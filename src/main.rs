@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use bevy::{prelude::*, sprite::MaterialMesh2dBundle};
+use bevy::{prelude::*, sprite::MaterialMesh2dBundle, input::mouse::MouseWheel};
 use bevy_egui::{egui, EguiPlugin, EguiContexts};
 use bevy_mod_picking::{PickableBundle, prelude::{RaycastPickCamera, RaycastPickTarget, OnPointer, Drag}, DefaultPickingPlugins};
 use rand::Rng;
@@ -13,19 +13,39 @@ fn main() {
         .add_plugins(DefaultPickingPlugins)
         .add_plugin(EguiPlugin)
 
-        .insert_resource(CurrentPath("/".to_string()))
+        .insert_resource(ViewSettings::default())
 
         .add_startup_system(setup)
         .add_startup_system(spawn_random_nodes)
-        
+
+        .add_event::<MouseScrollEvent>()
+
+        .add_system(mouse_scroll_events)
+
+        .add_system(graph_zoom)
         .add_system(spread_nodes)
     
         .run();
     
 }
 
+#[derive(Resource, Debug)]
+struct ViewSettings {
+    pub zoom: f32,
+}
+
+impl Default for ViewSettings {
+    fn default() -> Self {
+        ViewSettings {
+            zoom: 1.0,
+        }
+    }
+}
+
 #[derive(Resource, Default, Debug)]
-struct CurrentPath(String);
+struct InputSettings {
+
+}
 
 #[derive(Component)]
 struct Node;
@@ -78,12 +98,56 @@ fn spawn_random_nodes(
             PickableBundle::default(),
             RaycastPickTarget::default(),
             OnPointer::<Drag>::target_component_mut::<Transform>(|drag, transform| {
-                transform.translation += drag.delta.extend(0.0)
+                transform.translation += drag.delta.extend(0.0);
             })
         ));
     }
-
 }
+
+struct MouseScrollEvent {
+    value: f32
+}
+
+fn mouse_scroll_events(
+    mut scroll_evr: EventReader<MouseWheel>,
+    mut ev_mouse_scroll: EventWriter<MouseScrollEvent>,
+    mut view_settings: ResMut<ViewSettings>,
+){
+    use bevy::input::mouse::MouseScrollUnit;
+    for ev in scroll_evr.iter(){
+        match ev.unit {
+            MouseScrollUnit::Line => {
+                view_settings.zoom = ev.y;
+                ev_mouse_scroll.send(MouseScrollEvent {
+                    value: ev.y
+                });
+            },
+            MouseScrollUnit::Pixel => {
+                ()
+            }
+        }
+    }
+}
+
+fn graph_zoom(
+    mut query: Query<&mut OrthographicProjection, With<Camera>>, 
+    time: Res<Time>,
+    mut events: EventReader<MouseScrollEvent>
+) {
+    let zoom_mult: f32 = 2.;
+
+    for event in events.iter(){
+        for mut projection in query.iter_mut(){
+            let mut log_scale = projection.scale.ln();
+            log_scale -= event.value * zoom_mult * time.delta_seconds();
+            projection.scale = log_scale.exp();
+    
+            println!("Current zoom scale: {}", projection.scale);
+        }
+    }
+}
+
+
 
 fn spread_nodes(
     mut query: Query<(Entity, &Node, &mut Transform)>,
