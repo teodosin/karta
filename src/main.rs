@@ -7,12 +7,12 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .insert_resource(ViewSettings::default())
-        .add_startup_system(setup)
-        .add_startup_system(spawn_random_nodes)
+        .add_systems(Startup, setup)
+        .add_systems(Startup, spawn_random_nodes)
         .add_event::<MouseScrollEvent>()
-        .add_system(mouse_scroll_events)
-        .add_system(graph_zoom)
-        .add_system(spread_nodes)
+        .add_systems(Update, mouse_scroll_events)
+        .add_systems(Update, graph_zoom)
+        .add_systems(Update, spread_nodes)
         .run();
 }
 
@@ -39,6 +39,11 @@ struct Edge;
 #[derive(Component)]
 struct GraphPosition(Vec3);
 
+impl Node {
+    fn screamies(&self, num: &f32) {
+        println!("{}", num);
+    }
+}
 #[derive(Component)]
 struct GraphColor(Color);
 
@@ -120,6 +125,10 @@ fn graph_zoom(
 fn spread_nodes(mut query: Query<(Entity, &Node, &mut Transform)>) {
     let mut velocities: HashMap<Entity, Vec2> = HashMap::new();
 
+    for (_entity, node, _transf) in query.iter() {
+        node.screamies(&_transf.translation.x)
+    }
+
     for (esrc, _src_node, transform) in query.iter() {
         let src_pos: Vec2 = Vec2::new(transform.translation.x, transform.translation.y);
         let mut vel: Vec2;
@@ -130,14 +139,15 @@ fn spread_nodes(mut query: Query<(Entity, &Node, &mut Transform)>) {
             vel = trgt_pos - src_pos;
 
             if vel.length() < 100.0 {
-                velocities.insert(esrc, vel.normalize() * 0.0000000000000000001);
-                velocities.insert(etrgt, vel.normalize() * -0.0000000000000000001);
+                velocities.insert(esrc, vel.normalize() * 0.00001);
+                velocities.insert(etrgt, vel.normalize() * -0.00001);
             }
         }
     }
 
     for (e, _src_node, mut transform) in query.iter_mut() {
-        let vel = velocities.get(&e).unwrap_or(&Vec2::ZERO);
-        transform.translation += Vec3::new(0.01, 0.01, 0.0);
+        let _vel = velocities.get(&e).unwrap_or(&Vec2::ZERO);
+        debug!("{:?}", "bozo".to_string());
+        transform.translation += Vec3::new(0.1, 0.1, 0.0);
     }
 }
