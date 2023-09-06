@@ -1,7 +1,7 @@
 //lib
 use std::collections::HashMap;
 
-use bevy::{input::mouse::*, prelude::*, sprite::MaterialMesh2dBundle};
+use bevy::{input::mouse::*, prelude::*, sprite::MaterialMesh2dBundle, text::Text2dBounds};
 use bevy_mod_picking::prelude::*;
 use rand::Rng;
 
@@ -62,8 +62,14 @@ impl Node {
 struct GraphColor(Color);
 
 fn setup(mut commands: Commands) {
+    use bevy::core_pipeline::clear_color::ClearColorConfig;
     commands.spawn((
-        Camera2dBundle::default(),
+        Camera2dBundle {
+            camera_2d: Camera2d {
+                clear_color: ClearColorConfig::Custom(Color::rgb(0.1, 0.1, 0.1)),
+            },
+            ..Default::default()
+        },
         RaycastPickCamera::default()
     ));
 }
@@ -71,35 +77,36 @@ fn setup(mut commands: Commands) {
 
 fn move_node_selection(
     mut ev_mouse_drag: EventReader<MoveNodesEvent>,
+    view_settings: Res<ViewSettings>,
     mut query: Query<(Entity, &Node, &mut Transform), With<Selected> >,
-    mut click_evr: EventReader<MouseButtonInput>,
 ) {
     for ev in ev_mouse_drag.iter() {
+        println!("Zoom level: {}", view_settings.zoom);
         for (_entity, _node, mut transform) in query.iter_mut() {
-            transform.translation.x += ev.value.x;
-            transform.translation.y += ev.value.y;
-        }
-    }
-
-    for ev in click_evr.iter() {
-        if ev.button == MouseButton::Left  {
-            for (_entity, _node, mut transform) in query.iter_mut() {
-                transform.translation.x += 10.0;
-                transform.translation.y += 10.0;
-            }
+            transform.translation.x += ev.delta.x * view_settings.zoom;
+            transform.translation.y -= ev.delta.y * view_settings.zoom;
         }
     }
 }
 
 #[derive(Event)]
 struct MoveNodesEvent {
-    value: Vec2,
+    delta: Vec2,
+}
+
+impl From<ListenerInput<Pointer<Drag>>> for MoveNodesEvent {
+    fn from(event: ListenerInput<Pointer<Drag>>) -> Self {
+        MoveNodesEvent {
+            delta: event.delta, 
+        }
+    }
 }
 
 fn spawn_random_nodes(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
+    _asset_server: Res<AssetServer>,
 ) {
     for i in 0..10 {
         let mut rng = rand::thread_rng();
@@ -118,14 +125,35 @@ fn spawn_random_nodes(
             },
             PickableBundle::default(),
             RaycastPickTarget::default(),
-            On::<Pointer<Drag>>::target_component_mut::<Transform>(|drag, transform| {
-                transform.translation.x += drag.delta.x; // Make the square follow the mouse
-                transform.translation.y -= drag.delta.y;
-            }),
-            //On::<Pointer<Drag>>::send_event::<MoveNodesEvent>(),
-            On::<Pointer<Select>>::target_insert(Selected),
+
+            On::<Pointer<Drag>>::send_event::<MoveNodesEvent>(),
+            On::<Pointer<DragStart>>::target_insert(Selected),
             On::<Pointer<Deselect>>::target_remove::<Selected>(),
-        ));
+        ))
+            .with_children(|parent| {
+                parent.spawn(Text2dBundle {
+                    text: Text {
+                        sections: vec![TextSection::new(
+                            "Bwaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                            TextStyle {
+                                font_size: 20.0,
+                                color: Color::WHITE,
+                                ..default()
+                            },
+                        )],
+                        ..default()
+                    },
+                    text_2d_bounds: Text2dBounds {
+                        size: Vec2::new(200.0, 200.0),
+                        ..default()
+                    },
+                    transform: Transform {
+                        translation: Vec3::new(0.0, 0.0, 1.0),
+                        ..default()
+                    },
+                    ..default()
+                });
+            });
     }
 }
 
@@ -136,7 +164,7 @@ fn graph_pan(
     click_evr: Res<Input<MouseButton>>,
 ) {
     let window = windows.single();
-    let cursor = window.cursor_position();
+    let _cursor = window.cursor_position();
 
     if click_evr.pressed(MouseButton::Middle) {
         for event in mot_events.iter() {
@@ -159,11 +187,11 @@ fn graph_zoom(
     for ev in events.iter() {
         match ev.unit {
             MouseScrollUnit::Line => {
-                view_settings.zoom = ev.y;
                 for mut projection in query.iter_mut() {
                     let mut log_scale = projection.scale.ln();
                     log_scale -= ev.y * zoom_mult * time.delta_seconds();
                     projection.scale = log_scale.exp();
+                    view_settings.zoom = projection.scale;
         
                     println!("Current zoom scale: {}", projection.scale);
             }},
@@ -174,10 +202,6 @@ fn graph_zoom(
 
 fn spread_nodes(mut query: Query<(Entity, &Node, &mut Transform)>) {
     let mut velocities: HashMap<Entity, Vec2> = HashMap::new();
-
-    for (_entity, node, _transf) in query.iter() {
-        node.screamies(&_transf.translation.x)
-    }
 
     for (esrc, _src_node, transform) in query.iter() {
         let src_pos: Vec2 = Vec2::new(transform.translation.x, transform.translation.y);
@@ -195,7 +219,7 @@ fn spread_nodes(mut query: Query<(Entity, &Node, &mut Transform)>) {
         }
     }
 
-    for (e, _src_node, mut transform) in query.iter_mut() {
+    for (e, _src_node, mut _transform) in query.iter_mut() {
         let _vel = velocities.get(&e).unwrap_or(&Vec2::ZERO);
         debug!("{:?}", "bozo".to_string());
         //transform.translation += Vec3::new(0.1, 0.1, 0.0);
