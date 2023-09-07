@@ -1,19 +1,23 @@
 //lib
 use std::collections::HashMap;
 
-use bevy::{input::mouse::*, prelude::*, sprite::MaterialMesh2dBundle, text::Text2dBounds};
+use bevy::{input::mouse::*, prelude::*};
 use bevy_mod_picking::prelude::*;
-use rand::Rng;
+
+mod context;
+
+use crate::context::ContextPlugin;
 
 pub fn karta_app() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(DefaultPickingPlugins)
 
+        .add_plugins(ContextPlugin)
+
         .insert_resource(ViewSettings::default())
 
         .add_systems(Startup, setup)
-        .add_systems(Startup, spawn_random_nodes)
 
         .add_event::<MoveNodesEvent>()
 
@@ -45,7 +49,7 @@ struct InputSettings {}
 struct Selected;
 
 #[derive(Component)]
-struct Node;
+pub struct GraphNode;
 
 #[derive(Component)]
 struct Edge;
@@ -53,7 +57,7 @@ struct Edge;
 #[derive(Component)]
 struct GraphPosition(Vec3);
 
-impl Node {
+impl GraphNode {
     fn screamies(&self, num: &f32) {
         println!("{}", num);
     }
@@ -77,14 +81,16 @@ fn setup(mut commands: Commands) {
 
 fn move_node_selection(
     mut ev_mouse_drag: EventReader<MoveNodesEvent>,
+    mouse: Res<Input<MouseButton>>,
     view_settings: Res<ViewSettings>,
-    mut query: Query<(Entity, &Node, &mut Transform), With<Selected> >,
+    mut query: Query<(Entity, &GraphNode, &mut Transform), With<Selected> >,
 ) {
     for ev in ev_mouse_drag.iter() {
-        println!("Zoom level: {}", view_settings.zoom);
-        for (_entity, _node, mut transform) in query.iter_mut() {
-            transform.translation.x += ev.delta.x * view_settings.zoom;
-            transform.translation.y -= ev.delta.y * view_settings.zoom;
+        if mouse.pressed(MouseButton::Left){
+            for (_entity, _node, mut transform) in query.iter_mut() {
+                transform.translation.x += ev.delta.x * view_settings.zoom;
+                transform.translation.y -= ev.delta.y * view_settings.zoom;
+            }
         }
     }
 }
@@ -99,61 +105,6 @@ impl From<ListenerInput<Pointer<Drag>>> for MoveNodesEvent {
         MoveNodesEvent {
             delta: event.delta, 
         }
-    }
-}
-
-fn spawn_random_nodes(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-    _asset_server: Res<AssetServer>,
-) {
-    for i in 0..10 {
-        let mut rng = rand::thread_rng();
-
-        commands.spawn((
-            Node,
-            MaterialMesh2dBundle {
-                mesh: meshes.add(shape::Circle::new(50.).into()).into(),
-                material: materials.add(ColorMaterial::from(Color::PURPLE)),
-                transform: Transform::from_translation(Vec3::new(
-                    rng.gen_range(-400.0..400.0),
-                    rng.gen_range(-400.0..400.0),
-                    i as f32,
-                )),
-                ..default()
-            },
-            PickableBundle::default(),
-            RaycastPickTarget::default(),
-
-            On::<Pointer<Drag>>::send_event::<MoveNodesEvent>(),
-            On::<Pointer<DragStart>>::target_insert(Selected),
-            On::<Pointer<Deselect>>::target_remove::<Selected>(),
-        ))
-            .with_children(|parent| {
-                parent.spawn(Text2dBundle {
-                    text: Text {
-                        sections: vec![TextSection::new(
-                            "Bwaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-                            TextStyle {
-                                font_size: 20.0,
-                                color: Color::WHITE,
-                                ..default()
-                            },
-                        )],
-                        ..default()
-                    },
-                    text_2d_bounds: Text2dBounds {
-                        size: Vec2::new(200.0, 200.0),
-                        ..default()
-                    },
-                    transform: Transform {
-                        translation: Vec3::new(0.0, 0.0, 1.0),
-                        ..default()
-                    },
-                    ..default()
-                });
-            });
     }
 }
 
