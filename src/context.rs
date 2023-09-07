@@ -67,7 +67,7 @@ fn spawn_from_context(
     vault: Res<KartaVault>,
 ) {
     let path = vault.get_root_path();
-    let path = "/home/viktor/Downloads".to_owned();
+    let path = "/home/viktor/Pictures".to_owned();
     println!("Path: {}", path);
     let entries = fs::read_dir(path);
 
