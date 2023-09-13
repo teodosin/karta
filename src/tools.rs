@@ -1,6 +1,6 @@
 // Declarations of tool modules 
 
-use bevy::prelude::States;
+use bevy::prelude::{States, App, Plugin};
 
 pub mod arrange;
 pub mod select;
@@ -12,3 +12,12 @@ pub enum KartaToolState {
     Select,
 }
 
+pub struct ToolPlugin;
+
+impl Plugin for ToolPlugin {
+    fn build(&self, app: &mut App) {
+        app
+            .add_state::<KartaToolState>()
+        ;
+    }
+}
