@@ -106,17 +106,8 @@ fn initial_context(
     });
 }
 
-// Spawn and despawn functions
 
-// Spawn the context of a path
-// Take in the path of a node
-// Take in an optional filter 
-// Check if the path has a corresponding context file
-// If it does, spawn the nodes and edges in the context file
-// If the path is a folder, spawn the contents of the folder as nodes and edges
-// If the path is a file, spawn the file as a node
-// Check the nodes against the filter, don't spawn if it doesn't match
-
+// Big monolight function
 fn change_context(
     event: EventReader<NodeInputEvent>,
     input_data: Res<InputData>,
@@ -129,7 +120,6 @@ fn change_context(
     mut view_data: ResMut<ViewData>,
     mut pe_index: ResMut<PathsToEntitiesIndex>,
 
-    mut young_nodes: Query<(Entity, &GraphNode, Option<&JustSpawned>)>,
     mut nodes: Query<(Entity, &GraphNode)>,
 ) {
     // Only run the system if there has been a node input
@@ -248,21 +238,6 @@ fn change_context(
             to: node,
             attributes: vec![],
         },));
-
-        // let image_handle: Handle<Image> =_asset_server.load::<Image, String>(full_path);
-
-        // let image_size = assets.get(&image_handle);
-        // match image_size {
-        //     Some(image_size) => {
-        //         println!("Image size: {},{}", 
-        //             image_size.texture_descriptor.size.width, 
-        //             image_size.texture_descriptor.size.height
-        //         );
-        //     },
-        //     None => {
-        //         println!("Image size: None");
-        //     }
-        // }
     });
 
     vault.set_current_context(path.clone());

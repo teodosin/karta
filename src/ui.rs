@@ -7,9 +7,37 @@ pub struct KartaUiPlugin;
 impl Plugin for KartaUiPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_systems(Startup, create_tool_menu);
+            .add_systems(PreStartup, default_font_setup)
+            .add_systems(PreUpdate, 
+                default_font_set.run_if(resource_exists::<FontHandle>()))
+
+            .add_systems(Startup, create_tool_menu)
+            .add_systems(Update, button_system);
     }
 }
+
+fn default_font_set(
+    mut commands: Commands,
+    mut fonts: ResMut<Assets<Font>>,
+    font_handle: Res<FontHandle>,
+){
+    if let Some(font) = fonts.remove(&font_handle.0) {
+        fonts.set_untracked(TextStyle::default().font, font);
+        commands.remove_resource::<FontHandle>();
+    }
+}
+
+fn default_font_setup(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+
+) {
+    let font = asset_server.load("assets/fonts/Roboto/Roboto-Regular.ttf");
+    commands.insert_resource(FontHandle(font));
+}
+
+#[derive(Resource)]
+struct FontHandle(Handle<Font>);
 
 fn create_tool_menu(
     mut commands: Commands,
@@ -18,10 +46,16 @@ fn create_tool_menu(
         NodeBundle {
             style: Style {
                 flex_direction: FlexDirection::Column,
-                width: Val::Px(50.0),
+                width: Val::Px(100.0),
                 align_items: AlignItems::Center,
                 align_self: AlignSelf::FlexEnd,
                 justify_content: JustifyContent::Center,
+                margin: UiRect {
+                    left: Val::Px(20.0),
+                    right: Val::Px(20.0),
+                    top: Val::Px(20.0),
+                    bottom: Val::Px(20.0),
+                },
                 ..default()
             },
             ..default()
@@ -42,9 +76,8 @@ fn create_tool_menu_button<'a>(
 ) {
     parent.spawn(ButtonBundle {
         style: Style {
-            width: Val::Px(50.0),
-            height: Val::Px(20.0),
-            border: UiRect::all(Val::Px(5.0)),
+            width: Val::Px(100.0),
+            height: Val::Px(30.0),
             // horizontally center child text
             justify_content: JustifyContent::Center,
             // vertically center child text
@@ -59,7 +92,7 @@ fn create_tool_menu_button<'a>(
         parent.spawn(TextBundle::from_section(
             tool,
             TextStyle {
-                font_size: 12.0,
+                font_size: 16.0,
                 color: Color::rgb(0.9, 0.9, 0.9),
                 ..default()
             },
@@ -70,3 +103,27 @@ fn create_tool_menu_button<'a>(
 const NORMAL_BUTTON: Color = Color::rgb(0.15, 0.15, 0.15);
 const HOVERED_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
 const PRESSED_BUTTON: Color = Color::rgb(0.35, 0.75, 0.35);
+
+fn button_system(
+    mut interaction_query: Query<
+        (
+            &Interaction,
+            &mut BackgroundColor,
+        ),
+        (Changed<Interaction>, With<Button>),
+    >,
+) {
+    for (interaction, mut color) in &mut interaction_query {
+        match *interaction {
+            Interaction::Pressed => {
+                *color = PRESSED_BUTTON.into();
+            }
+            Interaction::Hovered => {
+                *color = HOVERED_BUTTON.into();
+            }
+            Interaction::None => {
+                *color = NORMAL_BUTTON.into();
+            }
+        }
+    }
+}
