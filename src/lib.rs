@@ -18,8 +18,7 @@ pub fn karta_app() {
             .build()
             .disable::<DebugPickingPlugin>()
         )        
-        //.add_plugins(DefaultPlugins)
-        .add_plugins(WorldInspectorPlugin::new())
+        //.add_plugins(WorldInspectorPlugin::new())
 
         .add_plugins(ui::KartaUiPlugin)
 
