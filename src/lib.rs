@@ -4,13 +4,12 @@ use bevy::{input::mouse::*, prelude::*};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_mod_picking::prelude::*;
 
-pub mod tools;
 
+mod ui;
 mod context;
 mod scene;
 
-use crate::context::ContextPlugin;
-use crate::scene::ScenePlugin;
+mod tools;
 
 pub fn karta_app() {
     App::new()
@@ -22,8 +21,12 @@ pub fn karta_app() {
         //.add_plugins(DefaultPlugins)
         .add_plugins(WorldInspectorPlugin::new())
 
-        .add_plugins(ContextPlugin)
-        .add_plugins(ScenePlugin)
+        .add_plugins(ui::KartaUiPlugin)
+
+        .add_plugins(context::ContextPlugin)
+        .add_plugins(scene::ScenePlugin)
+
+        .add_plugins(tools::ToolPlugin)
 
         .insert_resource(ViewSettings::default())
         .insert_resource(ViewData::default())
