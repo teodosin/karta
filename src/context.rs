@@ -37,10 +37,10 @@ struct PathsToEntitiesIndex(
 );
 
 #[derive(Resource, Debug)]
-struct KartaVault{
-    vault_folder_name: String,
-    root: String,
-    current_context: String,
+pub struct KartaVault{
+    pub vault_folder_name: String,
+    pub root: String,
+    pub current_context: String,
 }
 
 impl KartaVault {

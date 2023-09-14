@@ -2,6 +2,8 @@
 // Excludes the graph and floating windows(?)
 
 use bevy::prelude::*;
+
+use crate::context::KartaVault;
 pub struct KartaUiPlugin;
 
 impl Plugin for KartaUiPlugin {
@@ -12,7 +14,11 @@ impl Plugin for KartaUiPlugin {
                 default_font_set.run_if(resource_exists::<FontHandle>()))
 
             .add_systems(Startup, create_tool_menu)
+            .add_systems(Startup, create_context_and_active_bar)
+
+            .add_systems(Update, update_context_label.run_if(resource_changed::<KartaVault>()))
             .add_systems(Update, button_system);
+            
     }
 }
 
@@ -32,7 +38,7 @@ fn default_font_setup(
     asset_server: Res<AssetServer>,
 
 ) {
-    let font = asset_server.load("assets/fonts/Roboto/Roboto-Regular.ttf");
+    let font = asset_server.load("fonts/Roboto/Roboto-Medium.ttf");
     commands.insert_resource(FontHandle(font));
 }
 
@@ -104,6 +110,12 @@ const NORMAL_BUTTON: Color = Color::rgb(0.15, 0.15, 0.15);
 const HOVERED_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
 const PRESSED_BUTTON: Color = Color::rgb(0.35, 0.75, 0.35);
 
+#[derive(Component)]
+struct ContextLabel;
+
+#[derive(Component)]
+struct ActiveLabel;
+
 fn button_system(
     mut interaction_query: Query<
         (
@@ -127,3 +139,59 @@ fn button_system(
         }
     }
 }
+
+fn create_context_and_active_bar(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+){
+    commands.spawn(
+        NodeBundle {
+            style: Style {
+                flex_direction: FlexDirection::Column,
+                width: Val::Px(600.0),
+                align_items: AlignItems::Start,
+                align_self: AlignSelf::FlexEnd,
+                justify_content: JustifyContent::Center,
+                margin: UiRect {
+                    left: Val::Px(20.0),
+                    right: Val::Px(20.0),
+                    top: Val::Px(20.0),
+                    bottom: Val::Px(20.0),
+                },
+                ..default()
+            },
+            ..default()
+        })
+            .with_children(|parent| {
+                parent.spawn((TextBundle::from_section(
+                    "Context",
+                    TextStyle {
+                        font_size: 16.0,
+                        color: Color::rgb(0.9, 0.9, 0.9),
+                        ..default()
+                    },
+                ),
+                ContextLabel 
+                ));
+                parent.spawn((TextBundle::from_section(
+                    "Active",
+                    TextStyle {
+                        font_size: 16.0,
+                        color: Color::rgb(0.9, 0.9, 0.9),
+                        ..default()
+                    },
+                ),
+                ActiveLabel 
+                ));
+            });
+}
+
+fn update_context_label(
+    mut query: Query<&mut Text, With<ContextLabel>>,
+    vault: Res<KartaVault>,
+){
+    for mut text in &mut query.iter_mut() {
+        text.sections[0].value = vault.current_context.clone();
+    }
+}
+
