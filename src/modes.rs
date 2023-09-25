@@ -1,4 +1,4 @@
-// Declarations of tool modules 
+// Declarations of mode modules 
 
 use bevy::prelude::{States, App, Plugin};
 
@@ -6,18 +6,18 @@ pub mod arrange;
 pub mod select;
 
 #[derive(States, PartialEq, Eq, Debug, Clone, Hash, Default)]
-pub enum KartaToolState {
+pub enum KartaModeState {
     #[default]
     Arrange,
     Select,
 }
 
-pub struct ToolPlugin;
+pub struct ModePlugin;
 
-impl Plugin for ToolPlugin {
+impl Plugin for ModePlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_state::<KartaToolState>()
+            .add_state::<KartaModeState>()
         ;
     }
 }

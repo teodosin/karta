@@ -3,7 +3,7 @@
 
 use bevy::prelude::*;
 
-use crate::context::CurrentContext;
+use crate::graph::context::CurrentContext;
 pub struct KartaUiPlugin;
 
 impl Plugin for KartaUiPlugin {
@@ -13,7 +13,7 @@ impl Plugin for KartaUiPlugin {
             .add_systems(PreUpdate, 
                 default_font_set.run_if(resource_exists::<FontHandle>()))
 
-            .add_systems(Startup, create_tool_menu)
+            .add_systems(Startup, create_mode_menu)
             .add_systems(Startup, create_context_and_active_bar)
 
             .add_systems(Update, update_context_label.run_if(resource_changed::<CurrentContext>()))
@@ -45,7 +45,7 @@ fn default_font_setup(
 #[derive(Resource)]
 struct FontHandle(Handle<Font>);
 
-fn create_tool_menu(
+fn create_mode_menu(
     mut commands: Commands,
 ){
     commands.spawn(
@@ -68,17 +68,17 @@ fn create_tool_menu(
         }
     )
     .with_children(|parent| {
-        create_tool_menu_button(parent, "Arrange".to_string());
-        create_tool_menu_button(parent, "Select".to_string());
+        create_mode_menu_button(parent, "Arrange".to_string());
+        create_mode_menu_button(parent, "Select".to_string());
     });
 
 
 
 }
 
-fn create_tool_menu_button<'a>(
+fn create_mode_menu_button<'a>(
     parent: &mut ChildBuilder<'_, '_, '_>,
-    tool: String,
+    mode: String,
 ) {
     parent.spawn(ButtonBundle {
         style: Style {
@@ -96,7 +96,7 @@ fn create_tool_menu_button<'a>(
     })
     .with_children(|parent| {
         parent.spawn(TextBundle::from_section(
-            tool,
+            mode,
             TextStyle {
                 font_size: 16.0,
                 color: Color::rgb(0.9, 0.9, 0.9),
