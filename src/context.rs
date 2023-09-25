@@ -7,7 +7,7 @@ use bevy_mod_picking::prelude::*;
 use rand::Rng;
 use std::fs;
 
-use crate::{MoveNodesEvent, Selected, GraphNode, GraphEdge, ViewData, InputData};
+use crate::{MoveNodesEvent, Selected, GraphNode, GraphEdge, ViewData, InputData, vault::KartaVault};
 
 pub struct ContextPlugin;
 
@@ -15,7 +15,7 @@ impl Plugin for ContextPlugin {
     fn build(&self, app: &mut App) {
         app
             .insert_resource(PathsToEntitiesIndex(HashMap::new()))
-            .insert_resource(KartaVault::new())
+            .insert_resource(CurrentContext::new())
 
             .add_event::<NodeInputEvent>()
 
@@ -37,27 +37,15 @@ struct PathsToEntitiesIndex(
 );
 
 #[derive(Resource, Debug)]
-pub struct KartaVault{
-    pub vault_folder_name: String,
-    pub root: String,
+pub struct CurrentContext{
     pub current_context: String,
 }
 
-impl KartaVault {
+impl CurrentContext {
     fn new() -> Self {
-        KartaVault {
-            vault_folder_name: "kartaVault".to_string(),
-            root: "home/viktor/Pictures".to_string(),
+        CurrentContext {
             current_context: "home/viktor/Pictures".to_string(),
         }
-    }
-
-    fn get_root_path(&self) -> String {
-        format!("/{}", self.root)
-    }
-
-    fn get_vault_path(&self) -> String {
-        format!("/{}/{}", self.root, self.vault_folder_name)
     }
 
     fn set_current_context(&mut self, path: String) {
@@ -117,6 +105,8 @@ fn change_context(
     mut materials: ResMut<Assets<ColorMaterial>>,
 
     mut vault: ResMut<KartaVault>,
+    mut context: ResMut<CurrentContext>,
+
     mut view_data: ResMut<ViewData>,
     mut pe_index: ResMut<PathsToEntitiesIndex>,
 
@@ -130,9 +120,9 @@ fn change_context(
     
     // Handle the path to the desired context
     let path: String = input_data.latest_target_entity.clone()
-    .unwrap_or(vault.get_current_context_path());
+    .unwrap_or(context.get_current_context_path());
     // Also return if the target path is already the current context
-    if path == vault.get_current_context_path() && path != vault.get_root_path(){
+    if path == context.get_current_context_path() && path != vault.get_root_path(){
         println!("Already in context: {}", path);
         return
     }
@@ -150,7 +140,7 @@ fn change_context(
     };
 
     // Get all files
-    let file_names: Vec<String> = entries
+    let mut file_names: Vec<String> = entries
     .filter_map(|entry| {
         let path = entry.ok()?.path();
         if path.is_file() {
@@ -160,6 +150,12 @@ fn change_context(
         }
     })
     .collect();
+
+    file_names.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
+
+    for file in file_names.iter() {
+        println!("File: {}", file);
+    }
 
     // Iterate through existing nodes and mark them for deletion
     for (entity, node) in nodes.iter_mut() {
@@ -240,7 +236,7 @@ fn change_context(
         },));
     });
 
-    vault.set_current_context(path.clone());
+    context.set_current_context(path.clone());
 
     // Print pe_index to see what the hell is going on
     for (path, entity) in pe_index.0.iter() {
