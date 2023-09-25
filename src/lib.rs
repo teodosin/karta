@@ -8,6 +8,7 @@ use bevy_mod_picking::prelude::*;
 mod ui;
 mod context;
 mod scene;
+mod vault;
 
 mod tools;
 
@@ -16,12 +17,13 @@ pub fn karta_app() {
         .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
         .add_plugins(DefaultPickingPlugins
             .build()
-            .disable::<DebugPickingPlugin>()
+            //.disable::<DebugPickingPlugin>()
         )        
-        //.add_plugins(WorldInspectorPlugin::new())
+        .add_plugins(WorldInspectorPlugin::new())
 
         .add_plugins(ui::KartaUiPlugin)
 
+        .add_plugins(vault::VaultPlugin)
         .add_plugins(context::ContextPlugin)
         .add_plugins(scene::ScenePlugin)
 

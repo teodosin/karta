@@ -3,7 +3,7 @@
 
 use bevy::prelude::*;
 
-use crate::context::KartaVault;
+use crate::context::CurrentContext;
 pub struct KartaUiPlugin;
 
 impl Plugin for KartaUiPlugin {
@@ -16,7 +16,7 @@ impl Plugin for KartaUiPlugin {
             .add_systems(Startup, create_tool_menu)
             .add_systems(Startup, create_context_and_active_bar)
 
-            .add_systems(Update, update_context_label.run_if(resource_changed::<KartaVault>()))
+            .add_systems(Update, update_context_label.run_if(resource_changed::<CurrentContext>()))
             .add_systems(Update, button_system);
             
     }
@@ -188,7 +188,7 @@ fn create_context_and_active_bar(
 
 fn update_context_label(
     mut query: Query<&mut Text, With<ContextLabel>>,
-    vault: Res<KartaVault>,
+    vault: Res<CurrentContext>,
 ){
     for mut text in &mut query.iter_mut() {
         text.sections[0].value = vault.current_context.clone();
