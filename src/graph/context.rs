@@ -20,19 +20,16 @@ impl Plugin for ContextPlugin {
             .add_event::<NodeInputEvent>()
             .add_event::<MoveNodesEvent>()
 
-            .add_systems(Startup, gizmo_settings)
             .add_systems(Startup, initial_context)
 
             .add_systems(PreUpdate, handle_node_click)
             .add_systems(PreUpdate, draw_edges)
 
-            .add_systems(Update, change_context_path.before(change_context))
-            .add_systems(Update, change_context
+            .add_systems(Update, update_context
                 .run_if(resource_changed::<CurrentContext>())
             )
-            .add_systems(Update, despawn_nodes.after(change_context))
+            .add_systems(Update, despawn_nodes.after(update_context))
 
-            .add_systems(Update, move_node_selection)
         ;
     }
 }
@@ -62,19 +59,13 @@ impl CurrentContext {
         }
     }
 
-    fn set_current_context(&mut self, path: String) {
+    pub fn set_current_context(&mut self, path: String) {
         self.current_context = path;
     }
 
-    fn get_current_context_path(&self) -> String {
+    pub fn get_current_context_path(&self) -> String {
         format!("/{}", self.current_context)
     }
-}
-
-fn gizmo_settings(
-    mut gizmo: ResMut<GizmoConfig>,
-){
-    gizmo.depth_bias = 1.0;
 }
 
 
@@ -87,31 +78,8 @@ fn initial_context(
     });
 }
 
-fn change_context_path(
-    event: EventReader<NodeInputEvent>,
-    input_data: Res<graph_cam::InputData>,
-    vault: Res<KartaVault>,
-    mut context: ResMut<CurrentContext>,
-){
-    // Only run the system if there has been a node input
-    if event.is_empty(){
-        return
-    }
-
-    let path: String = input_data.latest_target_entity.clone()
-    .unwrap_or(context.get_current_context_path());
-
-    if path == context.get_current_context_path() && path != vault.get_root_path(){
-        println!("Already in context: {}", path);
-        return
-    }
-
-    context.set_current_context(path.clone());
-
-}
-
 // Big monolith function
-fn change_context(
+pub fn update_context(
     input_data: Res<graph_cam::InputData>,
 
     mut commands: Commands,
