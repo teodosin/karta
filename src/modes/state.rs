@@ -50,6 +50,7 @@ fn change_context_path(
         return
     }
 
+    println!("Changing context to: {}", path);
     context.set_current_context(path.clone());
 
 }

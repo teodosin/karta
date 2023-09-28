@@ -77,13 +77,15 @@ impl From<ListenerInput<Pointer<Drag>>> for MoveNodesEvent {
 }
 
 pub fn handle_node_click(
+    mouse: Res<Input<MouseButton>>,
     mut event: EventReader<NodeClickEvent>,
     mut input_data: ResMut<graph_cam::InputData>,
     nodes: Query<&GraphNode>,
 ){
-    if event.is_empty() {
+    if event.is_empty(){
         return
     }
+
     match event.iter().next().unwrap().target {
         None => {
             println!("No event");
@@ -100,9 +102,10 @@ pub fn handle_node_click(
 }
 
 pub fn handle_node_press(
-mut event: EventReader<NodePressedEvent>,
-mut input_data: ResMut<graph_cam::InputData>,
-nodes: Query<&GraphNode>,
+    mouse: Res<Input<MouseButton>>,
+    mut event: EventReader<NodePressedEvent>,
+    mut input_data: ResMut<graph_cam::InputData>,
+    nodes: Query<&GraphNode>,
 ){
     if event.is_empty() {
         return

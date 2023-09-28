@@ -117,7 +117,6 @@ fn update_cursor_info(
     }
 
     if mouse.just_released(MouseButton::Left) {
-        cursor_history.latest_click_entity = None;
         cursor_history.latest_press_entity = None;
     }
 }

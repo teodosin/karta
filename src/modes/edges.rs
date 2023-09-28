@@ -86,6 +86,7 @@ fn draw_edge_preview(
 }
 
 pub fn create_edge(from: &Entity, to: &Entity, commands: &mut Commands){
+    println!("Creating edge from {:?} to {:?}", from, to);
     commands.spawn((GraphEdge {
         from: *from,
         to: *to,

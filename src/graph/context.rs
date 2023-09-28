@@ -35,7 +35,9 @@ impl Plugin for ContextPlugin {
             )
             .add_systems(Update, despawn_nodes.after(update_context))
             
-            .add_systems(PostUpdate, despawn_edges)
+            .add_systems(Last, despawn_edges
+                .run_if(resource_changed::<CurrentContext>())
+            )
         ;
     }
 }
@@ -147,7 +149,6 @@ pub fn update_context(
             println!("Root node already exists");
             commands.entity(*entity).remove::<ToBeDespawned>();
             *entity
-            
         },
         None => {
             println!("Root node doesn't exist, spawning");
