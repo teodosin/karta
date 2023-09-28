@@ -59,6 +59,7 @@ pub fn despawn_edges(
 ) {
     for (edge_entity, edge_data) in edges.iter_mut() {
         if nodes.get(edge_data.from).is_err() || nodes.get(edge_data.to).is_err() {
+            println!("Despawning edge");
             commands.entity(edge_entity).despawn_recursive();
         }
     }
