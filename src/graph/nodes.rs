@@ -51,8 +51,8 @@ impl From<ListenerInput<Pointer<Drag>>> for MoveNodesEvent {
 
 pub fn handle_node_click(
     mut event: EventReader<NodeInputEvent>,
-     mut input_data: ResMut<graph_cam::InputData>,
-     nodes: Query<&GraphNode>,
+    mut input_data: ResMut<graph_cam::InputData>,
+    nodes: Query<&GraphNode>,
  ){
      if event.is_empty() {
          return
@@ -71,32 +71,7 @@ pub fn handle_node_click(
          },
      }
  }
- 
-pub fn move_node_selection(
-     mut ev_mouse_drag: EventReader<MoveNodesEvent>,
-     mouse: Res<Input<MouseButton>>,
-     cursor: Res<graph_cam::InputData>,
-     mut query: Query<(Entity, &GraphNode, &mut Transform), With<Selected>>,
-     mut view_data: ResMut<graph_cam::ViewData>,
- ) {
- 
-     if mouse.just_pressed(MouseButton::Left) {
-         for (_entity, _node, mut transform) in query.iter_mut() {
-             transform.translation.z = 60.0;
-             view_data.top_z += 1.0;
-         }
-     }
- 
-     for _ev in ev_mouse_drag.iter() {
-         if mouse.pressed(MouseButton::Left){
-             for (_entity, _node, mut transform) in query.iter_mut() {
-                     transform.translation.x += cursor.curr_position.x - cursor.prev_position.x;
-                     transform.translation.y += cursor.curr_position.y - cursor.prev_position.y;     
-             }
-         }
-         break
-     }
- }
+
 
 // ----------------------------------------------------------------
 // Spawning and despawning systems
