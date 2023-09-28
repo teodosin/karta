@@ -79,7 +79,7 @@ fn use_assets(
     let data_str = ron_assets.get(&data_assets.handle);
     match data_str {
         Some(data) => {
-            info!("data: {:?}", data);
+            //info!("data: {:?}", data);
         },
         None => {
             info!("data: None");
