@@ -79,7 +79,7 @@ fn use_assets(
     let data_str = ron_assets.get(&data_assets.handle);
     match data_str {
         Some(data) => {
-            //info!("data: {:?}", data);
+            info!("data: {:?}", data);
         },
         None => {
             info!("data: None");
@@ -104,18 +104,26 @@ struct ContextAssets {
     pub handle: Handle<ContextAsset>,
 }
 
-#[derive(Debug, Deserialize, TypeUuid, TypePath)]
+#[derive(Debug, Deserialize, TypeUuid, TypePath, Default)]
 #[uuid = "d0b0c5a0-0b0b-4c0b-8b0b-0b0b0b0b0b0b"]
 pub struct ContextAsset {
     pub self_path: String,
+    pub edges: Vec<EdgeSerial>,
     pub nodes: Vec<NodeSerial>,
     //pub edges: Vec<EdgeSerial>,
 }
 
-#[derive(Debug, Deserialize,)]
-pub struct NodeSerial {
+#[derive(Debug, Deserialize, Default)]
+pub struct EdgeSerial {
     pub path: String,
     pub relative_position: Vec2,
+}
+ 
+#[derive(Debug, Deserialize, Default)]
+pub struct NodeSerial {
+    pub name: String,
+    pub relative_position: Vec2,
+    pub edges: Vec<String>,
 }
 
 #[derive(Default)]
