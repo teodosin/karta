@@ -6,7 +6,7 @@ use bevy::prelude::{States, App, Plugin, Resource};
 
 use self::{
     state::StatePlugin, 
-    arrange::ArrangePlugin
+    arrange::ArrangePlugin, edges::EdgesPlugin
 };
 
 pub mod arrange;
@@ -45,6 +45,7 @@ impl Plugin for ModePlugin {
 
             .add_plugins(StatePlugin)
             .add_plugins(ArrangePlugin)
+            .add_plugins(EdgesPlugin)
         ;
     }
 }

@@ -16,9 +16,9 @@ pub fn karta_app() {
         .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
         .add_plugins(DefaultPickingPlugins
             .build()
-            //.disable::<DebugPickingPlugin>()
+            .disable::<DebugPickingPlugin>()
         )        
-        //.add_plugins(WorldInspectorPlugin::new())
+        .add_plugins(WorldInspectorPlugin::new())
 
         .add_plugins(ui::KartaUiPlugin)
 
