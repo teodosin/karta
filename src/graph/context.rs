@@ -5,7 +5,7 @@
 use bevy::{prelude::*, utils::HashMap};
 use std::fs;
 
-use crate::{graph::graph_cam, vault::KartaVault};
+use crate::{graph::graph_cam, modes::edges::create_edge};
 
 use super::{nodes::*, edges::*};
 
@@ -17,19 +17,25 @@ impl Plugin for ContextPlugin {
             .insert_resource(PathsToEntitiesIndex(HashMap::new()))
             .insert_resource(CurrentContext::new())
 
-            .add_event::<NodeInputEvent>()
+            .add_event::<NodeClickEvent>()
+            .add_event::<NodePressedEvent>()
+            .add_event::<NodeHoverEvent>()
             .add_event::<MoveNodesEvent>()
 
             .add_systems(Startup, initial_context)
 
             .add_systems(PreUpdate, handle_node_click)
-            .add_systems(PreUpdate, draw_edges)
+            .add_systems(PreUpdate, handle_node_press)
+            .add_systems(PreUpdate, handle_node_hover)
 
+            .add_systems(PreUpdate, draw_edges)
+            
             .add_systems(Update, update_context
                 .run_if(resource_changed::<CurrentContext>())
             )
             .add_systems(Update, despawn_nodes.after(update_context))
-
+            
+            .add_systems(PostUpdate, despawn_edges)
         ;
     }
 }
@@ -71,9 +77,9 @@ impl CurrentContext {
 
 
 fn initial_context(
-    mut event: EventWriter<NodeInputEvent>,
+    mut event: EventWriter<NodeClickEvent>,
 ){
-    event.send(NodeInputEvent {
+    event.send(NodeClickEvent {
         target: None,
     });
 }
@@ -95,7 +101,7 @@ pub fn update_context(
 ) {
     
     // Handle the path to the desired context
-    let path: String = input_data.latest_target_entity.clone()
+    let path: String = input_data.latest_click_entity.clone()
     .unwrap_or(context.get_current_context_path());
     // Also return if the target path is already the current context
 
@@ -131,7 +137,7 @@ pub fn update_context(
     }
 
     // Iterate through existing nodes and mark them for deletion
-    for (entity, node) in nodes.iter_mut() {
+    for (entity, _node) in nodes.iter_mut() {
         commands.entity(entity).insert(ToBeDespawned);
     }
 
@@ -202,11 +208,7 @@ pub fn update_context(
         );
 
         // Spawn an edge from the root node to each item
-        commands.spawn((GraphEdge {
-            from: root_node,
-            to: node,
-            attributes: vec![],
-        },));
+        create_edge(&root_node, &node, &mut commands);
     });
 
     // Print pe_index to see what the hell is going on

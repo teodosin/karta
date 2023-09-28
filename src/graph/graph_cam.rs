@@ -48,7 +48,9 @@ impl Default for ViewData {
 
 #[derive(Resource, Debug)]
 pub struct InputData {
-    pub latest_target_entity: Option<String>,
+    pub latest_click_entity: Option<String>,
+    pub latest_press_entity: Option<String>,
+    pub latest_hover_entity: Option<String>,
     pub drag_position: Vec2,
     pub prev_position: Vec2,
     pub curr_position: Vec2,
@@ -57,12 +59,20 @@ pub struct InputData {
 impl Default for InputData {
     fn default() -> Self {
         InputData {
-            latest_target_entity: None,
+            latest_click_entity: None,
+            latest_press_entity: None,
+            latest_hover_entity: None,
             drag_position: Vec2::ZERO,
             prev_position: Vec2::ZERO,
             curr_position: Vec2::ZERO,
         }
     }
+}
+
+pub fn left_click_just_released(
+    mouse: Res<Input<MouseButton>>,
+) -> bool {
+    mouse.just_released(MouseButton::Left)
 }
 
 fn cam_setup(
@@ -104,6 +114,11 @@ fn update_cursor_info(
         .map(|ray| ray.origin.truncate())
     {
         cursor_history.curr_position = world_position;
+    }
+
+    if mouse.just_released(MouseButton::Left) {
+        cursor_history.latest_click_entity = None;
+        cursor_history.latest_press_entity = None;
     }
 }
 

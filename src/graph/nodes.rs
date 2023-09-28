@@ -26,14 +26,41 @@ pub struct GraphNodeEdges {
 
 // The main input event for nodes. 
 #[derive(Event)]
-pub struct NodeInputEvent {
+pub struct NodeClickEvent {
     pub target: Option<Entity>,
 }
 
 // Implementation required by bevy_mod_picking
-impl From<ListenerInput<Pointer<Click>>> for NodeInputEvent {
+impl From<ListenerInput<Pointer<Click>>> for NodeClickEvent {
     fn from(event: ListenerInput<Pointer<Click>>) -> Self {
-        NodeInputEvent {
+        NodeClickEvent {
+            target: Some(event.target),
+        }
+    }
+}
+
+#[derive(Event)]
+pub struct NodePressedEvent {
+    pub target: Option<Entity>,
+}
+
+impl From<ListenerInput<Pointer<Down>>> for NodePressedEvent {
+    fn from(event: ListenerInput<Pointer<Down>>) -> Self {
+        NodePressedEvent {
+            target: Some(event.target),
+        }
+    }
+}
+
+#[derive(Event)]
+pub struct NodeHoverEvent {
+    pub target: Option<Entity>,
+}
+
+// Implementation required by bevy_mod_picking
+impl From<ListenerInput<Pointer<Over>>> for NodeHoverEvent {
+    fn from(event: ListenerInput<Pointer<Over>>) -> Self {
+        NodeHoverEvent {
             target: Some(event.target),
         }
     }
@@ -50,27 +77,74 @@ impl From<ListenerInput<Pointer<Drag>>> for MoveNodesEvent {
 }
 
 pub fn handle_node_click(
-    mut event: EventReader<NodeInputEvent>,
+    mut event: EventReader<NodeClickEvent>,
     mut input_data: ResMut<graph_cam::InputData>,
     nodes: Query<&GraphNode>,
- ){
-     if event.is_empty() {
-         return
-     }
-     match event.iter().next().unwrap().target {
-         None => {
-             println!("No event");
-             input_data.latest_target_entity = None;
-         }
-         Some(target) => {
-             println!("Event: {:?}", target);
-             let target_path = nodes.get(target).unwrap().path.clone();
-         
-             input_data.latest_target_entity = Some(target_path.clone());
-             println!("Target path: {}", target_path);
-         },
-     }
- }
+){
+    if event.is_empty() {
+        return
+    }
+    match event.iter().next().unwrap().target {
+        None => {
+            println!("No event");
+            input_data.latest_click_entity = None;
+        }
+        Some(target) => {
+            println!("Event: {:?}", target);
+            let target_path = nodes.get(target).unwrap().path.clone();
+        
+            input_data.latest_click_entity = Some(target_path.clone());
+            println!("Target path: {}", target_path);
+        },
+    }
+}
+
+pub fn handle_node_press(
+mut event: EventReader<NodePressedEvent>,
+mut input_data: ResMut<graph_cam::InputData>,
+nodes: Query<&GraphNode>,
+){
+    if event.is_empty() {
+        return
+    }
+    match event.iter().next().unwrap().target {
+        None => {
+            println!("No event");
+            input_data.latest_press_entity = None;
+        }
+        Some(target) => {
+            println!("Event: {:?}", target);
+            let target_path = nodes.get(target).unwrap().path.clone();
+        
+            input_data.latest_press_entity = Some(target_path.clone());
+            println!("Target path: {}", target_path);
+        },
+    }
+}
+
+
+pub fn handle_node_hover(
+mut event: EventReader<NodeHoverEvent>,
+mut input_data: ResMut<graph_cam::InputData>,
+nodes: Query<&GraphNode>,
+){
+    if event.is_empty() {
+        return
+    }
+    match event.iter().next().unwrap().target {
+        None => {
+            println!("No event");
+            input_data.latest_hover_entity = None;
+        }
+        Some(target) => {
+            println!("Event: {:?}", target);
+            let target_path = nodes.get(target).unwrap().path.clone();
+        
+            input_data.latest_hover_entity = Some(target_path.clone());
+            println!("Hovering over path: {}", target_path);
+        },
+    }
+}
 
 
 // ----------------------------------------------------------------
@@ -108,7 +182,9 @@ pub fn spawn_node (
         RaycastPickTarget::default(),
 
         On::<Pointer<Drag>>::send_event::<MoveNodesEvent>(),
-        On::<Pointer<Click>>::send_event::<NodeInputEvent>(),
+        On::<Pointer<Click>>::send_event::<NodeClickEvent>(),
+        On::<Pointer<Down>>::send_event::<NodePressedEvent>(),
+        On::<Pointer<Over>>::send_event::<NodeHoverEvent>(),
         // On::<Pointer<Drag>>::run(move_node_selection),
         On::<Pointer<DragStart>>::target_insert(Selected),
         On::<Pointer<DragEnd>>::target_remove::<Selected>(),

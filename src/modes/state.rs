@@ -8,7 +8,7 @@ use bevy::prelude::*;
 
 use crate::{
     graph::{
-        nodes::NodeInputEvent, graph_cam, context::{
+        nodes::NodeClickEvent, graph_cam, context::{
             CurrentContext, update_context
         }
     }, 
@@ -32,7 +32,7 @@ impl Plugin for StatePlugin {
 }
 
 fn change_context_path(
-    event: EventReader<NodeInputEvent>,
+    event: EventReader<NodeClickEvent>,
     input_data: Res<graph_cam::InputData>,
     vault: Res<KartaVault>,
     mut context: ResMut<CurrentContext>,
@@ -42,7 +42,7 @@ fn change_context_path(
         return
     }
 
-    let path: String = input_data.latest_target_entity.clone()
+    let path: String = input_data.latest_click_entity.clone()
     .unwrap_or(context.get_current_context_path());
 
     if path == context.get_current_context_path() && path != vault.get_root_path(){
