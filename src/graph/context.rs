@@ -5,7 +5,7 @@
 use bevy::{prelude::*, utils::HashMap};
 use std::fs;
 
-use crate::{graph::graph_cam, modes::edges::create_edge};
+use crate::{graph::graph_cam, modes::edges::create_edge, vault::KartaVault};
 
 use super::{nodes::*, edges::*};
 
@@ -28,12 +28,12 @@ impl Plugin for ContextPlugin {
             .add_systems(PreUpdate, handle_node_press)
             .add_systems(PreUpdate, handle_node_hover)
 
-            .add_systems(PreUpdate, draw_edges)
-            
             .add_systems(Update, update_context
                 .run_if(resource_changed::<CurrentContext>())
             )
-            .add_systems(Update, despawn_nodes.after(update_context))
+
+            .add_systems(PostUpdate, despawn_nodes.after(update_context))
+            .add_systems(PostUpdate, draw_edges)
             
             .add_systems(Last, despawn_edges
                 .run_if(resource_changed::<CurrentContext>())
@@ -94,6 +94,7 @@ pub fn update_context(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 
+    vault: Res<KartaVault>,
     context: Res<CurrentContext>,
 
     mut view_data: ResMut<graph_cam::ViewData>,
@@ -122,6 +123,13 @@ pub fn update_context(
 
     // Get all files
     let mut file_names: Vec<String> = entries
+    // Ignore the vault folder!!!
+    .filter(|entry| {
+        let path = entry.as_ref().unwrap().path().to_str().unwrap().to_string();
+        println!("Path: {}", path);
+        path != vault.get_vault_path()
+    })
+    // Carry on with everything else
     .filter_map(|entry| {
         let path = entry.ok()?.path();
         if path.is_file() {

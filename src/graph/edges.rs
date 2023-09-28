@@ -1,5 +1,5 @@
 
-use bevy::{prelude::*, transform::commands};
+use bevy::prelude::*;
 
 use super::nodes::GraphNode;
 
@@ -7,7 +7,7 @@ use super::nodes::GraphNode;
 // Component definitions
 
 // A component for the data of an EDGE
-#[derive(Component)]
+#[derive(Component, Reflect)]
 pub struct GraphEdge {
     pub from: Entity,
     pub to: Entity,
@@ -15,7 +15,7 @@ pub struct GraphEdge {
 }
 
 // A component for the attributes of an edge
-#[derive(Component)]
+#[derive(Component, Reflect)]
 pub struct GraphEdgeAttribute {
     pub name: String,
     pub value: f32,

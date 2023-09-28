@@ -45,6 +45,8 @@ fn create_edge_from_drag(
     let from = pe_index.0.get(&from).unwrap();
     let to = pe_index.0.get(&to).unwrap();
 
+    // println!("Creating edge from {:?} to {:?}", from, to);
+
     create_edge(from, to, &mut commands);
 
 
