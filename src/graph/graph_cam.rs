@@ -146,23 +146,39 @@ fn graph_pan(
 }
 
 fn graph_zoom(
-    mut query: Query<&mut OrthographicProjection, With<Camera2d>>,
+    mut query: Query<(&mut OrthographicProjection, &mut Transform), With<Camera2d>>,
+    input_data: Res<InputData>,
     mut view_settings: ResMut<ViewSettings>,
-    time: Res<Time>,
+    _time: Res<Time>,
     mut events: EventReader<MouseWheel>,
 ) {
-    let zoom_mult: f32 = 2.;
+    let zoom_mult: f32 = 1.07;
 
     for ev in events.iter() {
         match ev.unit {
             MouseScrollUnit::Line => {
-                for mut projection in query.iter_mut() {
-                    let mut log_scale = projection.scale.ln();
-                    log_scale -= ev.y * zoom_mult * time.delta_seconds();
-                    projection.scale = log_scale.exp();
-                    view_settings.zoom = projection.scale;
+                for (mut projection, mut transform) in query.iter_mut() {
+
+                    match ev.y {
+                        y if y > 0.0 => { // ZOOMING IN
+                            projection.scale = projection.scale / zoom_mult;
+                            view_settings.zoom = projection.scale;
+
+                            // Zoom-in is centered on mouse position
+                            let amount = zoom_mult - 1.0;
+                            let adjusted_position = (input_data.curr_position - transform.translation.truncate()) * amount;
+                            transform.translation.x += adjusted_position.x;
+                            transform.translation.y += adjusted_position.y;
+                        },
+                        y if y < 0.0 => { // ZOOMING OUT
+                            projection.scale = projection.scale * zoom_mult;
+                            view_settings.zoom = projection.scale;
+                        },
+                        _ => (),
+                    }
         
                     println!("Current zoom scale: {}", projection.scale);
+
             }},
             MouseScrollUnit::Pixel => (),
         }

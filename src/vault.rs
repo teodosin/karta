@@ -108,21 +108,30 @@ struct ContextAssets {
 #[uuid = "d0b0c5a0-0b0b-4c0b-8b0b-0b0b0b0b0b0b"]
 pub struct ContextAsset {
     pub self_path: String,
+
+    #[serde(default = "Vec::new")]
     pub edges: Vec<EdgeSerial>,
+
+    #[serde(default = "Vec::new")]
     pub nodes: Vec<NodeSerial>,
-    //pub edges: Vec<EdgeSerial>,
 }
 
 #[derive(Debug, Deserialize, Default)]
 pub struct EdgeSerial {
     pub path: String,
+
+    #[serde(default = "Vec2::default")]
     pub relative_position: Vec2,
 }
  
 #[derive(Debug, Deserialize, Default)]
 pub struct NodeSerial {
     pub name: String,
+
+    #[serde(default = "Vec2::default")]
     pub relative_position: Vec2,
+
+    #[serde(default = "Vec::new")]
     pub edges: Vec<String>,
 }
 

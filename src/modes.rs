@@ -10,7 +10,6 @@ use self::{
 };
 
 pub mod arrange;
-pub mod select;
 pub mod edges;
 pub mod state;
 
@@ -18,7 +17,6 @@ pub mod state;
 pub enum KartaModeState {
     #[default]
     Arrange,
-    Select,
     Edges,
     State,
 }
@@ -27,7 +25,6 @@ impl fmt::Display for KartaModeState {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             KartaModeState::Arrange => write!(f, "Arrange"),
-            KartaModeState::Select => write!(f, "Select"),
             KartaModeState::Edges => write!(f, "Edges"),
             KartaModeState::State => write!(f, "Context"),
         }
