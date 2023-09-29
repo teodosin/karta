@@ -3,7 +3,11 @@
 
 use bevy::prelude::*;
 
-use crate::{graph::context::CurrentContext, modes::KartaModeState};
+use crate::{graph::{context::CurrentContext, nodes::NodeClickEvent}, modes::KartaModeState};
+
+use self::context_menu::popup_menu_button_system;
+
+mod context_menu;
 pub struct KartaUiPlugin;
 
 impl Plugin for KartaUiPlugin {
@@ -18,8 +22,14 @@ impl Plugin for KartaUiPlugin {
             .add_systems(Startup, create_context_and_active_bar)
 
             .add_systems(Update, update_context_label.run_if(resource_changed::<CurrentContext>()))
-            .add_systems(Update, button_system)
-            .add_systems(Update, update_active_mode_highlight.after(button_system))
+
+            .add_systems(Update, mode_button_system)
+            .add_systems(Update, update_active_mode_highlight.after(mode_button_system))
+
+            .add_systems(Update, popup_menu_button_system)
+            
+            .add_systems(Update, context_menu::despawn_context_menus)
+            .add_systems(Update, context_menu::spawn_context_menu.run_if(on_event::<NodeClickEvent>()))
         ;
     }
 }
@@ -59,10 +69,6 @@ struct ModeButton {
     mode: KartaModeState,
 }
 
-#[derive(Component)]
-struct ModeButtonLabel {
-    mode: KartaModeState,
-}
 
 fn create_mode_menu(
     mut commands: Commands,
@@ -88,7 +94,6 @@ fn create_mode_menu(
     )
     .with_children(|parent| {
         create_mode_menu_button(parent, KartaModeState::Arrange);
-        create_mode_menu_button(parent, KartaModeState::Select);
         create_mode_menu_button(parent, KartaModeState::Edges);
         create_mode_menu_button(parent, KartaModeState::State);
 
@@ -131,9 +136,6 @@ fn create_mode_menu_button<'a>(
                     ..default()
                 },
             ),
-            ModeButtonLabel {
-                mode: mode,
-            },
         ));
     });
 }
@@ -149,7 +151,7 @@ struct ContextLabel;
 #[derive(Component)]
 struct ActiveLabel;
 
-fn button_system(
+fn mode_button_system(
     mut interaction_query: Query<
         (      
             &Interaction,
@@ -173,9 +175,6 @@ fn button_system(
                     KartaModeState::Arrange => {
                         println!("Arrange mode");
                     }
-                    KartaModeState::Select => {
-                        println!("Select mode");
-                    }
                     KartaModeState::Edges => {
                         println!("Edges mode");
                     }
@@ -192,10 +191,7 @@ fn button_system(
                 *color = NORMAL_BUTTON.into();
             }
         }
-
-
     }
-
 }
 
 fn update_active_mode_highlight(

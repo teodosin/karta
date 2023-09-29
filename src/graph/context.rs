@@ -83,6 +83,7 @@ fn initial_context(
 ){
     event.send(NodeClickEvent {
         target: None,
+        button: MouseButton::Left,
     });
 }
 

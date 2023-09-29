@@ -32,13 +32,17 @@ impl Plugin for StatePlugin {
 }
 
 fn change_context_path(
-    event: EventReader<NodeClickEvent>,
+    mut event: EventReader<NodeClickEvent>,
     input_data: Res<graph_cam::InputData>,
     vault: Res<KartaVault>,
     mut context: ResMut<CurrentContext>,
 ){
     // Only run the system if there has been a node input
     if event.is_empty(){
+        return
+    }
+
+    if event.iter().next().unwrap().button != MouseButton::Left {
         return
     }
 
