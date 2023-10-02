@@ -80,6 +80,7 @@ pub fn spawn_context_menu(
     .with_children(
         |parent| {
             create_context_menu_button(parent, "Pin".to_string());
+            create_context_menu_button(parent, "Go to Context".to_string());
         }
     );
 }

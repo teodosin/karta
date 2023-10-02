@@ -20,9 +20,9 @@ pub fn karta_app() {
         )        
         //.add_plugins(WorldInspectorPlugin::new())
 
-        .add_plugins(ui::KartaUiPlugin)
-
         .add_plugins(vault::VaultPlugin)
+        
+        .add_plugins(ui::KartaUiPlugin)
 
         .add_plugins(graph::context::ContextPlugin)
         .add_plugins(graph::graph_cam::GraphCamPlugin)
