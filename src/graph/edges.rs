@@ -8,7 +8,6 @@ pub struct EdgesPlugin;
 impl Plugin for EdgesPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_systems(PostUpdate, draw_edges)
 
             .add_systems(Last, despawn_edges
                 .run_if(resource_changed::<CurrentContext>())
@@ -27,37 +26,12 @@ pub struct GraphEdge {
     pub to: Entity,
 }
 
-
-
-// ----------------------------------------------------------------
-// Crude drawing of edges
-pub fn draw_edges(
-    mut commands: Commands,
-    edges: Query<(Entity, &GraphEdge)>,
-    nodes: Query<&Transform, With<GraphNode>>,
-    mut gizmos: Gizmos,
-) {
-    for (edge_entity, edge_data) in edges.iter() {
-        let start = match nodes.get(edge_data.from) {
-            Ok(node) => node,
-            Err(_) => {
-                //commands.entity(edge_entity).despawn_recursive();
-                continue
-            },
-        };
-        let end = match nodes.get(edge_data.to){
-            Ok(node) => node,
-            Err(_) => {
-                //commands.entity(edge_entity).despawn_recursive();
-                continue
-            },
-        };
-        gizmos.line_2d(
-            Vec2::new(start.translation.x, start.translation.y),
-            Vec2::new(end.translation.x, end.translation.y),
-            Color::GREEN,
-        );
-    }
+pub fn create_edge(from: &Entity, to: &Entity, commands: &mut Commands){
+    println!("Creating edge from {:?} to {:?}", from, to);
+    commands.spawn((GraphEdge {
+        from: *from,
+        to: *to,
+    },));
 }
 
 pub fn despawn_edges(

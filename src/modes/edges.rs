@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::graph::{graph_cam::{self, left_click_just_released}, edges::GraphEdge, context::PathsToEntitiesIndex, nodes::{self, GraphNode}};
+use crate::graph::{graph_cam::{self, left_click_just_released}, edges::{GraphEdge, create_edge}, context::PathsToEntitiesIndex, nodes::{self, GraphNode}};
 
 use super::KartaModeState;
 
@@ -12,6 +12,7 @@ impl Plugin for EdgesPlugin {
     fn build(&self, app: &mut App) {
         app
             .add_systems(Update, create_edge_from_drag
+                //.after()
                 .run_if(in_state(KartaModeState::Edges)
                     .and_then(left_click_just_released)
                 )
@@ -29,6 +30,8 @@ fn create_edge_from_drag(
     pe_index: Res<PathsToEntitiesIndex>,
     mut commands: Commands,
 ) {
+    println!("Creating edge from drag");
+
     if input_data.latest_press_entity.is_none() {
         return
     }
@@ -45,7 +48,7 @@ fn create_edge_from_drag(
     let from = pe_index.0.get(&from).unwrap();
     let to = pe_index.0.get(&to).unwrap();
 
-    // println!("Creating edge from {:?} to {:?}", from, to);
+    println!("Creating edge from {:?} to {:?}", from, to);
 
     create_edge(from, to, &mut commands);
 
@@ -87,10 +90,3 @@ fn draw_edge_preview(
     
 }
 
-pub fn create_edge(from: &Entity, to: &Entity, commands: &mut Commands){
-    println!("Creating edge from {:?} to {:?}", from, to);
-    commands.spawn((GraphEdge {
-        from: *from,
-        to: *to,
-    },));
-}
