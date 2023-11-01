@@ -1,25 +1,33 @@
 
 use bevy::prelude::*;
 
-use super::nodes::GraphNode;
+use super::{nodes::GraphNode, context::CurrentContext};
+
+pub struct EdgesPlugin;
+
+impl Plugin for EdgesPlugin {
+    fn build(&self, app: &mut App) {
+        app
+            .add_systems(PostUpdate, draw_edges)
+
+            .add_systems(Last, despawn_edges
+                .run_if(resource_changed::<CurrentContext>())
+            )
+        ;
+    }
+}
 
 // ----------------------------------------------------------------
 // Component definitions
 
-// A component for the data of an EDGE
+// A component for the most basic data of an EDGE
 #[derive(Component, Reflect)]
 pub struct GraphEdge {
     pub from: Entity,
     pub to: Entity,
-    pub attributes: Vec<GraphEdgeAttribute>,
 }
 
-// A component for the attributes of an edge
-#[derive(Component, Reflect)]
-pub struct GraphEdgeAttribute {
-    pub name: String,
-    pub value: f32,
-}
+
 
 // ----------------------------------------------------------------
 // Crude drawing of edges

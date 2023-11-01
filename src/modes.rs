@@ -6,17 +6,17 @@ use bevy::prelude::{States, App, Plugin, Resource};
 
 use self::{
     state::StatePlugin, 
-    arrange::ArrangePlugin, edges::EdgesPlugin
+    r#move::MovePlugin, edges::EdgesPlugin
 };
 
-pub mod arrange;
+pub mod r#move;
 pub mod edges;
 pub mod state;
 
 #[derive(States, PartialEq, Eq, Debug, Clone, Hash, Default)]
 pub enum KartaModeState {
     #[default]
-    Arrange,
+    Move,
     Edges,
     State,
 }
@@ -24,7 +24,7 @@ pub enum KartaModeState {
 impl fmt::Display for KartaModeState {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            KartaModeState::Arrange => write!(f, "Arrange"),
+            KartaModeState::Move => write!(f, "Move"),
             KartaModeState::Edges => write!(f, "Edges"),
             KartaModeState::State => write!(f, "Context"),
         }
@@ -41,7 +41,7 @@ impl Plugin for ModePlugin {
             .insert_resource(ActiveMode::default())
 
             .add_plugins(StatePlugin)
-            .add_plugins(ArrangePlugin)
+            .add_plugins(MovePlugin)
             .add_plugins(EdgesPlugin)
         ;
     }
@@ -55,7 +55,7 @@ pub struct ActiveMode {
 impl Default for ActiveMode {
     fn default() -> Self {
         ActiveMode {
-            mode: KartaModeState::Arrange,
+            mode: KartaModeState::Move,
         }
     }
 }

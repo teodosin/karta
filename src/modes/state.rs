@@ -8,10 +8,11 @@ use bevy::prelude::*;
 
 use crate::{
     graph::{
-        nodes::NodeClickEvent, graph_cam, context::{
+        graph_cam, context::{
             CurrentContext, update_context
         }
     }, 
+    events::nodes::NodeClickEvent,
     vault::KartaVault
 };
 
