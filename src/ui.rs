@@ -6,13 +6,13 @@ use bevy::prelude::*;
 use bevy_prototype_lyon::prelude::*;
 
 use crate::{
-    graph::context::{CurrentContext, update_context},
+    graph::context::CurrentContext,
     events::nodes::*};
 
 use self::{
     context_menu::popup_menu_button_system, 
     mode_menu::{create_mode_menu, mode_button_system, update_active_mode_highlight}, 
-    nodes::{add_node_ui, handle_outline_hover, outlines_pulse},
+    nodes::{handle_outline_hover, outlines_pulse}, edges::draw_edges,
 };
 
 mod context_menu;
@@ -56,6 +56,9 @@ impl Plugin for KartaUiPlugin {
             
             .add_systems(PostUpdate, handle_outline_hover)
             .add_systems(PostUpdate, outlines_pulse)
+
+            .add_systems(PostUpdate, draw_edges)
+
             
         ;
     }

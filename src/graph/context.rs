@@ -6,7 +6,7 @@ use bevy::{prelude::*, utils::HashMap};
 use std::fs;
 
 use crate::{
-    graph::graph_cam, modes::edges::create_edge, vault::KartaVault, 
+    graph::{graph_cam, edges::create_edge}, vault::KartaVault, 
     events::nodes::NodeClickEvent
 };
 
