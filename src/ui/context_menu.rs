@@ -11,7 +11,8 @@ use bevy::{
     window::Window
 };
 
-use crate::graph::nodes::NodeClickEvent;
+use crate::events::nodes::NodeClickEvent;
+
 
 #[derive(Component)]
 pub struct PopupMenu;

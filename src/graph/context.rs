@@ -1,13 +1,16 @@
 /// Main file for the Context plugin
-/// The Context manages the node graph 
-/// 
+/// The Context manages what is in the node graph. 
+/// Responsible for keeping track of what is spawned and despawned.
 
 use bevy::{prelude::*, utils::HashMap};
 use std::fs;
 
-use crate::{graph::graph_cam, modes::edges::create_edge, vault::KartaVault};
+use crate::{
+    graph::graph_cam, modes::edges::create_edge, vault::KartaVault, 
+    events::nodes::NodeClickEvent
+};
 
-use super::{nodes::*, edges::*};
+use super::nodes::*;
 
 pub struct ContextPlugin;
 
@@ -17,25 +20,9 @@ impl Plugin for ContextPlugin {
             .insert_resource(PathsToEntitiesIndex(HashMap::new()))
             .insert_resource(CurrentContext::new())
 
-            .add_event::<NodeClickEvent>()
-            .add_event::<NodePressedEvent>()
-            .add_event::<NodeHoverEvent>()
-            .add_event::<MoveNodesEvent>()
-
             .add_systems(Startup, initial_context)
 
-            .add_systems(PreUpdate, handle_node_click)
-            .add_systems(PreUpdate, handle_node_press)
-            .add_systems(PreUpdate, handle_node_hover)
-
             .add_systems(Update, update_context
-                .run_if(resource_changed::<CurrentContext>())
-            )
-
-            .add_systems(PostUpdate, despawn_nodes.after(update_context))
-            .add_systems(PostUpdate, draw_edges)
-            
-            .add_systems(Last, despawn_edges
                 .run_if(resource_changed::<CurrentContext>())
             )
         ;

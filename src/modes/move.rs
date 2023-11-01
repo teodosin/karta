@@ -2,18 +2,21 @@
 
 use bevy::prelude::*;
 
-use crate::graph::{context::{update_context, Selected}, nodes::{MoveNodesEvent, GraphNode}, graph_cam};
+use crate::{
+    graph::{context::{update_context, Selected}, nodes::GraphNode, graph_cam}, 
+    events::nodes::MoveNodesEvent
+};
 
 use super::KartaModeState;
 
-pub struct ArrangePlugin;
+pub struct MovePlugin;
 
-impl Plugin for ArrangePlugin {
+impl Plugin for MovePlugin {
     fn build(&self, app: &mut App) {
         app
             .add_systems(Update, move_node_selection
                 .before(update_context)
-                .run_if(in_state(KartaModeState::Arrange))
+                .run_if(in_state(KartaModeState::Move))
             )
         ;
 

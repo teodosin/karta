@@ -92,6 +92,5 @@ pub fn create_edge(from: &Entity, to: &Entity, commands: &mut Commands){
     commands.spawn((GraphEdge {
         from: *from,
         to: *to,
-        attributes: vec![],
     },));
 }
