@@ -92,8 +92,8 @@ pub fn add_node_ui(
             Stroke::new(Color::ORANGE, 10.0),
             NodeOutline,
 
-            // PickableBundle::default(),
-            // RaycastPickTarget::default(),
+            PickableBundle::default(),
+            RaycastPickTarget::default(),
     )).id();
     
     commands.entity(entity).push_children(&[node_outline]);
