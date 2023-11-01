@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use super::{graph_cam, context::{PathsToEntitiesIndex, ToBeDespawned}};
 
-use crate::events::nodes::*;
+use crate::{events::nodes::*, ui::nodes::NodeOutline};
 use crate::ui::nodes::add_node_ui;
 
 pub struct NodesPlugin;
@@ -96,6 +96,7 @@ fn handle_node_hover(
 mut event: EventReader<NodeHoverEvent>,
 mut input_data: ResMut<graph_cam::InputData>,
 nodes: Query<&GraphNode>,
+outlines: Query<&Parent, With<NodeOutline>>,
 ){
     if event.is_empty() {
         return
@@ -107,10 +108,30 @@ nodes: Query<&GraphNode>,
         }
         Some(target) => {
             println!("Event: {:?}", target);
-            let target_path = nodes.get(target).unwrap().path.clone();
-        
-            input_data.latest_hover_entity = Some(target_path.clone());
-            println!("Hovering over path: {}", target_path);
+            
+            match nodes.get(target){
+                Ok(node) => {
+                    let target_path = node.path.clone();
+                    input_data.latest_hover_entity = Some(target_path.clone());
+                    println!("Hovering over path: {}", target_path);
+                },
+                Err(_) => {
+                    println!("No node found");
+                    input_data.latest_hover_entity = None;
+                }
+            }
+
+            match outlines.get(target){
+                Ok(outline) => {
+                    let outline_path = nodes.get(outline.get()).unwrap().path.clone();
+                    input_data.latest_hover_entity = Some(outline_path.clone());
+                    println!("Hovering over outline: {}", outline_path);
+                },
+                Err(_) => {
+                    println!("No outline found");
+                    input_data.latest_hover_entity = None;
+                }
+            }
         },
     }
 }
