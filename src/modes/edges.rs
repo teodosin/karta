@@ -34,7 +34,7 @@ fn create_edge_from_drag(
     println!("Creating edge from drag");
 
     if input_data.latest_press_entity.is_none() {
-        println!("No press entity");
+        //println!("No press entity");
         return
     }
     if input_data.latest_hover_entity.is_none() {
@@ -42,6 +42,11 @@ fn create_edge_from_drag(
         return
     }
     if input_data.latest_press_entity == input_data.latest_hover_entity {
+        return
+    }
+
+    // Enforce only being able to create edges from the outline
+    if !input_data.press_is_outline {
         return
     }
 
@@ -66,6 +71,10 @@ fn draw_edge_preview(
     mut gizmos: Gizmos,
 ) {
     if input_data.latest_press_entity.is_none() {
+        return
+    }
+
+    if !input_data.press_is_outline {
         return
     }
 

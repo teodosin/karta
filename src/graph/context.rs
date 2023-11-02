@@ -3,6 +3,7 @@
 /// Responsible for keeping track of what is spawned and despawned.
 
 use bevy::{prelude::*, utils::HashMap};
+use bevy_mod_picking::prelude::PointerButton;
 use std::fs;
 
 use crate::{
@@ -70,7 +71,7 @@ fn initial_context(
 ){
     event.send(NodeClickEvent {
         target: None,
-        button: MouseButton::Left,
+        button: PointerButton::Primary,
     });
 }
 

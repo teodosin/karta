@@ -8,7 +8,7 @@ pub struct InputData {
     pub latest_press_entity: Option<String>,
     pub latest_hover_entity: Option<String>,
 
-    pub entity_is_outline: bool,
+    pub press_is_outline: bool,
 
     pub left_just_released: bool,
 
@@ -24,7 +24,7 @@ impl Default for InputData {
             latest_press_entity: None,
             latest_hover_entity: None,
 
-            entity_is_outline: false,
+            press_is_outline: false,
 
             left_just_released: false,
 
@@ -69,6 +69,4 @@ pub fn update_cursor_info(
     else {
         cursor_history.left_just_released = false;
     }
-
-    info!("Cursor: {:?}", cursor_history.latest_press_entity);
 }
