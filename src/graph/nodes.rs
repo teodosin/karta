@@ -38,6 +38,9 @@ pub struct GraphNodeEdges {
     pub edges: Vec<Entity>,
 }
 
+#[derive(Component)]
+pub struct PinnedPosition;
+
 // ----------------------------------------------------------------
 // Interaction systems
 
@@ -176,6 +179,7 @@ outlines: Query<&Parent, With<NodeOutline>>,
 
 // ----------------------------------------------------------------
 // Spawning and despawning systems
+
 
 pub fn spawn_node (
     mut commands: &mut Commands,

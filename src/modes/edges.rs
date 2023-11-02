@@ -1,6 +1,7 @@
 // Mode for creation and editing of edges
 
-use bevy::prelude::*;
+
+use bevy::{prelude::*, ecs::system::CommandQueue, core_pipeline::core_2d::graph::input};
 
 
 use crate::{input::pointer::{left_click_just_released, InputData}, graph::{context::PathsToEntitiesIndex, edges::create_edge, nodes::GraphNode}};
@@ -42,6 +43,7 @@ fn create_edge_from_drag(
         return
     }
     if input_data.latest_press_entity == input_data.latest_hover_entity {
+        println!("Same entity");
         return
     }
 
@@ -106,3 +108,75 @@ fn draw_edge_preview(
     
 }
 
+// -------------------------------------------
+// ------------------ Tests ------------------
+// -------------------------------------------
+
+
+// A test for the edge creation
+#[test]
+fn test_create_edge_from_drag() {
+    use bevy::utils::HashMap;
+    use crate::graph::edges::GraphEdge;
+    // Setup a world and schedule for Bevy ECS (assuming Bevy is being used)
+    let mut app = App::new();
+
+    let entity1 = app.world.spawn(
+        GraphNode {
+            path: "path/to/entity1".to_string(),
+            name: "entity1".to_string(),
+        }
+    ).id();
+    let node1 = &app.world.get::<GraphNode>(entity1).unwrap().path.to_string();
+
+    let entity2 = app.world.spawn(
+        GraphNode {
+            path: "path/to/entity2".to_string(),
+            name: "entity2".to_string(),
+        }
+    ).id();
+    let node2 = app.world.get::<GraphNode>(entity2).unwrap().path.to_string();
+
+    // Mock InputData, Valid
+    let input_data_mock_valid = InputData {
+        latest_press_entity: Some(node1.clone()), // Assuming Entity can be created like this
+        latest_hover_entity: Some(node2.clone()),
+        press_is_outline: true,
+        ..default()
+    };
+
+    // Mock InputData, Invalid: Same entity
+    let input_data_mock_invalid_same_entity = InputData {
+        latest_press_entity: Some(node1.clone()),
+        latest_hover_entity: Some(node1.clone()),
+        press_is_outline: true,
+        ..default()
+    };
+
+    // Create a mock PathsToEntitiesIndex
+    let mut pe_index = PathsToEntitiesIndex(HashMap::new());
+    pe_index.0.insert("path/to/entity1".to_string(), entity1);
+    pe_index.0.insert("path/to/entity2".to_string(), entity2);
+    app.world.insert_resource(pe_index);
+
+
+    // 1. Test valid input_data scenario
+    app.world.insert_resource(input_data_mock_valid);
+    app.add_systems(Update, create_edge_from_drag);
+
+    app.update();
+    assert_eq!(app.world.query::<&GraphEdge>().iter(&app.world).len(), 1);
+    
+    app.world.remove_resource::<InputData>();
+    
+    // 2. Test invalid scenario: same entity
+    app.world.insert_resource(input_data_mock_invalid_same_entity);
+
+    app.update();
+    assert_eq!(app.world.query::<&GraphEdge>().iter(&app.world).len(), 1);
+    
+    
+    //app.world.insert_resource(input_data_mock_invalid_same_entity);
+
+
+}

@@ -1,5 +1,9 @@
 
+use std::collections::HashMap;
+
 use bevy::prelude::*;
+
+use crate::graph::attribute::Attributes;
 
 use super::{nodes::GraphNode, context::CurrentContext};
 
@@ -26,12 +30,33 @@ pub struct GraphEdge {
     pub to: Entity,
 }
 
-pub fn create_edge(from: &Entity, to: &Entity, commands: &mut Commands){
+// TODO 0.12: Convert to One-Shot System
+// And use EdgeDefaults resource to set the default length
+pub fn create_edge(
+    from: &Entity, 
+    to: &Entity, 
+    commands: &mut Commands
+){
+
     println!("Creating edge from {:?} to {:?}", from, to);
+
+    let mut initial_attributes: HashMap<String, Option<f32>> = HashMap::new();
+
+    initial_attributes.insert(
+        "k".to_string(), Some(0.2),
+    );
+    initial_attributes.insert(
+        "length".to_string(), Some(210.0),
+    );
+
     commands.spawn((GraphEdge {
         from: *from,
         to: *to,
-    },));
+    },
+    Attributes {
+        attributes: initial_attributes,
+    }),
+);
 }
 
 pub fn despawn_edges(
@@ -42,7 +67,7 @@ pub fn despawn_edges(
     for (edge_entity, edge_data) in edges.iter_mut() {
         if nodes.get(edge_data.from).is_err() || nodes.get(edge_data.to).is_err() {
             println!("Despawning edge");
-            //commands.entity(edge_entity).despawn_recursive();
+            commands.entity(edge_entity).despawn_recursive();
         }
     }
 }

@@ -33,8 +33,8 @@ pub fn add_node_ui(
             mesh: meshes.add(shape::Circle::new(25.).into()).into(),
             material: materials.add(ColorMaterial::from(Color::rgb(0.3, 0.0, 0.0))),
             transform: Transform::from_translation(Vec3::new(
-                rng.gen_range(-600.0..600.0),
-                rng.gen_range(-400.0..400.0),
+                rng.gen_range(-10.0..10.0),
+                rng.gen_range(-10.0..10.0),
                 view_data.top_z,
             )),
             ..default()
@@ -70,7 +70,7 @@ pub fn add_node_ui(
             ..default()
         },
         transform: Transform {
-            translation: Vec3::new(30.0, 0.0, 0.1),
+            translation: Vec3::new(35.0, 0.0, 100.1),
             ..default()
         },
         text_anchor: bevy::sprite::Anchor::CenterLeft,
@@ -127,7 +127,7 @@ pub fn add_node_ui(
     
     
     // Update the view_data so we can keep track of which zindex is the topmost
-    view_data.top_z += 1.;
+    view_data.top_z += 0.0001;
     
 }
 
