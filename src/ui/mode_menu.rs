@@ -18,7 +18,7 @@ pub fn create_mode_menu(
                 flex_direction: FlexDirection::Column,
                 width: Val::Px(100.0),
                 align_items: AlignItems::Center,
-                align_self: AlignSelf::FlexEnd,
+                align_self: AlignSelf::Center,
                 justify_content: JustifyContent::Center,
                 margin: UiRect {
                     left: Val::Px(20.0),
