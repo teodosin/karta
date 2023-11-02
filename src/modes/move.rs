@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use crate::{
     graph::{context::{update_context, Selected}, nodes::GraphNode, graph_cam}, 
-    events::nodes::MoveNodesEvent
+    events::nodes::MoveNodesEvent, input::pointer::InputData
 };
 
 use super::KartaModeState;
@@ -26,7 +26,7 @@ impl Plugin for MovePlugin {
 pub fn move_node_selection(
     mut ev_mouse_drag: EventReader<MoveNodesEvent>,
     mouse: Res<Input<MouseButton>>,
-    cursor: Res<graph_cam::InputData>,
+    cursor: Res<InputData>,
     mut query: Query<(Entity, &GraphNode, &mut Transform), With<Selected>>,
     mut view_data: ResMut<graph_cam::ViewData>,
 ) {

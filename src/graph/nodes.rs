@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use super::{graph_cam, context::{PathsToEntitiesIndex, ToBeDespawned}};
 
-use crate::{events::nodes::*, ui::nodes::NodeOutline};
+use crate::{events::nodes::*, ui::nodes::NodeOutline, input::pointer::InputData};
 use crate::ui::nodes::add_node_ui;
 
 pub struct NodesPlugin;
@@ -45,8 +45,9 @@ pub struct GraphNodeEdges {
 fn handle_node_click(
     mouse: Res<Input<MouseButton>>,
     mut event: EventReader<NodeClickEvent>,
-    mut input_data: ResMut<graph_cam::InputData>,
+    mut input_data: ResMut<InputData>,
     nodes: Query<&GraphNode>,
+    outlines: Query<&Parent, With<NodeOutline>>,
 ){
     if event.is_empty(){
         return
@@ -54,15 +55,33 @@ fn handle_node_click(
 
     match event.iter().next().unwrap().target {
         None => {
-            println!("No event");
+            //println!("No event");
             input_data.latest_click_entity = None;
         }
         Some(target) => {
-            println!("Event: {:?}", target);
-            let target_path = nodes.get(target).unwrap().path.clone();
-        
-            input_data.latest_click_entity = Some(target_path.clone());
-            println!("Target path: {}", target_path);
+            //println!("Event: {:?}", target);
+            
+            match nodes.get(target){
+                Ok(node) => {
+                    let target_path = node.path.clone();
+                    input_data.latest_click_entity = Some(target_path.clone());
+                    //println!("Clicking path: {}", target_path);
+                },
+                Err(_) => {
+                    //println!("No node found");
+                }
+            }
+
+            match outlines.get(target){
+                Ok(outline) => {
+                    let outline_path = nodes.get(outline.get()).unwrap().path.clone();
+                    input_data.latest_click_entity = Some(outline_path.clone());
+                    //println!("Clicking outline: {}", outline_path);
+                },
+                Err(_) => {
+                    //println!("No outline found");
+                }
+            }
         },
     }
 }
@@ -70,23 +89,42 @@ fn handle_node_click(
 fn handle_node_press(
     mouse: Res<Input<MouseButton>>,
     mut event: EventReader<NodePressedEvent>,
-    mut input_data: ResMut<graph_cam::InputData>,
+    mut input_data: ResMut<InputData>,
     nodes: Query<&GraphNode>,
+    outlines: Query<&Parent, With<NodeOutline>>,
 ){
     if event.is_empty() {
         return
     }
     match event.iter().next().unwrap().target {
         None => {
-            println!("No event");
+            //println!("No event");
             input_data.latest_press_entity = None;
         }
         Some(target) => {
-            println!("Event: {:?}", target);
-            let target_path = nodes.get(target).unwrap().path.clone();
-        
-            input_data.latest_press_entity = Some(target_path.clone());
-            println!("Target path: {}", target_path);
+            //println!("Event: {:?}", target);
+            
+            match nodes.get(target){
+                Ok(node) => {
+                    let target_path = node.path.clone();
+                    input_data.latest_press_entity = Some(target_path.clone());
+                    println!("Pressing path: {}", input_data.latest_press_entity.clone().unwrap());
+                },
+                Err(_) => {
+                    //println!("No node found for press");
+                }
+            }
+
+            match outlines.get(target){
+                Ok(outline) => {
+                    let outline_path = nodes.get(outline.get()).unwrap().path.clone();
+                    input_data.latest_press_entity = Some(outline_path.clone());
+                    //println!("Pressing outline: {}", outline_path);
+                },
+                Err(_) => {
+                    //println!("No outline found");
+                }
+            }
         },
     }
 }
@@ -94,7 +132,7 @@ fn handle_node_press(
 
 fn handle_node_hover(
 mut event: EventReader<NodeHoverEvent>,
-mut input_data: ResMut<graph_cam::InputData>,
+mut input_data: ResMut<InputData>,
 nodes: Query<&GraphNode>,
 outlines: Query<&Parent, With<NodeOutline>>,
 ){
@@ -103,21 +141,20 @@ outlines: Query<&Parent, With<NodeOutline>>,
     }
     match event.iter().next().unwrap().target {
         None => {
-            println!("No event");
+            //println!("No event");
             input_data.latest_hover_entity = None;
         }
         Some(target) => {
-            println!("Event: {:?}", target);
+            //println!("Event: {:?}", target);
             
             match nodes.get(target){
                 Ok(node) => {
                     let target_path = node.path.clone();
                     input_data.latest_hover_entity = Some(target_path.clone());
-                    println!("Hovering over path: {}", target_path);
+                    //println!("Hovering over path: {}", target_path);
                 },
                 Err(_) => {
-                    println!("No node found");
-                    input_data.latest_hover_entity = None;
+                    //println!("No node found");
                 }
             }
 
@@ -125,11 +162,10 @@ outlines: Query<&Parent, With<NodeOutline>>,
                 Ok(outline) => {
                     let outline_path = nodes.get(outline.get()).unwrap().path.clone();
                     input_data.latest_hover_entity = Some(outline_path.clone());
-                    println!("Hovering over outline: {}", outline_path);
+                    //println!("Hovering over outline: {}", outline_path);
                 },
                 Err(_) => {
-                    println!("No outline found");
-                    input_data.latest_hover_entity = None;
+                    //println!("No outline found");
                 }
             }
         },
@@ -151,8 +187,6 @@ pub fn spawn_node (
 ) -> bevy::prelude::Entity {
     let full_path = format!("{}/{}", path, name);
 
-    // Positions will be random for now
-    let mut rng = rand::thread_rng();
 
     let node_entity = commands.spawn((
         GraphNode {

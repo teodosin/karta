@@ -7,7 +7,7 @@ use std::fs;
 
 use crate::{
     graph::{graph_cam, edges::create_edge}, vault::KartaVault, 
-    events::nodes::NodeClickEvent
+    events::nodes::NodeClickEvent, input::pointer::InputData
 };
 
 use super::nodes::*;
@@ -76,7 +76,7 @@ fn initial_context(
 
 // Big monolith function
 pub fn update_context(
-    input_data: Res<graph_cam::InputData>,
+    input_data: Res<InputData>,
 
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,

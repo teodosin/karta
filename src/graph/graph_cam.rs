@@ -3,6 +3,8 @@
 use bevy::{prelude::*, input::mouse::{MouseWheel, MouseScrollUnit, MouseMotion}};
 use bevy_mod_picking::prelude::RaycastPickCamera;
 
+use crate::input::pointer::InputData;
+
 pub struct GraphCamPlugin;
 
 impl Plugin for GraphCamPlugin {
@@ -10,11 +12,8 @@ impl Plugin for GraphCamPlugin {
         app
             .insert_resource(ViewSettings::default())
             .insert_resource(ViewData::default())
-            .insert_resource(InputData::default())
 
             .add_systems(Startup, cam_setup)
-
-            .add_systems(PreUpdate, update_cursor_info)
 
             .add_systems(Update, graph_zoom)
             .add_systems(Update, graph_pan)
@@ -46,35 +45,6 @@ impl Default for ViewData {
 }
 
 
-#[derive(Resource, Debug)]
-pub struct InputData {
-    pub latest_click_entity: Option<String>,
-    pub latest_press_entity: Option<String>,
-    pub latest_hover_entity: Option<String>,
-    pub drag_position: Vec2,
-    pub prev_position: Vec2,
-    pub curr_position: Vec2,
-}
-
-impl Default for InputData {
-    fn default() -> Self {
-        InputData {
-            latest_click_entity: None,
-            latest_press_entity: None,
-            latest_hover_entity: None,
-            drag_position: Vec2::ZERO,
-            prev_position: Vec2::ZERO,
-            curr_position: Vec2::ZERO,
-        }
-    }
-}
-
-pub fn left_click_just_released(
-    mouse: Res<Input<MouseButton>>,
-) -> bool {
-    mouse.just_released(MouseButton::Left)
-}
-
 fn cam_setup(
     mut commands: Commands,
 ){
@@ -95,31 +65,7 @@ fn cam_setup(
     ));
 }
 
-fn update_cursor_info(
-    mut cursor_history: ResMut<InputData>,
-    mouse: Res<Input<MouseButton>>,
-    window: Query<&Window>,
-    camera_q: Query<(&Camera, &GlobalTransform), With<Camera2d>>,
-) {
-    let (camera, camera_transform) = camera_q.single();
 
-    cursor_history.prev_position = cursor_history.curr_position;
-
-    if mouse.just_pressed(MouseButton::Middle) {
-        cursor_history.drag_position = cursor_history.curr_position;
-    }
-
-    if let Some(world_position) = window.single().cursor_position()
-        .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor))
-        .map(|ray| ray.origin.truncate())
-    {
-        cursor_history.curr_position = world_position;
-    }
-
-    if mouse.just_released(MouseButton::Left) {
-        cursor_history.latest_press_entity = None;
-    }
-}
 
 fn graph_pan(
     mut query: Query<&mut Transform, With<Camera2d>>,
