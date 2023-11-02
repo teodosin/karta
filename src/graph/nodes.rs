@@ -87,7 +87,6 @@ fn handle_node_click(
 }
 
 fn handle_node_press(
-    mouse: Res<Input<MouseButton>>,
     mut event: EventReader<NodePressedEvent>,
     mut input_data: ResMut<InputData>,
     nodes: Query<&GraphNode>,
@@ -108,6 +107,7 @@ fn handle_node_press(
                 Ok(node) => {
                     let target_path = node.path.clone();
                     input_data.latest_press_entity = Some(target_path.clone());
+                    input_data.press_is_outline = false;
                     println!("Pressing path: {}", input_data.latest_press_entity.clone().unwrap());
                 },
                 Err(_) => {
@@ -119,6 +119,7 @@ fn handle_node_press(
                 Ok(outline) => {
                     let outline_path = nodes.get(outline.get()).unwrap().path.clone();
                     input_data.latest_press_entity = Some(outline_path.clone());
+                    input_data.press_is_outline = true;
                     //println!("Pressing outline: {}", outline_path);
                 },
                 Err(_) => {

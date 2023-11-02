@@ -5,6 +5,7 @@
 // well together, so it would remove some redundancy in modes. 
 
 use bevy::prelude::*;
+use bevy_mod_picking::prelude::{Pointer, PointerButton};
 
 use crate::{
     graph::{
@@ -43,7 +44,7 @@ fn change_context_path(
         return
     }
 
-    if event.iter().next().unwrap().button != MouseButton::Left {
+    if event.iter().next().unwrap().button != PointerButton::Primary {
         return
     }
 

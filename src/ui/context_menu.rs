@@ -10,6 +10,7 @@ use bevy::{
     }, 
     window::Window
 };
+use bevy_mod_picking::prelude::PointerButton;
 
 use crate::events::nodes::NodeClickEvent;
 
@@ -35,24 +36,27 @@ pub fn despawn_context_menus(
 pub fn spawn_context_menu(
     mut commands: Commands,
     mut mouse_event: EventReader<NodeClickEvent>,
-    mouse: Res<Input<MouseButton>>,
     menus: Query<Entity, With<PopupMenu>>,
     window: Query<&Window>,
 ){
 
     // Despawn any menus already spawned
-    let inputs = [MouseButton::Left, MouseButton::Middle, MouseButton::Right];
-    if mouse.any_pressed(inputs) {
-        for menu in menus.iter() {
-            commands.entity(menu).despawn_recursive();
-        }
-    }
+    let inputs = [PointerButton::Primary, PointerButton::Secondary, PointerButton::Middle];
 
     if mouse_event.is_empty() {
         return
     }
 
-    if mouse_event.iter().next().unwrap().button != MouseButton::Right {
+    let button = mouse_event.iter().next().unwrap().button;
+
+    if inputs.contains(&button) {
+        for menu in menus.iter() {
+            commands.entity(menu).despawn_recursive();
+        }
+    }
+
+
+    if button != PointerButton::Secondary {
         return
     }
 
