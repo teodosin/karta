@@ -2,7 +2,11 @@ pub mod graph_cam;
 pub mod context;
 pub mod nodes;
 pub mod edges;
+pub mod attribute;
 pub mod grid;
+
+mod simulation;
+mod quadtree;
 
 use bevy::prelude::*;
 
@@ -17,6 +21,10 @@ impl Plugin for GraphPlugin {
             .add_plugins(context::ContextPlugin)
             .add_plugins(nodes::NodesPlugin)
             .add_plugins(edges::EdgesPlugin)
+
+            .add_plugins(simulation::GraphSimPlugin)
+
+            .insert_resource(ClearColor(Color::rgb(0.1, 0.1, 0.12)))
 
             .add_systems(Startup, setup_grid)
 

@@ -6,6 +6,7 @@ use bevy_mod_picking::prelude::*;
 
 
 mod vault;
+mod settings;
 
 mod modes;
 mod input;
@@ -34,6 +35,7 @@ pub fn karta_app() {
     // ENVIRONMENT BLOCK
     // The data that needs to remain in memory for the entire duration of the app
     .add_plugins(vault::VaultPlugin)// PreStartup
+    .add_plugins(settings::SettingsPlugin)
     
     // INPUT BLOCK
     // Plugins that handle input and interaction. 
