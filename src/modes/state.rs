@@ -13,7 +13,7 @@ use crate::{
         }
     }, 
     events::nodes::NodeClickEvent,
-    vault::KartaVault
+    vault::KartaVault, input::pointer::InputData
 };
 
 use super::KartaModeState;
@@ -34,7 +34,7 @@ impl Plugin for StatePlugin {
 
 fn change_context_path(
     mut event: EventReader<NodeClickEvent>,
-    input_data: Res<graph_cam::InputData>,
+    input_data: Res<InputData>,
     vault: Res<KartaVault>,
     mut context: ResMut<CurrentContext>,
 ){

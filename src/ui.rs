@@ -55,7 +55,7 @@ impl Plugin for KartaUiPlugin {
             // )
             
             .add_systems(PostUpdate, handle_outline_hover)
-            .add_systems(PostUpdate, outlines_pulse)
+            //.add_systems(PostUpdate, outlines_pulse)
 
             .add_systems(PostUpdate, draw_edges)
 

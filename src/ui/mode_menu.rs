@@ -15,8 +15,9 @@ pub fn create_mode_menu(
     commands.spawn(
         NodeBundle {
             style: Style {
+                position_type: PositionType::Absolute,
                 flex_direction: FlexDirection::Column,
-                width: Val::Px(100.0),
+                width: Val::Px(60.0),
                 align_items: AlignItems::Center,
                 align_self: AlignSelf::Center,
                 justify_content: JustifyContent::Center,
@@ -49,7 +50,7 @@ pub fn create_mode_menu_button<'a>(
     parent.spawn((
         ButtonBundle {
             style: Style {
-                width: Val::Px(100.0),
+                width: Val::Px(60.0),
                 height: Val::Px(30.0),
                 // horizontally center child text
                 justify_content: JustifyContent::Center,

@@ -2,7 +2,8 @@
 
 use bevy::prelude::*;
 
-use crate::graph::{graph_cam::{self, left_click_just_released}, edges::{GraphEdge, create_edge}, context::PathsToEntitiesIndex, nodes::{self, GraphNode}};
+
+use crate::{input::pointer::{left_click_just_released, InputData}, graph::{context::PathsToEntitiesIndex, edges::create_edge, nodes::GraphNode}};
 
 use super::KartaModeState;
 
@@ -26,16 +27,18 @@ impl Plugin for EdgesPlugin {
 }
 
 fn create_edge_from_drag(
-    input_data: Res<graph_cam::InputData>,
+    input_data: Res<InputData>,
     pe_index: Res<PathsToEntitiesIndex>,
     mut commands: Commands,
 ) {
     println!("Creating edge from drag");
 
     if input_data.latest_press_entity.is_none() {
+        println!("No press entity");
         return
     }
     if input_data.latest_hover_entity.is_none() {
+        //println!("No hover entity");
         return
     }
     if input_data.latest_press_entity == input_data.latest_hover_entity {
@@ -56,7 +59,7 @@ fn create_edge_from_drag(
 }
 
 fn draw_edge_preview(
-    input_data: Res<graph_cam::InputData>,
+    mut input_data: ResMut<InputData>,
     _mouse: Res<Input<MouseButton>>,
     nodes: Query<&Transform, With<GraphNode>>,
     pe_index: Res<PathsToEntitiesIndex>,
@@ -64,6 +67,10 @@ fn draw_edge_preview(
 ) {
     if input_data.latest_press_entity.is_none() {
         return
+    }
+
+    if input_data.left_just_released {
+        input_data.latest_press_entity = None;
     }
 
     let cursor = input_data.curr_position;
