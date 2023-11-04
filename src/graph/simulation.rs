@@ -22,7 +22,7 @@ impl Plugin for GraphSimPlugin {
 const FORCE_UPPER_LIMIT: f32 = 50.0;
 const FORCE_LOWER_LIMIT: f32 = 0.5;
 const DAMPING_FACTOR: f32 = 0.95;
-const SIMULATION_STEPS: usize = 1;
+const SIMULATION_STEPS: usize = 8;
 
 fn simulation(
     context: Res<CurrentContext>,
@@ -152,11 +152,11 @@ fn simulation(
             force = force * DAMPING_FACTOR / time.delta().as_millis() as f32;
             
             // Lines for debugging the forces
-            gizmos.line_2d(
-                pos.translation.truncate(), 
-                pos.translation.truncate() + force * 100.0, 
-                Color::RED,
-            );
+            // gizmos.line_2d(
+            //     pos.translation.truncate(), 
+            //     pos.translation.truncate() + force * 100.0, 
+            //     Color::RED,
+            // );
                 
             pos.translation.x += force.x;
             pos.translation.y += force.y;

@@ -12,13 +12,13 @@ use crate::{
 use self::{
     context_menu::popup_menu_button_system, 
     mode_menu::{create_mode_menu, mode_button_system, update_active_mode_highlight}, 
-    nodes::{handle_outline_hover, outlines_pulse}, edges::draw_edges,
+    nodes::{handle_outline_hover, outlines_pulse}, edges::{update_edges},
 };
 
 mod context_menu;
 mod mode_menu;
 pub(crate) mod nodes;
-mod edges;
+pub(crate) mod edges;
 
 pub struct KartaUiPlugin;
 
@@ -57,7 +57,7 @@ impl Plugin for KartaUiPlugin {
             .add_systems(PostUpdate, handle_outline_hover)
             //.add_systems(PostUpdate, outlines_pulse)
 
-            .add_systems(PostUpdate, draw_edges)
+            .add_systems(PostUpdate, update_edges)
 
             
         ;

@@ -36,11 +36,15 @@ impl Default for ViewSettings {
 #[derive(Resource, Debug)]
 pub struct ViewData {
     pub top_z: f32,
+    pub bottom_z: f32,
 }
 
 impl Default for ViewData {
     fn default() -> Self {
-        ViewData { top_z: 0.0 }
+        ViewData { 
+            top_z: 0.0,
+            bottom_z: -1.0,
+        }
     }
 }
 

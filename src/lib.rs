@@ -11,7 +11,6 @@ mod settings;
 mod modes;
 mod input;
 mod actions;
-mod history;
 
 mod events;
 
@@ -46,7 +45,6 @@ pub fn karta_app() {
     // Actions that handle communication between input and the rest of the app.
     // Mostly PreUpdate. 
     .add_plugins(actions::ActionPlugin)
-    .add_plugins(history::HistoryPlugin)
     .add_plugins(events::EventPlugin)
 
     // GRAPH BLOCK

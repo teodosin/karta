@@ -3,9 +3,9 @@ use std::collections::HashMap;
 
 use bevy::prelude::*;
 
-use crate::graph::attribute::Attributes;
+use crate::{graph::attribute::Attributes, ui::edges::add_edge_ui};
 
-use super::{nodes::GraphNode, context::CurrentContext};
+use super::{nodes::GraphNode, context::CurrentContext, graph_cam::ViewData};
 
 pub struct EdgesPlugin;
 
@@ -35,7 +35,8 @@ pub struct GraphEdge {
 pub fn create_edge(
     from: &Entity, 
     to: &Entity, 
-    commands: &mut Commands
+    commands: &mut Commands,
+    view_data: &mut ViewData
 ){
 
     println!("Creating edge from {:?} to {:?}", from, to);
@@ -49,14 +50,20 @@ pub fn create_edge(
         "length".to_string(), Some(210.0),
     );
 
-    commands.spawn((GraphEdge {
-        from: *from,
-        to: *to,
-    },
-    Attributes {
-        attributes: initial_attributes,
-    }),
-);
+    let edge = commands.spawn((
+        GraphEdge {
+            from: *from,
+            to: *to,
+        },
+        Attributes {
+            attributes: initial_attributes,
+        }),
+    ).id();
+    add_edge_ui(
+        commands, 
+        edge,
+        view_data
+    )
 }
 
 pub fn despawn_edges(
