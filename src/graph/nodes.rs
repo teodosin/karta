@@ -25,6 +25,7 @@ impl Plugin for NodesPlugin {
 // Component definitions
 
 // A component to store the data of a NODE
+// The path and name of the node is something that all node types have in common
 #[derive(Component)]
 pub struct GraphNode {
     pub path: String,
@@ -39,7 +40,13 @@ pub struct GraphNodeEdges {
 }
 
 #[derive(Component)]
-pub struct PinnedPosition;
+pub struct PinnedToPosition;
+
+#[derive(Component)]
+pub struct PinnedToPresence;
+
+#[derive(Component)]
+pub struct PinnedToUi;
 
 // ----------------------------------------------------------------
 // Interaction systems
@@ -135,10 +142,10 @@ fn handle_node_press(
 
 
 fn handle_node_hover(
-mut event: EventReader<NodeHoverEvent>,
-mut input_data: ResMut<InputData>,
-nodes: Query<&GraphNode>,
-outlines: Query<&Parent, With<NodeOutline>>,
+    mut event: EventReader<NodeHoverEvent>,
+    mut input_data: ResMut<InputData>,
+    nodes: Query<&GraphNode>,
+    outlines: Query<&Parent, With<NodeOutline>>,
 ){
     if event.is_empty() {
         return

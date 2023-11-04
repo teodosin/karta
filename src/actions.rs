@@ -23,10 +23,10 @@ impl Plugin for ActionPlugin {
 
 // All undoable actions must implement this trait
 pub trait Action: Send + Sync + 'static {
-    fn perform(&mut self, world: &mut World);
+    fn execute(&mut self, world: &mut World);
     fn undo(&mut self, world: &mut World);
     fn redo(&mut self, world:  &mut World){
-        self.perform(world);
+        self.execute(world);
     }
 }
 
@@ -53,7 +53,7 @@ impl ActionManager {
     }
 
     fn perform_action(&mut self, mut action: Box<dyn Action>, world: &mut World) {
-        action.perform(world);
+        action.execute(world);
         self.undo_stack.push(action);
         self.redo_stack.clear();
     }
