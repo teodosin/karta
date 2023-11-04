@@ -43,7 +43,14 @@ pub fn handle_key_input(
     if event.is_empty() {
         return
     }
-    match event.iter().next().unwrap().key_code {
+
+    let ev = event.iter().next().unwrap();
+
+    if ev.state.is_pressed() {
+        return
+    }
+
+    match ev.key_code {
         Some(key) => {
             println!("Key: {:?}", key);
 

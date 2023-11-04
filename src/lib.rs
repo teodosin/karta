@@ -24,7 +24,16 @@ mod ui;
 pub fn karta_app() {
     App::new()
     // PLUGIN BLOCK
-    .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
+    .add_plugins(DefaultPlugins
+        .set(ImagePlugin::default_nearest())
+        .set(WindowPlugin {
+            primary_window: Some(Window {
+                title: "Karta".to_string(),
+                ..default()
+            }),
+            ..default()
+        })
+    )
     .add_plugins(DefaultPickingPlugins
         .build()
         .disable::<DebugPickingPlugin>()

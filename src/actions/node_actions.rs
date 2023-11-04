@@ -10,7 +10,7 @@ pub struct CreateNodeAction {
 }
 
 impl Action for CreateNodeAction {
-    fn perform(&mut self, world: &mut bevy::prelude::World) {
+    fn execute(&mut self, world: &mut bevy::prelude::World) {
         println!("Performing CreateNodeAction");
     }
 

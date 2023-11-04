@@ -6,7 +6,7 @@ use bevy::{prelude::{Query, Transform, With, Without, Vec2, Plugin, App, Update,
 
 use crate::modes::r#move::move_node_selection;
 
-use super::{nodes::{GraphNode, PinnedPosition, GraphNodeEdges}, edges::GraphEdge, attribute::Attributes, context::{Selected, CurrentContext}};
+use super::{nodes::{GraphNode, PinnedToPosition, GraphNodeEdges}, edges::GraphEdge, attribute::Attributes, context::{Selected, CurrentContext}};
 
 pub struct GraphSimPlugin;
 
@@ -30,7 +30,7 @@ fn simulation(
     mut nodes: Query<(Entity, &mut Transform, &GraphNode)>,
     edges: Query<(&GraphEdge, &Attributes)>,
     selected: Query<&Selected, With<GraphNode>>,
-    pinned: Query<&PinnedPosition, With<GraphNode>>,
+    pinned: Query<&PinnedToPosition, With<GraphNode>>,
     mut gizmos: Gizmos,
 ){
     for _ in 0..SIMULATION_STEPS {
