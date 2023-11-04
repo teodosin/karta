@@ -206,7 +206,12 @@ pub fn update_context(
         );
 
         // Spawn an edge from the root node to each item
-        create_edge(&root_node, &node, &mut commands);
+        create_edge(
+            &root_node, 
+            &node, 
+            &mut commands,
+            &mut view_data
+        );
     });
 
     // Print pe_index to see what the hell is going on
