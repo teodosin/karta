@@ -89,7 +89,7 @@ pub fn update_context(
     mut view_data: ResMut<graph_cam::ViewData>,
     mut pe_index: ResMut<PathsToEntitiesIndex>,
 
-    mut nodes: Query<(Entity, &GraphNode)>,
+    mut nodes: Query<(Entity, &GraphDataNode)>,
 ) {
     
     // Handle the path to the desired context

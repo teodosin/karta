@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    graph::{context::{update_context, Selected}, nodes::GraphNode, graph_cam}, 
+    graph::{context::{update_context, Selected}, nodes::GraphDataNode, graph_cam}, 
     events::nodes::MoveNodesEvent, input::pointer::InputData
 };
 
@@ -27,7 +27,7 @@ pub fn move_node_selection(
     mut ev_mouse_drag: EventReader<MoveNodesEvent>,
     mouse: Res<Input<MouseButton>>,
     cursor: Res<InputData>,
-    mut query: Query<(Entity, &GraphNode, &mut Transform), With<Selected>>,
+    mut query: Query<(Entity, &GraphDataNode, &mut Transform), With<Selected>>,
     mut view_data: ResMut<graph_cam::ViewData>,
 ) {
 

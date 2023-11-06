@@ -5,7 +5,7 @@ use bevy::prelude::*;
 
 use crate::{graph::attribute::Attributes, ui::edges::add_edge_ui};
 
-use super::{nodes::GraphNode, context::CurrentContext, graph_cam::ViewData};
+use super::{nodes::GraphDataNode, context::CurrentContext, graph_cam::ViewData};
 
 pub struct EdgesPlugin;
 
@@ -69,7 +69,7 @@ pub fn create_edge(
 pub fn despawn_edges(
     mut commands: Commands,
     mut edges: Query<(Entity, &GraphEdge)>,
-    nodes: Query<&GraphNode>,
+    nodes: Query<&GraphDataNode>,
 ) {
     for (edge_entity, edge_data) in edges.iter_mut() {
         if nodes.get(edge_data.from).is_err() || nodes.get(edge_data.to).is_err() {

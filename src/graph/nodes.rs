@@ -27,7 +27,7 @@ impl Plugin for NodesPlugin {
 // A component to store the data of a NODE
 // The path and name of the node is something that all node types have in common
 #[derive(Component)]
-pub struct GraphNode {
+pub struct GraphDataNode {
     pub path: String,
     pub name: String,
 }
@@ -48,6 +48,11 @@ pub struct PinnedToPresence;
 #[derive(Component)]
 pub struct PinnedToUi;
 
+// ? Should there be a:
+// DataNode Bundle
+// The basic component bundle of every node. This is shared between all of them,
+// regardless of type.
+
 // ----------------------------------------------------------------
 // Interaction systems
 
@@ -56,13 +61,14 @@ fn handle_node_click(
     mouse: Res<Input<MouseButton>>,
     mut event: EventReader<NodeClickEvent>,
     mut input_data: ResMut<InputData>,
-    nodes: Query<&GraphNode>,
+    nodes: Query<&GraphDataNode>,
     outlines: Query<&Parent, With<NodeOutline>>,
 ){
     if event.is_empty(){
         return
     }
 
+    // TODO: Handle multiple events
     match event.iter().next().unwrap().target {
         None => {
             //println!("No event");
@@ -99,7 +105,7 @@ fn handle_node_click(
 fn handle_node_press(
     mut event: EventReader<NodePressedEvent>,
     mut input_data: ResMut<InputData>,
-    nodes: Query<&GraphNode>,
+    nodes: Query<&GraphDataNode>,
     outlines: Query<&Parent, With<NodeOutline>>,
 ){
     if event.is_empty() {
@@ -144,7 +150,7 @@ fn handle_node_press(
 fn handle_node_hover(
     mut event: EventReader<NodeHoverEvent>,
     mut input_data: ResMut<InputData>,
-    nodes: Query<&GraphNode>,
+    nodes: Query<&GraphDataNode>,
     outlines: Query<&Parent, With<NodeOutline>>,
 ){
     if event.is_empty() {
@@ -201,7 +207,7 @@ pub fn spawn_node (
 
 
     let node_entity = commands.spawn((
-        GraphNode {
+        GraphDataNode {
             path: full_path.clone(),
             name: name.clone()
         },
@@ -226,7 +232,7 @@ pub fn spawn_node (
 
 fn despawn_nodes(
     mut commands: Commands,
-    mut nodes: Query<(Entity, &GraphNode), With<ToBeDespawned>>,
+    mut nodes: Query<(Entity, &GraphDataNode), With<ToBeDespawned>>,
     mut pe_index: ResMut<PathsToEntitiesIndex>,
 ){
     for (entity, node) in nodes.iter_mut() {
