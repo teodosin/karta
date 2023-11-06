@@ -10,8 +10,6 @@ pub struct InputPlugin;
 impl Plugin for InputPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_systems(PreStartup, keymap::setup_input_map)
-
             .insert_resource(InputData::default())
             .insert_resource(keymap::KeyMap::default())
             
