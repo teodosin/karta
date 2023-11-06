@@ -24,6 +24,8 @@ impl Plugin for GraphPlugin {
             .add_plugins(nodes::NodesPlugin)
             .add_plugins(edges::EdgesPlugin)
 
+            .add_plugins(node_types::NodeTypesPlugin)
+
             .add_plugins(simulation::GraphSimPlugin)
 
             .insert_resource(ClearColor(Color::rgb(0.1, 0.1, 0.12)))

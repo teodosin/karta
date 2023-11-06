@@ -1,4 +1,4 @@
-use bevy::{prelude::{Vec2, Resource, ResMut, Input, Res, MouseButton, Query, Camera, GlobalTransform, With, Camera2d, info}, window::Window};
+use bevy::{prelude::{Vec2, Resource, ResMut, Input, Res, MouseButton, Query, Camera, GlobalTransform, With, Camera2d, info}, window::Window, render::view::window};
 
 
 
@@ -55,12 +55,21 @@ pub fn update_cursor_info(
         cursor_history.drag_position = cursor_history.curr_position;
     }
 
-    if let Some(world_position) = window.single().cursor_position()
+    let window = window.iter().next();
+
+    let window = match window.iter().next() {
+        Some(window) => window,
+        None => return
+    };
+
+    if let Some(world_position) = window.cursor_position()
         .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor))
         .map(|ray| ray.origin.truncate())
     {
         cursor_history.curr_position = world_position;
     }
+
+
 
     if mouse.just_released(MouseButton::Left) {
         //cursor_history.latest_press_entity = None;
