@@ -6,7 +6,7 @@ use bevy::{prelude::{Query, Transform, With, Without, Vec2, Plugin, App, Update,
 
 use crate::modes::r#move::move_node_selection;
 
-use super::{nodes::{GraphNode, PinnedToPosition, GraphNodeEdges}, edges::GraphEdge, attribute::Attributes, context::{Selected, CurrentContext}};
+use super::{nodes::{GraphDataNode, PinnedToPosition, GraphNodeEdges}, edges::GraphEdge, attribute::Attributes, context::{Selected, CurrentContext}};
 
 pub struct GraphSimPlugin;
 
@@ -24,13 +24,23 @@ const FORCE_LOWER_LIMIT: f32 = 0.5;
 const DAMPING_FACTOR: f32 = 0.95;
 const SIMULATION_STEPS: usize = 8;
 
+// Should the simulation settings be a part of the sim root node?
+// #[derive(Debug, Resource)]
+// pub struct GraphSimSettings {
+//     pub force_upper_limit: f32,
+//     pub force_lower_limit: f32,
+//     pub damping_factor: f32,
+//     pub simulation_steps: usize,
+// }
+
+
 fn simulation(
     context: Res<CurrentContext>,
     time: Res<Time>,
-    mut nodes: Query<(Entity, &mut Transform, &GraphNode)>,
+    mut nodes: Query<(Entity, &mut Transform, &GraphDataNode)>,
     edges: Query<(&GraphEdge, &Attributes)>,
-    selected: Query<&Selected, With<GraphNode>>,
-    pinned: Query<&PinnedToPosition, With<GraphNode>>,
+    selected: Query<&Selected, With<GraphDataNode>>,
+    pinned: Query<&PinnedToPosition, With<GraphDataNode>>,
     mut gizmos: Gizmos,
 ){
     for _ in 0..SIMULATION_STEPS {

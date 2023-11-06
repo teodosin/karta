@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use bevy_prototype_lyon::{shapes, prelude::{Fill, ShapeBundle, GeometryBuilder, Path, Stroke}};
 
-use crate::graph::{edges::GraphEdge, nodes::GraphNode, graph_cam::ViewData};
+use crate::graph::{edges::GraphEdge, nodes::GraphDataNode, graph_cam::ViewData};
 
 pub fn add_edge_ui(
     commands: &mut Commands,
@@ -34,7 +34,7 @@ pub fn add_edge_ui(
 pub fn update_edges(
     mut commands: Commands,
     mut edges: Query<(Entity, &GraphEdge, &mut Path)>,
-    nodes: Query<&Transform, With<GraphNode>>,
+    nodes: Query<&Transform, With<GraphDataNode>>,
 ){
     for (edge, data, mut path) in edges.iter_mut() {
         let start = match nodes.get(data.from) {
@@ -65,7 +65,7 @@ pub fn update_edges(
 pub fn _draw_edges(
     mut commands: Commands,
     edges: Query<(Entity, &GraphEdge)>,
-    nodes: Query<&Transform, With<GraphNode>>,
+    nodes: Query<&Transform, With<GraphDataNode>>,
     mut gizmos: Gizmos,
 ) {
     for (edge_entity, edge_data) in edges.iter() {
