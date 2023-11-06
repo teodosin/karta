@@ -1,4 +1,3 @@
-//
 
 use bevy::{prelude::{EventReader, ResMut, Res, Resource, KeyCode}, input::keyboard::KeyboardInput, utils::HashMap, time::Time};
 
@@ -10,9 +9,20 @@ pub fn setup_input_map(){
     println!("Setting up input map");
 }
 
+// Keymap for Karta. 
+// ------------------------------------------------------------------
+
 #[derive(Resource)]
 pub struct KeyMap {
     key_action_pairs: HashMap<KeyCode, ActionFactory>,
+}
+
+// We have to support combinations of keys. Ctrl + N for example.
+// Also combinations of keys and mouse buttons. Ctrl + Left Click for example.
+// Possibly even arbitrary combinations of keys, mouse buttons and mouse positions.
+// That's crazy though. Let's start with just keys.
+struct KeyChord {
+    keys: Vec<KeyCode>,
 }
 
 impl KeyMap {

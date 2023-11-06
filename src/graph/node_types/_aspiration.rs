@@ -6,6 +6,11 @@
 
 // Some nodes have inputs. 
 
+// Some nodes, which I am calling "operators", may need caches to prevent unnecessary 
+// recomputation. The node always tries to return the cache first, but is able to 
+// recompute the value if the cache is not available. It will somehow know if the
+// cache is valid or not. 
+
 
 
 // Outstanding questions:
@@ -33,7 +38,10 @@ fn ExampleNode (
 
 // Trait implementation variant
 // ----------------------------------------------------------------
-// The node is defined as a trait implementation.
+// The node is defined as a trait implementation. 
+// This potentially allows for the ability to also change the visible ui of the node
+// type, more easily than if the node was defined as a function. At least that is my
+// current intuition on that. 
 
 pub trait Node {
     fn execute(&self.cache: T , input: &Input) -> Output;
