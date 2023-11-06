@@ -2,8 +2,6 @@
 
 use bevy::prelude::{Component, Plugin, App, Update};
 
-use self::forces::{edge_spring_constraints, repulsion_constraints};
-
 mod file_types;
 mod filters;
 mod forces;

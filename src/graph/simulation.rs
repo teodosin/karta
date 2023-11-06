@@ -53,8 +53,11 @@ fn apply_forces(
     mut nodes: Query<(Entity, &GraphViewNode, &mut Transform, &mut Velocity2D)>,
     selected: Query<&Selected, With<GraphViewNode>>,
     pinned: Query<&PinnedToPosition, With<GraphViewNode>>,
+    mut gizmos: Gizmos,
 ) {
     //for step in 0..sim_settings.simulation_steps {
+        println!("Nodes in apply force query: {}", nodes.iter().count());
+        
         for (node, view, mut pos, vel) in nodes.iter_mut() {
             let mut force = vel.velocity;
                 
@@ -74,11 +77,13 @@ fn apply_forces(
             force = force * DAMPING_FACTOR / time.delta().as_millis() as f32;
             
             // Lines for debugging the forces
-            // gizmos.line_2d(
-            //     pos.translation.truncate(), 
-            //     pos.translation.truncate() + force * 100.0, 
-            //     Color::RED,
-            // );
+            gizmos.line_2d(
+                pos.translation.truncate(), 
+                pos.translation.truncate() + force * 100.0, 
+                Color::RED,
+            );
+
+            println!("Applying force: {:?}", force);
                 
             pos.translation.x += force.x;
             pos.translation.y += force.y;
