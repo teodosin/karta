@@ -19,6 +19,7 @@ impl Plugin for ForceNodesPlugin {
     fn build(&self, app: &mut App) {
         app
             .add_systems(Update, (
+                // TODO: Refactor these systems to not depend on a fixed order
                 repulsion_constraints,
                 edge_spring_constraints,
             ).chain())
