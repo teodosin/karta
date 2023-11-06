@@ -1,6 +1,25 @@
 // 
 
-use bevy::prelude::Component;
+use bevy::prelude::{Component, Plugin, App, Update};
+
+use self::forces::{edge_spring_constraints, repulsion_constraints};
+
+mod file_types;
+mod filters;
+mod forces;
+mod operators;
+mod panels;
+mod query;
+
+pub struct NodeTypesPlugin;
+
+impl Plugin for NodeTypesPlugin {
+    fn build(&self, app: &mut App) {
+        app
+            .add_plugins(forces::ForceNodesPlugin)
+        ;
+    }
+}
 
 trait Node {
     // Path and node are stored in the GraphNode, right?

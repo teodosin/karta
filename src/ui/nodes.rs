@@ -33,6 +33,14 @@ pub struct Velocity2D {
     pub velocity: Vec2,
 }
 
+impl Default for Velocity2D {
+    fn default() -> Self {
+        Velocity2D {
+            velocity: Vec2::new(0.0, 0.0),
+        }
+    }
+}
+
 // I considered making bundles to store all the default component
 // combinations and values and then just spawn those bundles, but
 // I couldn't get it to work just yet. MaterialMesh2dBundle is the
@@ -107,6 +115,7 @@ pub fn add_node_ui(
     //let node_ui = commands.spawn(
     commands.entity(entity).insert((
         GraphViewNode,
+        Velocity2D::default(),
         MaterialMesh2dBundle {
             mesh: meshes.add(shape::Circle::new(25.).into()).into(),
             material: materials.add(ColorMaterial::from(Color::rgb(0.3, 0.0, 0.0))),
