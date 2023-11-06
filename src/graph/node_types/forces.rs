@@ -18,8 +18,11 @@ pub struct ForceNodesPlugin;
 impl Plugin for ForceNodesPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_systems(Update, edge_spring_constraints)
-            .add_systems(Update, repulsion_constraints)
+            .add_systems(Update, (
+                repulsion_constraints,
+                edge_spring_constraints,
+            ).chain())
+            //.add_systems(Update, repulsion_constraints)
         ;
     }
 }
