@@ -99,7 +99,11 @@ pub fn edge_spring_constraints (
             
         match nodes.get_mut(edge.from){
             Ok(mut node) => {
-                
+
+                println!("Force to FROM: {:?}", diff / dist * attractive_force);
+                println!("Attractive force FROM: {}", attractive_force);
+                println!("Edges length FROM: {}", edges.iter().len());
+
                 node.3.velocity -= diff / dist * attractive_force;
                 
             },
@@ -108,6 +112,12 @@ pub fn edge_spring_constraints (
         
         match nodes.get_mut(edge.to){
             Ok(mut node) => {
+
+                println!("Force to TO: {:?}", diff / dist * attractive_force);
+                println!("Attractive force TO: {}", attractive_force);
+                println!("Edges length TO: {}", edges.iter().len());
+
+
                 
                 node.3.velocity += diff / dist * attractive_force;
                 
