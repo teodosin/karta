@@ -50,9 +50,10 @@ impl Default for GraphSimSettings {
 fn apply_forces(
     sim_settings: Res<GraphSimSettings>,
     time: Res<Time>,
-    mut nodes: Query<(Entity, &GraphViewNode, &mut Transform, &mut Velocity2D)>,
-    selected: Query<&Selected, With<GraphViewNode>>,
-    pinned: Query<&PinnedToPosition, With<GraphViewNode>>,
+    mut nodes: Query<
+        (Entity, &GraphViewNode, &mut Transform, &mut Velocity2D), 
+        (Without<PinnedToPosition>, Without<Selected>)
+    >,
     mut gizmos: Gizmos,
 ) {
     //for step in 0..sim_settings.simulation_steps {
@@ -63,11 +64,6 @@ fn apply_forces(
                 
             if force.length() < sim_settings.force_lower_limit {
                 continue
-            }
-
-            match selected.get(node){
-                Ok(_) => continue,
-                Err(_) => (),
             }
 
             if force.length() > sim_settings.force_upper_limit {
@@ -90,3 +86,4 @@ fn apply_forces(
         }
     //}
 }
+

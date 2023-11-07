@@ -12,7 +12,7 @@ use crate::{
 use self::{
     context_menu::{popup_menu_button_system, spawn_context_menu}, 
     mode_menu::{create_mode_menu, mode_button_system, update_active_mode_highlight}, 
-    nodes::{handle_outline_hover, outlines_pulse, GraphViewNode}, edges::{update_edges},
+    nodes::{handle_outline_hover, outlines_pulse, GraphViewNode, visualise_pinned_position}, edges::{update_edges},
 };
 
 // Building blocks of specific components
@@ -67,6 +67,8 @@ impl Plugin for KartaUiPlugin {
 
             .add_systems(PostUpdate, update_edges)
 
+            // Debug visualizations
+            .add_systems(PostUpdate, visualise_pinned_position)
             .add_systems(Update, point_to_root_if_offscreen)
 
             
@@ -171,19 +173,14 @@ fn point_to_root_if_offscreen(
     query: Query<(Entity, &GlobalTransform), With<ContextRoot>>,
     cameras: Query<(&GlobalTransform, &VisibleEntities), With<GraphCamera>>,
 ){
-    println!("Running point_to_root_if_offscreen");
     for (campos, entities) in cameras.iter() {
-        println!("Found camera");
         for (node, nodepos) in query.iter() {
-            println!("Found root");
 
             // Check if the entity is within the camera's view bounds
             if entities.entities.contains(&node)
             {
-                println!("Root is on screen");
                 continue;
             } else {
-                println!("Root is offscreen");
                 // Find center of screen
 
                 gizmos.line_2d(
