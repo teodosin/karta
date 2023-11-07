@@ -133,7 +133,7 @@ pub fn repulsion_constraints (
             // distance between the two positions
             let dist = diff.length();
             
-            let repulsive_force = 20000.0 / dist.powf(1.85);
+            let repulsive_force = 20000.0 / dist.powf(1.25);
 
             *forces.entry(node_a).or_insert(Vec2::ZERO) += diff / dist * repulsive_force;
             *forces.entry(node_b).or_insert(Vec2::ZERO) -= diff / dist * repulsive_force;
