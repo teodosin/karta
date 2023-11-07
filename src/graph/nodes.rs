@@ -1,10 +1,10 @@
 //Code pertaining to the graph nodes
 
-use bevy::prelude::*;
+use bevy::{prelude::*, input::keyboard::KeyboardInput};
 
-use super::{graph_cam, context::{PathsToEntitiesIndex, ToBeDespawned}};
+use super::{graph_cam, context::{PathsToEntitiesIndex, ToBeDespawned, Selected}};
 
-use crate::{events::nodes::*, ui::nodes::NodeOutline, input::pointer::InputData};
+use crate::{events::nodes::*, ui::nodes::{NodeOutline, GraphViewNode}, input::pointer::InputData};
 use crate::ui::nodes::add_node_ui;
 
 pub struct NodesPlugin;
@@ -61,14 +61,28 @@ pub struct PinnedToUi;
 
 
 fn handle_node_click(
+    mut commands: Commands,
     mouse: Res<Input<MouseButton>>,
+    mut keys: EventReader<KeyboardInput>,
     mut event: EventReader<NodeClickEvent>,
     mut input_data: ResMut<InputData>,
-    nodes: Query<&GraphDataNode>,
+    nodes: Query<(Entity, &GraphDataNode)>,
+    selection: Query<Entity, (With<GraphViewNode>, With<Selected>)>,
     outlines: Query<&Parent, With<NodeOutline>>,
 ){
     if event.is_empty(){
         return
+    }
+
+    if !keys.iter().any(
+        |k| k.key_code == Some(KeyCode::ShiftLeft) 
+        || k.key_code == Some(KeyCode::ShiftRight)
+    ) //&& !mouse.pressed(MouseButton::Right) 
+    {
+        println!("Clearing selection");
+        for node in selection.iter() {
+            commands.entity(node).remove::<Selected>();
+        }
     }
 
     // TODO: Handle multiple events
@@ -82,8 +96,9 @@ fn handle_node_click(
             
             match nodes.get(target){
                 Ok(node) => {
-                    let target_path = node.path.clone();
+                    let target_path = node.1.path.clone();
                     input_data.latest_click_entity = Some(target_path.clone());
+                    commands.entity(node.0).insert(Selected);
                     //println!("Clicking path: {}", target_path);
                 },
                 Err(_) => {
@@ -93,7 +108,7 @@ fn handle_node_click(
 
             match outlines.get(target){
                 Ok(outline) => {
-                    let outline_path = nodes.get(outline.get()).unwrap().path.clone();
+                    let outline_path = nodes.get(outline.get()).unwrap().1.path.clone();
                     input_data.latest_click_entity = Some(outline_path.clone());
                     //println!("Clicking outline: {}", outline_path);
                 },

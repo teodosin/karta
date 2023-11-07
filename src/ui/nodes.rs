@@ -4,7 +4,7 @@ use bevy_prototype_lyon::{shapes, prelude::{GeometryBuilder, ShapeBundle, Fill, 
 use rand::Rng;
 
 use crate::{
-    graph::{nodes::GraphDataNode, graph_cam::ViewData, context::Selected}, 
+    graph::{nodes::{GraphDataNode, PinnedToPosition}, graph_cam::ViewData, context::Selected}, 
     events::nodes::{MoveNodesEvent, NodeClickEvent, NodePressedEvent, NodeHoverEvent}
 };
 
@@ -132,16 +132,16 @@ pub fn add_node_ui(
         On::<Pointer<Drag>>::send_event::<MoveNodesEvent>(),
         // On::<Pointer<Drag>>::run(move_node_selection), // What to do with this?
         On::<Pointer<Click>>::send_event::<NodeClickEvent>(),
+        //On::<Pointer<Down>>::target_insert(Selected),
         On::<Pointer<Down>>::send_event::<NodePressedEvent>(),
         On::<Pointer<Over>>::send_event::<NodeHoverEvent>(),
 
         On::<Pointer<DragStart>>::target_insert(Selected),
-        On::<Pointer<DragEnd>>::target_remove::<Selected>(),
+        //On::<Pointer<DragEnd>>::target_remove::<Selected>(),
         On::<Pointer<Deselect>>::target_remove::<Selected>(),
     ));
     
     // NAME LABEL
-    // ----------------------------------------------------------------
     // This is the text label that will be attached to the node.
     // It will be spawned as a child of the node entity.
 
@@ -206,6 +206,32 @@ pub fn add_node_ui(
     
 }
 
+pub fn handle_outline_hover(
+    // ev_spawn: EventReader<Node>,
+    nodes: Query<&Transform, With<GraphDataNode>>,
+    
+    mut commands: Commands,
+){
+    for pos in nodes.iter(){
+
+    }
+}
+
+// Debug visualisers
+// ----------------------------------------------------------------
+pub fn visualise_pinned_position (
+    mut gizmos: Gizmos,
+    pinned: Query<&Transform, With<PinnedToPosition>>,
+) {
+    for pos in pinned.iter() {
+        gizmos.circle_2d(
+            pos.translation.truncate(),
+            5.0,
+            Color::rgb(0.1, 0.1, 0.9),
+        );
+    }
+}
+
 pub fn outlines_pulse(
     time: Res<Time>,
     mut outlines: Query<&mut Stroke, With<NodeOutline>>,
@@ -218,13 +244,3 @@ pub fn outlines_pulse(
 
 
                     
-pub fn handle_outline_hover(
-    // ev_spawn: EventReader<Node>,
-    nodes: Query<&Transform, With<GraphDataNode>>,
-    
-    mut commands: Commands,
-){
-    for pos in nodes.iter(){
-
-    }
-}
