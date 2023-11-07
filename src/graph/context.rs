@@ -76,6 +76,7 @@ fn initial_context(
 }
 
 // Big monolith function
+// --------------------------------------------------------------------------------
 pub fn update_context(
     input_data: Res<InputData>,
 
@@ -91,7 +92,18 @@ pub fn update_context(
 
     mut nodes: Query<(Entity, &GraphDataNode)>,
 ) {
-    
+    // Handle previous context
+    //----------------------------------------
+    let previous_root = pe_index.0.get(&context.get_current_context_path());
+    match previous_root {
+        Some(entity) => {
+            //println!("Previous root: {:?}", entity);
+            commands.entity(*entity).remove::<ContextRoot>();
+        },
+        None => (),
+    }    
+
+
     // Handle the path to the desired context
     let path: String = input_data.latest_click_entity.clone()
     .unwrap_or(context.get_current_context_path());
@@ -164,6 +176,8 @@ pub fn update_context(
             )
         }
     };
+    commands.entity(root_node).insert(ContextRoot);
+
 
     // Don't despawn the parent of the root
     let root_parent_path = path
@@ -171,16 +185,53 @@ pub fn update_context(
         .last()
         .unwrap(), "");
     let root_parent_path = &root_parent_path[0..&root_parent_path.len()-1].to_string();
-    let root_parent = pe_index.0.get(root_parent_path);
-    println!("Root parent: {:?}", root_parent_path);
-    match root_parent {
+
+    // Spawn parent if it doesn't exist
+    // AND if we are not already at the root
+    let mut parent_node = Option::<Entity>::None;
+
+    parent_node = match pe_index.0.get(root_parent_path) {
         Some(entity) => {
+            println!("Parent node already exists");
             commands.entity(*entity).remove::<ToBeDespawned>();
+            Some(*entity)
         },
         None => {
-            println!("Root parent doesn't exist");
+            if root_parent_path.contains(&vault.get_root_path()){
+                println!("Parent node doesn't exist, spawning");
+                let parent_name = root_parent_path.split("/").last().unwrap().to_string();
+                let parent_path = root_parent_path.replace(&parent_name, "");
+                let parent_path = &parent_path[0..&parent_path.len()-1].to_string();
+                println!("Parent Path: {}, Parent Name: {}", parent_path, parent_name);
+                Some(spawn_node(
+                    &mut commands, 
+                    &parent_path, 
+                    &parent_name,
+                    &mut meshes, 
+                    &mut materials, 
+                    &mut view_data,
+                    &mut pe_index,
+                ))
+            } else {
+                println!("Current context is vault root, not spawning parent");
+                None
+            }
         }
+    };
+
+    // Add an edge from the parent to the root, if the parent exists
+    match parent_node {
+        Some(entity) => {
+            create_edge(
+                &entity, 
+                &root_node, 
+                &mut commands,
+                &mut view_data
+            );
+        },
+        None => (),
     }
+    
     
     file_names.iter().for_each(|name| {
 

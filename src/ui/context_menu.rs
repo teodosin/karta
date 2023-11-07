@@ -14,9 +14,12 @@ use bevy_mod_picking::prelude::PointerButton;
 
 use crate::events::nodes::NodeClickEvent;
 
+use super::modal::*;
 
-#[derive(Component)]
-pub struct PopupMenu;
+enum ContextMenuButtons {
+    Pin,
+    GoToContext,
+}
 
 #[derive(Component)]
 pub struct PopupMenuButton;
@@ -24,7 +27,7 @@ pub struct PopupMenuButton;
 pub fn despawn_context_menus(
     mut commands: Commands,
     mouse: Res<Input<MouseButton>>,
-    menus: Query<Entity, With<PopupMenu>>,
+    menus: Query<Entity, With<Modal>>,
 ) {
     if mouse.is_changed() {
         for menu in menus.iter() {
@@ -36,58 +39,43 @@ pub fn despawn_context_menus(
 pub fn spawn_context_menu(
     mut commands: Commands,
     mut mouse_event: EventReader<NodeClickEvent>,
-    menus: Query<Entity, With<PopupMenu>>,
+    menus: Query<(Entity, &ModalGroup), With<Modal>>,
     window: Query<&Window>,
 ){
 
-    // Despawn any menus already spawned
     let inputs = [PointerButton::Primary, PointerButton::Secondary, PointerButton::Middle];
-
+    
     if mouse_event.is_empty() {
         return
     }
-
+    
     let button = mouse_event.iter().next().unwrap().button;
-
-    if inputs.contains(&button) {
-        for menu in menus.iter() {
-            commands.entity(menu).despawn_recursive();
-        }
-    }
-
-
+    
     if button != PointerButton::Secondary {
         return
     }
 
     println!("Spawning context menu");
 
+    // TODO: Handle multiple windows
     let window = window.single();
 
     let position: Vec2 = window.cursor_position().unwrap();
 
-    commands.spawn((
-        NodeBundle {
-            style: Style {
-                position_type: PositionType::Absolute,
-                left: Val::Px(position.x),
-                top: Val::Px(position.y),
-                width: Val::Px(100.0),
-                height: Val::Px(100.0),
-                
-                ..Default::default()
-            },
-            background_color: BackgroundColor::from(Color::rgb(0.0, 0.0, 0.0)),
-            ..Default::default()
-        },
-        PopupMenu,
-    ))
-    .with_children(
-        |parent| {
-            create_context_menu_button(parent, "Pin".to_string());
-            create_context_menu_button(parent, "Go to Context".to_string());
-        }
+    // Get a modal root
+    let menu_root = spawn_modal_root(
+        &mut commands, 
+        menus,
+        ModalGroup::Context,
+        position,
     );
+
+    let pin_button = create_context_menu_button(&mut commands, "Pin".to_string());
+    let move_to_context_button = create_context_menu_button(&mut commands, "Go to Context".to_string());
+
+    commands.entity(menu_root).push_children(&[pin_button]);
+    commands.entity(menu_root).push_children(&[move_to_context_button]);
+
 }
 
 const NORMAL_BUTTON: Color = Color::rgb(0.15, 0.15, 0.15);
@@ -95,10 +83,10 @@ const HOVERED_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
 const PRESSED_BUTTON: Color = Color::rgb(0.35, 0.75, 0.35);
 
 fn create_context_menu_button<'a>(
-    parent: &mut ChildBuilder<'_, '_, '_>,
+    commands: &mut Commands,
     action: String,
-) {
-    parent.spawn((
+) -> Entity {
+    let button = commands.spawn((
         ButtonBundle {
             style: Style {
                 width: Val::Px(100.0),
@@ -126,7 +114,9 @@ fn create_context_menu_button<'a>(
                 },
             ),
         ));
-    });
+    }).id();
+
+    button
 }
 
 pub fn popup_menu_button_system(

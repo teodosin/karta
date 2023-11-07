@@ -48,12 +48,16 @@ impl Default for ViewData {
     }
 }
 
+#[derive(Component)]
+pub struct GraphCamera;
+
 
 fn cam_setup(
     mut commands: Commands,
 ){
     use bevy::core_pipeline::clear_color::ClearColorConfig;
     commands.spawn((
+        GraphCamera,
         Camera2dBundle {
             camera_2d: Camera2d {
                 clear_color: ClearColorConfig::None,

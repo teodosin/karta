@@ -1,19 +1,22 @@
 // All that is fixed in place in the foreground
 // Excludes the graph and floating windows(?)
 
-use bevy::prelude::*;
+use bevy::{prelude::*, ui::FocusPolicy, render::view::VisibleEntities};
 
 use bevy_prototype_lyon::prelude::*;
 
 use crate::{
-    graph::context::CurrentContext,
+    graph::{context::CurrentContext, nodes::ContextRoot, graph_cam::GraphCamera},
     events::nodes::*};
 
 use self::{
-    context_menu::popup_menu_button_system, 
+    context_menu::{popup_menu_button_system, spawn_context_menu}, 
     mode_menu::{create_mode_menu, mode_button_system, update_active_mode_highlight}, 
-    nodes::{handle_outline_hover, outlines_pulse}, edges::{update_edges},
+    nodes::{handle_outline_hover, outlines_pulse, GraphViewNode}, edges::{update_edges},
 };
+
+// Building blocks of specific components
+mod modal;
 
 mod context_menu;
 mod mode_menu;
@@ -25,13 +28,18 @@ pub struct KartaUiPlugin;
 impl Plugin for KartaUiPlugin {
     fn build(&self, app: &mut App) {
         app
+            // Plugins
             .add_plugins(ShapePlugin)
 
+            // Resources
             .add_systems(PreStartup, default_font_setup)
             .add_systems(PreUpdate, 
                 default_font_set.run_if(resource_exists::<FontHandle>()))
 
-                
+            // Element Systems
+            .add_systems(Update, modal::modal_position_system.after(spawn_context_menu))
+
+            // Systems
             .add_systems(Startup, gizmo_settings)
             .add_systems(Startup, create_mode_menu)
             .add_systems(Startup, create_context_and_active_bar)
@@ -46,7 +54,7 @@ impl Plugin for KartaUiPlugin {
             .add_systems(Update, context_menu::despawn_context_menus)
             .add_systems(
                 Update, 
-                context_menu::spawn_context_menu.run_if(on_event::<NodeClickEvent>())
+                spawn_context_menu.run_if(on_event::<NodeClickEvent>())
             )
 
             // .add_systems(PostUpdate, add_node_ui
@@ -58,6 +66,8 @@ impl Plugin for KartaUiPlugin {
             //.add_systems(PostUpdate, outlines_pulse)
 
             .add_systems(PostUpdate, update_edges)
+
+            .add_systems(Update, point_to_root_if_offscreen)
 
             
         ;
@@ -71,7 +81,7 @@ fn default_font_set(
 ){
     if let Some(font) = fonts.remove(&font_handle.0) {
         fonts.set_untracked(TextStyle::default().font, font);
-        commands.remove_resource::<FontHandle>();
+        //commands.remove_resource::<FontHandle>();
     }
 }
 
@@ -106,6 +116,7 @@ fn create_context_and_active_bar(
 ){
     commands.spawn(
         NodeBundle {
+            focus_policy: FocusPolicy::Pass,
             style: Style {
                 flex_direction: FlexDirection::Column,
                 width: Val::Px(600.0),
@@ -155,3 +166,32 @@ fn update_context_label(
     }
 }
 
+fn point_to_root_if_offscreen(
+    mut gizmos: Gizmos,
+    query: Query<(Entity, &GlobalTransform), With<ContextRoot>>,
+    cameras: Query<(&GlobalTransform, &VisibleEntities), With<GraphCamera>>,
+){
+    println!("Running point_to_root_if_offscreen");
+    for (campos, entities) in cameras.iter() {
+        println!("Found camera");
+        for (node, nodepos) in query.iter() {
+            println!("Found root");
+
+            // Check if the entity is within the camera's view bounds
+            if entities.entities.contains(&node)
+            {
+                println!("Root is on screen");
+                continue;
+            } else {
+                println!("Root is offscreen");
+                // Find center of screen
+
+                gizmos.line_2d(
+                    campos.translation().truncate(), 
+                    nodepos.translation().truncate(), 
+                    Color::rgb(0.9, 0.9, 0.9),
+                )
+            }
+        }
+    }
+}

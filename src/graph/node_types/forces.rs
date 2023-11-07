@@ -48,7 +48,6 @@ pub struct NodeForce {
 // For now, the attributes that will be read will be hard-coded (k and length).
 // In the future, the resting length and stiffness values will be inputs to the node.
 pub fn edge_spring_constraints (
-    sim_settings: Res<GraphSimSettings>,
     forces: Query<(&GraphViewNode, &mut NodeForce)>,
     mut nodes: Query<(Entity, &GraphViewNode, &Transform, &mut Velocity2D)>,
     edges: Query<(&GraphEdge, &Attributes)>,
@@ -83,31 +82,16 @@ pub fn edge_spring_constraints (
         
         let displacement = dist - len;
         
-        let mut attractive_force = match attr.attributes.get("k") {
+        let attractive_force = match attr.attributes.get("k") {
             Some(k) => match k {
                 Some(k) => *k,
                 None => continue,
             },
             None => continue,
-        } * displacement;
-        
-        
-        if attractive_force.abs() < sim_settings.force_lower_limit {
-            continue
-        }
-        
-        if attractive_force.abs() > sim_settings.force_upper_limit {
-                attractive_force = attractive_force / attractive_force * sim_settings.force_upper_limit;
-        }
-            
+        } * displacement;      
             
         match nodes.get_mut(edge.from){
             Ok(mut node) => {
-
-                println!("Force to FROM: {:?}", diff / dist * attractive_force);
-                println!("Attractive force FROM: {}", attractive_force);
-                println!("Edges length FROM: {}", edges.iter().len());
-
                 node.3.velocity -= diff / dist * attractive_force;
                 
             },
@@ -115,16 +99,8 @@ pub fn edge_spring_constraints (
         }
         
         match nodes.get_mut(edge.to){
-            Ok(mut node) => {
-
-                println!("Force to TO: {:?}", diff / dist * attractive_force);
-                println!("Attractive force TO: {}", attractive_force);
-                println!("Edges length TO: {}", edges.iter().len());
-
-
-                
-                node.3.velocity += diff / dist * attractive_force;
-                
+            Ok(mut node) => {                
+                node.3.velocity += diff / dist * attractive_force;                
             },
             Err(_) => continue,
         }        
@@ -157,7 +133,7 @@ pub fn repulsion_constraints (
             // distance between the two positions
             let dist = diff.length();
             
-            let repulsive_force = 30000.0 / dist.powi(2);
+            let repulsive_force = 20000.0 / dist.powf(1.85);
 
             *forces.entry(node_a).or_insert(Vec2::ZERO) += diff / dist * repulsive_force;
             *forces.entry(node_b).or_insert(Vec2::ZERO) -= diff / dist * repulsive_force;

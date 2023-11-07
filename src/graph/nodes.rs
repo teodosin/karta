@@ -40,6 +40,9 @@ pub struct GraphNodeEdges {
 }
 
 #[derive(Component)]
+pub struct ContextRoot;
+
+#[derive(Component)]
 pub struct PinnedToPosition;
 
 #[derive(Component)]

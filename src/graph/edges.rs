@@ -44,7 +44,7 @@ pub fn create_edge(
     let mut initial_attributes: HashMap<String, Option<f32>> = HashMap::new();
 
     initial_attributes.insert(
-        "k".to_string(), Some(0.2),
+        "k".to_string(), Some(0.85),
     );
     initial_attributes.insert(
         "length".to_string(), Some(210.0),
