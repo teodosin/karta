@@ -49,7 +49,9 @@ impl KartaVault {
     fn new() -> Self {
         let new_vault = KartaVault {
             vault_folder_name: ".kartaVault".to_string(),
-            root: "home/viktor/Pictures".to_string(),
+            // root: "home/viktor/Pictures".to_string(),
+            root: "home/viktor".to_string(),
+
         };
 
         // Check if the folder exists in the root. If not, create it.
@@ -90,8 +92,11 @@ fn use_assets(
 fn load_assets(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
+    vault: Res<KartaVault>,
 ){
-    let context_assets: Handle<ContextAsset> = asset_server.load("/home/viktor/Pictures/.kartaVault/thingy.context");
+    let path = format!("{}/.kartaVault/thingy.context", vault.get_root_path());
+    let context_assets: Handle<ContextAsset> = 
+        asset_server.load(path);
     println!("context_assets: {:?}", context_assets);
 
     commands.insert_resource(ContextAssets {
