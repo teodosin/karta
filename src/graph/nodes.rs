@@ -216,6 +216,7 @@ pub fn spawn_node (
     mut commands: &mut Commands,
     path: &String,
     name: &String,
+    position: Vec2, // For the viewnodes
     mut meshes: &mut ResMut<Assets<Mesh>>,
     mut materials: &mut ResMut<Assets<ColorMaterial>>,
     mut view_data: &mut ResMut<graph_cam::ViewData>,
@@ -234,6 +235,7 @@ pub fn spawn_node (
     add_node_ui(
         &mut commands,
         node_entity,
+        position, 
         full_path.clone(),
         name.to_string(),
         &mut meshes,

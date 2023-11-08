@@ -93,6 +93,7 @@ impl Default for Velocity2D {
 pub fn add_node_ui(
     commands: &mut Commands,
     entity: Entity,
+    position: Vec2,
     path: String,
     name: String,
     meshes: &mut ResMut<Assets<Mesh>>,
@@ -120,8 +121,8 @@ pub fn add_node_ui(
             mesh: meshes.add(shape::Circle::new(25.).into()).into(),
             material: materials.add(ColorMaterial::from(Color::rgb(0.3, 0.0, 0.0))),
             transform: Transform::from_translation(Vec3::new(
-                rng.gen_range(-10.0..10.0),
-                rng.gen_range(-10.0..10.0),
+                position.x + rng.gen_range(-10.0..10.0),
+                position.y + rng.gen_range(-10.0..10.0),
                 view_data.top_z,
             )),
             ..default()

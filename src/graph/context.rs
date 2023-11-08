@@ -90,7 +90,7 @@ pub fn update_context(
     mut view_data: ResMut<graph_cam::ViewData>,
     mut pe_index: ResMut<PathsToEntitiesIndex>,
 
-    mut nodes: Query<(Entity, &GraphDataNode)>,
+    mut nodes: Query<(Entity, &GraphDataNode, &Transform)>,
 ) {
     // Handle previous context
     //----------------------------------------
@@ -148,14 +148,18 @@ pub fn update_context(
     }
 
     // Iterate through existing nodes and mark them for deletion
-    for (entity, _node) in nodes.iter_mut() {
+    for (entity, _node, _pos) in nodes.iter_mut() {
         commands.entity(entity).insert(ToBeDespawned);
     }
+
+    let root_position: Vec2;
 
     // Spawn the context root if it doesn't exist
     let root_node = match pe_index.0.get(&path) {
         Some(entity) => {
             println!("Root node already exists");
+            // Get position of root node
+            root_position = nodes.get(*entity).unwrap().2.translation.truncate();
             commands.entity(*entity).remove::<ToBeDespawned>();
             *entity
         },
@@ -164,11 +168,13 @@ pub fn update_context(
             let root_name = path.split("/").last().unwrap().to_string();
             let root_path = path.replace(&root_name, "");
             let root_path = &root_path[0..&root_path.len()-1].to_string();
+            root_position = Vec2::ZERO;
             println!("Root Path: {}, Root Name: {}", root_path, root_name);
             spawn_node(
                 &mut commands, 
                 &root_path, 
                 &root_name,
+                root_position,
                 &mut meshes, 
                 &mut materials, 
                 &mut view_data,
@@ -177,6 +183,8 @@ pub fn update_context(
         }
     };
     commands.entity(root_node).insert(ContextRoot);
+
+    // Get position 
 
 
     // Don't despawn the parent of the root
@@ -207,6 +215,7 @@ pub fn update_context(
                     &mut commands, 
                     &parent_path, 
                     &parent_name,
+                    root_position,
                     &mut meshes, 
                     &mut materials, 
                     &mut view_data,
@@ -250,6 +259,7 @@ pub fn update_context(
             &mut commands,
             &path,
             name,
+            root_position,
             &mut meshes,
             &mut materials,
             &mut view_data,
