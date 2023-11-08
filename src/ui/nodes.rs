@@ -4,7 +4,7 @@ use bevy_prototype_lyon::{shapes, prelude::{GeometryBuilder, ShapeBundle, Fill, 
 use rand::Rng;
 
 use crate::{
-    graph::{nodes::{GraphDataNode, PinnedToPosition}, graph_cam::ViewData, context::Selected}, 
+    graph::{nodes::{GraphDataNode, PinnedToPosition}, graph_cam::ViewData, context::Selected, node_types::NodeTypes}, 
     events::nodes::{MoveNodesEvent, NodeClickEvent, NodePressedEvent, NodeHoverEvent}
 };
 
@@ -93,6 +93,7 @@ impl Default for Velocity2D {
 pub fn add_node_ui(
     commands: &mut Commands,
     entity: Entity,
+    ntype: NodeTypes,
     position: Vec2,
     path: String,
     name: String,
@@ -113,12 +114,16 @@ pub fn add_node_ui(
     // settings (whether previews are enabled) and the type of the node (whether a
     // preview representation for its type exists)
 
-    //let node_ui = commands.spawn(
+    let radius = match ntype {
+        NodeTypes::FileBase => 25.0,
+        NodeTypes::Folder => 50.0,
+    };
+
     commands.entity(entity).insert((
         GraphViewNode,
         Velocity2D::default(),
         MaterialMesh2dBundle {
-            mesh: meshes.add(shape::Circle::new(25.).into()).into(),
+            mesh: meshes.add(shape::Circle::new(radius).into()).into(),
             material: materials.add(ColorMaterial::from(Color::rgb(0.3, 0.0, 0.0))),
             transform: Transform::from_translation(Vec3::new(
                 position.x + rng.gen_range(-10.0..10.0),
@@ -164,7 +169,7 @@ pub fn add_node_ui(
                 ..default()
             },
             transform: Transform {
-                translation: Vec3::new(35.0, 0.0, 100.1),
+                translation: Vec3::new(radius + 14.0, 0.0, 100.1),
                 ..default()
             },
             text_anchor: bevy::sprite::Anchor::CenterLeft,
@@ -181,7 +186,7 @@ pub fn add_node_ui(
     // type of node it outlines. 
 
     let outline_shape = shapes::Circle {
-        radius: 30.0,
+        radius: radius + 5.0,
         center: Vec2::from((0.0, 0.0)),
     };
 

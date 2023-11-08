@@ -1,5 +1,7 @@
 // 
 
+use std::fs;
+
 use bevy::prelude::{Component, Plugin, App, Update};
 
 mod file_types;
@@ -16,6 +18,32 @@ impl Plugin for NodeTypesPlugin {
         app
             .add_plugins(forces::ForceNodesPlugin)
         ;
+    }
+}
+
+// For now, all node types will be stored in a single enum
+// This will be changed to a more flexible system later
+pub enum NodeTypes {
+    Folder, 
+    FileBase,
+}
+
+// A helper function to get the type based on a node path
+pub fn get_type_from_path(
+    path: &String, 
+) -> Option<NodeTypes> {
+    match fs::metadata(&path) {
+        Ok(metadata) => {
+            if metadata.is_dir() {
+                Some(NodeTypes::Folder)
+            } else {
+                Some(NodeTypes::FileBase)
+            }
+        },
+        Err(_) => {
+            println!("Error: Parent path does not exist");
+            None
+        }
     }
 }
 
