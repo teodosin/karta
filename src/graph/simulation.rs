@@ -39,7 +39,7 @@ pub struct GraphSimSettings {
 impl Default for GraphSimSettings {
     fn default() -> Self {
         GraphSimSettings {
-            force_upper_limit: 50.0,
+            force_upper_limit: 350.0,
             force_lower_limit: 0.5,
             damping_factor: 0.85,
             simulation_steps: 8,
@@ -57,7 +57,7 @@ fn apply_forces(
     mut gizmos: Gizmos,
 ) {
     //for step in 0..sim_settings.simulation_steps {
-        for (node, view, mut pos, mut vel) in nodes.iter_mut() {
+        for (_node, _view, mut pos, mut vel) in nodes.iter_mut() {
 
             let mut force = vel.velocity;
             vel.velocity = Vec2::ZERO;
@@ -70,7 +70,7 @@ fn apply_forces(
                 force = force.normalize() * sim_settings.force_upper_limit;
             }
             
-            force = force * sim_settings.damping_factor / time.delta().as_millis() as f32;
+            force = force * sim_settings.damping_factor * time.delta().as_secs_f32();
             
             // Lines for debugging the forces
             // gizmos.line_2d(
