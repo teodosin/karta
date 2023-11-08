@@ -7,7 +7,7 @@ use bevy_mod_picking::prelude::PointerButton;
 use std::fs;
 
 use crate::{
-    graph::{graph_cam, edges::create_edge}, vault::KartaVault, 
+    graph::{graph_cam, edges::create_edge, node_types::{NodeTypes, get_type_from_path}}, vault::KartaVault, 
     events::nodes::NodeClickEvent, input::pointer::InputData
 };
 
@@ -169,11 +169,13 @@ pub fn update_context(
             let root_path = path.replace(&root_name, "");
             let root_path = &root_path[0..&root_path.len()-1].to_string();
             root_position = Vec2::ZERO;
+            let root_type = get_type_from_path(&root_path).unwrap();
             println!("Root Path: {}, Root Name: {}", root_path, root_name);
             spawn_node(
                 &mut commands, 
                 &root_path, 
                 &root_name,
+                root_type,
                 root_position,
                 &mut meshes, 
                 &mut materials, 
@@ -207,14 +209,21 @@ pub fn update_context(
         None => {
             if root_parent_path.contains(&vault.get_root_path()){
                 println!("Parent node doesn't exist, spawning");
+
                 let parent_name = root_parent_path.split("/").last().unwrap().to_string();
                 let parent_path = root_parent_path.replace(&parent_name, "");
                 let parent_path = &parent_path[0..&parent_path.len()-1].to_string();
+
+                // Check if the parent is a directory or a file
+
+                let parent_type = get_type_from_path(&path).unwrap();
+
                 println!("Parent Path: {}, Parent Name: {}", parent_path, parent_name);
                 Some(spawn_node(
                     &mut commands, 
                     &parent_path, 
                     &parent_name,
+                    parent_type,
                     root_position,
                     &mut meshes, 
                     &mut materials, 
@@ -254,11 +263,22 @@ pub fn update_context(
                 return
         }
 
+        // Get the type of the item
+        let item_type = get_type_from_path(&full_path);
+        let item_type = match item_type {
+            Some(item_type) => item_type,
+            None => {
+                println!("Item path unwrap panic: {}", full_path);
+                return
+            }
+        };
+
         // Spawn a node for each item
         let node = spawn_node(
             &mut commands,
             &path,
             name,
+            item_type,
             root_position,
             &mut meshes,
             &mut materials,

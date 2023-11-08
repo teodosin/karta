@@ -2,7 +2,7 @@
 
 use bevy::{prelude::*, input::keyboard::KeyboardInput};
 
-use super::{graph_cam, context::{PathsToEntitiesIndex, ToBeDespawned, Selected}};
+use super::{graph_cam, context::{PathsToEntitiesIndex, ToBeDespawned, Selected}, node_types::NodeTypes};
 
 use crate::{events::nodes::*, ui::nodes::{NodeOutline, GraphViewNode}, input::pointer::InputData};
 use crate::ui::nodes::add_node_ui;
@@ -30,6 +30,11 @@ impl Plugin for NodesPlugin {
 pub struct GraphDataNode {
     pub path: String,
     pub name: String,
+}
+
+#[derive(Component)]
+pub struct NodeType {
+    pub ntype: NodeTypes,
 }
 
 // A component to store the edge relationships of a node
@@ -216,11 +221,12 @@ pub fn spawn_node (
     mut commands: &mut Commands,
     path: &String,
     name: &String,
+    ntype: NodeTypes,
     position: Vec2, // For the viewnodes
     mut meshes: &mut ResMut<Assets<Mesh>>,
     mut materials: &mut ResMut<Assets<ColorMaterial>>,
     mut view_data: &mut ResMut<graph_cam::ViewData>,
-    mut pe_index: &mut ResMut<PathsToEntitiesIndex>,
+    pe_index: &mut ResMut<PathsToEntitiesIndex>,
 ) -> bevy::prelude::Entity {
     let full_path = format!("{}/{}", path, name);
 
@@ -235,6 +241,7 @@ pub fn spawn_node (
     add_node_ui(
         &mut commands,
         node_entity,
+        ntype,
         position, 
         full_path.clone(),
         name.to_string(),
