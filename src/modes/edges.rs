@@ -4,7 +4,7 @@
 use bevy::{prelude::*, ecs::system::CommandQueue, core_pipeline::core_2d::graph::input};
 
 
-use crate::{input::pointer::{left_click_just_released, InputData}, graph::{context::PathsToEntitiesIndex, edges::create_edge, nodes::GraphDataNode, graph_cam::ViewData}};
+use crate::{input::pointer::{left_click_just_released, InputData}, graph::{context::PathsToEntitiesIndex, edges::create_edge, nodes::GraphDataNode, graph_cam::ViewData}, events::edges::EdgeSpawnedEvent};
 
 use super::KartaModeState;
 
@@ -28,6 +28,7 @@ impl Plugin for EdgesPlugin {
 }
 
 fn create_edge_from_drag(
+    mut event: EventWriter<EdgeSpawnedEvent>,
     input_data: Res<InputData>,
     pe_index: Res<PathsToEntitiesIndex>,
     mut commands: Commands,
@@ -62,6 +63,7 @@ fn create_edge_from_drag(
     println!("Creating edge from {:?} to {:?}", from, to);
 
     create_edge(
+        &mut event,
         from, 
         to, 
         &mut commands,

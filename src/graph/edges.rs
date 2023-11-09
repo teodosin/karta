@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use bevy::prelude::*;
 
-use crate::{graph::attribute::Attributes, ui::edges::add_edge_ui};
+use crate::{graph::attribute::Attributes, ui::edges::add_edge_ui, events::edges::EdgeSpawnedEvent};
 
 use super::{nodes::GraphDataNode, context::CurrentContext, graph_cam::ViewData};
 
@@ -43,6 +43,7 @@ pub enum EdgeTypes {
 // TODO 0.12: Convert to One-Shot System
 // And use EdgeDefaults resource to set the default length
 pub fn create_edge(
+    mut event: &mut EventWriter<EdgeSpawnedEvent>,
     from: &Entity, 
     to: &Entity, 
     commands: &mut Commands,
@@ -69,11 +70,12 @@ pub fn create_edge(
             attributes: initial_attributes,
         }),
     ).id();
-    add_edge_ui(
-        commands, 
-        edge,
-        view_data
-    )
+
+    event.send(EdgeSpawnedEvent {
+        entity: edge,
+        connected_to_focal: true,
+        edge_type: EdgeTypes::Base,
+    });
 }
 
 pub fn despawn_edges(

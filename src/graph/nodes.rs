@@ -66,11 +66,12 @@ pub struct PinnedToUi;
 
 
 fn handle_node_click(
-    mut commands: Commands,
-    mouse: Res<Input<MouseButton>>,
-    mut keys: EventReader<KeyboardInput>,
     mut event: EventReader<NodeClickEvent>,
+    mut keys: EventReader<KeyboardInput>,
+
+    mut commands: Commands,
     mut input_data: ResMut<InputData>,
+
     nodes: Query<(Entity, &GraphDataNode)>,
     selection: Query<Entity, (With<GraphViewNode>, With<Selected>)>,
     outlines: Query<&Parent, With<NodeOutline>>,
@@ -218,14 +219,14 @@ fn handle_node_hover(
 
 
 pub fn spawn_node (
-    mut commands: &mut Commands,
+    event: &mut EventWriter<NodeSpawnedEvent>,
+
+    commands: &mut Commands,
     path: &String,
     name: &String,
     ntype: NodeTypes,
     position: Vec2, // For the viewnodes
-    mut meshes: &mut ResMut<Assets<Mesh>>,
-    mut materials: &mut ResMut<Assets<ColorMaterial>>,
-    mut view_data: &mut ResMut<graph_cam::ViewData>,
+
     pe_index: &mut ResMut<PathsToEntitiesIndex>,
 ) -> bevy::prelude::Entity {
     let full_path = format!("{}/{}", path, name);
@@ -238,17 +239,13 @@ pub fn spawn_node (
         },
     )).id();
 
-    add_node_ui(
-        &mut commands,
-        node_entity,
+    event.send(NodeSpawnedEvent {
+        entity: node_entity,
+        path: path.to_string(),
+        name: name.to_string(),
         ntype,
-        position, 
-        full_path.clone(),
-        name.to_string(),
-        &mut meshes,
-        &mut materials,
-        &mut view_data,
-    );
+        position: position,
+    });
 
     // Update the PathsToEntitiesIndex
     pe_index.0.insert(full_path, node_entity);
