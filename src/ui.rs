@@ -69,7 +69,7 @@ impl Plugin for KartaUiPlugin {
 
             // Debug visualizations
             .add_systems(PostUpdate, visualise_pinned_position)
-            .add_systems(Update, point_to_root_if_offscreen)
+            //.add_systems(Update, point_to_root_if_offscreen)
 
             
         ;

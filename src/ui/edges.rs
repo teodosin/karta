@@ -3,8 +3,10 @@
 use bevy::prelude::*;
 use bevy_prototype_lyon::{shapes, prelude::{Fill, ShapeBundle, GeometryBuilder, Path, Stroke}};
 
-use crate::graph::{edges::GraphEdge, nodes::GraphDataNode, graph_cam::ViewData};
+use crate::{graph::{edges::GraphEdge, nodes::GraphDataNode, graph_cam::ViewData}, settings::theme::EDGE_PARENT_COLOR};
 
+// TODO: Convert to system that processes events instead of having to 
+// be called manually.
 pub fn add_edge_ui(
     commands: &mut Commands,
     edge_entity: Entity,
@@ -13,6 +15,8 @@ pub fn add_edge_ui(
     let line = shapes::Line(
         Vec2::ZERO, Vec2::ZERO
     );
+
+    let edgecol = EDGE_PARENT_COLOR;
 
     commands.entity(edge_entity).insert((
         ShapeBundle {
@@ -23,8 +27,8 @@ pub fn add_edge_ui(
             },
             ..default()
         },
-        Fill::color(Color::ORANGE_RED),
-        Stroke::new(Color::ORANGE_RED, 5.0)
+        //Fill::color(edgecol),
+        Stroke::new(edgecol, 8.0)
     ));
 
     view_data.bottom_z -= 0.001;

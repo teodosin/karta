@@ -30,6 +30,16 @@ pub struct GraphEdge {
     pub to: Entity,
 }
 
+#[derive(Component)]
+pub struct EdgeType {
+    pub etype: EdgeTypes,
+}
+
+pub enum EdgeTypes {
+    Base,
+    Parent,
+}
+
 // TODO 0.12: Convert to One-Shot System
 // And use EdgeDefaults resource to set the default length
 pub fn create_edge(

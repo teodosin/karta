@@ -26,6 +26,7 @@ impl Plugin for NodeTypesPlugin {
 pub enum NodeTypes {
     Folder, 
     FileBase,
+    Image,
 }
 
 // A helper function to get the type based on a node path
