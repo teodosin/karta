@@ -1,6 +1,6 @@
 use bevy::{prelude::*, sprite::{MaterialMesh2dBundle, Material2d}, text::Text2dBounds};
 use bevy_mod_picking::prelude::*;
-use bevy_prototype_lyon::{shapes, prelude::{GeometryBuilder, ShapeBundle, Fill, Stroke, StrokeOptions}, entity};
+use bevy_prototype_lyon::{shapes, prelude::{GeometryBuilder, ShapeBundle, Fill, Stroke, StrokeOptions, Path}, entity};
 use rand::Rng;
 
 use crate::{
@@ -90,6 +90,7 @@ impl Default for Velocity2D {
 // }
 
 // TODO: Convert to One-Shot System
+// Is that even possible? This function requires input parameters. 
 pub fn add_node_ui(
     commands: &mut Commands,
     entity: Entity,
@@ -117,6 +118,7 @@ pub fn add_node_ui(
     let radius = match ntype {
         NodeTypes::FileBase => 25.0,
         NodeTypes::Folder => 50.0,
+        NodeTypes::Image => 70.0,
     };
 
     commands.entity(entity).insert((
@@ -140,7 +142,7 @@ pub fn add_node_ui(
         On::<Pointer<Click>>::send_event::<NodeClickEvent>(),
         //On::<Pointer<Down>>::target_insert(Selected),
         On::<Pointer<Down>>::send_event::<NodePressedEvent>(),
-        On::<Pointer<Over>>::send_event::<NodeHoverEvent>(),
+        //On::<Pointer<Over>>::send_event::<NodeHoverEvent>(),
 
         On::<Pointer<DragStart>>::target_insert(Selected),
         //On::<Pointer<DragEnd>>::target_remove::<Selected>(),
@@ -185,21 +187,42 @@ pub fn add_node_ui(
     // The shape of it is determined by the users view settings as well as the
     // type of node it outlines. 
 
+    let outline_width = 10.0;
+    let outline_width_hovered = 12.0;
+
     let outline_shape = shapes::Circle {
-        radius: radius + 5.0,
+        radius: radius + outline_width / 2.,
         center: Vec2::from((0.0, 0.0)),
     };
+    //let outline_shape_hovered = shapes::Circle {
+    //     radius: radius + outline_width_hovered / 2.,
+    //     center: Vec2::from((0.0, 0.0)),
+    // };
+    let outline_path = GeometryBuilder::build_as(&outline_shape);
+    //let outline_path_hovered = GeometryBuilder::build_as(&outline_shape_hovered);
 
     let node_outline = commands.spawn((
             ShapeBundle {
-                path: GeometryBuilder::build_as(&outline_shape),
+                path: outline_path,
                 ..default()
             },
-            Stroke::new(Color::ORANGE, 10.0),
+            Stroke::new(
+                crate::settings::theme::OUTLINE_BASE_COLOR, 5.0
+            ),
             NodeOutline,
 
             PickableBundle::default(),
             RaycastPickTarget::default(),
+
+            On::<Pointer<Over>>::target_component_mut::<Stroke>(move |over, stroke| {
+                stroke.color = crate::settings::theme::OUTLINE_HOVER_COLOR;
+                stroke.options = StrokeOptions::default().with_line_width(outline_width_hovered);
+            }),
+
+            On::<Pointer<Out>>::target_component_mut::<Stroke>(move |out, stroke| {
+                stroke.color = crate::settings::theme::OUTLINE_BASE_COLOR;
+                stroke.options = StrokeOptions::default().with_line_width(outline_width);
+            }),
     )).id();
     
     commands.entity(entity).push_children(&[node_outline]);
@@ -218,9 +241,7 @@ pub fn handle_outline_hover(
     
     mut commands: Commands,
 ){
-    for pos in nodes.iter(){
-
-    }
+    
 }
 
 // Debug visualisers
