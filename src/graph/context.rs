@@ -8,7 +8,7 @@ use std::fs;
 
 use crate::{
     graph::{graph_cam, edges::create_edge, node_types::{NodeTypes, get_type_from_path}}, vault::KartaVault, 
-    events::nodes::NodeClickEvent, input::pointer::InputData
+    events::{nodes::{NodeClickEvent, NodeSpawnedEvent}, edges::EdgeSpawnedEvent}, input::pointer::InputData
 };
 
 use super::nodes::*;
@@ -78,11 +78,12 @@ fn initial_context(
 // Big monolith function
 // --------------------------------------------------------------------------------
 pub fn update_context(
+    mut node_event: EventWriter<NodeSpawnedEvent>,
+    mut edge_event: EventWriter<EdgeSpawnedEvent>,
+    
     input_data: Res<InputData>,
 
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
 
     vault: Res<KartaVault>,
     context: Res<CurrentContext>,
@@ -172,14 +173,12 @@ pub fn update_context(
             let root_type = get_type_from_path(&root_path).unwrap();
             println!("Root Path: {}, Root Name: {}", root_path, root_name);
             spawn_node(
+                &mut node_event,
                 &mut commands, 
                 &root_path, 
                 &root_name,
                 root_type,
                 root_position,
-                &mut meshes, 
-                &mut materials, 
-                &mut view_data,
                 &mut pe_index,
             )
         }
@@ -220,14 +219,12 @@ pub fn update_context(
 
                 println!("Parent Path: {}, Parent Name: {}", parent_path, parent_name);
                 Some(spawn_node(
+                    &mut node_event,
                     &mut commands, 
                     &parent_path, 
                     &parent_name,
                     parent_type,
                     root_position,
-                    &mut meshes, 
-                    &mut materials, 
-                    &mut view_data,
                     &mut pe_index,
                 ))
             } else {
@@ -241,6 +238,7 @@ pub fn update_context(
     match parent_node {
         Some(entity) => {
             create_edge(
+                &mut edge_event,
                 &entity, 
                 &root_node, 
                 &mut commands,
@@ -275,19 +273,18 @@ pub fn update_context(
 
         // Spawn a node for each item
         let node = spawn_node(
+            &mut node_event,
             &mut commands,
             &path,
             name,
             item_type,
             root_position,
-            &mut meshes,
-            &mut materials,
-            &mut view_data,
             &mut pe_index,
         );
 
         // Spawn an edge from the root node to each item
         create_edge(
+            &mut edge_event,
             &root_node, 
             &node, 
             &mut commands,

@@ -5,8 +5,24 @@ use rand::Rng;
 
 use crate::{
     graph::{nodes::{GraphDataNode, PinnedToPosition}, graph_cam::ViewData, context::Selected, node_types::NodeTypes}, 
-    events::nodes::{MoveNodesEvent, NodeClickEvent, NodePressedEvent, NodeHoverEvent}
+    events::nodes::{MoveNodesEvent, NodeClickEvent, NodePressedEvent, NodeHoverEvent, NodeSpawnedEvent}
 };
+
+pub struct NodesUiPlugin;
+
+impl Plugin for NodesUiPlugin {
+    fn build(&self, app: &mut App) {
+        app
+            .add_systems(PreUpdate, handle_outline_hover)
+
+            .add_systems(PostUpdate, add_node_ui)
+            .add_systems(PostUpdate, visualise_pinned_position)
+
+            // .add_systems(PreUpdate, outlines_pulse)
+            // .add_systems(PreUpdate, visualise_pinned_position)
+        ;
+    }
+}
 
 // Component Definitions
 // ----------------------------------------------------------------
@@ -92,116 +108,107 @@ impl Default for Velocity2D {
 // TODO: Convert to One-Shot System
 // Is that even possible? This function requires input parameters. 
 pub fn add_node_ui(
-    commands: &mut Commands,
-    entity: Entity,
-    ntype: NodeTypes,
-    position: Vec2,
-    path: String,
-    name: String,
-    meshes: &mut ResMut<Assets<Mesh>>,
-    materials: &mut ResMut<Assets<ColorMaterial>>,
-    view_data: &mut ResMut<ViewData>,
+    mut events: EventReader<NodeSpawnedEvent>,
+
+    mut commands: Commands,
+
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    mut view_data: ResMut<ViewData>,
 ){
-    println!("Adding node UI");
-
-    let full_path = format!("{}/{}", path, name);
     
-    // Positions will be random for now
-    let mut rng = rand::thread_rng();
-    
-    // BASE NODE
-    // ----------------------------------------------------------------
-    // This is the main node entity. The type of it depends on the users view
-    // settings (whether previews are enabled) and the type of the node (whether a
-    // preview representation for its type exists)
-
-    let radius = match ntype {
-        NodeTypes::FileBase => 25.0,
-        NodeTypes::Folder => 50.0,
-        NodeTypes::Image => 70.0,
-    };
-
-    commands.entity(entity).insert((
-        GraphViewNode,
-        Velocity2D::default(),
-        MaterialMesh2dBundle {
-            mesh: meshes.add(shape::Circle::new(radius).into()).into(),
-            material: materials.add(ColorMaterial::from(Color::rgb(0.3, 0.0, 0.0))),
-            transform: Transform::from_translation(Vec3::new(
-                position.x + rng.gen_range(-10.0..10.0),
-                position.y + rng.gen_range(-10.0..10.0),
-                view_data.top_z,
-            )),
-            ..default()
-        },
-        PickableBundle::default(),
-        RaycastPickTarget::default(),
+    for ev in events.iter(){
         
-        On::<Pointer<Drag>>::send_event::<MoveNodesEvent>(),
-        // On::<Pointer<Drag>>::run(move_node_selection), // What to do with this?
-        On::<Pointer<Click>>::send_event::<NodeClickEvent>(),
-        On::<Pointer<Down>>::target_insert(Selected),
-        On::<Pointer<Down>>::send_event::<NodePressedEvent>(),
-        On::<Pointer<Over>>::send_event::<NodeHoverEvent>(),
+        // let full_path = format!("{}/{}", ev.path, ev.name);
+        
+        // Positions are slightly randomized to avoid nodes being spawned on top of each other
+        let mut rng = rand::thread_rng();
+        
+        let radius = match ev.ntype {
+            NodeTypes::FileBase => 25.0,
+            NodeTypes::Folder => 50.0,
+            NodeTypes::Image => 70.0,
+        };
 
-        On::<Pointer<DragStart>>::target_insert(Selected),
-        On::<Pointer<DragEnd>>::target_remove::<Selected>(),
-        On::<Pointer<Deselect>>::target_remove::<Selected>(),
-    ));
-    
-    // NAME LABEL
-    // This is the text label that will be attached to the node.
-    // It will be spawned as a child of the node entity.
-
-    let name_label = commands.spawn(
-        Text2dBundle {
-            text: Text {
-                sections: vec![TextSection::new(
-                    name,
-                    TextStyle {
-                        font_size: 20.0,
-                        color: Color::WHITE,
-                        ..default()
-                    },
-                )],
+        commands.entity(ev.entity).insert((
+            GraphViewNode,
+            Velocity2D::default(),
+            MaterialMesh2dBundle {
+                mesh: meshes.add(shape::Circle::new(radius).into()).into(),
+                material: materials.add(ColorMaterial::from(Color::rgb(0.3, 0.0, 0.0))),
+                transform: Transform::from_translation(Vec3::new(
+                    ev.position.x + rng.gen_range(-10.0..10.0),
+                    ev.position.y + rng.gen_range(-10.0..10.0),
+                    view_data.top_z,
+                )),
                 ..default()
             },
-            text_2d_bounds: Text2dBounds {
-                size: Vec2::new(400.0, 200.0),
+            PickableBundle::default(),
+            RaycastPickTarget::default(),
+            
+            On::<Pointer<Drag>>::send_event::<MoveNodesEvent>(),
+            On::<Pointer<Click>>::send_event::<NodeClickEvent>(),
+            On::<Pointer<Down>>::send_event::<NodePressedEvent>(),
+            On::<Pointer<Over>>::send_event::<NodeHoverEvent>(),
+            
+            On::<Pointer<DragStart>>::target_insert(Selected),
+            On::<Pointer<DragEnd>>::target_remove::<Selected>(),
+            On::<Pointer<Deselect>>::target_remove::<Selected>(),
+        ));
+        
+        // NAME LABEL
+        // This is the text label that will be attached to the node.
+        // It will be spawned as a child of the node entity.
+        
+        let name_label = commands.spawn(
+            Text2dBundle {
+                text: Text {
+                    sections: vec![TextSection::new(
+                        &ev.name,
+                        TextStyle {
+                            font_size: 20.0,
+                            color: Color::WHITE,
+                            ..default()
+                        },
+                    )],
+                    ..default()
+                },
+                text_2d_bounds: Text2dBounds {
+                    size: Vec2::new(400.0, 200.0),
+                    ..default()
+                },
+                transform: Transform {
+                    translation: Vec3::new(radius + 14.0, 0.0, 100.1),
+                    ..default()
+                },
+                text_anchor: bevy::sprite::Anchor::CenterLeft,
                 ..default()
-            },
-            transform: Transform {
-                translation: Vec3::new(radius + 14.0, 0.0, 100.1),
-                ..default()
-            },
-            text_anchor: bevy::sprite::Anchor::CenterLeft,
-            ..default()
-        }
-    ).id();
-    
-    commands.entity(entity).push_children(&[name_label]);
-
-    // OUTLINE
-    // ----------------------------------------------------------------
-    // This is the hoverable, interactable outline from which edges are created.
-    // The shape of it is determined by the users view settings as well as the
-    // type of node it outlines. 
-
-    let outline_width = 10.0;
-    let outline_width_hovered = 12.0;
-
-    let outline_shape = shapes::Circle {
-        radius: radius + outline_width / 2.,
-        center: Vec2::from((0.0, 0.0)),
-    };
-    //let outline_shape_hovered = shapes::Circle {
-    //     radius: radius + outline_width_hovered / 2.,
-    //     center: Vec2::from((0.0, 0.0)),
-    // };
-    let outline_path = GeometryBuilder::build_as(&outline_shape);
-    //let outline_path_hovered = GeometryBuilder::build_as(&outline_shape_hovered);
-
-    let node_outline = commands.spawn((
+            }
+        ).id();
+        
+        commands.entity(ev.entity).push_children(&[name_label]);
+        
+        // OUTLINE
+        // ----------------------------------------------------------------
+        // This is the hoverable, interactable outline from which edges are created.
+        // The shape of it is determined by the users view settings as well as the
+        // type of node it outlines. 
+        
+        let outline_width = 10.0;
+        let outline_width_hovered = 12.0;
+        
+        let outline_shape = shapes::Circle {
+            radius: radius + outline_width / 2.,
+            center: Vec2::from((0.0, 0.0)),
+        };
+        //let outline_shape_hovered = shapes::Circle {
+        //     radius: radius + outline_width_hovered / 2.,
+        //     center: Vec2::from((0.0, 0.0)),
+        // };
+        let outline_path = GeometryBuilder::build_as(&outline_shape);
+        //let outline_path_hovered = GeometryBuilder::build_as(&outline_shape_hovered);
+        
+        let node_outline = commands.spawn((
             ShapeBundle {
                 path: outline_path,
                 ..default()
@@ -210,7 +217,7 @@ pub fn add_node_ui(
                 crate::settings::theme::OUTLINE_BASE_COLOR, 5.0
             ),
             NodeOutline,
-
+            
             PickableBundle::default(),
             RaycastPickTarget::default(),
 
@@ -218,21 +225,18 @@ pub fn add_node_ui(
                 stroke.color = crate::settings::theme::OUTLINE_HOVER_COLOR;
                 stroke.options = StrokeOptions::default().with_line_width(outline_width_hovered);
             }),
-
+            
             On::<Pointer<Out>>::target_component_mut::<Stroke>(move |out, stroke| {
                 stroke.color = crate::settings::theme::OUTLINE_BASE_COLOR;
                 stroke.options = StrokeOptions::default().with_line_width(outline_width);
             }),
-    )).id();
-    
-    commands.entity(entity).push_children(&[node_outline]);
+        )).id();
         
-     
-    
-    
-    // Update the view_data so we can keep track of which zindex is the topmost
-    view_data.top_z += 0.0001;
-    
+        commands.entity(ev.entity).push_children(&[node_outline]);
+        
+        // Update the view_data so we can keep track of which zindex is the topmost
+        view_data.top_z += 0.0001;
+    }
 }
 
 pub fn handle_outline_hover(

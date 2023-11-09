@@ -12,7 +12,7 @@ use crate::{
 use self::{
     context_menu::{popup_menu_button_system, spawn_context_menu}, 
     mode_menu::{create_mode_menu, mode_button_system, update_active_mode_highlight}, 
-    nodes::{handle_outline_hover, outlines_pulse, GraphViewNode, visualise_pinned_position}, edges::{update_edges},
+    nodes::NodesUiPlugin, edges::{update_edges, EdgeUiPlugin},
 };
 
 // Building blocks of specific components
@@ -36,11 +36,15 @@ impl Plugin for KartaUiPlugin {
             .add_systems(PreUpdate, 
                 default_font_set.run_if(resource_exists::<FontHandle>()))
 
+            .add_systems(Startup, gizmo_settings)
+
+            .add_plugins(NodesUiPlugin)
+            .add_plugins(EdgeUiPlugin)
+            
             // Element Systems
             .add_systems(Update, modal::modal_position_system.after(spawn_context_menu))
 
             // Systems
-            .add_systems(Startup, gizmo_settings)
             .add_systems(Startup, create_mode_menu)
             .add_systems(Startup, create_context_and_active_bar)
             
@@ -56,21 +60,6 @@ impl Plugin for KartaUiPlugin {
                 Update, 
                 spawn_context_menu.run_if(on_event::<NodeClickEvent>())
             )
-
-            // .add_systems(PostUpdate, add_node_ui
-            //     .after(update_context)
-            //     .run_if(resource_changed::<CurrentContext>())
-            // )
-            
-            .add_systems(PostUpdate, handle_outline_hover)
-            //.add_systems(PostUpdate, outlines_pulse)
-
-            .add_systems(PostUpdate, update_edges)
-
-            // Debug visualizations
-            .add_systems(PostUpdate, visualise_pinned_position)
-            //.add_systems(Update, point_to_root_if_offscreen)
-
             
         ;
     }
@@ -83,7 +72,7 @@ fn default_font_set(
 ){
     if let Some(font) = fonts.remove(&font_handle.0) {
         fonts.set_untracked(TextStyle::default().font, font);
-        //commands.remove_resource::<FontHandle>();
+        commands.remove_resource::<FontHandle>();
     }
 }
 

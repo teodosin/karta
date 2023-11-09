@@ -11,7 +11,7 @@ use crate::graph::node_types::NodeTypes;
 // bare data.
 #[derive(Event)]
 pub struct NodeSpawnedEvent {
-    pub node: Entity,
+    pub entity: Entity,
     pub path: String,
     pub name: String,
     pub ntype: NodeTypes,
