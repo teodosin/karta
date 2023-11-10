@@ -1,5 +1,5 @@
 use bevy::{prelude::*, sprite::{MaterialMesh2dBundle, Material2d}, text::Text2dBounds};
-use bevy_mod_picking::prelude::*;
+use bevy_mod_picking::{prelude::*, backends::raycast::RaycastPickable};
 use bevy_prototype_lyon::{shapes, prelude::{GeometryBuilder, ShapeBundle, Fill, Stroke, StrokeOptions, Path}, entity};
 use rand::Rng;
 
@@ -144,7 +144,7 @@ pub fn add_node_ui(
                 ..default()
             },
             PickableBundle::default(),
-            RaycastPickTarget::default(),
+            RaycastPickable::default(),
             
             On::<Pointer<Drag>>::send_event::<MoveNodesEvent>(),
             On::<Pointer<Click>>::send_event::<NodeClickEvent>(),
@@ -219,7 +219,7 @@ pub fn add_node_ui(
             NodeOutline,
             
             PickableBundle::default(),
-            RaycastPickTarget::default(),
+            RaycastPickable::default(),
 
             On::<Pointer<Over>>::target_component_mut::<Stroke>(move |over, stroke| {
                 stroke.color = crate::settings::theme::OUTLINE_HOVER_COLOR;

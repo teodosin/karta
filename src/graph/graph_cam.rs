@@ -1,7 +1,7 @@
 // Camera and cursor information for the graph
 
 use bevy::{prelude::*, input::mouse::{MouseWheel, MouseScrollUnit, MouseMotion}};
-use bevy_mod_picking::prelude::RaycastPickCamera;
+use bevy_mod_picking::backends::raycast::RaycastPickable;
 
 use crate::input::pointer::InputData;
 
@@ -69,7 +69,7 @@ fn cam_setup(
             },
             ..default()
         },
-        RaycastPickCamera::default(),
+        RaycastPickable::default(),
     ));
 }
 

@@ -1,7 +1,7 @@
 //lib
 
 use bevy::{prelude::*, log::LogPlugin};
-use bevy_inspector_egui::quick::WorldInspectorPlugin;
+// use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_mod_picking::prelude::*;
 
 
@@ -77,13 +77,13 @@ pub fn karta_app() {
         //.run()
     ;
 
-    let dot = bevy_mod_debugdump::schedule_graph_dot(&mut app, Update, &bevy_mod_debugdump::schedule_graph::Settings::default());
-    // Save dot output as a file
-    std::fs::write("strings_notworking_update.dot", dot).expect("Unable to write file");
+    // let dot = bevy_mod_debugdump::schedule_graph_dot(&mut app, Update, &bevy_mod_debugdump::schedule_graph::Settings::default());
+    // // Save dot output as a file
+    // std::fs::write("strings_notworking_update.dot", dot).expect("Unable to write file");
 
-    let dot = bevy_mod_debugdump::schedule_graph_dot(&mut app, PostUpdate, &bevy_mod_debugdump::schedule_graph::Settings::default());
-    // Save dot output as a file
-    std::fs::write("strings_notworking_postupdate.dot", dot).expect("Unable to write file");
+    // let dot = bevy_mod_debugdump::schedule_graph_dot(&mut app, PostUpdate, &bevy_mod_debugdump::schedule_graph::Settings::default());
+    // // Save dot output as a file
+    // std::fs::write("strings_notworking_postupdate.dot", dot).expect("Unable to write file");
 
     app.run();
 }

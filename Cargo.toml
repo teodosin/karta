@@ -5,16 +5,20 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bevy = { version = "0.11.2", features = ["dynamic_linking"] }
-bevy-inspector-egui = "0.19.0"
-bevy_mod_debugdump = "0.8.0"
+bevy = { version = "0.12.0", features = ["dynamic_linking","bevy_asset",] }
+
+bevy_mod_picking = "0.17.0"
+bevy_prototype_lyon = "0.10.0"
+
+# bevy_mod_debugdump = "0.8.0"
+# bevy-inspector-egui = "0.19.0"
 # bevy_cosmic_edit = "0.13.0"
-bevy_mod_picking = "0.15.0"
-bevy_prototype_lyon = "0.9.0"
 # bevy_tweening = "0.8.0"
+
 lyon = "1.0.1"
 rand = "0.8.5"
 ron = "0.8.1"
+thiserror = "1.0"
 serde = { version = "1.0.188", features = ["derive"]}
 
 [profile.dev]
