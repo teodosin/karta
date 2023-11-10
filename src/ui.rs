@@ -71,7 +71,7 @@ fn default_font_set(
     font_handle: Res<FontHandle>,
 ){
     if let Some(font) = fonts.remove(&font_handle.0) {
-        fonts.set_untracked(TextStyle::default().font, font);
+        fonts.add(font);
         commands.remove_resource::<FontHandle>();
     }
 }

@@ -82,16 +82,18 @@ pub fn modal_position_system(
     // TODO: Handle multiple windows
     let window = window.single();
 
+    let viewport_size = Vec2::new(window.width(), window.height());
+
     for (modal, mut style, global_pos) in query.iter_mut() {
         let size = modal.size();
         let window_size = Vec2::new(window.width(), window.height());
 
-        let left = style.left.evaluate(1.).unwrap();
+        let left = style.left.resolve(1., viewport_size).unwrap();
         if left + size.x > window_size.x {
             style.left = Val::Px(left - size.x);
         }
 
-        let top = style.top.evaluate(1.).unwrap();
+        let top = style.top.resolve(1., viewport_size).unwrap();
         if top + size.y > window_size.y {
             style.top = Val::Px(top - size.y);
         }

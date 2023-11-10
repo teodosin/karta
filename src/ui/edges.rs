@@ -32,8 +32,11 @@ pub fn add_edge_ui(
         commands.entity(ev.entity).insert((
             ShapeBundle {
                 path: GeometryBuilder::build_as(&line),
-                transform: Transform {
-                    translation: Vec3::new(0.0, 0.0, view_data.bottom_z),
+                spatial: SpatialBundle {
+                    transform: Transform {
+                        translation: Vec3::new(0.0, 0.0, view_data.bottom_z),
+                        ..default()
+                    },
                     ..default()
                 },
                 ..default()
