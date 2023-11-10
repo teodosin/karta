@@ -54,7 +54,7 @@ pub fn handle_key_input(
         return
     }
 
-    let ev = event.iter().next().unwrap();
+    let ev = event.read().next().unwrap();
 
     if ev.state.is_pressed() {
         return

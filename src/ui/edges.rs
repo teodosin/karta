@@ -22,7 +22,7 @@ pub fn add_edge_ui(
     mut commands: Commands,
     mut view_data: ResMut<ViewData>,
 ){
-    for ev in events.iter() {
+    for ev in events.read() {
         let line = shapes::Line(
             Vec2::ZERO, Vec2::ZERO
         );

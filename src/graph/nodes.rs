@@ -80,7 +80,7 @@ fn handle_node_click(
         return
     }
 
-    if !keys.iter().any(
+    if !keys.read().any(
         |k| k.key_code == Some(KeyCode::ShiftLeft) 
         || k.key_code == Some(KeyCode::ShiftRight)
     ) //&& !mouse.pressed(MouseButton::Right) 
@@ -92,7 +92,7 @@ fn handle_node_click(
     }
 
     // TODO: Handle multiple events
-    match event.iter().next().unwrap().target {
+    match event.read().next().unwrap().target {
         None => {
             //println!("No event");
             input_data.latest_click_entity = None;
@@ -135,7 +135,7 @@ fn handle_node_press(
     if event.is_empty() {
         return
     }
-    match event.iter().next().unwrap().target {
+    match event.read().next().unwrap().target {
         None => {
             //println!("No event");
             input_data.latest_press_entity = None;
@@ -180,7 +180,7 @@ fn handle_node_hover(
     if event.is_empty() {
         return
     }
-    match event.iter().next().unwrap().target {
+    match event.read().next().unwrap().target {
         None => {
             //println!("No event");
             input_data.latest_hover_entity = None;

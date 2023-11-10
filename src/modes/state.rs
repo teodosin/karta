@@ -44,7 +44,7 @@ fn change_context_path(
         return
     }
 
-    if event.iter().next().unwrap().button != PointerButton::Primary {
+    if event.read().next().unwrap().button != PointerButton::Primary {
         return
     }
 
