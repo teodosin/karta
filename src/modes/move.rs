@@ -38,7 +38,7 @@ pub fn move_node_selection(
         }
     }
 
-    for _ev in ev_mouse_drag.iter() {
+    for _ev in ev_mouse_drag.read() {
         if mouse.pressed(MouseButton::Left){
             for (_entity, _node, mut transform) in query.iter_mut() {
                     transform.translation.x += cursor.curr_position.x - cursor.prev_position.x;

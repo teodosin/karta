@@ -49,7 +49,7 @@ pub fn spawn_context_menu(
         return
     }
     
-    let button = mouse_event.iter().next().unwrap().button;
+    let button = mouse_event.read().next().unwrap().button;
     
     if button != PointerButton::Secondary {
         return

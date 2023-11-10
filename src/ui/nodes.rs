@@ -117,7 +117,7 @@ pub fn add_node_ui(
     mut view_data: ResMut<ViewData>,
 ){
     
-    for ev in events.iter(){
+    for ev in events.read(){
         
         // let full_path = format!("{}/{}", ev.path, ev.name);
         
@@ -155,6 +155,8 @@ pub fn add_node_ui(
             On::<Pointer<DragEnd>>::target_remove::<Selected>(),
             On::<Pointer<Deselect>>::target_remove::<Selected>(),
         ));
+        // Update the view_data so we can keep track of which zindex is the topmost
+        view_data.top_z += 0.0001;
         
         // NAME LABEL
         // This is the text label that will be attached to the node.
@@ -234,8 +236,6 @@ pub fn add_node_ui(
         
         commands.entity(ev.entity).push_children(&[node_outline]);
         
-        // Update the view_data so we can keep track of which zindex is the topmost
-        view_data.top_z += 0.0001;
     }
 }
 
