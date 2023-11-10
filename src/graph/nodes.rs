@@ -1,10 +1,10 @@
 //Code pertaining to the graph nodes
 
-use bevy::prelude::*;
+use bevy::{prelude::*, input::keyboard::KeyboardInput};
 
-use super::{graph_cam, context::{PathsToEntitiesIndex, ToBeDespawned}};
+use super::{graph_cam, context::{PathsToEntitiesIndex, ToBeDespawned, Selected}, node_types::NodeTypes};
 
-use crate::{events::nodes::*, ui::nodes::NodeOutline, input::pointer::InputData};
+use crate::{events::nodes::*, ui::nodes::{NodeOutline, GraphViewNode}, input::pointer::InputData};
 use crate::ui::nodes::add_node_ui;
 
 pub struct NodesPlugin;
@@ -27,9 +27,14 @@ impl Plugin for NodesPlugin {
 // A component to store the data of a NODE
 // The path and name of the node is something that all node types have in common
 #[derive(Component)]
-pub struct GraphNode {
+pub struct GraphDataNode {
     pub path: String,
     pub name: String,
+}
+
+#[derive(Component)]
+pub struct NodeType {
+    pub ntype: NodeTypes,
 }
 
 // A component to store the edge relationships of a node
@@ -40,6 +45,9 @@ pub struct GraphNodeEdges {
 }
 
 #[derive(Component)]
+pub struct ContextRoot;
+
+#[derive(Component)]
 pub struct PinnedToPosition;
 
 #[derive(Component)]
@@ -48,22 +56,43 @@ pub struct PinnedToPresence;
 #[derive(Component)]
 pub struct PinnedToUi;
 
+// ? Should there be a:
+// DataNode Bundle
+// The basic component bundle of every node. This is shared between all of them,
+// regardless of type.
+
 // ----------------------------------------------------------------
 // Interaction systems
 
 
 fn handle_node_click(
-    mouse: Res<Input<MouseButton>>,
     mut event: EventReader<NodeClickEvent>,
+    mut keys: EventReader<KeyboardInput>,
+
+    mut commands: Commands,
     mut input_data: ResMut<InputData>,
-    nodes: Query<&GraphNode>,
+
+    nodes: Query<(Entity, &GraphDataNode)>,
+    selection: Query<Entity, (With<GraphViewNode>, With<Selected>)>,
     outlines: Query<&Parent, With<NodeOutline>>,
 ){
     if event.is_empty(){
         return
     }
 
-    match event.iter().next().unwrap().target {
+    if !keys.read().any(
+        |k| k.key_code == Some(KeyCode::ShiftLeft) 
+        || k.key_code == Some(KeyCode::ShiftRight)
+    ) //&& !mouse.pressed(MouseButton::Right) 
+    {
+        println!("Clearing selection");
+        for node in selection.iter() {
+            commands.entity(node).remove::<Selected>();
+        }
+    }
+
+    // TODO: Handle multiple events
+    match event.read().next().unwrap().target {
         None => {
             //println!("No event");
             input_data.latest_click_entity = None;
@@ -73,8 +102,9 @@ fn handle_node_click(
             
             match nodes.get(target){
                 Ok(node) => {
-                    let target_path = node.path.clone();
+                    let target_path = node.1.path.clone();
                     input_data.latest_click_entity = Some(target_path.clone());
+                    commands.entity(node.0).insert(Selected);
                     //println!("Clicking path: {}", target_path);
                 },
                 Err(_) => {
@@ -84,7 +114,7 @@ fn handle_node_click(
 
             match outlines.get(target){
                 Ok(outline) => {
-                    let outline_path = nodes.get(outline.get()).unwrap().path.clone();
+                    let outline_path = nodes.get(outline.get()).unwrap().1.path.clone();
                     input_data.latest_click_entity = Some(outline_path.clone());
                     //println!("Clicking outline: {}", outline_path);
                 },
@@ -99,13 +129,13 @@ fn handle_node_click(
 fn handle_node_press(
     mut event: EventReader<NodePressedEvent>,
     mut input_data: ResMut<InputData>,
-    nodes: Query<&GraphNode>,
+    nodes: Query<&GraphDataNode>,
     outlines: Query<&Parent, With<NodeOutline>>,
 ){
     if event.is_empty() {
         return
     }
-    match event.iter().next().unwrap().target {
+    match event.read().next().unwrap().target {
         None => {
             //println!("No event");
             input_data.latest_press_entity = None;
@@ -144,13 +174,13 @@ fn handle_node_press(
 fn handle_node_hover(
     mut event: EventReader<NodeHoverEvent>,
     mut input_data: ResMut<InputData>,
-    nodes: Query<&GraphNode>,
+    nodes: Query<&GraphDataNode>,
     outlines: Query<&Parent, With<NodeOutline>>,
 ){
     if event.is_empty() {
         return
     }
-    match event.iter().next().unwrap().target {
+    match event.read().next().unwrap().target {
         None => {
             //println!("No event");
             input_data.latest_hover_entity = None;
@@ -189,33 +219,33 @@ fn handle_node_hover(
 
 
 pub fn spawn_node (
-    mut commands: &mut Commands,
+    event: &mut EventWriter<NodeSpawnedEvent>,
+
+    commands: &mut Commands,
     path: &String,
     name: &String,
-    mut meshes: &mut ResMut<Assets<Mesh>>,
-    mut materials: &mut ResMut<Assets<ColorMaterial>>,
-    mut view_data: &mut ResMut<graph_cam::ViewData>,
-    mut pe_index: &mut ResMut<PathsToEntitiesIndex>,
+    ntype: NodeTypes,
+    position: Vec2, // For the viewnodes
+
+    pe_index: &mut ResMut<PathsToEntitiesIndex>,
 ) -> bevy::prelude::Entity {
     let full_path = format!("{}/{}", path, name);
 
 
     let node_entity = commands.spawn((
-        GraphNode {
+        GraphDataNode {
             path: full_path.clone(),
             name: name.clone()
         },
     )).id();
 
-    add_node_ui(
-        &mut commands,
-        node_entity,
-        full_path.clone(),
-        name.to_string(),
-        &mut meshes,
-        &mut materials,
-        &mut view_data,
-    );
+    event.send(NodeSpawnedEvent {
+        entity: node_entity,
+        path: path.to_string(),
+        name: name.to_string(),
+        ntype,
+        position: position,
+    });
 
     // Update the PathsToEntitiesIndex
     pe_index.0.insert(full_path, node_entity);
@@ -226,7 +256,7 @@ pub fn spawn_node (
 
 fn despawn_nodes(
     mut commands: Commands,
-    mut nodes: Query<(Entity, &GraphNode), With<ToBeDespawned>>,
+    mut nodes: Query<(Entity, &GraphDataNode), With<ToBeDespawned>>,
     mut pe_index: ResMut<PathsToEntitiesIndex>,
 ){
     for (entity, node) in nodes.iter_mut() {

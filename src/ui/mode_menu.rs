@@ -36,6 +36,7 @@ pub fn create_mode_menu(
         create_mode_menu_button(parent, KartaModeState::Move);
         create_mode_menu_button(parent, KartaModeState::Edges);
         create_mode_menu_button(parent, KartaModeState::State);
+        create_mode_menu_button(parent, KartaModeState::Draw);
 
     });
 
@@ -114,6 +115,9 @@ pub fn mode_button_system(
                     }
                     KartaModeState::State => {
                         println!("Context mode");
+                    }
+                    KartaModeState::Draw => {
+                        println!("Draw mode");
                     }
                 }
                 next_state.set(mode.mode.clone());

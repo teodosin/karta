@@ -4,7 +4,7 @@
 use bevy::{prelude::*, ecs::system::CommandQueue, core_pipeline::core_2d::graph::input};
 
 
-use crate::{input::pointer::{left_click_just_released, InputData}, graph::{context::PathsToEntitiesIndex, edges::create_edge, nodes::GraphNode, graph_cam::ViewData}};
+use crate::{input::pointer::{left_click_just_released, InputData}, graph::{context::PathsToEntitiesIndex, edges::create_edge, nodes::GraphDataNode, graph_cam::ViewData}, events::edges::EdgeSpawnedEvent};
 
 use super::KartaModeState;
 
@@ -28,6 +28,7 @@ impl Plugin for EdgesPlugin {
 }
 
 fn create_edge_from_drag(
+    mut event: EventWriter<EdgeSpawnedEvent>,
     input_data: Res<InputData>,
     pe_index: Res<PathsToEntitiesIndex>,
     mut commands: Commands,
@@ -62,6 +63,7 @@ fn create_edge_from_drag(
     println!("Creating edge from {:?} to {:?}", from, to);
 
     create_edge(
+        &mut event,
         from, 
         to, 
         &mut commands,
@@ -74,7 +76,7 @@ fn create_edge_from_drag(
 fn draw_edge_preview(
     mut input_data: ResMut<InputData>,
     _mouse: Res<Input<MouseButton>>,
-    nodes: Query<&Transform, With<GraphNode>>,
+    nodes: Query<&Transform, With<GraphDataNode>>,
     pe_index: Res<PathsToEntitiesIndex>,
     mut gizmos: Gizmos,
 ) {
@@ -128,20 +130,20 @@ fn test_create_edge_from_drag() {
     let mut app = App::new();
 
     let entity1 = app.world.spawn(
-        GraphNode {
+        GraphDataNode {
             path: "path/to/entity1".to_string(),
             name: "entity1".to_string(),
         }
     ).id();
-    let node1 = &app.world.get::<GraphNode>(entity1).unwrap().path.to_string();
+    let node1 = &app.world.get::<GraphDataNode>(entity1).unwrap().path.to_string();
 
     let entity2 = app.world.spawn(
-        GraphNode {
+        GraphDataNode {
             path: "path/to/entity2".to_string(),
             name: "entity2".to_string(),
         }
     ).id();
-    let node2 = app.world.get::<GraphNode>(entity2).unwrap().path.to_string();
+    let node2 = app.world.get::<GraphDataNode>(entity2).unwrap().path.to_string();
 
     // Mock InputData, Valid
     let input_data_mock_valid = InputData {

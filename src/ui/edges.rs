@@ -3,38 +3,57 @@
 use bevy::prelude::*;
 use bevy_prototype_lyon::{shapes, prelude::{Fill, ShapeBundle, GeometryBuilder, Path, Stroke}};
 
-use crate::graph::{edges::GraphEdge, nodes::GraphNode, graph_cam::ViewData};
+use crate::{graph::{edges::GraphEdge, nodes::GraphDataNode, graph_cam::ViewData}, settings::theme::EDGE_PARENT_COLOR, events::edges::EdgeSpawnedEvent};
+
+pub struct EdgeUiPlugin;
+
+impl Plugin for EdgeUiPlugin {
+    fn build(&self, app: &mut App) {
+        app
+            .add_systems(PostUpdate, add_edge_ui.after(super::nodes::add_node_ui))
+            .add_systems(PostUpdate, update_edges)
+            //.add_systems(PostUpdate, _draw_edges)
+        ;
+    }
+}
 
 pub fn add_edge_ui(
-    commands: &mut Commands,
-    edge_entity: Entity,
-    view_data: &mut ViewData,
+    mut events: EventReader<EdgeSpawnedEvent>,
+    mut commands: Commands,
+    mut view_data: ResMut<ViewData>,
 ){
-    let line = shapes::Line(
-        Vec2::ZERO, Vec2::ZERO
-    );
+    for ev in events.read() {
+        let line = shapes::Line(
+            Vec2::ZERO, Vec2::ZERO
+        );
 
-    commands.entity(edge_entity).insert((
-        ShapeBundle {
-            path: GeometryBuilder::build_as(&line),
-            transform: Transform {
-                translation: Vec3::new(0.0, 0.0, view_data.bottom_z),
+        let edgecol = EDGE_PARENT_COLOR;
+
+        commands.entity(ev.entity).insert((
+            ShapeBundle {
+                path: GeometryBuilder::build_as(&line),
+                spatial: SpatialBundle {
+                    transform: Transform {
+                        translation: Vec3::new(0.0, 0.0, view_data.bottom_z),
+                        ..default()
+                    },
+                    ..default()
+                },
                 ..default()
             },
-            ..default()
-        },
-        Fill::color(Color::ORANGE_RED),
-        Stroke::new(Color::ORANGE_RED, 5.0)
-    ));
+            //Fill::color(edgecol),
+            Stroke::new(edgecol, 8.0)
+        ));
 
-    view_data.bottom_z -= 0.001;
+        view_data.bottom_z -= 0.001;
+    }
         
 }
 
 pub fn update_edges(
     mut commands: Commands,
     mut edges: Query<(Entity, &GraphEdge, &mut Path)>,
-    nodes: Query<&Transform, With<GraphNode>>,
+    nodes: Query<&Transform, With<GraphDataNode>>,
 ){
     for (edge, data, mut path) in edges.iter_mut() {
         let start = match nodes.get(data.from) {
@@ -65,7 +84,7 @@ pub fn update_edges(
 pub fn _draw_edges(
     mut commands: Commands,
     edges: Query<(Entity, &GraphEdge)>,
-    nodes: Query<&Transform, With<GraphNode>>,
+    nodes: Query<&Transform, With<GraphDataNode>>,
     mut gizmos: Gizmos,
 ) {
     for (edge_entity, edge_data) in edges.iter() {

@@ -1,9 +1,24 @@
 //
 
-use bevy::prelude::{Event, Entity, MouseButton};
+use bevy::prelude::{Event, Entity, MouseButton, Vec2};
 use bevy_mod_picking::prelude::*;
 
+use crate::graph::node_types::NodeTypes;
+
+
+// Informing the World that a node has been spawned
+// Mostly needed to add ui to the node, which before this is just the 
+// bare data.
 #[derive(Event)]
+pub struct NodeSpawnedEvent {
+    pub entity: Entity,
+    pub path: String,
+    pub name: String,
+    pub ntype: NodeTypes,
+    pub position: Vec2,
+}
+
+#[derive(Event)]   
 pub struct MoveNodesEvent;
 
 // Implementation required by bevy_mod_picking

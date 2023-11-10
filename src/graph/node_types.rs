@@ -1,6 +1,52 @@
 // 
 
-use bevy::prelude::Component;
+use std::fs;
+
+use bevy::prelude::{Component, Plugin, App, Update};
+
+mod file_types;
+mod filters;
+mod forces;
+mod operators;
+mod panels;
+mod query;
+
+pub struct NodeTypesPlugin;
+
+impl Plugin for NodeTypesPlugin {
+    fn build(&self, app: &mut App) {
+        app
+            .add_plugins(forces::ForceNodesPlugin)
+        ;
+    }
+}
+
+// For now, all node types will be stored in a single enum
+// This will be changed to a more flexible system later
+pub enum NodeTypes {
+    Folder, 
+    FileBase,
+    Image,
+}
+
+// A helper function to get the type based on a node path
+pub fn get_type_from_path(
+    path: &String, 
+) -> Option<NodeTypes> {
+    match fs::metadata(&path) {
+        Ok(metadata) => {
+            if metadata.is_dir() {
+                Some(NodeTypes::Folder)
+            } else {
+                Some(NodeTypes::FileBase)
+            }
+        },
+        Err(_) => {
+            println!("Error: Parent path does not exist");
+            None
+        }
+    }
+}
 
 trait Node {
     // Path and node are stored in the GraphNode, right?

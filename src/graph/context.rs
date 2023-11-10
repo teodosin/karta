@@ -7,8 +7,8 @@ use bevy_mod_picking::prelude::PointerButton;
 use std::fs;
 
 use crate::{
-    graph::{graph_cam, edges::create_edge}, vault::KartaVault, 
-    events::nodes::NodeClickEvent, input::pointer::InputData
+    graph::{graph_cam, edges::create_edge, node_types::{NodeTypes, get_type_from_path}}, vault::KartaVault, 
+    events::{nodes::{NodeClickEvent, NodeSpawnedEvent}, edges::EdgeSpawnedEvent}, input::pointer::InputData
 };
 
 use super::nodes::*;
@@ -76,12 +76,14 @@ fn initial_context(
 }
 
 // Big monolith function
+// --------------------------------------------------------------------------------
 pub fn update_context(
+    mut node_event: EventWriter<NodeSpawnedEvent>,
+    mut edge_event: EventWriter<EdgeSpawnedEvent>,
+    
     input_data: Res<InputData>,
 
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
 
     vault: Res<KartaVault>,
     context: Res<CurrentContext>,
@@ -89,9 +91,20 @@ pub fn update_context(
     mut view_data: ResMut<graph_cam::ViewData>,
     mut pe_index: ResMut<PathsToEntitiesIndex>,
 
-    mut nodes: Query<(Entity, &GraphNode)>,
+    mut nodes: Query<(Entity, &GraphDataNode, &Transform)>,
 ) {
-    
+    // Handle previous context
+    //----------------------------------------
+    let previous_root = pe_index.0.get(&context.get_current_context_path());
+    match previous_root {
+        Some(entity) => {
+            //println!("Previous root: {:?}", entity);
+            commands.entity(*entity).remove::<ContextRoot>();
+        },
+        None => (),
+    }    
+
+
     // Handle the path to the desired context
     let path: String = input_data.latest_click_entity.clone()
     .unwrap_or(context.get_current_context_path());
@@ -136,14 +149,18 @@ pub fn update_context(
     }
 
     // Iterate through existing nodes and mark them for deletion
-    for (entity, _node) in nodes.iter_mut() {
+    for (entity, _node, _pos) in nodes.iter_mut() {
         commands.entity(entity).insert(ToBeDespawned);
     }
+
+    let root_position: Vec2;
 
     // Spawn the context root if it doesn't exist
     let root_node = match pe_index.0.get(&path) {
         Some(entity) => {
             println!("Root node already exists");
+            // Get position of root node
+            root_position = nodes.get(*entity).unwrap().2.translation.truncate();
             commands.entity(*entity).remove::<ToBeDespawned>();
             *entity
         },
@@ -152,18 +169,24 @@ pub fn update_context(
             let root_name = path.split("/").last().unwrap().to_string();
             let root_path = path.replace(&root_name, "");
             let root_path = &root_path[0..&root_path.len()-1].to_string();
+            root_position = Vec2::ZERO;
+            let root_type = get_type_from_path(&root_path).unwrap();
             println!("Root Path: {}, Root Name: {}", root_path, root_name);
             spawn_node(
+                &mut node_event,
                 &mut commands, 
                 &root_path, 
                 &root_name,
-                &mut meshes, 
-                &mut materials, 
-                &mut view_data,
+                root_type,
+                root_position,
                 &mut pe_index,
             )
         }
     };
+    commands.entity(root_node).insert(ContextRoot);
+
+    // Get position 
+
 
     // Don't despawn the parent of the root
     let root_parent_path = path
@@ -171,16 +194,60 @@ pub fn update_context(
         .last()
         .unwrap(), "");
     let root_parent_path = &root_parent_path[0..&root_parent_path.len()-1].to_string();
-    let root_parent = pe_index.0.get(root_parent_path);
-    println!("Root parent: {:?}", root_parent_path);
-    match root_parent {
+
+    // Spawn parent if it doesn't exist
+    // AND if we are not already at the root
+    let mut parent_node = Option::<Entity>::None;
+
+    parent_node = match pe_index.0.get(root_parent_path) {
         Some(entity) => {
+            println!("Parent node already exists");
             commands.entity(*entity).remove::<ToBeDespawned>();
+            Some(*entity)
         },
         None => {
-            println!("Root parent doesn't exist");
+            if root_parent_path.contains(&vault.get_root_path()){
+                println!("Parent node doesn't exist, spawning");
+
+                let parent_name = root_parent_path.split("/").last().unwrap().to_string();
+                let parent_path = root_parent_path.replace(&parent_name, "");
+                let parent_path = &parent_path[0..&parent_path.len()-1].to_string();
+
+                // Check if the parent is a directory or a file
+
+                let parent_type = get_type_from_path(&path).unwrap();
+
+                println!("Parent Path: {}, Parent Name: {}", parent_path, parent_name);
+                Some(spawn_node(
+                    &mut node_event,
+                    &mut commands, 
+                    &parent_path, 
+                    &parent_name,
+                    parent_type,
+                    root_position,
+                    &mut pe_index,
+                ))
+            } else {
+                println!("Current context is vault root, not spawning parent");
+                None
+            }
         }
+    };
+
+    // Add an edge from the parent to the root, if the parent exists
+    match parent_node {
+        Some(entity) => {
+            create_edge(
+                &mut edge_event,
+                &entity, 
+                &root_node, 
+                &mut commands,
+                &mut view_data
+            );
+        },
+        None => (),
     }
+    
     
     file_names.iter().for_each(|name| {
 
@@ -194,19 +261,30 @@ pub fn update_context(
                 return
         }
 
+        // Get the type of the item
+        let item_type = get_type_from_path(&full_path);
+        let item_type = match item_type {
+            Some(item_type) => item_type,
+            None => {
+                println!("Item path unwrap panic: {}", full_path);
+                return
+            }
+        };
+
         // Spawn a node for each item
         let node = spawn_node(
+            &mut node_event,
             &mut commands,
             &path,
             name,
-            &mut meshes,
-            &mut materials,
-            &mut view_data,
+            item_type,
+            root_position,
             &mut pe_index,
         );
 
         // Spawn an edge from the root node to each item
         create_edge(
+            &mut edge_event,
             &root_node, 
             &node, 
             &mut commands,

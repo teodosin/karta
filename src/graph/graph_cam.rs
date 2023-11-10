@@ -1,7 +1,7 @@
 // Camera and cursor information for the graph
 
 use bevy::{prelude::*, input::mouse::{MouseWheel, MouseScrollUnit, MouseMotion}};
-use bevy_mod_picking::prelude::RaycastPickCamera;
+use bevy_mod_picking::backends::raycast::RaycastPickable;
 
 use crate::input::pointer::InputData;
 
@@ -48,12 +48,16 @@ impl Default for ViewData {
     }
 }
 
+#[derive(Component)]
+pub struct GraphCamera;
+
 
 fn cam_setup(
     mut commands: Commands,
 ){
     use bevy::core_pipeline::clear_color::ClearColorConfig;
     commands.spawn((
+        GraphCamera,
         Camera2dBundle {
             camera_2d: Camera2d {
                 clear_color: ClearColorConfig::None,
@@ -65,7 +69,7 @@ fn cam_setup(
             },
             ..default()
         },
-        RaycastPickCamera::default(),
+        RaycastPickable::default(),
     ));
 }
 
@@ -86,7 +90,7 @@ fn graph_pan(
         for mut transform in query.iter_mut() {
                 // transform.translation.x -= cursor.curr_position.x - cursor.prev_position.x;
                 // transform.translation.y -= cursor.curr_position.y - cursor.prev_position.y; 
-            for ev in motion.iter() {
+            for ev in motion.read() {
                 transform.translation.x -= ev.delta.x * view_settings.zoom;
                 transform.translation.y += ev.delta.y * view_settings.zoom;
             }      
@@ -104,7 +108,7 @@ fn graph_zoom(
 ) {
     let zoom_mult: f32 = 1.07;
 
-    for ev in events.iter() {
+    for ev in events.read() {
         match ev.unit {
             MouseScrollUnit::Line => {
                 for (mut projection, mut transform) in query.iter_mut() {

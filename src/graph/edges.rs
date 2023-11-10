@@ -3,9 +3,9 @@ use std::collections::HashMap;
 
 use bevy::prelude::*;
 
-use crate::{graph::attribute::Attributes, ui::edges::add_edge_ui};
+use crate::{graph::attribute::Attributes, ui::edges::add_edge_ui, events::edges::EdgeSpawnedEvent};
 
-use super::{nodes::GraphNode, context::CurrentContext, graph_cam::ViewData};
+use super::{nodes::GraphDataNode, context::CurrentContext, graph_cam::ViewData};
 
 pub struct EdgesPlugin;
 
@@ -30,9 +30,20 @@ pub struct GraphEdge {
     pub to: Entity,
 }
 
+#[derive(Component)]
+pub struct EdgeType {
+    pub etype: EdgeTypes,
+}
+
+pub enum EdgeTypes {
+    Base,
+    Parent,
+}
+
 // TODO 0.12: Convert to One-Shot System
 // And use EdgeDefaults resource to set the default length
 pub fn create_edge(
+    mut event: &mut EventWriter<EdgeSpawnedEvent>,
     from: &Entity, 
     to: &Entity, 
     commands: &mut Commands,
@@ -44,7 +55,7 @@ pub fn create_edge(
     let mut initial_attributes: HashMap<String, Option<f32>> = HashMap::new();
 
     initial_attributes.insert(
-        "k".to_string(), Some(0.2),
+        "k".to_string(), Some(0.85),
     );
     initial_attributes.insert(
         "length".to_string(), Some(210.0),
@@ -59,17 +70,18 @@ pub fn create_edge(
             attributes: initial_attributes,
         }),
     ).id();
-    add_edge_ui(
-        commands, 
-        edge,
-        view_data
-    )
+
+    event.send(EdgeSpawnedEvent {
+        entity: edge,
+        connected_to_focal: true,
+        edge_type: EdgeTypes::Base,
+    });
 }
 
 pub fn despawn_edges(
     mut commands: Commands,
     mut edges: Query<(Entity, &GraphEdge)>,
-    nodes: Query<&GraphNode>,
+    nodes: Query<&GraphDataNode>,
 ) {
     for (edge_entity, edge_data) in edges.iter_mut() {
         if nodes.get(edge_data.from).is_err() || nodes.get(edge_data.to).is_err() {

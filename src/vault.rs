@@ -8,20 +8,22 @@ use bevy::{
         Plugin, 
         App, 
         Vec2, 
-        AddAsset, 
         Res, 
         AssetServer, 
         Startup, 
         Handle, 
         Commands, 
         Assets, 
-        PostStartup, Resource, info, Update
+        PostStartup, Resource, Update, AssetApp, Asset, ResMut
     }, 
     asset::{
-        AssetLoader, LoadedAsset, LoadContext
-    }, reflect::{TypeUuid, TypePath}, utils::BoxedFuture
+        AssetLoader, LoadedAsset, LoadContext, io::Reader, AsyncReadExt
+    }, reflect::{TypeUuid, TypePath}, utils::{BoxedFuture}
 };
+// use thiserror_core::display::DisplayAsDisplay;
+// use futures_lite::AsyncReadExt;
 use serde::Deserialize;
+use thiserror::Error;
 
 pub struct VaultPlugin;
 
@@ -29,11 +31,13 @@ impl Plugin for VaultPlugin {
     fn build(&self, app: &mut App) {
         app
             .insert_resource(KartaVault::new())
-            .add_asset::<ContextAsset>()
+            // .register_asset_loader(ContextAssetLoader)
             .init_asset_loader::<ContextAssetLoader>()
+            .init_resource::<ContextAssetState>()
+            .init_asset::<ContextAsset>()
 
             .add_systems(Startup, load_assets)
-            .add_systems(Update, use_assets)
+            // .add_systems(Update, use_assets)
         ;
 
     }
@@ -49,7 +53,9 @@ impl KartaVault {
     fn new() -> Self {
         let new_vault = KartaVault {
             vault_folder_name: ".kartaVault".to_string(),
-            root: "home/viktor/Pictures".to_string(),
+            // root: "home/viktor/Pictures".to_string(),
+            root: "home/viktor".to_string(),
+
         };
 
         // Check if the folder exists in the root. If not, create it.
@@ -72,40 +78,45 @@ impl KartaVault {
     }
 }
 
-fn use_assets(
-    ron_assets: Res<Assets<ContextAsset>>,
-    data_assets: Res<ContextAssets>,
-){
-    let data_str = ron_assets.get(&data_assets.handle);
-    match data_str {
-        Some(data) => {
-            //info!("data: {:?}", data);
-        },
-        None => {
-            info!("data: None");
-        }
-    }
-}
+// fn use_assets(
+//     ron_assets: Res<Assets<ContextAsset>>,
+//     data_assets: Res<ContextAssets>,
+// ){
+//     let data_str = ron_assets.get(&data_assets.handle);
+//     match data_str {
+//         Some(data) => {
+//             //info!("data: {:?}", data);
+//         },
+//         None => {
+
+//         }
+//     }
+// }
 
 fn load_assets(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
+    context_asset_state: Res<ContextAssetState>,
+    assets: ResMut<Assets<ContextAsset>>,
+    vault: Res<KartaVault>,
 ){
-    let context_assets: Handle<ContextAsset> = asset_server.load("/home/viktor/Pictures/.kartaVault/thingy.context");
+    let path = format!("{}/.kartaVault/thingy.context", vault.get_root_path());
+    let context_assets: Handle<ContextAsset> = 
+        asset_server.load(path);
     println!("context_assets: {:?}", context_assets);
 
-    commands.insert_resource(ContextAssets {
-        handle: context_assets,
-    });
+    let data = assets.get(&context_assets);
+    // commands.insert_resource(ContextAssets {
+    //     handle: context_assets,
+    // });
 }
 
-#[derive(Resource, Debug)]
-struct ContextAssets {
+#[derive(Resource, Default)]
+struct ContextAssetState {
     pub handle: Handle<ContextAsset>,
 }
 
-#[derive(Debug, Deserialize, TypeUuid, TypePath, Default)]
-#[uuid = "d0b0c5a0-0b0b-4c0b-8b0b-0b0b0b0b0b0b"]
+#[derive(Asset, Debug, Deserialize, TypePath, Default)]
 pub struct ContextAsset {
     pub self_path: String,
 
@@ -135,25 +146,45 @@ pub struct NodeSerial {
     pub edges: Vec<String>,
 }
 
+
+
 #[derive(Default)]
 pub struct ContextAssetLoader;
 
+#[non_exhaustive]
+#[derive(Debug, Error)]
+pub enum ContextAssetLoaderError {
+    /// An [IO](std::io) Error
+    #[error("Could load shader: {0}")]
+    Io(#[from] std::io::Error),
+    /// A [RON](ron) Error
+    #[error("Could not parse RON: {0}")]
+    RonSpannedError(#[from] ron::error::SpannedError),
+}
+
 impl AssetLoader for ContextAssetLoader {
+    type Asset = ContextAsset;
+    type Settings = ();
+    type Error = ContextAssetLoaderError;
+
     fn load<'a>(
         &'a self,
-        bytes: &'a [u8],
+        reader: &'a mut Reader,
+        settings: &'a Self::Settings,
         load_context: &'a mut LoadContext,
-    ) -> BoxedFuture<'a, Result<(), bevy::asset::Error>> {
+    ) -> BoxedFuture<'a, Result<Self::Asset, Self::Error>> {
         Box::pin(async move {
-            let data_str = ron::de::from_bytes::<ContextAsset>(bytes)?;
-            load_context.set_default_asset(LoadedAsset::new(data_str));
-            Ok(())
+            let mut bytes = Vec::new();
+            reader.read_to_end(&mut bytes).await?;
+            let asset: ContextAsset = ron::de::from_bytes::<ContextAsset>(&bytes)?;
+            Ok(asset)
         })
     }
 
     fn extensions(&self) -> &[&str] {
         &["context"]
     }
+
 }
 
 pub fn dir_or_file_is_hidden(
