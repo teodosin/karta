@@ -10,9 +10,12 @@ use crate::{
     events::nodes::*};
 
 use self::{
-    context_menu::{popup_menu_button_system, spawn_context_menu}, 
+    context_menu::{context_menu_button_system, spawn_context_menu}, 
     mode_menu::{create_mode_menu, mode_button_system, update_active_mode_highlight}, 
-    nodes::NodesUiPlugin, edges::{update_edges, EdgeUiPlugin},
+    nodes::NodesUiPlugin, edges::{
+        update_edges, EdgeUiPlugin
+    }, 
+    create_node_menu::CreateNodeMenuPlugin,
 };
 
 // Building blocks of specific components
@@ -20,6 +23,7 @@ mod modal;
 
 mod context_menu;
 mod mode_menu;
+mod create_node_menu;
 pub(crate) mod nodes;
 pub(crate) mod edges;
 
@@ -40,6 +44,7 @@ impl Plugin for KartaUiPlugin {
 
             .add_plugins(NodesUiPlugin)
             .add_plugins(EdgeUiPlugin)
+            .add_plugins(CreateNodeMenuPlugin)
             
             // Element Systems
             .add_systems(Update, modal::modal_position_system.after(spawn_context_menu))
@@ -53,7 +58,7 @@ impl Plugin for KartaUiPlugin {
             .add_systems(Update, mode_button_system)
             .add_systems(Update, update_active_mode_highlight.after(mode_button_system))
             
-            .add_systems(Update, popup_menu_button_system)
+            .add_systems(Update, context_menu_button_system)
             
             .add_systems(Update, context_menu::despawn_context_menus)
             .add_systems(

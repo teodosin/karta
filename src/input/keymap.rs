@@ -1,5 +1,5 @@
 
-use bevy::{prelude::{EventReader, ResMut, Res, Resource, KeyCode}, input::keyboard::KeyboardInput, utils::HashMap, time::Time};
+use bevy::{prelude::{EventReader, ResMut, Res, Resource, KeyCode, EventWriter}, input::keyboard::KeyboardInput, utils::HashMap, time::Time};
 
 use crate::actions::{Action, ActionManager, ActionFactory, node_actions::CreateNodeAction};
 
@@ -16,6 +16,7 @@ pub fn setup_input_map(){
 pub struct KeyMap {
     key_action_pairs: HashMap<KeyCode, ActionFactory>,
 }
+
 
 // We have to support combinations of keys. Ctrl + N for example.
 // Also combinations of keys and mouse buttons. Ctrl + Left Click for example.
@@ -38,7 +39,9 @@ impl Default for KeyMap {
             key_action_pairs: HashMap::default(),
         };
 
-        map.add_key_action_pair(KeyCode::N, Box::new(|| Box::new(CreateNodeAction::default())));
+        // map.add_key_action_pair(
+        //     KeyCode::Tab, 
+        //     Box::new(|| Box::new(CreateNodeAction::new("Goodbye".to_string()))));
 
         map
     }

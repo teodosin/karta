@@ -1,6 +1,15 @@
 //
 
-use bevy::prelude::{Plugin, PreStartup, Update, App, World, Resource, ResMut, Component};
+use bevy::prelude::{
+        Plugin, 
+        PreStartup,
+        Update, 
+        App, 
+        World, 
+        Resource,
+        Component
+    };
+
 
 pub(crate) mod move_actions;
 pub(crate) mod node_actions;
@@ -14,6 +23,8 @@ impl Plugin for ActionPlugin {
         app
         .add_systems(PreStartup, move_actions::setup_move_actions)
         
+        // .add_plugins(ResourceInspectorPlugin::<ActionManager>::new())
+
         .insert_resource(ActionManager::new())
             
         .add_systems(Update, execute_actions)

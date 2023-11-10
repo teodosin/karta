@@ -5,7 +5,7 @@ use crate::events::nodes::NodeClickEvent;
 
 // Modal groups
 // -----------------------------------------------------------------------------
-#[derive(Component, PartialEq)]
+#[derive(Component, PartialEq, Debug, Clone)]
 pub enum ModalGroup {
     // Context(ModalGroupContext), 
     Context,
@@ -36,7 +36,7 @@ pub fn spawn_modal_root(
     // Despawn any menus already spawned from the same group
     clear_modal_group(
         &mut commands,
-        group,
+        &group,
         menus,
     );
 
@@ -57,6 +57,7 @@ pub fn spawn_modal_root(
             ..Default::default()
         },
         Modal,
+        group,
     )).id();
 
     modal_root
@@ -64,11 +65,14 @@ pub fn spawn_modal_root(
 
 pub fn clear_modal_group(
     commands: &mut Commands,
-    target_group: ModalGroup,
+    target_group: &ModalGroup,
     menus: Query<(Entity, &ModalGroup), With<Modal>>,
 ) {
+
     for (menu, group) in menus.iter() {
-        if *group == target_group {
+        println!("Checking group: {:?}", group);
+        if *group == *target_group {
+            println!("Despawning old menu");
             commands.entity(menu).despawn_recursive();
         }
     }
