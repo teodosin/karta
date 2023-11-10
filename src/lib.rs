@@ -1,6 +1,7 @@
 //lib
 
 use bevy::{prelude::*, log::LogPlugin};
+use bevy_inspector_egui::quick::ResourceInspectorPlugin;
 // use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_mod_picking::prelude::*;
 
@@ -42,7 +43,9 @@ pub fn karta_app() {
             .build()
             .disable::<DebugPickingPlugin>()
         )        
-            //.add_plugins(WorldInspectorPlugin::new())
+
+        // EGUI INSPECTOR BLOCK
+        //.add_plugins(WorldInspectorPlugin::new())
 
         // ENVIRONMENT BLOCK
         // The data that needs to remain in memory for the entire duration of the app

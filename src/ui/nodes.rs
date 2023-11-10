@@ -125,9 +125,9 @@ pub fn add_node_ui(
         let mut rng = rand::thread_rng();
         
         let radius = match ev.ntype {
-            NodeTypes::FileBase => 25.0,
+            NodeTypes::FileImage => 70.0,
             NodeTypes::Folder => 50.0,
-            NodeTypes::Image => 70.0,
+            _ => 25.0,
         };
 
         commands.entity(ev.entity).insert((

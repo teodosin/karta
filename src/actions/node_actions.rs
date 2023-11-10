@@ -1,8 +1,8 @@
 //
 
-use bevy::prelude::{Entity, With};
+use bevy::prelude::{Entity, With, Vec2};
 
-use crate::{graph::{nodes::PinnedToPosition, context::{PathsToEntitiesIndex, Selected}}, input::pointer::InputData, ui::nodes::GraphViewNode};
+use crate::{graph::{nodes::{PinnedToPosition, spawn_node}, context::{PathsToEntitiesIndex, Selected}, node_types::NodeTypes}, input::pointer::InputData, ui::nodes::GraphViewNode};
 
 use super::Action;
 
@@ -10,12 +10,23 @@ use super::Action;
 
 #[derive(Clone)]
 pub struct CreateNodeAction {
-    node: String,
+    // entity: Entity,
+    ntype: NodeTypes,
+    position: Vec2,
 }
 
 impl Action for CreateNodeAction {
     fn execute(&mut self, world: &mut bevy::prelude::World) {
-        println!("Performing CreateNodeAction");
+        println!("Creating: ");
+        // spawn_node(
+        //     event, 
+        //     commands, 
+        //     path, 
+        //     name, 
+        //     ntype, 
+        //     position, 
+        //     pe_index
+        // )
     }
 
     fn undo(&mut self, world: &mut bevy::prelude::World) {
@@ -27,18 +38,24 @@ impl Action for CreateNodeAction {
     }
 }
 
-impl Default for CreateNodeAction {
-    fn default() -> Self {
-        CreateNodeAction {
-            node: String::from("Default Node"),
-        }
-    }
-}
+// impl Default for CreateNodeAction {
+//     fn default() -> Self {
+//         CreateNodeAction {
+//             node: String::from("Default Node"),
+//         }
+//     }
+// }
 
 impl CreateNodeAction {
-    pub fn new(node: String) -> Self {
+    pub fn new(
+        // entity: Entity,
+        ntype: NodeTypes, 
+        pos: Vec2
+    ) -> Self {
         CreateNodeAction {
-            node,
+            // entity,
+            ntype, 
+            position: pos,
         }
     }
 }

@@ -1,8 +1,9 @@
 // 
 
-use std::fs;
+use std::{fs, fmt};
 
 use bevy::prelude::{Component, Plugin, App, Update};
+use enum_iterator::Sequence;
 
 mod file_types;
 mod filters;
@@ -23,9 +24,31 @@ impl Plugin for NodeTypesPlugin {
 
 // For now, all node types will be stored in a single enum
 // This will be changed to a more flexible system later
+#[derive(Clone, Debug, PartialEq, Sequence)]
 pub enum NodeTypes {
     Folder, 
     FileBase,
+    FileImage,
+    FileText,
+    Text,
+}
+
+impl fmt::Display for NodeTypes {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            NodeTypes::Folder => write!(f, "Folder"),
+            NodeTypes::FileBase => write!(f, "File Base"),
+            NodeTypes::FileImage => write!(f, "File Image"),
+            NodeTypes::FileText => write!(f, "File Text"),
+            NodeTypes::Text => write!(f, "Text Card"),
+        }
+    }
+
+}
+
+#[derive(Clone, Debug, PartialEq, Sequence)]
+pub enum DataTypes {
+    Text,
     Image,
 }
 

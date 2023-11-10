@@ -22,7 +22,7 @@ enum ContextMenuButtons {
 }
 
 #[derive(Component)]
-pub struct PopupMenuButton;
+pub struct ContextMenuButton;
 
 pub fn despawn_context_menus(
     mut commands: Commands,
@@ -49,6 +49,7 @@ pub fn spawn_context_menu(
         return
     }
     
+    // let target = mouse_event.read().next().unwrap().target.unwrap();
     let button = mouse_event.read().next().unwrap().button;
     
     if button != PointerButton::Secondary {
@@ -86,19 +87,19 @@ pub fn spawn_context_menu(
         &mut commands, "Pin".to_string(),
         Box::new(|| Box::new(PinToPositionAction::new()))
     );
-    let move_to_context_button = create_context_menu_button(
-        &mut commands, "Go to Context".to_string(),
-        Box::new(|| Box::new(CreateNodeAction::default()))
-    );
+    // let move_to_context_button = create_context_menu_button(
+    //     &mut commands, "Go to Context".to_string(),
+    //     Box::new(|| Box::new(CreateNodeAction::new("Awesome".to_string())))
+    // );
 
     commands.entity(menu_root).push_children(&[pin_button]);
-    commands.entity(menu_root).push_children(&[move_to_context_button]);
+    // commands.entity(menu_root).push_children(&[move_to_context_button]);
 
 }
 
-const NORMAL_BUTTON: Color = Color::rgb(0.15, 0.15, 0.15);
-const HOVERED_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
-const PRESSED_BUTTON: Color = Color::rgb(0.35, 0.75, 0.35);
+pub const NORMAL_BUTTON: Color = Color::rgb(0.15, 0.15, 0.15);
+pub const HOVERED_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
+pub const PRESSED_BUTTON: Color = Color::rgb(0.35, 0.75, 0.35);
 
 fn create_context_menu_button<'a>(
     commands: &mut Commands,
@@ -123,7 +124,7 @@ fn create_context_menu_button<'a>(
             background_color: NORMAL_BUTTON.into(),
             ..default()
         },
-        PopupMenuButton,
+        ContextMenuButton,
     ))
     .with_children(|parent| {
         parent.spawn((
@@ -141,12 +142,12 @@ fn create_context_menu_button<'a>(
     button
 }
 
-pub fn popup_menu_button_system(
+pub fn context_menu_button_system(
     mut interaction_query: Query<
         (      
             &Interaction,
             &mut BackgroundColor,
-            &PopupMenuButton,
+            &ContextMenuButton,
             &ActionComponent,
         ),
         (Changed<Interaction>, With<Button>),
