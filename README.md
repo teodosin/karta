@@ -10,7 +10,6 @@ Karta will in any event be used as an internal tool for Teodosin creative produc
 
 
 ### ROADMAP
-
 ##### AUTUMN 2023/SPRING 2024
 Viktor develops Karta part-time as part of his master's thesis. Iteration continues. Commercial viability begins to be determined. 
 

@@ -1,6 +1,6 @@
 //
 
-use bevy::prelude::{Plugin, PreStartup, Update, App, World, Resource, ResMut};
+use bevy::prelude::{Plugin, PreStartup, Update, App, World, Resource, ResMut, Component};
 
 pub(crate) mod move_actions;
 pub(crate) mod node_actions;
@@ -30,7 +30,14 @@ pub trait Action: Send + Sync + 'static {
     }
 }
 
+// A component that stores an action 
+#[derive(Component)]
+pub struct ActionComponent {
+    pub action: ActionFactory,
+}
+
 pub type ActionFactory = Box<dyn Fn() -> Box<dyn Action> + Send + Sync>;
+
 
 #[derive(Resource)]
 pub struct ActionManager {

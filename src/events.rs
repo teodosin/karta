@@ -13,10 +13,15 @@ pub struct EventPlugin;
 impl Plugin for EventPlugin {
     fn build(&self, app: &mut App) {
         app
+            // Node Events
+            .add_event::<NodeSpawnedEvent>()
             .add_event::<NodeClickEvent>()
             .add_event::<NodePressedEvent>()
             .add_event::<NodeHoverEvent>()
             .add_event::<MoveNodesEvent>()
+
+            // Edge Events
+            .add_event::<EdgeSpawnedEvent>()
         ;
     }
 }
