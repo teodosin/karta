@@ -1,8 +1,8 @@
 //
 
-use bevy::prelude::{Entity, With, Vec2};
+use bevy::prelude::{Entity, With, Vec2, EventWriter, Commands};
 
-use crate::{graph::{nodes::{PinnedToPosition, spawn_node}, context::{PathsToEntitiesIndex, Selected}, node_types::NodeTypes}, input::pointer::InputData, ui::nodes::GraphViewNode};
+use crate::{graph::{nodes::{PinnedToPosition, spawn_node, GraphDataNode}, context::{PathsToEntitiesIndex, Selected, CurrentContext}, node_types::NodeTypes}, input::pointer::InputData, ui::nodes::GraphViewNode, events::nodes::NodeSpawnedEvent};
 
 use super::Action;
 
@@ -16,17 +16,39 @@ pub struct CreateNodeAction {
 }
 
 impl Action for CreateNodeAction {
+    // NOTE: The implementation here must be kept in sync with the implementation of spawn_node,
+    // which is mostly called when expanding a node or changing context. 
     fn execute(&mut self, world: &mut bevy::prelude::World) {
         println!("Creating: ");
-        // spawn_node(
-        //     event, 
-        //     commands, 
-        //     path, 
-        //     name, 
-        //     ntype, 
-        //     position, 
-        //     pe_index
-        // )
+
+        let context = world.get_resource::<CurrentContext>().unwrap();
+
+        // TODO: Implement a function to get an available name. Use the Houdini convention.
+        // Two nodes can't share the same path, so we need to check if a node already exists
+        // in the current path. 
+        let name = self.ntype.to_string();
+        let path = context.get_current_context_path();
+        let full_path = format!("{}/{}", path, name);
+
+        let node_entity = world.spawn((
+            GraphDataNode {
+                path: full_path.clone(),
+                name: name.clone()
+            },
+            PinnedToPosition,
+        )).id();
+
+        world.send_event(NodeSpawnedEvent {
+            entity: node_entity,
+            path: path.to_string(),
+            name: name.to_string(),
+            ntype: self.ntype,
+            position: self.position,
+        });
+    
+        // Update the PathsToEntitiesIndex
+        let mut pe_index = world.get_resource_mut::<PathsToEntitiesIndex>().unwrap();
+        pe_index.0.insert(full_path, node_entity);
     }
 
     fn undo(&mut self, world: &mut bevy::prelude::World) {

@@ -4,6 +4,7 @@
 use bevy::{prelude::*, ui::FocusPolicy, render::view::VisibleEntities};
 
 use bevy_prototype_lyon::prelude::*;
+use lyon::geom::point;
 
 use crate::{
     graph::{context::CurrentContext, nodes::ContextRoot, graph_cam::GraphCamera},
@@ -24,6 +25,7 @@ mod modal;
 mod context_menu;
 mod mode_menu;
 mod create_node_menu;
+pub mod grid;
 pub(crate) mod nodes;
 pub(crate) mod edges;
 
@@ -66,6 +68,7 @@ impl Plugin for KartaUiPlugin {
                 spawn_context_menu.run_if(on_event::<NodeClickEvent>())
             )
             
+            .add_systems(PostUpdate, point_to_root_if_offscreen)
         ;
     }
 }
