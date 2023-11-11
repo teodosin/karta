@@ -24,7 +24,7 @@ impl Plugin for NodeTypesPlugin {
 
 // For now, all node types will be stored in a single enum
 // This will be changed to a more flexible system later
-#[derive(Clone, Debug, PartialEq, Sequence)]
+#[derive(Clone, Copy, Debug, PartialEq, Sequence)]
 pub enum NodeTypes {
     Folder, 
     FileBase,
@@ -37,9 +37,9 @@ impl fmt::Display for NodeTypes {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             NodeTypes::Folder => write!(f, "Folder"),
-            NodeTypes::FileBase => write!(f, "File Base"),
-            NodeTypes::FileImage => write!(f, "File Image"),
-            NodeTypes::FileText => write!(f, "File Text"),
+            NodeTypes::FileBase => write!(f, "Generic File"),
+            NodeTypes::FileImage => write!(f, "Image"),
+            NodeTypes::FileText => write!(f, "Text File"),
             NodeTypes::Text => write!(f, "Text Card"),
         }
     }

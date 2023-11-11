@@ -217,7 +217,9 @@ fn handle_node_hover(
 // ----------------------------------------------------------------
 // Spawning and despawning systems
 
-
+// NOTE: This function can't be used in the CreateNodeAction directly, but
+// the two must be kept in sync. 
+// TODO: Address this limitation. 
 pub fn spawn_node (
     event: &mut EventWriter<NodeSpawnedEvent>,
 
@@ -230,7 +232,6 @@ pub fn spawn_node (
     pe_index: &mut ResMut<PathsToEntitiesIndex>,
 ) -> bevy::prelude::Entity {
     let full_path = format!("{}/{}", path, name);
-
 
     let node_entity = commands.spawn((
         GraphDataNode {

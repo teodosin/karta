@@ -1,4 +1,3 @@
-pub mod grid;
 pub mod graph_cam;
 pub mod context;
 
@@ -11,8 +10,6 @@ mod simulation;
 mod quadtree;
 
 use bevy::prelude::*;
-
-use self::grid::InfiniteGrid2DPlugin;
 
 pub struct GraphPlugin;
 

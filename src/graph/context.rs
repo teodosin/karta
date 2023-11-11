@@ -38,7 +38,11 @@ pub struct PathsToEntitiesIndex(
 // The resource that stores the current context path
 #[derive(Resource, Debug)]
 pub struct CurrentContext{
+    // A context can be any file or node defined inside some context. 
+    // Any node that is created which is not a file in itself, must still
+    // be stored somewhere. That place is the closest parent folder. 
     pub current_context: String,
+    pub current_context_directory: String,
 }
 
 // A marker component for selected graph entities
@@ -52,6 +56,7 @@ impl CurrentContext {
     fn new() -> Self {
         CurrentContext {
             current_context: "home/viktor/Pictures".to_string(),
+            current_context_directory: "home/viktor/Pictures".to_string(),
         }
     }
 
@@ -92,18 +97,8 @@ pub fn update_context(
     mut pe_index: ResMut<PathsToEntitiesIndex>,
 
     mut nodes: Query<(Entity, &GraphDataNode, &Transform)>,
+    mut root: Query<Entity, With<ContextRoot>>,
 ) {
-    // Handle previous context
-    //----------------------------------------
-    let previous_root = pe_index.0.get(&context.get_current_context_path());
-    match previous_root {
-        Some(entity) => {
-            //println!("Previous root: {:?}", entity);
-            commands.entity(*entity).remove::<ContextRoot>();
-        },
-        None => (),
-    }    
-
 
     // Handle the path to the desired context
     let path: String = input_data.latest_click_entity.clone()
@@ -183,7 +178,12 @@ pub fn update_context(
             )
         }
     };
+    // Remove ContextRoot marker component from previous root
+    for node in root.iter(){
+        commands.entity(node).remove::<ContextRoot>();
+    }
     commands.entity(root_node).insert(ContextRoot);
+    commands.entity(root_node).insert(PinnedToPosition);
 
     // Get position 
 

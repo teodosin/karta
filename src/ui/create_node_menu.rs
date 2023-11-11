@@ -1,8 +1,8 @@
 
-use bevy::{prelude::*, render::view::window};
+use bevy::{prelude::*, render::{view::window, render_graph::Node}};
 use enum_iterator::all;
 
-use crate::{events::nodes::NodeSpawnedEvent, graph::node_types::NodeTypes, actions::{ActionComponent, ActionFactory, node_actions::CreateNodeAction, Action}};
+use crate::{events::nodes::NodeSpawnedEvent, graph::node_types::NodeTypes, actions::{ActionComponent, ActionFactory, node_actions::CreateNodeAction, Action}, input::pointer::InputData};
 
 use super::{modal::{ModalGroup, Modal, spawn_modal_root}, context_menu::ContextMenuButton};
 pub struct CreateNodeMenuPlugin;
@@ -21,6 +21,7 @@ fn create_node_menu(
     // event: EventReader<OpenCreateNodeMenuEvent>,
     // event: EventWriter<NodeSpawnedEvent>,
     key: Res<Input<KeyCode>>,
+    input_data: Res<InputData>,
     menus: Query<(Entity, &ModalGroup), With<Modal>>,
     window: Query<&Window>,
 ){
@@ -39,6 +40,7 @@ fn create_node_menu(
             position
         }
     };
+    let global_position = input_data.curr_position;
 
     let menu_root = spawn_modal_root(
         &mut commands, 
@@ -51,7 +53,7 @@ fn create_node_menu(
         let button = create_context_menu_button(
             &mut commands,
             ntype,
-            position,
+            global_position,
         );
         commands.entity(menu_root).push_children(&[button]);
     }
