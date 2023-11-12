@@ -10,7 +10,7 @@ use super::Action;
 
 #[derive(Clone)]
 pub struct CreateNodeAction {
-    // entity: Entity,
+    entity: Option<Entity>,
     ntype: NodeTypes,
     position: Vec2,
 }
@@ -38,6 +38,8 @@ impl Action for CreateNodeAction {
             PinnedToPosition,
         )).id();
 
+        self.entity = Some(node_entity);
+
         world.send_event(NodeSpawnedEvent {
             entity: node_entity,
             path: path.to_string(),
@@ -60,14 +62,6 @@ impl Action for CreateNodeAction {
     }
 }
 
-// impl Default for CreateNodeAction {
-//     fn default() -> Self {
-//         CreateNodeAction {
-//             node: String::from("Default Node"),
-//         }
-//     }
-// }
-
 impl CreateNodeAction {
     pub fn new(
         // entity: Entity,
@@ -75,7 +69,7 @@ impl CreateNodeAction {
         pos: Vec2
     ) -> Self {
         CreateNodeAction {
-            // entity,
+            entity: None,
             ntype, 
             position: pos,
         }
