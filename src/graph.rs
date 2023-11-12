@@ -27,14 +27,6 @@ impl Plugin for GraphPlugin {
 
             .insert_resource(ClearColor(Color::rgb(0.1, 0.1, 0.12)))
 
-            .add_systems(Startup, setup_grid)
-
         ;
     }
-}
-
-fn setup_grid(
-    mut commands: Commands
-){
-    // commands.spawn(InfiniteGrid2DBundle::default());
 }

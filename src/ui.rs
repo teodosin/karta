@@ -16,7 +16,7 @@ use self::{
     nodes::NodesUiPlugin, edges::{
         update_edges, EdgeUiPlugin
     }, 
-    create_node_menu::CreateNodeMenuPlugin,
+    create_node_menu::CreateNodeMenuPlugin, grid::InfiniteGrid2DPlugin,
 };
 
 // Building blocks of specific components
@@ -47,6 +47,7 @@ impl Plugin for KartaUiPlugin {
             .add_plugins(NodesUiPlugin)
             .add_plugins(EdgeUiPlugin)
             .add_plugins(CreateNodeMenuPlugin)
+            .add_plugins(InfiniteGrid2DPlugin)
             
             // Element Systems
             .add_systems(Update, modal::modal_position_system.after(spawn_context_menu))
