@@ -84,6 +84,13 @@ impl CreateNodeAction {
 
 // ------------------ DeleteNodeAction ------------------
 
+// ------------------ RemoveNodeAction ------------------
+// There is a distinction to be made between removing and deleting. Removing a node
+// just removes it from the current context. If the node doesn't exist in any other context,
+// it will also be deleted after a warning. If the current context is the parent context,
+// but it exists in other contexts, upon removal the user should also probably be 
+// notified if the node has to be moved to a different host context.
+
 // ------------------ EditNodeAction ------------------
 
 // ------------------ PinToPositionAction ------------------
