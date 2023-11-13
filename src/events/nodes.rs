@@ -1,6 +1,6 @@
 //
 
-use bevy::prelude::{Event, Entity, MouseButton, Vec2};
+use bevy::prelude::{Event, Entity, Vec2};
 use bevy_mod_picking::prelude::*;
 
 use crate::graph::node_types::NodeTypes;

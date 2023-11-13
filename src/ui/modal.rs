@@ -1,7 +1,4 @@
 use bevy::prelude::*;
-use bevy_mod_picking::prelude::PointerButton;
-
-use crate::events::nodes::NodeClickEvent;
 
 // Modal groups
 // -----------------------------------------------------------------------------
@@ -9,7 +6,7 @@ use crate::events::nodes::NodeClickEvent;
 pub enum ModalGroup {
     // Context(ModalGroupContext), 
     Context,
-    Input,   
+    // Input,   
 }
 
 // What if groups weren't necessarily mutually exclusive?
@@ -88,7 +85,7 @@ pub fn modal_position_system(
 
     let viewport_size = Vec2::new(window.width(), window.height());
 
-    for (modal, mut style, global_pos) in query.iter_mut() {
+    for (modal, mut style, _global_pos) in query.iter_mut() {
         let size = modal.size();
         let window_size = Vec2::new(window.width(), window.height());
 

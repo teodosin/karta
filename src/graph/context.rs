@@ -7,7 +7,7 @@ use bevy_mod_picking::prelude::PointerButton;
 use std::fs;
 
 use crate::{
-    graph::{graph_cam, edges::create_edge, node_types::{NodeTypes, get_type_from_path}}, vault::KartaVault, 
+    graph::{graph_cam, edges::create_edge, node_types::get_type_from_path}, vault::KartaVault, 
     events::{nodes::{NodeClickEvent, NodeSpawnedEvent}, edges::EdgeSpawnedEvent}, input::pointer::InputData
 };
 
@@ -97,7 +97,7 @@ pub fn update_context(
     mut pe_index: ResMut<PathsToEntitiesIndex>,
 
     mut nodes: Query<(Entity, &GraphDataNode, &Transform)>,
-    mut root: Query<Entity, With<ContextRoot>>,
+    root: Query<Entity, With<ContextRoot>>,
 ) {
 
     // Handle the path to the desired context
@@ -197,9 +197,8 @@ pub fn update_context(
 
     // Spawn parent if it doesn't exist
     // AND if we are not already at the root
-    let mut parent_node = Option::<Entity>::None;
 
-    parent_node = match pe_index.0.get(root_parent_path) {
+    let parent_node = match pe_index.0.get(root_parent_path) {
         Some(entity) => {
             println!("Parent node already exists");
             commands.entity(*entity).remove::<ToBeDespawned>();

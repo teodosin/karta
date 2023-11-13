@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use bevy::prelude::*;
 
-use crate::{graph::attribute::Attributes, ui::edges::add_edge_ui, events::edges::EdgeSpawnedEvent};
+use crate::{graph::attribute::Attributes, events::edges::EdgeSpawnedEvent};
 
 use super::{nodes::GraphDataNode, context::CurrentContext, graph_cam::ViewData};
 
@@ -37,17 +37,17 @@ pub struct EdgeType {
 
 pub enum EdgeTypes {
     Base,
-    Parent,
+    _Parent,
 }
 
 // TODO 0.12: Convert to One-Shot System
 // And use EdgeDefaults resource to set the default length
 pub fn create_edge(
-    mut event: &mut EventWriter<EdgeSpawnedEvent>,
+    event: &mut EventWriter<EdgeSpawnedEvent>,
     from: &Entity, 
     to: &Entity, 
     commands: &mut Commands,
-    view_data: &mut ViewData
+    _view_data: &mut ViewData
 ){
 
     println!("Creating edge from {:?} to {:?}", from, to);

@@ -1,12 +1,10 @@
 // FORCE SIMULATION
 
-use std::collections::HashMap;
+use bevy::{prelude::{Query, Transform, Without, Vec2, Plugin, App, Entity, Res, Gizmos, PostUpdate, Resource}, time::Time};
 
-use bevy::{prelude::{Query, Transform, With, Without, Vec2, Plugin, App, Update, Entity, Res, IntoSystemConfigs, Gizmos, Color, Resource, PostUpdate}, time::Time};
+use crate::ui::nodes::{GraphViewNode, Velocity2D};
 
-use crate::{ui::nodes::{GraphViewNode, Velocity2D}};
-
-use super::{nodes::{PinnedToPosition, GraphNodeEdges}, edges::GraphEdge, attribute::Attributes, context::{Selected, CurrentContext}};
+use super::{nodes::PinnedToPosition, context::Selected};
 
 pub struct GraphSimPlugin;
 
@@ -22,10 +20,10 @@ impl Plugin for GraphSimPlugin {
 
 }
 
-const FORCE_UPPER_LIMIT: f32 = 50.0;
-const FORCE_LOWER_LIMIT: f32 = 0.5;
-const DAMPING_FACTOR: f32 = 0.95;
-const SIMULATION_STEPS: usize = 8;
+const _FORCE_UPPER_LIMIT: f32 = 50.0;
+const _FORCE_LOWER_LIMIT: f32 = 0.5;
+const _DAMPING_FACTOR: f32 = 0.95;
+const _SIMULATION_STEPS: usize = 8;
 
 // Should the simulation settings be a part of the sim root node?
 #[derive(Debug, Resource)]
@@ -54,7 +52,7 @@ fn apply_forces(
         (Entity, &GraphViewNode, &mut Transform, &mut Velocity2D), 
         (Without<PinnedToPosition>, Without<Selected>)
     >,
-    mut gizmos: Gizmos,
+    _gizmos: Gizmos,
 ) {
     //for step in 0..sim_settings.simulation_steps {
         for (_node, _view, mut pos, mut vel) in nodes.iter_mut() {

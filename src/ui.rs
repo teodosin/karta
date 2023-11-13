@@ -4,7 +4,6 @@
 use bevy::{prelude::*, ui::FocusPolicy, render::view::VisibleEntities};
 
 use bevy_prototype_lyon::prelude::*;
-use lyon::geom::point;
 
 use crate::{
     graph::{context::CurrentContext, nodes::ContextRoot, graph_cam::GraphCamera},
@@ -13,9 +12,7 @@ use crate::{
 use self::{
     context_menu::{context_menu_button_system, spawn_context_menu}, 
     mode_menu::{create_mode_menu, mode_button_system, update_active_mode_highlight}, 
-    nodes::NodesUiPlugin, edges::{
-        update_edges, EdgeUiPlugin
-    }, 
+    nodes::NodesUiPlugin, edges::EdgeUiPlugin, 
     create_node_menu::CreateNodeMenuPlugin, grid::InfiniteGrid2DPlugin,
 };
 

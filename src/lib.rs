@@ -1,7 +1,7 @@
 //lib
 
 use bevy::{prelude::*, log::LogPlugin};
-use bevy_inspector_egui::quick::{ResourceInspectorPlugin, WorldInspectorPlugin};
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
 // use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_mod_picking::prelude::*;
 
@@ -78,6 +78,11 @@ pub fn karta_app() {
         .add_plugins(ui::KartaUiPlugin)
 
         //.run()
+
+        // It's been brought to my attention that my way of structuring my plugins might suck a bit.
+        // My plugins are strongly coupled to each other. I can't test plugins in isolation.
+        // I can create test cases still, and import everything I need to test a plugin, but it's 
+        // not ideal. So, TODO!
     ;
 
     // let dot = bevy_mod_debugdump::schedule_graph_dot(&mut app, Update, &bevy_mod_debugdump::schedule_graph::Settings::default());

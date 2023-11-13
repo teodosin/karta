@@ -1,4 +1,4 @@
-use bevy::prelude::{Plugin, PreStartup, PreUpdate, App, PostUpdate};
+use bevy::prelude::{Plugin, PreUpdate, App, PostUpdate};
 
 use self::pointer::{InputData, update_cursor_info};
 

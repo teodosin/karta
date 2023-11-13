@@ -14,11 +14,11 @@ use bevy::{
         Handle, 
         Commands, 
         Assets, 
-        PostStartup, Resource, Update, AssetApp, Asset, ResMut
+        AssetApp, ResMut, Resource, Asset
     }, 
     asset::{
-        AssetLoader, LoadedAsset, LoadContext, io::Reader, AsyncReadExt
-    }, reflect::{TypeUuid, TypePath}, utils::{BoxedFuture}
+        AssetLoader, LoadContext, io::Reader, AsyncReadExt
+    }, utils::BoxedFuture, reflect::TypePath
 };
 // use thiserror_core::display::DisplayAsDisplay;
 // use futures_lite::AsyncReadExt;
@@ -94,9 +94,9 @@ impl KartaVault {
 // }
 
 fn load_assets(
-    mut commands: Commands,
+    mut _commands: Commands,
     asset_server: Res<AssetServer>,
-    context_asset_state: Res<ContextAssetState>,
+    _context_asset_state: Res<ContextAssetState>,
     assets: ResMut<Assets<ContextAsset>>,
     vault: Res<KartaVault>,
 ){
@@ -105,7 +105,7 @@ fn load_assets(
         asset_server.load(path);
     println!("context_assets: {:?}", context_assets);
 
-    let data = assets.get(&context_assets);
+    let _data = assets.get(&context_assets);
     // commands.insert_resource(ContextAssets {
     //     handle: context_assets,
     // });
@@ -113,7 +113,7 @@ fn load_assets(
 
 #[derive(Resource, Default)]
 struct ContextAssetState {
-    pub handle: Handle<ContextAsset>,
+    pub _handle: Handle<ContextAsset>,
 }
 
 #[derive(Asset, Debug, Deserialize, TypePath, Default)]
@@ -170,8 +170,8 @@ impl AssetLoader for ContextAssetLoader {
     fn load<'a>(
         &'a self,
         reader: &'a mut Reader,
-        settings: &'a Self::Settings,
-        load_context: &'a mut LoadContext,
+        _settings: &'a Self::Settings,
+        _load_context: &'a mut LoadContext,
     ) -> BoxedFuture<'a, Result<Self::Asset, Self::Error>> {
         Box::pin(async move {
             let mut bytes = Vec::new();
@@ -187,7 +187,7 @@ impl AssetLoader for ContextAssetLoader {
 
 }
 
-pub fn dir_or_file_is_hidden(
+pub fn _dir_or_file_is_hidden(
     entry: &DirEntry,
 ) -> bool {
     entry

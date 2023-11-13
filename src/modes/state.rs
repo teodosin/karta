@@ -5,14 +5,12 @@
 // well together, so it would remove some redundancy in modes. 
 
 use bevy::prelude::*;
-use bevy_mod_picking::prelude::{Pointer, PointerButton};
+use bevy_mod_picking::prelude::PointerButton;
 
 use crate::{
-    graph::{
-        graph_cam, context::{
+    graph::context::{
             CurrentContext, update_context
-        }
-    }, 
+        }, 
     events::nodes::NodeClickEvent,
     vault::KartaVault, input::pointer::InputData
 };

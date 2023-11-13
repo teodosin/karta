@@ -1,4 +1,4 @@
-use bevy::{prelude::{Vec2, Resource, ResMut, Input, Res, MouseButton, Query, Camera, GlobalTransform, With, Camera2d, info}, window::Window};
+use bevy::{prelude::{Vec2, ResMut, Input, Res, MouseButton, Query, Camera, GlobalTransform, With, Camera2d, Resource}, window::Window};
 
 
 

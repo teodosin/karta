@@ -23,10 +23,10 @@ impl Plugin for ThemePlugin {
 // ------------------------------------------------------------------
 pub const OUTLINE_BASE_COLOR: Color = Color::rgba(0.2, 0.2, 0.4, 0.0);
 pub const OUTLINE_HOVER_COLOR: Color = Color::rgb(0.3, 0.3, 0.5);
-pub const OUTLINE_SELECTED_COLOR: Color = Color::rgb(0.4, 0.4, 0.6);
-pub const OUTLINE_FOCAL_COLOR: Color = Color::ORANGE;
-pub const OUTLINE_FOCAL_HOVER_COLOR: Color = Color::rgb(0.9, 0.9, 0.9);
-pub const OUTLINE_FOCAL_SELECTED_COLOR: Color = Color::rgb(0.9, 0.9, 0.9);
+// pub const OUTLINE_SELECTED_COLOR: Color = Color::rgb(0.4, 0.4, 0.6);
+// pub const OUTLINE_FOCAL_COLOR: Color = Color::ORANGE;
+// pub const OUTLINE_FOCAL_HOVER_COLOR: Color = Color::rgb(0.9, 0.9, 0.9);
+// pub const OUTLINE_FOCAL_SELECTED_COLOR: Color = Color::rgb(0.9, 0.9, 0.9);
 
 #[derive(Resource)]
 pub struct OutlinesTheme {
@@ -54,11 +54,11 @@ impl Default for OutlinesTheme {
 // Would color mixing be useful here?
 
 // The previous 8 colors as consts
-pub const EDGE_FOCAL_BASE_COLOR: Color = Color::rgba(0.67, 0.21, 0.0, 0.5);
-pub const EDGE_FOCAL_BASE_HOVER_COLOR: Color = Color::rgba(0.73, 0.22, 0.0, 0.73);
-pub const EDGE_FOCAL_PARENT_COLOR: Color = Color::rgba(0.57, 0.0, 0.0, 0.5);
-pub const EDGE_FOCAL_PARENT_HOVER_COLOR: Color = Color::rgba(0.67, 0.0, 0.0, 0.73);
-pub const EDGE_BASE_COLOR: Color = Color::rgb(0.2, 0.2, 0.3);
-pub const EDGE_BASE_HOVER_COLOR: Color = Color::rgb(0.3, 0.3, 0.4);
+// pub const EDGE_FOCAL_BASE_COLOR: Color = Color::rgba(0.67, 0.21, 0.0, 0.5);
+// pub const EDGE_FOCAL_BASE_HOVER_COLOR: Color = Color::rgba(0.73, 0.22, 0.0, 0.73);
+// pub const EDGE_FOCAL_PARENT_COLOR: Color = Color::rgba(0.57, 0.0, 0.0, 0.5);
+// pub const EDGE_FOCAL_PARENT_HOVER_COLOR: Color = Color::rgba(0.67, 0.0, 0.0, 0.73);
+// pub const EDGE_BASE_COLOR: Color = Color::rgb(0.2, 0.2, 0.3);
+// pub const EDGE_BASE_HOVER_COLOR: Color = Color::rgb(0.3, 0.3, 0.4);
 pub const EDGE_PARENT_COLOR: Color = Color::rgb(0.67, 0.21, 0.0);
-pub const EDGE_PARENT_HOVER_COLOR: Color = Color::rgb(0.73, 0.22, 0.0);
+// pub const EDGE_PARENT_HOVER_COLOR: Color = Color::rgb(0.73, 0.22, 0.0);

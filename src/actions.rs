@@ -76,14 +76,14 @@ impl ActionManager {
         self.redo_stack.clear();
     }
 
-    fn undo(&mut self, world: &mut World) {
+    fn _undo(&mut self, world: &mut World) {
         if let Some(mut action) = self.undo_stack.pop() {
             action.undo(world);
             self.redo_stack.push(action);
         }
     }
 
-    fn redo(&mut self, world: &mut World) {
+    fn _redo(&mut self, world: &mut World) {
         if let Some(mut action) = self.redo_stack.pop() {
             action.redo(world);
             self.undo_stack.push(action);
