@@ -2,7 +2,7 @@
 
 use std::{fs, fmt};
 
-use bevy::prelude::{Component, Plugin, App, Update};
+use bevy::prelude::{Component, Plugin, App};
 use enum_iterator::Sequence;
 
 mod file_types;
@@ -81,7 +81,7 @@ trait Node {
 }
 
 enum NodeDataTypes {
-    Image,
+    _Image,
     Text,
 }
 

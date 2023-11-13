@@ -1,7 +1,7 @@
 // Mode for creation and editing of edges
 
 
-use bevy::{prelude::*, ecs::system::CommandQueue, core_pipeline::core_2d::graph::input};
+use bevy::prelude::*;
 
 
 use crate::{input::pointer::{left_click_just_released, InputData}, graph::{context::PathsToEntitiesIndex, edges::create_edge, nodes::GraphDataNode, graph_cam::ViewData}, events::edges::EdgeSpawnedEvent};

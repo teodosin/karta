@@ -1,6 +1,6 @@
-use bevy::{prelude::*, sprite::{MaterialMesh2dBundle, Material2d}, text::Text2dBounds};
+use bevy::{prelude::*, sprite::MaterialMesh2dBundle, text::Text2dBounds};
 use bevy_mod_picking::{prelude::*, backends::raycast::RaycastPickable};
-use bevy_prototype_lyon::{shapes, prelude::{GeometryBuilder, ShapeBundle, Fill, Stroke, StrokeOptions, Path}, entity};
+use bevy_prototype_lyon::{shapes, prelude::{GeometryBuilder, ShapeBundle, Stroke, StrokeOptions}};
 use rand::Rng;
 
 use crate::{
@@ -223,12 +223,12 @@ pub fn add_node_ui(
             PickableBundle::default(),
             RaycastPickable::default(),
 
-            On::<Pointer<Over>>::target_component_mut::<Stroke>(move |over, stroke| {
+            On::<Pointer<Over>>::target_component_mut::<Stroke>(move |_over, stroke| {
                 stroke.color = crate::settings::theme::OUTLINE_HOVER_COLOR;
                 stroke.options = StrokeOptions::default().with_line_width(outline_width_hovered);
             }),
             
-            On::<Pointer<Out>>::target_component_mut::<Stroke>(move |out, stroke| {
+            On::<Pointer<Out>>::target_component_mut::<Stroke>(move |_out, stroke| {
                 stroke.color = crate::settings::theme::OUTLINE_BASE_COLOR;
                 stroke.options = StrokeOptions::default().with_line_width(outline_width);
             }),
@@ -241,9 +241,9 @@ pub fn add_node_ui(
 
 pub fn handle_outline_hover(
     // ev_spawn: EventReader<Node>,
-    nodes: Query<&Transform, With<GraphDataNode>>,
+    _nodes: Query<&Transform, With<GraphDataNode>>,
     
-    mut commands: Commands,
+    // mut commands: Commands,
 ){
     
 }
@@ -263,15 +263,15 @@ pub fn visualise_pinned_position (
     }
 }
 
-pub fn outlines_pulse(
-    time: Res<Time>,
-    mut outlines: Query<&mut Stroke, With<NodeOutline>>,
-){
-    let line_width = 5.0 + (time.elapsed_seconds() * 4.0).sin() * 5.0;
-    for mut outline in outlines.iter_mut(){
-        outline.options = StrokeOptions::default().with_line_width(line_width);
-    }
-}
+// pub fn outlines_pulse(
+//     time: Res<Time>,
+//     mut outlines: Query<&mut Stroke, With<NodeOutline>>,
+// ){
+//     let line_width = 5.0 + (time.elapsed_seconds() * 4.0).sin() * 5.0;
+//     for mut outline in outlines.iter_mut(){
+//         outline.options = StrokeOptions::default().with_line_width(line_width);
+//     }
+// }
 
 
                     

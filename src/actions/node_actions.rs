@@ -1,8 +1,8 @@
 //
 
-use bevy::prelude::{Entity, With, Vec2, EventWriter, Commands};
+use bevy::prelude::{Entity, With, Vec2};
 
-use crate::{graph::{nodes::{PinnedToPosition, spawn_node, GraphDataNode}, context::{PathsToEntitiesIndex, Selected, CurrentContext}, node_types::NodeTypes}, input::pointer::InputData, ui::nodes::GraphViewNode, events::nodes::NodeSpawnedEvent};
+use crate::{graph::{nodes::{PinnedToPosition, GraphDataNode}, context::{PathsToEntitiesIndex, Selected, CurrentContext}, node_types::NodeTypes}, input::pointer::InputData, ui::nodes::GraphViewNode, events::nodes::NodeSpawnedEvent};
 
 use super::Action;
 
@@ -53,11 +53,11 @@ impl Action for CreateNodeAction {
         pe_index.0.insert(full_path, node_entity);
     }
 
-    fn undo(&mut self, world: &mut bevy::prelude::World) {
+    fn undo(&mut self, _world: &mut bevy::prelude::World) {
         println!("Undoing CreateNodeAction");
     }
 
-    fn redo(&mut self, world:  &mut bevy::prelude::World) {
+    fn redo(&mut self, _world:  &mut bevy::prelude::World) {
         println!("Redoing CreateNodeAction");
     }
 }
@@ -183,7 +183,7 @@ impl Action for UnpinToPositionAction {
 }
 
 impl UnpinToPositionAction {
-    pub fn new(node: Entity) -> Self {
+    pub fn _new(node: Entity) -> Self {
         UnpinToPositionAction {
             node,
         }

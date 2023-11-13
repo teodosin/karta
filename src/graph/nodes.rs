@@ -2,10 +2,9 @@
 
 use bevy::{prelude::*, input::keyboard::KeyboardInput};
 
-use super::{graph_cam, context::{PathsToEntitiesIndex, ToBeDespawned, Selected}, node_types::NodeTypes};
+use super::{context::{PathsToEntitiesIndex, ToBeDespawned, Selected}, node_types::NodeTypes};
 
 use crate::{events::nodes::*, ui::nodes::{NodeOutline, GraphViewNode}, input::pointer::InputData};
-use crate::ui::nodes::add_node_ui;
 
 pub struct NodesPlugin;
 

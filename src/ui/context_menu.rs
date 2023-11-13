@@ -4,7 +4,6 @@ use bevy::{
     prelude::*, 
     ui::{
         Style, 
-        PositionType, 
         BackgroundColor, 
         Val
     }, 
@@ -12,11 +11,11 @@ use bevy::{
 };
 use bevy_mod_picking::prelude::PointerButton;
 
-use crate::{events::nodes::NodeClickEvent, actions::{node_actions::{PinToPositionAction, CreateNodeAction}, ActionComponent, ActionFactory, ActionManager}};
+use crate::{events::nodes::NodeClickEvent, actions::{node_actions::PinToPositionAction, ActionComponent, ActionFactory, ActionManager}};
 
 use super::modal::*;
 
-enum ContextMenuButtons {
+enum _ContextMenuButtons {
     Pin,
     GoToContext,
 }
@@ -43,7 +42,7 @@ pub fn spawn_context_menu(
     window: Query<&Window>,
 ){
 
-    let inputs = [PointerButton::Primary, PointerButton::Secondary, PointerButton::Middle];
+    let _inputs = [PointerButton::Primary, PointerButton::Secondary, PointerButton::Middle];
     
     if mouse_event.is_empty() {
         return
@@ -154,7 +153,7 @@ pub fn context_menu_button_system(
     >,
     mut manager: ResMut<ActionManager>, 
 ) {
-    for (interaction, mut color, mode, factory) in &mut interaction_query {
+    for (interaction, mut color, _mode, factory) in &mut interaction_query {
         // let mode = mode_query.get(children[0]).unwrap();
 
         match *interaction {

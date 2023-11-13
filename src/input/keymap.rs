@@ -1,11 +1,10 @@
 
-use bevy::{prelude::{EventReader, ResMut, Res, Resource, KeyCode, EventWriter}, input::keyboard::KeyboardInput, utils::HashMap, time::Time};
+use bevy::{prelude::{EventReader, ResMut, Res, Resource, KeyCode}, input::keyboard::KeyboardInput, utils::HashMap, time::Time};
 
-use crate::actions::{Action, ActionManager, ActionFactory, node_actions::CreateNodeAction};
+use crate::actions::{ActionManager, ActionFactory};
 
-use super::pointer::InputData;
 
-pub fn setup_input_map(){
+pub fn _setup_input_map(){
     println!("Setting up input map");
 }
 
@@ -22,12 +21,12 @@ pub struct KeyMap {
 // Also combinations of keys and mouse buttons. Ctrl + Left Click for example.
 // Possibly even arbitrary combinations of keys, mouse buttons and mouse positions.
 // That's crazy though. Let's start with just keys.
-struct KeyChord {
+struct _KeyChord {
     keys: Vec<KeyCode>,
 }
 
 impl KeyMap {
-    pub fn add_key_action_pair(&mut self, key: KeyCode, action: ActionFactory) {
+    pub fn _add_key_action_pair(&mut self, key: KeyCode, action: ActionFactory) {
         self.key_action_pairs.insert(key, action);
     }
 }
@@ -35,7 +34,7 @@ impl KeyMap {
 impl Default for KeyMap {
     fn default() -> Self {
 
-        let mut map = KeyMap {
+        let map = KeyMap {
             key_action_pairs: HashMap::default(),
         };
 

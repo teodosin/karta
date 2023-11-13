@@ -1,8 +1,8 @@
 
-use bevy::{prelude::*, render::{view::window, render_graph::Node}};
+use bevy::prelude::*;
 use enum_iterator::all;
 
-use crate::{events::nodes::NodeSpawnedEvent, graph::node_types::NodeTypes, actions::{ActionComponent, ActionFactory, node_actions::CreateNodeAction, Action}, input::pointer::InputData};
+use crate::{graph::node_types::NodeTypes, actions::{ActionComponent, ActionFactory, node_actions::CreateNodeAction, Action}, input::pointer::InputData};
 
 use super::{modal::{ModalGroup, Modal, spawn_modal_root}, context_menu::ContextMenuButton};
 pub struct CreateNodeMenuPlugin;

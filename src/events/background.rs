@@ -19,6 +19,7 @@ impl From<ListenerInput<Pointer<Down>>> for RectangleSelectionEvent {
 
 #[derive(Event)]
 pub struct RectangleSelectionEndEvent {
+    _button: PointerButton,
     pub end: Vec2,
 }
 
@@ -26,6 +27,7 @@ pub struct RectangleSelectionEndEvent {
 impl From<ListenerInput<Pointer<DragEnd>>> for RectangleSelectionEndEvent {
     fn from(event: ListenerInput<Pointer<DragEnd>>) -> Self {
         RectangleSelectionEndEvent {
+            _button: event.button,
             end: event.distance,
         }
     }

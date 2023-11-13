@@ -6,7 +6,7 @@ use bevy::{
 };
 use bevy_mod_picking::prelude::*;
 
-use crate::events::background::{RectangleSelectionEvent, RectangleSelectionEndEvent};
+use crate::events::background::RectangleSelectionEndEvent;
 
 // Modeled after lib.rs of bevy_infinite_grid
 
@@ -31,7 +31,7 @@ fn setup_grid(
     commands.spawn((
         GraphBackground,
         MaterialMesh2dBundle {
-            mesh: meshes.add(shape::Quad::new(Vec2::new(10000.0, 10000.0)).into()).into(),
+            mesh: meshes.add(shape::Quad::new(Vec2::new(1000000.0, 1000000.0)).into()).into(),
             material: grid_materials.add(GridMaterial::default().into()),
             transform: Transform {
                 translation: Vec3::new(0.0, 0.0, -1000.0),
@@ -40,7 +40,7 @@ fn setup_grid(
             ..default()
         },
 
-        // On::<Pointer<DragEnd>>::send_event::<RectangleSelectionEndEvent>(),
+        On::<Pointer<DragEnd>>::send_event::<RectangleSelectionEndEvent>(),
     ));
 }
 
@@ -51,7 +51,9 @@ pub struct GraphBackground;
 impl Default for GridMaterial {
     fn default() -> Self {
         GridMaterial {
-            color: Color::ORANGE,
+            zoom: 1.0,
+            color: Color::rgba(1.0, 1.0, 1.0, 0.2),
+            grid_cell_size: Vec2::new(0.00002, 0.00002),
         }
     }
 }
@@ -59,7 +61,11 @@ impl Default for GridMaterial {
 #[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
 pub struct GridMaterial {
     #[uniform(0)]
+    pub zoom: f32,
+    #[uniform(1)]
     pub color: Color,
+    #[uniform(2)]
+    pub grid_cell_size: Vec2,
 }
 
 impl Material2d for GridMaterial {

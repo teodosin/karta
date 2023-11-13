@@ -1,7 +1,7 @@
 // Drawing the edges
 
 use bevy::prelude::*;
-use bevy_prototype_lyon::{shapes, prelude::{Fill, ShapeBundle, GeometryBuilder, Path, Stroke}};
+use bevy_prototype_lyon::{shapes, prelude::{ShapeBundle, GeometryBuilder, Path, Stroke}};
 
 use crate::{graph::{edges::GraphEdge, nodes::GraphDataNode, graph_cam::ViewData}, settings::theme::EDGE_PARENT_COLOR, events::edges::EdgeSpawnedEvent};
 

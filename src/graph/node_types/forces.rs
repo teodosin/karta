@@ -11,7 +11,7 @@
 
 use bevy::{prelude::*, utils::HashMap};
 
-use crate::{graph::{edges::GraphEdge, attribute::Attributes, simulation::GraphSimSettings}, ui::nodes::{GraphViewNode, Velocity2D}};
+use crate::{graph::{edges::GraphEdge, attribute::Attributes}, ui::nodes::{GraphViewNode, Velocity2D}};
 
 pub struct ForceNodesPlugin;
 
@@ -30,7 +30,7 @@ impl Plugin for ForceNodesPlugin {
 
 #[derive(Component)]
 pub struct NodeForce {
-    running: bool,
+    _running: bool,
 }
 
 // Graph Simulation Root
@@ -48,7 +48,7 @@ pub struct NodeForce {
 // For now, the attributes that will be read will be hard-coded (k and length).
 // In the future, the resting length and stiffness values will be inputs to the node.
 pub fn edge_spring_constraints (
-    forces: Query<(&GraphViewNode, &mut NodeForce)>,
+    _forces: Query<(&GraphViewNode, &mut NodeForce)>,
     mut nodes: Query<(Entity, &GraphViewNode, &Transform, &mut Velocity2D)>,
     edges: Query<(&GraphEdge, &Attributes)>,
 ){
@@ -114,13 +114,13 @@ pub fn edge_spring_constraints (
 
 // Same current restrictions and future plans as for the edge spring constraints apply here. 
 pub fn repulsion_constraints (
-    force_nodes: Query<&GraphViewNode, With<NodeForce>>,
+    _force_nodes: Query<&GraphViewNode, With<NodeForce>>,
     mut nodes: Query<(Entity, &GraphViewNode, &Transform, &mut Velocity2D)>,
 ){
     let mut forces: HashMap<Entity, Vec2> = HashMap::new();
 
-    for (node_a, view_a, pos_a, mut vel_a) in nodes.iter(){
-        for (node_b, view_b, pos_b, mut vel_b) in nodes.iter(){
+    for (node_a, _view_a, pos_a, mut _vel_a) in nodes.iter(){
+        for (node_b, _view_b, pos_b, mut _vel_b) in nodes.iter(){
             if node_a == node_b {
                 continue
             }
