@@ -1,12 +1,14 @@
+use std::path::PathBuf;
+
 use bevy::{prelude::{Vec2, ResMut, Input, Res, MouseButton, Query, Camera, GlobalTransform, With, Camera2d, Resource}, window::Window};
 
 
 
 #[derive(Resource, Debug)]
 pub struct InputData {
-    pub latest_click_entity: Option<String>,
-    pub latest_press_entity: Option<String>,
-    pub latest_hover_entity: Option<String>,
+    pub latest_click_entity: Option<PathBuf>,
+    pub latest_press_entity: Option<PathBuf>,
+    pub latest_hover_entity: Option<PathBuf>,
 
     pub press_is_outline: bool,
 

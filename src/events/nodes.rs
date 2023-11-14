@@ -1,5 +1,7 @@
 //
 
+use std::{path::PathBuf, ffi::OsString};
+
 use bevy::prelude::{Event, Entity, Vec2};
 use bevy_mod_picking::prelude::*;
 
@@ -12,8 +14,8 @@ use crate::graph::node_types::NodeTypes;
 #[derive(Event)]
 pub struct NodeSpawnedEvent {
     pub entity: Entity,
-    pub path: String,
-    pub name: String,
+    pub path: PathBuf,
+    pub name: OsString,
     pub ntype: NodeTypes,
     pub position: Vec2,
 }

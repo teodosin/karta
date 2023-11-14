@@ -1,6 +1,7 @@
 // Mode for creation and editing of edges
 
 
+
 use bevy::prelude::*;
 
 
@@ -126,24 +127,26 @@ fn draw_edge_preview(
 fn test_create_edge_from_drag() {
     use bevy::utils::HashMap;
     use crate::graph::edges::GraphEdge;
+    use std::{path::PathBuf, ffi::OsString};
     // Setup a world and schedule for Bevy ECS (assuming Bevy is being used)
     let mut app = App::new();
 
     let entity1 = app.world.spawn(
         GraphDataNode {
-            path: "path/to/entity1".to_string(),
-            name: "entity1".to_string(),
+            path: PathBuf::from("path/to/entity1"),
+            name: OsString::from("entity1"),
         }
     ).id();
-    let node1 = &app.world.get::<GraphDataNode>(entity1).unwrap().path.to_string();
-
+    
     let entity2 = app.world.spawn(
         GraphDataNode {
-            path: "path/to/entity2".to_string(),
-            name: "entity2".to_string(),
+            path: PathBuf::from("path/to/entity2"),
+            name: OsString::from("entity2"),
         }
     ).id();
-    let node2 = app.world.get::<GraphDataNode>(entity2).unwrap().path.to_string();
+    
+    let node1 = &app.world.get::<GraphDataNode>(entity1).unwrap().path;
+    let node2 = &app.world.get::<GraphDataNode>(entity2).unwrap().path;
 
     // Mock InputData, Valid
     let input_data_mock_valid = InputData {
@@ -163,8 +166,8 @@ fn test_create_edge_from_drag() {
 
     // Create a mock PathsToEntitiesIndex
     let mut pe_index = PathsToEntitiesIndex(HashMap::new());
-    pe_index.0.insert("path/to/entity1".to_string(), entity1);
-    pe_index.0.insert("path/to/entity2".to_string(), entity2);
+    pe_index.0.insert(PathBuf::from("path/to/entity1"), entity1);
+    pe_index.0.insert(PathBuf::from("path/to/entity2"), entity2);
     app.world.insert_resource(pe_index);
 
 
