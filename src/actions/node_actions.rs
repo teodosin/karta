@@ -1,5 +1,7 @@
 //
 
+use std::ffi::OsString;
+
 use bevy::prelude::{Entity, With, Vec2};
 
 use crate::{graph::{nodes::{PinnedToPosition, GraphDataNode}, context::{PathsToEntitiesIndex, Selected, CurrentContext}, node_types::NodeTypes}, input::pointer::InputData, ui::nodes::GraphViewNode, events::nodes::NodeSpawnedEvent};
@@ -21,16 +23,30 @@ impl Action for CreateNodeAction {
     fn execute(&mut self, world: &mut bevy::prelude::World) {
         println!("Creating: ");
 
-        let context = world.get_resource::<CurrentContext>().unwrap();
-
-        // TODO: Implement a function to get an available name. Use the Houdini convention.
+        
+        // DONE: Implement a function to get an available name. Use the Houdini convention.
         // Two nodes can't share the same path, so we need to check if a node already exists
-        // in the current path. 
-        let name = self.ntype.to_string();
-        let path = context.get_current_context_path();
-
-        let full_path = path.join(&name);
-
+        // in the current path.
+        let context = world.get_resource::<CurrentContext>().unwrap();
+        let cpath = context.get_current_context_path();
+        
+        let mut name = OsString::from(self.ntype.to_string());
+        let mut full_path = cpath.join(&name);
+        
+        let pe_index = world.get_resource_mut::<PathsToEntitiesIndex>().unwrap(); 
+        if pe_index.0.contains_key(&full_path) {
+            let mut i = 1;
+            loop {
+                name = OsString::from(format!("{}{}", self.ntype.to_string(), i));
+                let path = cpath.join(&name);
+                if !pe_index.0.contains_key(&path) {
+                    full_path = path;
+                    break;
+                }
+                i += 1;
+            }
+        }
+        
         let node_entity = world.spawn((
             GraphDataNode {
                 path: full_path.clone(),
@@ -38,17 +54,17 @@ impl Action for CreateNodeAction {
             },
             PinnedToPosition,
         )).id();
-
+        
         self.entity = Some(node_entity);
-
+        
         world.send_event(NodeSpawnedEvent {
             entity: node_entity,
-            path: path,
-            name: name.to_string().into(),
+            path: cpath,
+            name: name,
             ntype: self.ntype,
             position: self.position,
         });
-    
+        
         // Update the PathsToEntitiesIndex
         let mut pe_index = world.get_resource_mut::<PathsToEntitiesIndex>().unwrap();
         pe_index.0.insert(full_path, node_entity);
