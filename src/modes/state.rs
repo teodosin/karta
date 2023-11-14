@@ -4,6 +4,8 @@
 // of the context and the active node into one mode. They seem to fit
 // well together, so it would remove some redundancy in modes. 
 
+use std::path::PathBuf;
+
 use bevy::prelude::*;
 use bevy_mod_picking::prelude::PointerButton;
 
@@ -27,7 +29,6 @@ impl Plugin for StatePlugin {
                 .run_if(in_state(KartaModeState::State))
             )
         ;
-
     }
 }
 
@@ -46,15 +47,15 @@ fn change_context_path(
         return
     }
 
-    let path: String = input_data.latest_click_entity.clone()
+    let path: PathBuf = input_data.latest_click_entity.clone()
     .unwrap_or(context.get_current_context_path());
 
     if path == context.get_current_context_path() && path != vault.get_root_path(){
-        println!("Already in context: {}", path);
+        println!("Already in context: {}", path.display());
         return
     }
 
-    println!("Changing context to: {}", path);
+    println!("Changing context to: {}", path.display());
     context.set_current_context(path.clone());
 
 }

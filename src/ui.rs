@@ -159,7 +159,7 @@ fn update_context_label(
     vault: Res<CurrentContext>,
 ){
     for mut text in &mut query.iter_mut() {
-        text.sections[0].value = vault.current_context.clone();
+        text.sections[0].value = vault.current_context.clone().to_string_lossy().to_string();
     }
 }
 
