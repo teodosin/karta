@@ -1,7 +1,7 @@
 // Handling the vault stuff
 // Creating one if it doesn't exist
 
-use std::fs::DirEntry;
+use std::{fs::DirEntry, path::PathBuf, ffi::OsString};
 
 use bevy::{
     prelude::{
@@ -45,36 +45,41 @@ impl Plugin for VaultPlugin {
 
 #[derive(Resource, Debug)]
 pub struct KartaVault{
-    pub vault_folder_name: String,
-    pub root: String,
+    pub vault_folder_name: OsString,
+    pub root: PathBuf,
 }
 
 impl KartaVault {
     fn new() -> Self {
         let new_vault = KartaVault {
-            vault_folder_name: ".kartaVault".to_string(),
-            // root: "home/viktor/Pictures".to_string(),
-            root: "home/viktor".to_string(),
-
+            vault_folder_name: OsString::from(".kartaVault"),
+            root: PathBuf::from("/home/viktor"),
         };
 
-        // Check if the folder exists in the root. If not, create it.
-        // If it does, do nothing.
-        let path = format!("/{}/{}", new_vault.root, new_vault.vault_folder_name);
+        let path: PathBuf = new_vault.root.join(&new_vault.vault_folder_name);
 
-        if !std::path::Path::new(&path).exists() {
-            std::fs::create_dir(&path).expect("Could not create vault folder");
+        println!("Vault path: {:?}", path);
+
+        if path.exists() {
+            println!("Vault folder already exists");
+            return new_vault
         }
+        else {
+            println!("Vault folder does not exist");
+            std::fs::create_dir(path).expect("Could not create vault folder");
+        }
+
 
         new_vault
     }
 
-    pub fn get_root_path(&self) -> String {
-        format!("/{}", self.root)
+    pub fn get_root_path(&self) -> PathBuf {
+        self.root.clone()
     }
 
-    pub fn get_vault_path(&self) -> String {
-        format!("/{}/{}", self.root, self.vault_folder_name)
+    pub fn get_vault_path(&self) -> PathBuf {
+        let vault_path = self.root.join(&self.vault_folder_name);
+        vault_path
     }
 }
 
@@ -100,7 +105,8 @@ fn load_assets(
     assets: ResMut<Assets<ContextAsset>>,
     vault: Res<KartaVault>,
 ){
-    let path = format!("{}/.kartaVault/thingy.context", vault.get_root_path());
+    let file_name = "thingy.context";
+    let path: PathBuf = vault.get_vault_path().join(file_name);
     let context_assets: Handle<ContextAsset> = 
         asset_server.load(path);
     println!("context_assets: {:?}", context_assets);

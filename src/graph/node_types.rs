@@ -1,6 +1,6 @@
 // 
 
-use std::{fs, fmt};
+use std::{fs, fmt, path::PathBuf};
 
 use bevy::prelude::{Component, Plugin, App};
 use enum_iterator::Sequence;
@@ -54,7 +54,7 @@ pub enum DataTypes {
 
 // A helper function to get the type based on a node path
 pub fn get_type_from_path(
-    path: &String, 
+    path: &PathBuf, 
 ) -> Option<NodeTypes> {
     match fs::metadata(&path) {
         Ok(metadata) => {

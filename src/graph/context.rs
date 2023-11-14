@@ -4,7 +4,7 @@
 
 use bevy::{prelude::*, utils::HashMap};
 use bevy_mod_picking::prelude::PointerButton;
-use std::fs;
+use std::{fs, path::PathBuf, ffi::OsString};
 
 use crate::{
     graph::{graph_cam, edges::create_edge, node_types::get_type_from_path}, vault::KartaVault, 
@@ -32,7 +32,7 @@ impl Plugin for ContextPlugin {
 
 #[derive(Resource, Debug)]
 pub struct PathsToEntitiesIndex(
-    pub HashMap<String, Entity>,
+    pub HashMap<PathBuf, Entity>,
 );
 
 // The resource that stores the current context path
@@ -41,8 +41,8 @@ pub struct CurrentContext{
     // A context can be any file or node defined inside some context. 
     // Any node that is created which is not a file in itself, must still
     // be stored somewhere. That place is the closest parent folder. 
-    pub current_context: String,
-    pub current_context_directory: String,
+    pub current_context: PathBuf,
+    pub current_context_directory: PathBuf,
 }
 
 // A marker component for selected graph entities
@@ -55,17 +55,18 @@ pub struct ToBeDespawned;
 impl CurrentContext {
     fn new() -> Self {
         CurrentContext {
-            current_context: "home/viktor/Pictures".to_string(),
-            current_context_directory: "home/viktor/Pictures".to_string(),
+            // current_context: "home/viktor/Pictures".to_string(),
+            current_context: PathBuf::from("/home/viktor/Pictures"),
+            current_context_directory: PathBuf::from("/home/viktor/Pictures"),
         }
     }
 
-    pub fn set_current_context(&mut self, path: String) {
+    pub fn set_current_context(&mut self, path: PathBuf) {
         self.current_context = path;
     }
 
-    pub fn get_current_context_path(&self) -> String {
-        format!("/{}", self.current_context)
+    pub fn get_current_context_path(&self) -> PathBuf {
+        self.current_context.clone()
     }
 }
 
@@ -101,12 +102,12 @@ pub fn update_context(
 ) {
 
     // Handle the path to the desired context
-    let path: String = input_data.latest_click_entity.clone()
+    let path: PathBuf = input_data.latest_click_entity.clone()
     .unwrap_or(context.get_current_context_path());
     // Also return if the target path is already the current context
 
 
-    println!("Path: {}", path);
+    println!("Path: {}", path.display());
     let entries = fs::read_dir(&path);
 
     // Get all file and folder names in 
@@ -119,28 +120,27 @@ pub fn update_context(
     };
 
     // Get all files
-    let mut file_names: Vec<String> = entries
+    let mut file_names: Vec<OsString> = entries
     // Ignore the vault folder!!!
     .filter(|entry| {
-        let path = entry.as_ref().unwrap().path().to_str().unwrap().to_string();
-        println!("Path: {}", path);
+        let path = entry.as_ref().unwrap().path();
+        println!("Path: {}", path.display());
         path != vault.get_vault_path()
     })
     // Carry on with everything else
     .filter_map(|entry| {
-        let path = entry.ok()?.path();
-        if path.is_file() {
-            path.file_name()?.to_str().map(|s| s.to_owned())
-        } else {
-            path.file_name()?.to_str().map(|s| s.to_owned())
-        }
+        let path = entry.ok()?.path().clone();
+        let file_name: OsString = path.file_name()?.into();
+        Some(file_name)
     })
     .collect();
 
-    file_names.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
+    // file_names.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
+    // Sort the OsStr vec
+    file_names.sort_by(|a, b| a.cmp(&b));
 
     for file in file_names.iter() {
-        println!("File: {}", file);
+        println!("File: {}", file.to_string_lossy());
     }
 
     // Iterate through existing nodes and mark them for deletion
@@ -161,17 +161,17 @@ pub fn update_context(
         },
         None => {
             println!("Root node doesn't exist, spawning");
-            let root_name = path.split("/").last().unwrap().to_string();
-            let root_path = path.replace(&root_name, "");
-            let root_path = &root_path[0..&root_path.len()-1].to_string();
+            let mut root_path = path.clone();
+            let root_name = path.file_name().unwrap();
+            root_path.pop();
             root_position = Vec2::ZERO;
             let root_type = get_type_from_path(&root_path).unwrap();
-            println!("Root Path: {}, Root Name: {}", root_path, root_name);
+            println!("Root Path: {}, Root Name: {}", root_path.display(), root_name.to_string_lossy());
             spawn_node(
                 &mut node_event,
                 &mut commands, 
-                &root_path, 
-                &root_name,
+                root_path, 
+                root_name.into(),
                 root_type,
                 root_position,
                 &mut pe_index,
@@ -188,12 +188,8 @@ pub fn update_context(
     // Get position 
 
 
-    // Don't despawn the parent of the root
-    let root_parent_path = path
-        .replace(&path.split("/")
-        .last()
-        .unwrap(), "");
-    let root_parent_path = &root_parent_path[0..&root_parent_path.len()-1].to_string();
+    // Don't despawn the parent directory of the root
+    let root_parent_path = path.parent().unwrap();
 
     // Spawn parent if it doesn't exist
     // AND if we are not already at the root
@@ -205,23 +201,22 @@ pub fn update_context(
             Some(*entity)
         },
         None => {
-            if root_parent_path.contains(&vault.get_root_path()){
+            if root_parent_path.starts_with(&vault.get_root_path()){
                 println!("Parent node doesn't exist, spawning");
 
-                let parent_name = root_parent_path.split("/").last().unwrap().to_string();
-                let parent_path = root_parent_path.replace(&parent_name, "");
-                let parent_path = &parent_path[0..&parent_path.len()-1].to_string();
+                let parent_name = root_parent_path.file_name().unwrap();
+                let parent_path = root_parent_path.parent().unwrap();
 
                 // Check if the parent is a directory or a file
 
                 let parent_type = get_type_from_path(&path).unwrap();
 
-                println!("Parent Path: {}, Parent Name: {}", parent_path, parent_name);
+                println!("Parent Path: {}, Parent Name: {:?}", parent_path.display(), parent_name);
                 Some(spawn_node(
                     &mut node_event,
                     &mut commands, 
-                    &parent_path, 
-                    &parent_name,
+                    parent_path.into(), 
+                    parent_name.into(),
                     parent_type,
                     root_position,
                     &mut pe_index,
@@ -251,10 +246,10 @@ pub fn update_context(
     file_names.iter().for_each(|name| {
 
         // Check if the item already exists
-        let full_path = format!("{}/{}", path, name);
+        let full_path = path.join(name);
         let item_exists = pe_index.0.get(&full_path).is_some();
         if item_exists {
-                println!("Item already exists: {}", full_path);
+                println!("Item already exists: {}", full_path.display());
                 // Remove despawn component
                 commands.entity(pe_index.0.get(&full_path).unwrap().clone()).remove::<ToBeDespawned>();
                 return
@@ -265,7 +260,7 @@ pub fn update_context(
         let item_type = match item_type {
             Some(item_type) => item_type,
             None => {
-                println!("Item path unwrap panic: {}", full_path);
+                println!("Item path unwrap panic: {}", full_path.display());
                 return
             }
         };
@@ -274,8 +269,8 @@ pub fn update_context(
         let node = spawn_node(
             &mut node_event,
             &mut commands,
-            &path,
-            name,
+            path.clone().into(),
+            name.into(),
             item_type,
             root_position,
             &mut pe_index,
@@ -293,7 +288,7 @@ pub fn update_context(
 
     // Print pe_index to see what the hell is going on
     for (path, entity) in pe_index.0.iter() {
-        println!("Path: {}, Entity: {:?}", path, entity);
+        println!("Path: {}, Entity: {:?}", path.display(), entity);
     };
 }
 

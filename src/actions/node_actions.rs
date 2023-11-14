@@ -28,12 +28,13 @@ impl Action for CreateNodeAction {
         // in the current path. 
         let name = self.ntype.to_string();
         let path = context.get_current_context_path();
-        let full_path = format!("{}/{}", path, name);
+
+        let full_path = path.join(&name);
 
         let node_entity = world.spawn((
             GraphDataNode {
                 path: full_path.clone(),
-                name: name.clone()
+                name: name.clone().into(),
             },
             PinnedToPosition,
         )).id();
@@ -42,8 +43,8 @@ impl Action for CreateNodeAction {
 
         world.send_event(NodeSpawnedEvent {
             entity: node_entity,
-            path: path.to_string(),
-            name: name.to_string(),
+            path: path,
+            name: name.to_string().into(),
             ntype: self.ntype,
             position: self.position,
         });
