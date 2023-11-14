@@ -1,5 +1,7 @@
 //Code pertaining to the graph nodes
 
+use std::{path::PathBuf, ffi::OsString};
+
 use bevy::{prelude::*, input::keyboard::KeyboardInput};
 
 use super::{context::{PathsToEntitiesIndex, ToBeDespawned, Selected}, node_types::NodeTypes};
@@ -27,8 +29,8 @@ impl Plugin for NodesPlugin {
 // The path and name of the node is something that all node types have in common
 #[derive(Component)]
 pub struct GraphDataNode {
-    pub path: String,
-    pub name: String,
+    pub path: PathBuf,
+    pub name: OsString,
 }
 
 #[derive(Component)]
@@ -147,7 +149,7 @@ fn handle_node_press(
                     let target_path = node.path.clone();
                     input_data.latest_press_entity = Some(target_path.clone());
                     input_data.press_is_outline = false;
-                    println!("Pressing path: {}", input_data.latest_press_entity.clone().unwrap());
+                    println!("Pressing path: {}", input_data.latest_press_entity.clone().unwrap().display());
                 },
                 Err(_) => {
                     //println!("No node found for press");
@@ -223,14 +225,15 @@ pub fn spawn_node (
     event: &mut EventWriter<NodeSpawnedEvent>,
 
     commands: &mut Commands,
-    path: &String,
-    name: &String,
+    path: PathBuf,
+    name: OsString,
     ntype: NodeTypes,
     position: Vec2, // For the viewnodes
 
     pe_index: &mut ResMut<PathsToEntitiesIndex>,
 ) -> bevy::prelude::Entity {
-    let full_path = format!("{}/{}", path, name);
+
+    let full_path = path.join(&name);
 
     let node_entity = commands.spawn((
         GraphDataNode {
@@ -241,8 +244,8 @@ pub fn spawn_node (
 
     event.send(NodeSpawnedEvent {
         entity: node_entity,
-        path: path.to_string(),
-        name: name.to_string(),
+        path: path,
+        name: name,
         ntype,
         position: position,
     });

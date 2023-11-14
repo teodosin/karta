@@ -166,7 +166,7 @@ pub fn add_node_ui(
             Text2dBundle {
                 text: Text {
                     sections: vec![TextSection::new(
-                        &ev.name,
+                        &*ev.name.to_string_lossy(),
                         TextStyle {
                             font_size: 20.0,
                             color: Color::WHITE,
