@@ -83,6 +83,8 @@ pub fn karta_app() {
         // My plugins are strongly coupled to each other. I can't test plugins in isolation.
         // I can create test cases still, and import everything I need to test a plugin, but it's 
         // not ideal. So, TODO!
+        // Events and actions are prime candidates to be dissolved into other plugins.
+        // I am not confident that the others can be dissolved.
     ;
 
     // let dot = bevy_mod_debugdump::schedule_graph_dot(&mut app, Update, &bevy_mod_debugdump::schedule_graph::Settings::default());
