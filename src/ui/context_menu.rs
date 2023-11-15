@@ -13,7 +13,7 @@ use bevy_mod_picking::prelude::PointerButton;
 
 use crate::{events::nodes::NodeClickEvent, actions::{node_actions::PinToPositionAction, ActionComponent, ActionFactory, ActionManager}};
 
-use super::modal::*;
+use super::popup::*;
 
 enum _ContextMenuButtons {
     Pin,
@@ -26,7 +26,7 @@ pub struct ContextMenuButton;
 pub fn despawn_context_menus(
     mut commands: Commands,
     mouse: Res<Input<MouseButton>>,
-    menus: Query<Entity, With<Modal>>,
+    menus: Query<Entity, With<Popup>>,
 ) {
     if mouse.is_changed() {
         for menu in menus.iter() {
@@ -38,7 +38,7 @@ pub fn despawn_context_menus(
 pub fn spawn_context_menu(
     mut commands: Commands,
     mut mouse_event: EventReader<NodeClickEvent>,
-    menus: Query<(Entity, &ModalGroup), With<Modal>>,
+    menus: Query<(Entity, &PopupGroup), With<Popup>>,
     window: Query<&Window>,
 ){
 
@@ -74,11 +74,11 @@ pub fn spawn_context_menu(
 
     let position: Vec2 = window.cursor_position().unwrap();
 
-    // Get a modal root
-    let menu_root = spawn_modal_root(
+    // Get a popup root
+    let menu_root = spawn_popup_root(
         &mut commands, 
         menus,
-        ModalGroup::Context,
+        PopupGroup::Context,
         position,
     );
 
