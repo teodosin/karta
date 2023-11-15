@@ -1,10 +1,10 @@
 use bevy::prelude::*;
 
-// Modal groups
+// Popup groups
 // -----------------------------------------------------------------------------
 #[derive(Component, PartialEq, Debug, Clone)]
-pub enum ModalGroup {
-    // Context(ModalGroupContext), 
+pub enum PopupGroup {
+    // Context(PopupGroupContext), 
     Context,
     // Input,   
 }
@@ -12,33 +12,33 @@ pub enum ModalGroup {
 // What if groups weren't necessarily mutually exclusive?
 
 // #[derive(Component)]
-// struct ModalGroupContext;
+// struct PopupGroupContext;
 
-// Individual modal components
+// Individual popup components
 // -----------------------------------------------------------------------------
 
 #[derive(Component)]
-pub struct Modal;
+pub struct Popup;
 
 // One-shot Systems 
 // -----------------------------------------------------------------------------
 
-pub fn spawn_modal_root(
+pub fn spawn_popup_root(
     mut commands: &mut Commands, 
-    menus: Query<(Entity, &ModalGroup), With<Modal>>,
-    group: ModalGroup,
+    menus: Query<(Entity, &PopupGroup), With<Popup>>,
+    group: PopupGroup,
     position: Vec2,
 ) -> Entity {
 
     // Despawn any menus already spawned from the same group
-    clear_modal_group(
+    clear_popup_group(
         &mut commands,
         &group,
         menus,
     );
 
-    // Handle the modal type
-    let modal_root =  commands.spawn((
+    // Handle the popup type
+    let popup_root =  commands.spawn((
         NodeBundle {
             style: Style {
                 position_type: PositionType::Absolute,
@@ -53,17 +53,17 @@ pub fn spawn_modal_root(
             background_color: BackgroundColor::from(Color::rgb(0.0, 0.0, 0.0)),
             ..Default::default()
         },
-        Modal,
+        Popup,
         group,
     )).id();
 
-    modal_root
+    popup_root
 }
 
-pub fn clear_modal_group(
+pub fn clear_popup_group(
     commands: &mut Commands,
-    target_group: &ModalGroup,
-    menus: Query<(Entity, &ModalGroup), With<Modal>>,
+    target_group: &PopupGroup,
+    menus: Query<(Entity, &PopupGroup), With<Popup>>,
 ) {
 
     for (menu, group) in menus.iter() {
@@ -75,9 +75,9 @@ pub fn clear_modal_group(
     }
 }
 
-pub fn modal_position_system(
+pub fn popup_position_system(
     window: Query<&Window>,
-    mut query: Query<(&Node, &mut Style, &GlobalTransform,), With<Modal>>,
+    mut query: Query<(&Node, &mut Style, &GlobalTransform,), With<Popup>>,
 ) {
 
     // TODO: Handle multiple windows
@@ -85,8 +85,8 @@ pub fn modal_position_system(
 
     let viewport_size = Vec2::new(window.width(), window.height());
 
-    for (modal, mut style, _global_pos) in query.iter_mut() {
-        let size = modal.size();
+    for (popup, mut style, _global_pos) in query.iter_mut() {
+        let size = popup.size();
         let window_size = Vec2::new(window.width(), window.height());
 
         let left = style.left.resolve(1., viewport_size).unwrap();

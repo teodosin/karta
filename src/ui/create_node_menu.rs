@@ -4,7 +4,7 @@ use enum_iterator::all;
 
 use crate::{graph::node_types::NodeTypes, actions::{ActionComponent, ActionFactory, node_actions::CreateNodeAction, Action}, input::pointer::InputData};
 
-use super::{modal::{ModalGroup, Modal, spawn_modal_root}, context_menu::ContextMenuButton};
+use super::{popup::{PopupGroup, Popup, spawn_popup_root}, context_menu::ContextMenuButton};
 pub struct CreateNodeMenuPlugin;
 
 impl Plugin for CreateNodeMenuPlugin {
@@ -22,7 +22,7 @@ fn create_node_menu(
     // event: EventWriter<NodeSpawnedEvent>,
     key: Res<Input<KeyCode>>,
     input_data: Res<InputData>,
-    menus: Query<(Entity, &ModalGroup), With<Modal>>,
+    menus: Query<(Entity, &PopupGroup), With<Popup>>,
     window: Query<&Window>,
 ){
     if !key.just_pressed(KeyCode::Tab) {
@@ -42,10 +42,10 @@ fn create_node_menu(
     };
     let global_position = input_data.curr_position;
 
-    let menu_root = spawn_modal_root(
+    let menu_root = spawn_popup_root(
         &mut commands, 
         menus,
-        ModalGroup::Context,
+        PopupGroup::Context,
         position,
     );
 

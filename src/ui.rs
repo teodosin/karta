@@ -17,7 +17,7 @@ use self::{
 };
 
 // Building blocks of specific components
-mod modal;
+mod popup;
 
 mod context_menu;
 mod mode_menu;
@@ -47,7 +47,7 @@ impl Plugin for KartaUiPlugin {
             .add_plugins(InfiniteGrid2DPlugin)
             
             // Element Systems
-            .add_systems(Update, modal::modal_position_system.after(spawn_context_menu))
+            .add_systems(Update, popup::popup_position_system.after(spawn_context_menu))
 
             // Systems
             .add_systems(Startup, create_mode_menu)
@@ -184,6 +184,8 @@ fn point_to_root_if_offscreen(
                     None => continue,
                 };
 
+                println!("Viewport: {:?}", viewport);
+
                 // Convert viewport size and position to Vec2 for calculations
                 let viewport_size = Vec2::new(viewport.physical_size.x as f32, viewport.physical_size.y as f32);
                 let viewport_position = Vec2::new(viewport.physical_position.x as f32, viewport.physical_position.y as f32);
@@ -193,7 +195,7 @@ fn point_to_root_if_offscreen(
                 let nodepos_in_viewport = nodepos.translation().truncate() - viewport_position;
 
                 // Calculate intersection with each edge of the viewport
-                let mut closest_point = Vec2::ZERO;
+                let mut closest_point_in_viewport = Vec2::ZERO;
                 let mut found = false;
                 for edge in 0..4 {
                     let (p1, p2) = match edge {
@@ -204,18 +206,21 @@ fn point_to_root_if_offscreen(
                     };
 
                     if let Some(intersection) = line_intersection(campos_in_viewport, nodepos_in_viewport, p1, p2) {
-                        closest_point = intersection;
+                        closest_point_in_viewport = intersection;
                         found = true;
                         break;
                     }
                 }
 
                 if found {
-                    gizmos.circle_2d(
-                        closest_point, 
-                        500.0, 
-                        Color::rgb(0.9, 0.9, 0.9),
-                    );
+                    // Convert the closest point in viewport space to world space
+                    if let Some(closest_point_world) = cam.viewport_to_world_2d(campos, closest_point_in_viewport) {
+                        gizmos.circle_2d(
+                            closest_point_world,
+                            500.0,
+                            Color::rgb(0.9, 0.9, 0.9),
+                        );
+                    }
                 }
             }
         }
