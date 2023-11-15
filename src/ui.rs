@@ -166,24 +166,74 @@ fn update_context_label(
 fn point_to_root_if_offscreen(
     mut gizmos: Gizmos,
     query: Query<(Entity, &GlobalTransform), With<ContextRoot>>,
-    cameras: Query<(&GlobalTransform, &VisibleEntities), With<GraphCamera>>,
+    cameras: Query<(&GlobalTransform, &Camera, &VisibleEntities), With<GraphCamera>>,
 ){
-    for (campos, entities) in cameras.iter() {
+    for (campos, cam, entities) in cameras.iter() {
         for (node, nodepos) in query.iter() {
 
             // Check if the entity is within the camera's view bounds
-            if entities.entities.contains(&node)
-            {
-                continue;
-            } else {
-                // Find center of screen
-
+            if !entities.entities.contains(&node){
                 gizmos.line_2d(
                     campos.translation().truncate(), 
                     nodepos.translation().truncate(), 
                     Color::rgb(0.9, 0.9, 0.9),
-                )
+                );
+
+                let viewport = match cam.viewport.as_ref(){
+                    Some(v) => v,
+                    None => continue,
+                };
+
+                // Convert viewport size and position to Vec2 for calculations
+                let viewport_size = Vec2::new(viewport.physical_size.x as f32, viewport.physical_size.y as f32);
+                let viewport_position = Vec2::new(viewport.physical_position.x as f32, viewport.physical_position.y as f32);
+
+                // Calculate camera and node positions in viewport space
+                let campos_in_viewport = campos.translation().truncate() - viewport_position;
+                let nodepos_in_viewport = nodepos.translation().truncate() - viewport_position;
+
+                // Calculate intersection with each edge of the viewport
+                let mut closest_point = Vec2::ZERO;
+                let mut found = false;
+                for edge in 0..4 {
+                    let (p1, p2) = match edge {
+                        0 => (Vec2::new(0.0, 0.0), Vec2::new(viewport_size.x, 0.0)),
+                        1 => (Vec2::new(viewport_size.x, 0.0), Vec2::new(viewport_size.x, viewport_size.y)),
+                        2 => (Vec2::new(viewport_size.x, viewport_size.y), Vec2::new(0.0, viewport_size.y)),
+                        _ => (Vec2::new(0.0, viewport_size.y), Vec2::new(0.0, 0.0)),
+                    };
+
+                    if let Some(intersection) = line_intersection(campos_in_viewport, nodepos_in_viewport, p1, p2) {
+                        closest_point = intersection;
+                        found = true;
+                        break;
+                    }
+                }
+
+                if found {
+                    gizmos.circle_2d(
+                        closest_point, 
+                        500.0, 
+                        Color::rgb(0.9, 0.9, 0.9),
+                    );
+                }
             }
         }
     }
+}
+
+// Calculate line intersection
+fn line_intersection(p0: Vec2, p1: Vec2, p2: Vec2, p3: Vec2) -> Option<Vec2> {
+    let s1 = p1 - p0;
+    let s2 = p3 - p2;
+
+    let s = (-s1.y * (p0.x - p2.x) + s1.x * (p0.y - p2.y)) / (-s2.x * s1.y + s1.x * s2.y);
+    let t = (s2.x * (p0.y - p2.y) - s2.y * (p0.x - p2.x)) / (-s2.x * s1.y + s1.x * s2.y);
+
+    if s >= 0.0 && s <= 1.0 && t >= 0.0 && t <= 1.0 {
+        // Collision detected
+        return Some(Vec2::new(p0.x + (t * s1.x), p0.y + (t * s1.y)));
+    }
+
+    None
 }
