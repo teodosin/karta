@@ -43,7 +43,6 @@ pub struct NodeLabel;
 
 // Component to store the current velocity of a node. 
 // This component might get abstracted out at some point, because it is very generic. 
-// 
 #[derive(Component)]
 pub struct Velocity2D {
     pub velocity: Vec2,
@@ -57,53 +56,26 @@ impl Default for Velocity2D {
     }
 }
 
-// I considered making bundles to store all the default component
-// combinations and values and then just spawn those bundles, but
-// I couldn't get it to work just yet. MaterialMesh2dBundle is the
-// culprit to this difficulty. 
-//
-// The main component bundle that all visible ui nodes share. 
-// #[derive(Bundle)]
-// pub struct GraphViewNodeBundle {
-//     pub node: GraphViewNode,
-//     pub velocity: Velocity2D,
-//
-//     pub mesh: MaterialMesh2dBundle<M>,
-//
-//     pub pickable: PickableBundle,
-//     pub pick_target: RaycastPickTarget,
-//
-//     pub drag: On<Pointer<Drag>>,
-//     pub click: On<Pointer<Click>>,
-//     pub down: On<Pointer<Down>>,
-//     pub over: On<Pointer<Over>>,
-//     pub drag_start: On<Pointer<DragStart>>,
-//     pub drag_end: On<Pointer<DragEnd>>,
-//     pub deselect: On<Pointer<Deselect>>,
-// }
-//
-// impl Default for GraphViewNodeBundle {
-//     fn default() -> Self {
-//         GraphViewNodeBundle {
-//             node: GraphViewNode,
-//             velocity: Velocity2D {
-//                 velocity: Vec2::new(0.0, 0.0),
-//             },
-//
-//             mesh : MaterialMesh2dBundle {
-//                 mesh: meshes.add(shape::Circle::new(25.).into()).into(),
-//                 material: materials.add(ColorMaterial::from(Color::rgb(0.3, 0.0, 0.0))),
-//                 transform: Transform::from_translation(Vec3::new(
-//                     rng.gen_range(-10.0..10.0),
-//                     rng.gen_range(-10.0..10.0),
-//                     view_data.top_z,
-//                 )),
-//                 ..default()
-//             },
-//
-//         }
-//     }
-// }
+// Component to store the scale of a node. This should also affect the simulation,
+// but I don't know how that should behave just yet. So for now there will be a 
+// separate "radius" variable that will be used for the simulation.
+#[derive(Component)]
+pub struct ViewNodeScale {
+    pub scale: Vec2,
+    pub radius: f32,
+}
+
+impl Default for ViewNodeScale {
+    fn default() -> Self {
+        ViewNodeScale {
+            scale: Vec2::from((1.0, 1.0)),
+            radius: 25.0,
+        }
+    }
+}
+
+// Component to store the radius of a node. This is used for the simulation.
+
 
 // TODO: Convert to One-Shot System
 // Is that even possible? This function requires input parameters. 

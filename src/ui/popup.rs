@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, ui::FocusPolicy};
 
 // Popup groups
 // -----------------------------------------------------------------------------
@@ -6,7 +6,7 @@ use bevy::prelude::*;
 pub enum PopupGroup {
     // Context(PopupGroupContext), 
     Context,
-    // Input,   
+    ModalStrong,   
 }
 
 // What if groups weren't necessarily mutually exclusive?
@@ -28,6 +28,7 @@ pub fn spawn_popup_root(
     menus: Query<(Entity, &PopupGroup), With<Popup>>,
     group: PopupGroup,
     position: Vec2,
+    size: Vec2,
 ) -> Entity {
 
     // Despawn any menus already spawned from the same group
@@ -37,6 +38,11 @@ pub fn spawn_popup_root(
         menus,
     );
 
+    let is_modal = match group {
+        PopupGroup::ModalStrong => true,
+        _ => false,
+    };
+
     // Handle the popup type
     let popup_root =  commands.spawn((
         NodeBundle {
@@ -45,17 +51,41 @@ pub fn spawn_popup_root(
                 flex_direction: FlexDirection::Column,
                 left: Val::Px(position.x),
                 top: Val::Px(position.y),
-                width: Val::Px(100.0),
-                height: Val::Px(100.0),
+                width: Val::Px(size.x),
+                height: Val::Px(size.y),
                 
                 ..Default::default()
             },
             background_color: BackgroundColor::from(Color::rgb(0.0, 0.0, 0.0)),
+            transform: Transform::from_translation(Vec3::from((0.0, 0.0, 10000.0))),
             ..Default::default()
         },
         Popup,
         group,
     )).id();
+
+    // Add a background to the popup if it is a modal
+    if is_modal {
+        let popup_bg = commands.spawn((
+            NodeBundle {
+                style: Style {
+                    position_type: PositionType::Absolute,
+                    left: Val::Px(-position.x),
+                    top: Val::Px(-position.y),
+                    width: Val::Vw(100.0),
+                    height: Val::Vh(100.0),
+                    
+                    ..Default::default()
+                },
+                focus_policy: FocusPolicy::Block,
+                background_color: BackgroundColor::from(Color::rgba(0.0, 0.0, 0.0, 0.5)),
+                transform: Transform::from_translation(Vec3::from((0.0, 0.0, 9999.0))),
+                ..Default::default()
+            },
+        )).id();
+
+        commands.entity(popup_root).push_children(&[popup_bg]);
+    }
 
     popup_root
 }
