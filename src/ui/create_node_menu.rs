@@ -41,12 +41,14 @@ fn create_node_menu(
         }
     };
     let global_position = input_data.curr_position;
+    let size: Vec2 = Vec2::new(100.0, 100.0);
 
     let menu_root = spawn_popup_root(
         &mut commands, 
         menus,
         PopupGroup::Context,
         position,
+        size,
     );
 
     for ntype in all::<NodeTypes>(){

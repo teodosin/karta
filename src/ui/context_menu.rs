@@ -23,14 +23,20 @@ enum _ContextMenuButtons {
 #[derive(Component)]
 pub struct ContextMenuButton;
 
-pub fn despawn_context_menus(
+// TODO: Revisit the logic for when a popup should be despawned, exactly
+pub fn despawn_context_menus_on_any_click(
     mut commands: Commands,
     mouse: Res<Input<MouseButton>>,
-    menus: Query<Entity, With<Popup>>,
+    menus: Query<(Entity, &PopupGroup), With<Popup>>,
 ) {
     if mouse.is_changed() {
-        for menu in menus.iter() {
-            commands.entity(menu).despawn_recursive();
+        for (menu, group) in menus.iter() {
+            match group {
+                PopupGroup::Context => {
+                    commands.entity(menu).despawn_recursive();
+                },
+                _ => {},
+            }
         }
     }
 }
@@ -73,6 +79,7 @@ pub fn spawn_context_menu(
     let window = window.single();
 
     let position: Vec2 = window.cursor_position().unwrap();
+    let size: Vec2 = Vec2::new(100.0, 100.0);
 
     // Get a popup root
     let menu_root = spawn_popup_root(
@@ -80,6 +87,7 @@ pub fn spawn_context_menu(
         menus,
         PopupGroup::Context,
         position,
+        size,
     );
 
     let pin_button = create_context_menu_button(

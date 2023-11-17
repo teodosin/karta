@@ -1,7 +1,7 @@
 // All that is fixed in place in the foreground
 // Excludes the graph and floating windows(?)
 
-use bevy::{prelude::*, ui::FocusPolicy, render::view::VisibleEntities};
+use bevy::{prelude::*, ui::{FocusPolicy, UiSystem}, render::view::VisibleEntities};
 
 use bevy_prototype_lyon::prelude::*;
 
@@ -13,12 +13,13 @@ use self::{
     context_menu::{context_menu_button_system, spawn_context_menu}, 
     mode_menu::{create_mode_menu, mode_button_system, update_active_mode_highlight}, 
     nodes::NodesUiPlugin, edges::EdgeUiPlugin, 
-    create_node_menu::CreateNodeMenuPlugin, grid::InfiniteGrid2DPlugin,
+    create_node_menu::CreateNodeMenuPlugin, grid::InfiniteGrid2DPlugin, vault_menu::VaultMenuPlugin,
 };
 
 // Building blocks of specific components
 mod popup;
 
+mod vault_menu;
 mod context_menu;
 mod mode_menu;
 mod create_node_menu;
@@ -41,13 +42,14 @@ impl Plugin for KartaUiPlugin {
 
             .add_systems(Startup, gizmo_settings)
 
+            .add_plugins(VaultMenuPlugin)
             .add_plugins(NodesUiPlugin)
             .add_plugins(EdgeUiPlugin)
             .add_plugins(CreateNodeMenuPlugin)
             .add_plugins(InfiniteGrid2DPlugin)
             
             // Element Systems
-            .add_systems(Update, popup::popup_position_system.after(spawn_context_menu))
+            .add_systems(PostUpdate, popup::popup_position_system.after(UiSystem::Layout))
 
             // Systems
             .add_systems(Startup, create_mode_menu)
@@ -60,7 +62,7 @@ impl Plugin for KartaUiPlugin {
             
             .add_systems(Update, context_menu_button_system)
             
-            .add_systems(Update, context_menu::despawn_context_menus)
+            .add_systems(Update, context_menu::despawn_context_menus_on_any_click)
             .add_systems(
                 Update, 
                 spawn_context_menu.run_if(on_event::<NodeClickEvent>())
