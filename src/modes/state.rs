@@ -14,7 +14,7 @@ use crate::{
             CurrentContext, update_context
         }, 
     events::nodes::NodeClickEvent,
-    vault::KartaVault, input::pointer::InputData
+    vault::{KartaVault, CurrentVault}, input::pointer::InputData
 };
 
 use super::KartaModeState;
@@ -35,9 +35,10 @@ impl Plugin for StatePlugin {
 fn change_context_path(
     mut event: EventReader<NodeClickEvent>,
     input_data: Res<InputData>,
-    vault: Res<KartaVault>,
+    vault: Res<CurrentVault>,
     mut context: ResMut<CurrentContext>,
 ){
+    let vault = &vault.vault;
     // Only run the system if there has been a node input
     if event.is_empty(){
         return
@@ -47,10 +48,26 @@ fn change_context_path(
         return
     }
 
-    let path: PathBuf = input_data.latest_click_entity.clone()
-    .unwrap_or(context.get_current_context_path());
+    let cxt = match &context.cxt {
+        Some(cxt) => cxt,
+        None => {
+            println!("No context set");
+            return
+        }
+    };
 
-    if path == context.get_current_context_path() && path != vault.get_root_path(){
+    let path: PathBuf = input_data.latest_click_entity.clone()
+    .unwrap_or(cxt.get_current_context_path());
+
+    let vault = match vault{
+        Some(ref vault) => vault,
+        None => {
+            println!("No vault set");
+            return
+        }
+    };
+
+    if path == cxt.get_current_context_path() && path != vault.get_root_path(){
         println!("Already in context: {}", path.display());
         return
     }

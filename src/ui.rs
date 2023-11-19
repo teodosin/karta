@@ -7,7 +7,7 @@ use bevy_prototype_lyon::prelude::*;
 
 use crate::{
     graph::{context::CurrentContext, nodes::ContextRoot, graph_cam::GraphCamera},
-    events::nodes::*};
+    events::nodes::*, scene::scene::CurrentActive};
 
 use self::{
     context_menu::{context_menu_button_system, spawn_context_menu}, 
@@ -56,13 +56,15 @@ impl Plugin for KartaUiPlugin {
             .add_systems(Startup, create_context_and_active_bar)
             
             .add_systems(Update, update_context_label.run_if(resource_changed::<CurrentContext>()))
+            .add_systems(Update, update_active_mode_label.run_if(resource_changed::<CurrentActive>()))
             
             .add_systems(Update, mode_button_system)
+
             .add_systems(Update, update_active_mode_highlight.after(mode_button_system))
             
             .add_systems(Update, context_menu_button_system)
             
-            .add_systems(Update, context_menu::despawn_context_menus_on_any_click)
+            .add_systems(PostUpdate, context_menu::despawn_context_menus_on_any_click)
             .add_systems(
                 Update, 
                 spawn_context_menu.run_if(on_event::<NodeClickEvent>())
@@ -158,10 +160,37 @@ fn create_context_and_active_bar(
 
 fn update_context_label(
     mut query: Query<&mut Text, With<ContextLabel>>,
-    vault: Res<CurrentContext>,
+    context: Res<CurrentContext>,
 ){
-    for mut text in &mut query.iter_mut() {
-        text.sections[0].value = vault.current_context.clone().to_string_lossy().to_string();
+    match context.cxt {
+        Some(ref cxt) => {
+            for mut text in &mut query.iter_mut() {
+                text.sections[0].value = cxt.current_context.to_string_lossy().to_string();
+            }
+        },
+        None => {
+            for mut text in &mut query.iter_mut() {
+                text.sections[0].value = "No context".to_string();
+            }
+        }
+    }
+}
+
+fn update_active_mode_label(
+    mut query: Query<&mut Text, With<ActiveLabel>>,
+    active: Res<CurrentActive>,
+){
+    match active.active {
+        Some(ref active) => {
+            for mut text in &mut query.iter_mut() {
+                text.sections[0].value = active.to_string_lossy().to_string();
+            }
+        },
+        None => {
+            for mut text in &mut query.iter_mut() {
+                text.sections[0].value = "None active".to_string();
+            }
+        }
     }
 }
 

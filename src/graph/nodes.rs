@@ -4,7 +4,7 @@ use std::{path::PathBuf, ffi::OsString};
 
 use bevy::{prelude::*, input::keyboard::KeyboardInput};
 
-use super::{context::{PathsToEntitiesIndex, ToBeDespawned, Selected}, node_types::NodeTypes};
+use super::{context::{PathsToEntitiesIndex, ToBeDespawned, Selected}, node_types::{NodeTypes, DataTypes, DataNode, type_to_data}};
 
 use crate::{events::nodes::*, ui::nodes::{NodeOutline, GraphViewNode}, input::pointer::InputData};
 
@@ -31,11 +31,28 @@ impl Plugin for NodesPlugin {
 pub struct GraphDataNode {
     pub path: PathBuf,
     pub name: OsString,
+    pub data: Option<Box<dyn DataNode>>,
 }
 
-#[derive(Component)]
-pub struct NodeType {
-    pub ntype: NodeTypes,
+impl GraphDataNode {
+    pub fn get_data_type(&self) -> String {
+        let ntype = match &self.data {
+            None => String::from("No data"),
+            Some(data) => data.get_data_type(),
+        };
+        ntype
+    }
+
+    pub fn get_data(&self, world: &World) -> Option<Box<dyn DataNode>> {
+        let data = match self.data {
+            None => {
+                println!("No data");
+                return None;
+            },
+            Some(ref data) => Some(data.get_data(world, &self.path)),
+        };
+        data
+    }
 }
 
 // A component to store the edge relationships of a node
@@ -44,6 +61,7 @@ pub struct NodeType {
 pub struct GraphNodeEdges {
     pub edges: Vec<Entity>,
 }
+
 
 #[derive(Component)]
 pub struct ContextRoot;
@@ -238,7 +256,8 @@ pub fn spawn_node (
     let node_entity = commands.spawn((
         GraphDataNode {
             path: full_path.clone(),
-            name: name.clone()
+            name: name.clone(),
+            data: type_to_data(ntype),
         },
     )).id();
 

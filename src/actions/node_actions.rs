@@ -4,7 +4,7 @@ use std::ffi::OsString;
 
 use bevy::prelude::{Entity, With, Vec2};
 
-use crate::{graph::{nodes::{PinnedToPosition, GraphDataNode}, context::{PathsToEntitiesIndex, Selected, CurrentContext}, node_types::NodeTypes}, input::pointer::InputData, ui::nodes::GraphViewNode, events::nodes::NodeSpawnedEvent};
+use crate::{graph::{nodes::{PinnedToPosition, GraphDataNode}, context::{PathsToEntitiesIndex, Selected, CurrentContext}, node_types::{NodeTypes, type_to_data}}, input::pointer::InputData, ui::nodes::GraphViewNode, events::nodes::NodeSpawnedEvent};
 
 use super::Action;
 
@@ -28,7 +28,16 @@ impl Action for CreateNodeAction {
         // Two nodes can't share the same path, so we need to check if a node already exists
         // in the current path.
         let context = world.get_resource::<CurrentContext>().unwrap();
-        let cpath = context.get_current_context_path();
+
+        let cxt = match &context.cxt {
+            None => {
+                println!("No context set");
+                return
+            },
+            Some(cxt) => cxt,
+        };
+
+        let cpath = cxt.get_current_context_path();
         
         let mut name = OsString::from(self.ntype.to_string());
         let mut full_path = cpath.join(&name);
@@ -51,6 +60,7 @@ impl Action for CreateNodeAction {
             GraphDataNode {
                 path: full_path.clone(),
                 name: name.clone().into(),
+                data: type_to_data(self.ntype)
             },
             PinnedToPosition,
         )).id();
