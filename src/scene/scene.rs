@@ -1,20 +1,47 @@
 // Management of the currently active 3D scene
 
-use std::f32::consts::PI;
+use std::{f32::consts::PI, path::PathBuf};
 
 use bevy::{
     prelude::*,
     render::render_resource::{Extent3d, TextureDimension, TextureFormat},
 };
 
+use crate::graph::context::CurrentContext;
+
 pub struct ScenePlugin;
 
 impl Plugin for ScenePlugin {
     fn build(&self, app: &mut App) {
         app
+            .insert_resource(CurrentActive { active: None })
+
             .add_systems(Startup, spawn_some_spheres)
+
+            .add_systems(Update, update_active_on_context_change.run_if(resource_changed::<CurrentContext>()))
             .add_systems(Update, rotate);
     }
+}
+
+#[derive(Resource, Debug)]
+pub struct CurrentActive {
+    pub active: Option<PathBuf>,
+}
+
+fn update_active_on_context_change(
+    context: Res<CurrentContext>,
+    mut active: ResMut<CurrentActive>,
+){
+    let cxt = match &context.cxt {
+        Some(cxt) => cxt,
+        None => {
+            println!("No context set");
+            return
+        }
+    };
+    
+    active.active = Some(cxt.get_current_context_path());
+
 }
 
 /// A marker component for our shapes so we can query them separately from the ground plane

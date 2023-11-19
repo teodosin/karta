@@ -1,8 +1,10 @@
 use bevy::{prelude::*, ui::FocusPolicy};
 
+use crate::events::context;
+
 // Popup groups
 // -----------------------------------------------------------------------------
-#[derive(Component, PartialEq, Debug, Clone)]
+#[derive(Component, PartialEq, Debug, Clone, Copy)]
 pub enum PopupGroup {
     // Context(PopupGroupContext), 
     Context,
@@ -66,6 +68,8 @@ pub fn spawn_popup_root(
 
     // Add a background to the popup if it is a modal
     if is_modal {
+
+        println!("Adding modal background for group {:?}", group);
         let popup_bg = commands.spawn((
             NodeBundle {
                 style: Style {
@@ -77,7 +81,11 @@ pub fn spawn_popup_root(
                     
                     ..Default::default()
                 },
-                focus_policy: FocusPolicy::Block,
+                //focus_policy: FocusPolicy::Block,
+                focus_policy: match group {
+                    PopupGroup::ModalStrong => FocusPolicy::Block,
+                    _ => FocusPolicy::Pass,
+                },
                 background_color: BackgroundColor::from(Color::rgba(0.0, 0.0, 0.0, 0.5)),
                 transform: Transform::from_translation(Vec3::from((0.0, 0.0, 9999.0))),
                 ..Default::default()

@@ -27,9 +27,11 @@ fn create_vault_menu(
     menus: Query<(Entity, &PopupGroup), With<Popup>>,
     window: Query<&Window>,
 ){
+    return
+
     if !key.just_pressed(KeyCode::Tab) {
         return
-    }
+    };
     // TODO: Handle multiple windows
     let window = window.single();
     let pos = window.cursor_position();

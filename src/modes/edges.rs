@@ -5,7 +5,7 @@
 use bevy::prelude::*;
 
 
-use crate::{input::pointer::{left_click_just_released, InputData}, graph::{context::PathsToEntitiesIndex, edges::create_edge, nodes::GraphDataNode, graph_cam::ViewData}, events::edges::EdgeSpawnedEvent};
+use crate::{input::pointer::{left_click_just_released, InputData}, graph::{context::PathsToEntitiesIndex, edges::create_edge, nodes::GraphDataNode, graph_cam::ViewData, node_types::{DataTypes, TypeText}}, events::edges::EdgeSpawnedEvent};
 
 use super::KartaModeState;
 
@@ -135,6 +135,7 @@ fn test_create_edge_from_drag() {
         GraphDataNode {
             path: PathBuf::from("path/to/entity1"),
             name: OsString::from("entity1"),
+            data: None,
         }
     ).id();
     
@@ -142,6 +143,7 @@ fn test_create_edge_from_drag() {
         GraphDataNode {
             path: PathBuf::from("path/to/entity2"),
             name: OsString::from("entity2"),
+            data: None,
         }
     ).id();
     
