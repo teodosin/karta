@@ -4,7 +4,7 @@ use std::{path::PathBuf, ffi::OsString};
 
 use bevy::{prelude::*, input::keyboard::KeyboardInput};
 
-use super::{context::{PathsToEntitiesIndex, ToBeDespawned, Selected}, node_types::{NodeTypes, DataTypes, DataNode, type_to_data}};
+use super::{context::{PathsToEntitiesIndex, ToBeDespawned, Selected}, node_types::{NodeTypes, DataTypes, NodeData, type_to_data}};
 
 use crate::{events::nodes::*, ui::nodes::{NodeOutline, GraphViewNode}, input::pointer::InputData};
 
@@ -31,7 +31,7 @@ impl Plugin for NodesPlugin {
 pub struct GraphDataNode {
     pub path: PathBuf,
     pub name: OsString,
-    pub data: Option<Box<dyn DataNode>>,
+    pub data: Option<Box<dyn NodeData>>,
 }
 
 impl GraphDataNode {
@@ -43,7 +43,7 @@ impl GraphDataNode {
         ntype
     }
 
-    pub fn get_data(&self, world: &World) -> Option<Box<dyn DataNode>> {
+    pub fn get_data(&self, world: &World) -> Option<Box<dyn NodeData>> {
         let data = match self.data {
             None => {
                 //println!("No data");
@@ -253,11 +253,13 @@ pub fn spawn_node (
 
     let full_path = path.join(&name);
 
+    let data = type_to_data(ntype);
+
     let node_entity = commands.spawn((
         GraphDataNode {
             path: full_path.clone(),
             name: name.clone(),
-            data: type_to_data(ntype),
+            data: None,
         },
     )).id();
 
@@ -266,6 +268,7 @@ pub fn spawn_node (
         path: path,
         name: name,
         ntype,
+        data,
         position: position,
     });
 

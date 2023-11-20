@@ -30,6 +30,7 @@ impl Plugin for NodeTypesPlugin {
 // This will be changed to a more flexible system later
 #[derive(Clone, Copy, Debug, PartialEq, Sequence)]
 pub enum NodeTypes {
+    Base,
     Folder, 
     FileBase,
     FileImage,
@@ -41,6 +42,7 @@ pub enum NodeTypes {
 impl fmt::Display for NodeTypes {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            NodeTypes::Base => write!(f, "Base"),
             NodeTypes::Folder => write!(f, "Folder"),
             NodeTypes::FileBase => write!(f, "Generic File"),
             NodeTypes::FileImage => write!(f, "Image"),
@@ -62,18 +64,19 @@ pub enum DataTypes {
 
 pub fn type_to_data(
     ntype: NodeTypes,
-) -> Option<Box<dyn DataNode>>  {
+) -> Option<Box<dyn NodeData>>  {
     let data = match ntype {
+        NodeTypes::Base => None,
         NodeTypes::Folder => None,
         NodeTypes::FileBase => None,
         NodeTypes::FileImage => {
-            let data: Box<dyn DataNode> = Box::new(TypeImage {
+            let data: Box<dyn NodeData> = Box::new(TypeImage {
                 image: None,
             });
             Some(data)
         },
         NodeTypes::FileSvg => {
-            let data: Box<dyn DataNode> = Box::new(TypeSvg {
+            let data: Box<dyn NodeData> = Box::new(TypeSvg {
                 svg: None,
             });
             Some(data)
@@ -128,25 +131,31 @@ pub fn get_type_from_path(
     }
 }
 
-pub trait DataNode: Send + Sync + 'static {
+pub trait NodeData: Send + Sync + 'static {
     // Path and node are stored in the GraphNode, right?
     // fn get_path(&self) -> String;
     // fn get_name(&self) -> String;
     fn get_data_type(&self) -> String;
 
-    fn get_data(&self, world: &World, path: &PathBuf) -> Box<dyn DataNode>;
+    fn set_data(&mut self);
+
+    fn get_data(&self, world: &World, path: &PathBuf) -> Box<dyn NodeData>;
 }
 
 pub struct TypeText {
     pub text: Option<String>,
 }
 
-impl DataNode for TypeText {
+impl NodeData for TypeText {
     fn get_data_type(&self) -> String {
         DataTypes::TypeText.to_string()
     }
 
-    fn get_data(&self, world: &World, path: &PathBuf) -> Box<dyn DataNode> {
+    fn set_data(&mut self) {
+        println!("Setting data");
+    }
+
+    fn get_data(&self, world: &World, path: &PathBuf) -> Box<dyn NodeData> {
         let data = TypeText {
             text: self.text.clone(),
         };
@@ -157,12 +166,16 @@ pub struct TypeSvg {
     pub svg: Option<Handle<Svg>>,
 }
 
-impl DataNode for TypeSvg {
+impl NodeData for TypeSvg {
     fn get_data_type(&self) -> String {
         DataTypes::TypeSvg.to_string()
     }
 
-    fn get_data(&self, world: &World, path: &PathBuf) -> Box<dyn DataNode> {
+    fn set_data(&mut self) {
+        println!("Setting data");
+    }
+
+    fn get_data(&self, world: &World, path: &PathBuf) -> Box<dyn NodeData> {
         match &self.svg {
             Some(svg) => {
                 let data = TypeSvg {
@@ -199,12 +212,16 @@ pub struct TypeImage {
     pub image: Option<Handle<Image>>,
 }
 
-impl DataNode for TypeImage {
+impl NodeData for TypeImage {
     fn get_data_type(&self) -> String {
         DataTypes::TypeImage.to_string()
     }
 
-    fn get_data(&self, world: &World, path: &PathBuf) -> Box<dyn DataNode> {
+    fn set_data(&mut self) {
+        println!("Setting data");
+    }
+
+    fn get_data(&self, world: &World, path: &PathBuf) -> Box<dyn NodeData> {
         println!("Getting data for image: {:?}", path);
         match &self.image {
             Some(image) => {
