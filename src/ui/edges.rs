@@ -5,6 +5,8 @@ use bevy_prototype_lyon::{shapes, prelude::{ShapeBundle, GeometryBuilder, Path, 
 
 use crate::{graph::{edges::GraphEdge, nodes::GraphDataNode, graph_cam::ViewData}, settings::theme::EDGE_PARENT_COLOR, events::edges::EdgeSpawnedEvent};
 
+use super::nodes::GraphViewNode;
+
 pub struct EdgeUiPlugin;
 
 impl Plugin for EdgeUiPlugin {
@@ -53,23 +55,28 @@ pub fn add_edge_ui(
 pub fn update_edges(
     mut commands: Commands,
     mut edges: Query<(Entity, &GraphEdge, &mut Path)>,
-    nodes: Query<&Transform, With<GraphDataNode>>,
+    nodes: Query<&Transform, With<GraphViewNode>>,
 ){
     for (edge, data, mut path) in edges.iter_mut() {
         let start = match nodes.get(data.from) {
             Ok(node) => node,
             Err(_) => {
-                commands.entity(edge).despawn_recursive();
+                // commands.entity(edge).despawn_recursive();
                 continue
             },
         };
         let end = match nodes.get(data.to){
             Ok(node) => node,
             Err(_) => {
-                commands.entity(edge).despawn_recursive();
+                // commands.entity(edge).despawn_recursive();
                 continue
             },
         };
+        // Check that all positions are valid
+        if !start.translation.x.is_finite() || !start.translation.y.is_finite() || !end.translation.x.is_finite() || !end.translation.y.is_finite() {
+            // commands.entity(edge).despawn_recursive();
+            continue
+        }
 
         *path = GeometryBuilder::build_as(
             &shapes::Line(

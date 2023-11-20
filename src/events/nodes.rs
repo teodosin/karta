@@ -5,7 +5,7 @@ use std::{path::PathBuf, ffi::OsString};
 use bevy::prelude::{Event, Entity, Vec2};
 use bevy_mod_picking::prelude::*;
 
-use crate::graph::node_types::NodeTypes;
+use crate::graph::node_types::{NodeTypes, NodeData};
 
 
 // Informing the World that a node has been spawned
@@ -17,6 +17,7 @@ pub struct NodeSpawnedEvent {
     pub path: PathBuf,
     pub name: OsString,
     pub ntype: NodeTypes,
+    pub data: Option<Box<dyn NodeData>>,
     pub position: Vec2,
 }
 

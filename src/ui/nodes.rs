@@ -8,11 +8,17 @@ use crate::{
     events::nodes::{MoveNodesEvent, NodeClickEvent, NodePressedEvent, NodeHoverEvent, NodeSpawnedEvent}
 };
 
+use self::node_ui_types::{add_base_node_ui, add_image_node_ui};
+
+mod node_ui_types;
+
 pub struct NodesUiPlugin;
 
 impl Plugin for NodesUiPlugin {
     fn build(&self, app: &mut App) {
         app
+            // .insert_resource(UiNodeSystemsIndex::default())
+            // .add_systems(PreStartup, setup_node_ui_systems)
             .add_systems(PreUpdate, handle_outline_hover)
 
             .add_systems(PostUpdate, add_node_ui)
@@ -84,17 +90,18 @@ pub fn add_node_ui(
 
     mut commands: Commands,
 
+    mut server: ResMut<AssetServer>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut view_data: ResMut<ViewData>,
+    // systems: Res<UiNodeSystemsIndex>,
 ){
     
     for ev in events.read(){
         
         // let full_path = format!("{}/{}", ev.path, ev.name);
         
-        // Positions are slightly randomized to avoid nodes being spawned on top of each other
-        let mut rng = rand::thread_rng();
+
         
         let radius = match ev.ntype {
             NodeTypes::FileImage => 70.0,
@@ -102,19 +109,20 @@ pub fn add_node_ui(
             _ => 25.0,
         };
 
+        let data = &ev.data;
+
+        println!("Node type: {:?}", ev.ntype);
+
+        match ev.ntype {
+            NodeTypes::FileImage => {
+                add_image_node_ui(&ev, data, &mut commands, &mut server, &mut meshes, &mut materials, &mut view_data)
+            },
+            _ => add_base_node_ui(&ev, &mut commands, &mut meshes, &mut materials, &mut view_data),
+        }
+
         commands.entity(ev.entity).insert((
             GraphViewNode,
             Velocity2D::default(),
-            MaterialMesh2dBundle {
-                mesh: meshes.add(shape::Circle::new(radius).into()).into(),
-                material: materials.add(ColorMaterial::from(Color::rgb(0.3, 0.0, 0.0))),
-                transform: Transform::from_translation(Vec3::new(
-                    ev.position.x + rng.gen_range(-10.0..10.0),
-                    ev.position.y + rng.gen_range(-10.0..10.0),
-                    view_data.top_z,
-                )),
-                ..default()
-            },
             PickableBundle::default(),
             RaycastPickable::default(),
             
@@ -127,88 +135,101 @@ pub fn add_node_ui(
             On::<Pointer<DragEnd>>::target_remove::<Selected>(),
             On::<Pointer<Deselect>>::target_remove::<Selected>(),
         ));
-        // Update the view_data so we can keep track of which zindex is the topmost
-        view_data.top_z += 0.0001;
-        
-        // NAME LABEL
-        // This is the text label that will be attached to the node.
-        // It will be spawned as a child of the node entity.
-        
-        let name_label = commands.spawn(
-            Text2dBundle {
-                text: Text {
-                    sections: vec![TextSection::new(
-                        &*ev.name.to_string_lossy(),
-                        TextStyle {
-                            font_size: 20.0,
-                            color: Color::WHITE,
-                            ..default()
-                        },
-                    )],
-                    ..default()
-                },
-                text_2d_bounds: Text2dBounds {
-                    size: Vec2::new(400.0, 200.0),
-                    ..default()
-                },
-                transform: Transform {
-                    translation: Vec3::new(radius + 14.0, 0.0, 100.1),
-                    ..default()
-                },
-                text_anchor: bevy::sprite::Anchor::CenterLeft,
-                ..default()
-            }
-        ).id();
-        
-        commands.entity(ev.entity).push_children(&[name_label]);
-        
-        // OUTLINE
-        // ----------------------------------------------------------------
-        // This is the hoverable, interactable outline from which edges are created.
-        // The shape of it is determined by the users view settings as well as the
-        // type of node it outlines. 
-        
-        let outline_width = 10.0;
-        let outline_width_hovered = 12.0;
-        
-        let outline_shape = shapes::Circle {
-            radius: radius + outline_width / 2.,
-            center: Vec2::from((0.0, 0.0)),
-        };
-        //let outline_shape_hovered = shapes::Circle {
-        //     radius: radius + outline_width_hovered / 2.,
-        //     center: Vec2::from((0.0, 0.0)),
-        // };
-        let outline_path = GeometryBuilder::build_as(&outline_shape);
-        //let outline_path_hovered = GeometryBuilder::build_as(&outline_shape_hovered);
-        
-        let node_outline = commands.spawn((
-            ShapeBundle {
-                path: outline_path,
+
+        add_node_label(&mut commands, &ev, radius);
+        add_node_outline(&mut commands, &ev.entity, radius);
+
+    }
+}
+
+// NAME LABEL
+// This is the text label that will be attached to the node.
+// It will be spawned as a child of the node entity.
+pub fn add_node_label(
+    commands: &mut Commands,
+    ev: &NodeSpawnedEvent, 
+    radius: f32,
+){
+    
+    let name_label = commands.spawn(
+        Text2dBundle {
+            text: Text {
+                sections: vec![TextSection::new(
+                    &*ev.name.to_string_lossy(),
+                    TextStyle {
+                        font_size: 20.0,
+                        color: Color::WHITE,
+                        ..default()
+                    },
+                )],
                 ..default()
             },
-            Stroke::new(
-                crate::settings::theme::OUTLINE_BASE_COLOR, 5.0
-            ),
-            NodeOutline,
-            
-            PickableBundle::default(),
-            RaycastPickable::default(),
+            text_2d_bounds: Text2dBounds {
+                size: Vec2::new(400.0, 200.0),
+                ..default()
+            },
+            transform: Transform {
+                translation: Vec3::new(radius + 14.0, 0.0, 100.1),
+                ..default()
+            },
+            text_anchor: bevy::sprite::Anchor::CenterLeft,
+            ..default()
+        }
+    ).id();
+    
+    commands.entity(ev.entity).push_children(&[name_label]);
+}
 
-            On::<Pointer<Over>>::target_component_mut::<Stroke>(move |_over, stroke| {
-                stroke.color = crate::settings::theme::OUTLINE_HOVER_COLOR;
-                stroke.options = StrokeOptions::default().with_line_width(outline_width_hovered);
-            }),
-            
-            On::<Pointer<Out>>::target_component_mut::<Stroke>(move |_out, stroke| {
-                stroke.color = crate::settings::theme::OUTLINE_BASE_COLOR;
-                stroke.options = StrokeOptions::default().with_line_width(outline_width);
-            }),
-        )).id();
+// OUTLINE
+// ----------------------------------------------------------------
+// This is the hoverable, interactable outline from which edges are created.
+// The shape of it is determined by the users view settings as well as the
+// type of node it outlines. 
+pub fn add_node_outline(
+    commands: &mut Commands,
+    parent: &Entity,
+    radius: f32,
+){
+    
+    let outline_width = 10.0;
+    let outline_width_hovered = 12.0;
+    
+    let outline_shape = shapes::Circle {
+        radius: radius + outline_width / 2.,
+        center: Vec2::from((0.0, 0.0)),
+    };
+    //let outline_shape_hovered = shapes::Circle {
+    //     radius: radius + outline_width_hovered / 2.,
+    //     center: Vec2::from((0.0, 0.0)),
+    // };
+    let outline_path = GeometryBuilder::build_as(&outline_shape);
+    //let outline_path_hovered = GeometryBuilder::build_as(&outline_shape_hovered);
+    
+    let node_outline = commands.spawn((
+        ShapeBundle {
+            path: outline_path,
+            ..default()
+        },
+        Stroke::new(
+            crate::settings::theme::OUTLINE_BASE_COLOR, 5.0
+        ),
+        NodeOutline,
         
-        commands.entity(ev.entity).push_children(&[node_outline]);
+        PickableBundle::default(),
+        RaycastPickable::default(),
+
+        On::<Pointer<Over>>::target_component_mut::<Stroke>(move |_over, stroke| {
+            stroke.color = crate::settings::theme::OUTLINE_HOVER_COLOR;
+            stroke.options = StrokeOptions::default().with_line_width(outline_width_hovered);
+        }),
         
-    }
+        On::<Pointer<Out>>::target_component_mut::<Stroke>(move |_out, stroke| {
+            stroke.color = crate::settings::theme::OUTLINE_BASE_COLOR;
+            stroke.options = StrokeOptions::default().with_line_width(outline_width);
+        }),
+    )).id();
+    
+    commands.entity(*parent).push_children(&[node_outline]);
 }
 
 pub fn handle_outline_hover(

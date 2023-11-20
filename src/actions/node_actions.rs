@@ -72,6 +72,7 @@ impl Action for CreateNodeAction {
             path: cpath,
             name: name,
             ntype: self.ntype,
+            data: type_to_data(self.ntype),
             position: self.position,
         });
         
