@@ -2172,6 +2172,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0206175f82b8d6bf6652ff7d71a1e27fd2e4efde587fd368662814d6ec1d9ce0"
 
 [[package]]
+name = "exif"
+version = "0.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "33a3d04e1284789bde99b86efed7e78c9c12e88b8146be27faf4404e05d8716e"
+dependencies = [
+ "exif-sys",
+ "libc",
+]
+
+[[package]]
+name = "exif-sys"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aeb44bee079869d834d0f9023ebffe7550ff005daa57b0b9b2d0d53dd2cb08cf"
+dependencies = [
+ "libc",
+ "pkg-config",
+]
+
+[[package]]
 name = "exr"
 version = "1.71.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2839,6 +2859,7 @@ dependencies = [
  "bevy_svg",
  "directories",
  "enum-iterator",
+ "exif",
  "lyon",
  "rand",
  "ron",
