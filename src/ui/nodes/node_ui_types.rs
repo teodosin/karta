@@ -95,6 +95,9 @@ pub fn add_image_node_ui(
         None => return,
     }
 
+    let metadata = full_path.metadata().unwrap();
+    println!("Metadata: {:?}", metadata);
+
     let image = server.load(full_path.clone());
 
     println!("Position: {:?}", ev.position);
