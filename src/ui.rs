@@ -64,11 +64,11 @@ impl Plugin for KartaUiPlugin {
             
             .add_systems(Update, context_menu_button_system)
             
-            .add_systems(PostUpdate, context_menu::despawn_context_menus_on_any_click)
             .add_systems(
                 Update, 
                 spawn_context_menu.run_if(on_event::<NodeClickEvent>())
             )
+            .add_systems(Update, context_menu::despawn_context_menus_on_any_click)
             
             .add_systems(PostUpdate, point_to_root_if_offscreen)
         ;

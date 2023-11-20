@@ -29,7 +29,10 @@ pub fn despawn_context_menus_on_any_click(
     mouse: Res<Input<MouseButton>>,
     menus: Query<(Entity, &PopupGroup), With<Popup>>,
 ) {
-    if mouse.is_changed() {
+    let input = [MouseButton::Left, MouseButton::Right, MouseButton::Middle];
+    if mouse.any_just_released(input) {
+    // if mouse.is_changed() {
+        println!("Despawning context menus");
         for (menu, group) in menus.iter() {
             match group {
                 PopupGroup::Context => {
@@ -61,6 +64,8 @@ pub fn spawn_context_menu(
         return
     }
 
+    println!("Spawning context menu");
+
     // let entity_option = mouse_event.iter().next();
     // let entity: Entity;
     // match entity_option {
@@ -72,8 +77,6 @@ pub fn spawn_context_menu(
     //         entity = target.target.unwrap();
     //     },
     // }
-
-    println!("Spawning context menu");
 
     // TODO: Handle multiple windows
     let window = window.single();

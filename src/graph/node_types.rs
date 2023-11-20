@@ -33,6 +33,7 @@ pub enum NodeTypes {
     Folder, 
     FileBase,
     FileImage,
+    FileSvg,
     FileText,
     Text,
 }
@@ -43,6 +44,7 @@ impl fmt::Display for NodeTypes {
             NodeTypes::Folder => write!(f, "Folder"),
             NodeTypes::FileBase => write!(f, "Generic File"),
             NodeTypes::FileImage => write!(f, "Image"),
+            NodeTypes::FileSvg => write!(f, "Svg"),
             NodeTypes::FileText => write!(f, "Text File"),
             NodeTypes::Text => write!(f, "Text Card"),
         }
@@ -67,6 +69,12 @@ pub fn type_to_data(
         NodeTypes::FileImage => {
             let data: Box<dyn DataNode> = Box::new(TypeImage {
                 image: None,
+            });
+            Some(data)
+        },
+        NodeTypes::FileSvg => {
+            let data: Box<dyn DataNode> = Box::new(TypeSvg {
+                svg: None,
             });
             Some(data)
         },
@@ -101,7 +109,7 @@ pub fn get_type_from_path(
                     Some(ext) => {
                         println!("Matching extensions: {:?}", ext);
                         match ext.to_str() {
-                            Some("svg") => return Some(NodeTypes::FileImage),
+                            Some("svg") => return Some(NodeTypes::FileSvg),
                             Some("png") => return Some(NodeTypes::FileImage),
                             Some("jpg") => return Some(NodeTypes::FileImage),
                             Some("jpeg") => return Some(NodeTypes::FileImage),
@@ -146,7 +154,7 @@ impl DataNode for TypeText {
     }
 }
 pub struct TypeSvg {
-    pub svg: Option<Svg>,
+    pub svg: Option<Handle<Svg>>,
 }
 
 impl DataNode for TypeSvg {
@@ -161,14 +169,25 @@ impl DataNode for TypeSvg {
 
                     svg: Some(svg.clone()),
                 };
+                println!("Found svg handle");
                 Box::new(data)
             },
             None => {
                 // Here we see that the file is not loaded, so we load it 
                 let server = world.get_resource::<AssetServer>().unwrap();
+
+                // Check that the file is an svg
+                if path.extension().unwrap() != "svg" {
+                    println!("Error: File is not an svg");
+                    return Box::new(TypeSvg {
+                        svg: None,
+                    });
+                }
+
+                let svg_file: Handle<Svg> = server.load(path.clone());
                 
                 let data = TypeSvg {
-                    svg: None,
+                    svg: Some(svg_file),
                 };
                 Box::new(data)
             }

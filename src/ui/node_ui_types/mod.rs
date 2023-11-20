@@ -1,6 +1,16 @@
     // Commented out for now. 
     // Spawning nodes is generic until I figure out
     // how to handle different types of nodes. 
+
+    // BASE NODE
+    // ----------------------------------------------------------------
+    // For the node types that don't have a specific ui 
+
+    pub fn add_base_node_ui(
+
+    ){
+        
+    }
     
     // FOLDER/DIRECTORY NODE
     // ----------------------------------------------------------------
@@ -36,3 +46,12 @@
 
     // TEXT NODE
     // ----------------------------------------------------------------
+
+    // SVG NODE
+    // ----------------------------------------------------------------
+
+    pub fn add_svg_node_ui(
+
+    ){
+
+    }

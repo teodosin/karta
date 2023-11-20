@@ -46,7 +46,7 @@ impl GraphDataNode {
     pub fn get_data(&self, world: &World) -> Option<Box<dyn DataNode>> {
         let data = match self.data {
             None => {
-                println!("No data");
+                //println!("No data");
                 return None;
             },
             Some(ref data) => Some(data.get_data(world, &self.path)),
