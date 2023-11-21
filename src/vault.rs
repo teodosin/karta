@@ -19,10 +19,11 @@ use bevy::{
 
 use crate::graph::context::CurrentContext;
 
-use self::context_asset::{ContextAsset, ContextAssetState, ContextAssetLoader, load_contexts};
+use self::{context_asset::{ContextAsset, ContextAssetState, ContextAssetLoader, load_contexts}, asset_manager::{ImageLoadTracker, on_image_load}};
 
 mod context_asset;
 mod vault_asset;
+mod asset_manager;
 
 pub struct VaultPlugin;
 
@@ -35,12 +36,16 @@ impl Plugin for VaultPlugin {
             .init_asset_loader::<ContextAssetLoader>()
             .init_resource::<ContextAssetState>()
             .init_asset::<ContextAsset>()
+
+            .insert_resource(ImageLoadTracker::new())
             
             .add_systems(Startup, load_contexts)
             .add_systems(PreStartup, setup_vaults)
             // .add_systems(Update, use_assets)
 
             .add_systems(Update, on_vault_change.run_if(resource_changed::<CurrentVault>()))
+
+            .add_systems(Update, on_image_load)
         ;
 
     }

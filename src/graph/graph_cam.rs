@@ -63,6 +63,11 @@ fn cam_setup(
                 clear_color: ClearColorConfig::None,
                 ..default()
             },
+            projection: OrthographicProjection {
+                far: 1000000.,
+                near: -1000000.,
+                ..Default::default()
+            },
             camera: Camera {
                 order: 1,
                 ..default()
