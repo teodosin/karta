@@ -113,13 +113,7 @@ pub fn add_node_ui(
 
         println!("Node type: {:?}", ev.ntype);
 
-        match ev.ntype {
-            NodeTypes::FileImage => {
-                add_image_node_ui(&ev, data, &mut commands, &mut server, &mut meshes, &mut materials, &mut view_data)
-            },
-            _ => add_base_node_ui(&ev, &mut commands, &mut meshes, &mut materials, &mut view_data),
-        }
-
+        
         commands.entity(ev.entity).insert((
             GraphViewNode,
             Velocity2D::default(),
@@ -135,9 +129,16 @@ pub fn add_node_ui(
             On::<Pointer<DragEnd>>::target_remove::<Selected>(),
             On::<Pointer<Deselect>>::target_remove::<Selected>(),
         ));
-
+        
         add_node_label(&mut commands, &ev, radius);
         add_node_outline(&mut commands, &ev.entity, radius);
+
+        match ev.ntype {
+            NodeTypes::FileImage => {
+                add_image_node_ui(&ev, data, &mut commands, &mut server, &mut view_data)
+            },
+            _ => add_base_node_ui(&ev, &mut commands, &mut meshes, &mut materials, &mut view_data),
+        }
 
     }
 }
@@ -151,7 +152,8 @@ pub fn add_node_label(
     radius: f32,
 ){
     
-    let name_label = commands.spawn(
+    let name_label = commands.spawn((
+        NodeLabel,
         Text2dBundle {
             text: Text {
                 sections: vec![TextSection::new(
@@ -175,7 +177,7 @@ pub fn add_node_label(
             text_anchor: bevy::sprite::Anchor::CenterLeft,
             ..default()
         }
-    ).id();
+    )).id();
     
     commands.entity(ev.entity).push_children(&[name_label]);
 }

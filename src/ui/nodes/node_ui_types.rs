@@ -77,8 +77,6 @@ pub fn add_image_node_ui(
     commands: &mut Commands,
 
     server: &mut AssetServer,
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<ColorMaterial>,
     view_data: &mut ViewData,
 ){
     let mut rng = rand::thread_rng();
@@ -86,9 +84,10 @@ pub fn add_image_node_ui(
     let full_path = ev.path.join(&ev.name);
     println!("Adding image node ui: {:?}", full_path);
 
+    let accepted_image_formats = vec!["png", "jpg", "jpeg", "gif", "bmp", "tga", "tif", "tiff", "webp", "ico",];
     match full_path.extension() {
         Some(ext) => {
-            if ext != "png" {
+            if !accepted_image_formats.contains(&ext.to_str().unwrap()) {
                 return;
             }
         },
@@ -106,7 +105,7 @@ pub fn add_image_node_ui(
         SpriteBundle {
             texture: image,
             sprite: Sprite {
-                anchor: bevy::sprite::Anchor::TopLeft,
+                anchor: bevy::sprite::Anchor::Center,
                 ..default()
             },
             transform: Transform {
@@ -124,7 +123,7 @@ pub fn add_image_node_ui(
     view_data.top_z += 0.0001;
 }
                         
-                        // TEXT NODE
+// TEXT NODE
 // ----------------------------------------------------------------
 
 // SVG NODE
