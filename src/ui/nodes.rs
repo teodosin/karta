@@ -98,27 +98,15 @@ pub fn add_node_ui(
 ){
     
     for ev in events.read(){
-        
-        // let full_path = format!("{}/{}", ev.path, ev.name);
-        
-
-        
-        let radius = match ev.ntype {
-            NodeTypes::FileImage => 70.0,
-            NodeTypes::Folder => 50.0,
-            _ => 25.0,
-        };
 
         let data = &ev.data;
 
         println!("Node type: {:?}", ev.ntype);
 
-        
         commands.entity(ev.entity).insert((
             GraphViewNode,
             Velocity2D::default(),
-            PickableBundle::default(),
-            RaycastPickable::default(),
+            //PickableBundle::default(),
             
             On::<Pointer<Drag>>::send_event::<MoveNodesEvent>(),
             On::<Pointer<Click>>::send_event::<NodeClickEvent>(),
@@ -129,9 +117,6 @@ pub fn add_node_ui(
             On::<Pointer<DragEnd>>::target_remove::<Selected>(),
             On::<Pointer<Deselect>>::target_remove::<Selected>(),
         ));
-        
-        add_node_label(&mut commands, &ev, radius);
-        add_node_outline(&mut commands, &ev.entity, radius);
 
         match ev.ntype {
             NodeTypes::FileImage => {
@@ -187,7 +172,7 @@ pub fn add_node_label(
 // This is the hoverable, interactable outline from which edges are created.
 // The shape of it is determined by the users view settings as well as the
 // type of node it outlines. 
-pub fn add_node_outline(
+pub fn add_node_circle_outline(
     commands: &mut Commands,
     parent: &Entity,
     radius: f32,
@@ -200,12 +185,8 @@ pub fn add_node_outline(
         radius: radius + outline_width / 2.,
         center: Vec2::from((0.0, 0.0)),
     };
-    //let outline_shape_hovered = shapes::Circle {
-    //     radius: radius + outline_width_hovered / 2.,
-    //     center: Vec2::from((0.0, 0.0)),
-    // };
+
     let outline_path = GeometryBuilder::build_as(&outline_shape);
-    //let outline_path_hovered = GeometryBuilder::build_as(&outline_shape_hovered);
     
     let node_outline = commands.spawn((
         ShapeBundle {
@@ -213,7 +194,7 @@ pub fn add_node_outline(
             ..default()
         },
         Stroke::new(
-            crate::settings::theme::OUTLINE_BASE_COLOR, 5.0
+            crate::settings::theme::OUTLINE_BASE_COLOR, 10.0
         ),
         NodeOutline,
         

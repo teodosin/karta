@@ -7,7 +7,7 @@ use bevy::{
     render::render_resource::{Extent3d, TextureDimension, TextureFormat},
 };
 
-use crate::graph::context::CurrentContext;
+use crate::{graph::context::CurrentContext, ui::update_active_mode_label};
 
 pub struct ScenePlugin;
 
@@ -19,6 +19,8 @@ impl Plugin for ScenePlugin {
             .add_systems(Startup, spawn_some_spheres)
 
             .add_systems(Update, update_active_on_context_change.run_if(resource_changed::<CurrentContext>()))
+            .add_systems(Update, update_active_mode_label.run_if(resource_changed::<CurrentActive>()))
+
             .add_systems(Update, rotate);
     }
 }
