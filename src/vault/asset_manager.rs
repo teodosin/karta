@@ -67,16 +67,16 @@ pub fn on_image_load(
                             //Reverse the scale for the children of the node
                             for child in children.iter() {
                                 match labels.get_mut(*child) {
-                                    Ok(_) => {
+                                    Ok(mut label) => {
                                         println!("Rescaling label");
-                                        labels.get_mut(*child).unwrap().1.scale = reverse_scale;
+                                        label.1.scale = reverse_scale;
                                     }
                                     Err(_) => {}
                                 }
                                 match outlines.get_mut(*child) {
-                                    Ok(_) => {
+                                    Ok(mut outline) => {
                                         println!("Rescaling outline");
-                                        outlines.get_mut(*child).unwrap().1.scale = reverse_scale;
+                                        outline.1.scale = reverse_scale;
                                     }
                                     Err(_) => {}
                                 }

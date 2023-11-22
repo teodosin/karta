@@ -56,7 +56,6 @@ impl Plugin for KartaUiPlugin {
             .add_systems(Startup, create_context_and_active_bar)
             
             .add_systems(Update, update_context_label.run_if(resource_changed::<CurrentContext>()))
-            .add_systems(Update, update_active_mode_label.run_if(resource_changed::<CurrentActive>()))
             
             .add_systems(Update, mode_button_system)
 
@@ -106,10 +105,10 @@ fn gizmo_settings(
 
 
 #[derive(Component)]
-struct ContextLabel;
+pub struct ContextLabel;
 
 #[derive(Component)]
-struct ActiveLabel;
+pub struct ActiveLabel;
 
 fn create_context_and_active_bar(
     mut commands: Commands,
@@ -176,7 +175,7 @@ fn update_context_label(
     }
 }
 
-fn update_active_mode_label(
+pub fn update_active_mode_label(
     mut query: Query<&mut Text, With<ActiveLabel>>,
     active: Res<CurrentActive>,
 ){

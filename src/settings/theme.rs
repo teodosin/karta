@@ -21,7 +21,7 @@ impl Plugin for ThemePlugin {
 
 // Outlines
 // ------------------------------------------------------------------
-pub const OUTLINE_BASE_COLOR: Color = Color::rgba(0.2, 0.2, 0.4, 0.0);
+pub const OUTLINE_BASE_COLOR: Color = Color::rgba(0.2, 0.2, 0.4, 1.0);
 pub const OUTLINE_HOVER_COLOR: Color = Color::rgb(0.3, 0.3, 0.5);
 // pub const OUTLINE_SELECTED_COLOR: Color = Color::rgb(0.4, 0.4, 0.6);
 // pub const OUTLINE_FOCAL_COLOR: Color = Color::ORANGE;

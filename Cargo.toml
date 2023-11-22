@@ -7,7 +7,7 @@ edition = "2021"
 [dependencies]
 bevy = { version = "0.12.0", features = ["dynamic_linking","bevy_asset",] }
 
-bevy_mod_picking = "0.17.0"
+bevy_mod_picking = { version = "0.17.0", features = ["backend_sprite",]}
 bevy_prototype_lyon = "0.10.0"
 bevy_svg = "0.12.0"
 bevy_cosmic_edit = "0.15.1"
