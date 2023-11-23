@@ -74,7 +74,6 @@ fn cam_setup(
             },
             ..default()
         },
-        RaycastPickable::default(),
     ));
 }
 

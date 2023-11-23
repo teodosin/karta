@@ -49,7 +49,6 @@ pub fn add_base_node_ui(
     let radius = 25.0;
 
     commands.entity(ev.entity).insert((
-        //RaycastPickable::default(),
         MaterialMesh2dBundle {
             mesh: meshes.add(shape::Circle::new(radius).into()).into(),
             material: materials.add(ColorMaterial::from(Color::rgb(0.3, 0.0, 0.0))),
@@ -101,20 +100,19 @@ pub fn add_image_node_ui(
         None => return,
     }
 
-    let metadata = full_path.metadata().unwrap();
-    println!("Metadata: {:?}", metadata);
+    // let metadata = full_path.metadata().unwrap();
+    // println!("Metadata: {:?}", metadata);
 
     let image: Handle<Image> = server.load(full_path.clone());
 
     println!("Position: {:?}", ev.position);
 
     commands.entity(ev.entity).insert((
-        //PickableBundle::default(),
-        Pickable::IGNORE,
+
         SpriteBundle {
             texture: image,
             sprite: Sprite {
-                anchor: bevy::sprite::Anchor::Center,
+                //anchor: bevy::sprite::Anchor::Center,
                 ..default()
             },
             transform: Transform {
@@ -127,6 +125,9 @@ pub fn add_image_node_ui(
             },
             ..default()
         },
+        Pickable {
+            ..default()
+        }
         // SpatialBundle {
         //     transform: Transform::from_translation(Vec3::new(
         //         ev.position.x + rng.gen_range(-10.0..10.0),
