@@ -41,11 +41,11 @@ pub fn karta_app() {
         )
         .add_plugins(DefaultPickingPlugins
             .build()
-            .disable::<DebugPickingPlugin>()
+            //.disable::<DebugPickingPlugin>()
         )        
 
         // EGUI INSPECTOR BLOCK
-        //.add_plugins(WorldInspectorPlugin::new())
+        .add_plugins(WorldInspectorPlugin::new())
 
         // ENVIRONMENT BLOCK
         // The data that needs to remain in memory for the entire duration of the app
