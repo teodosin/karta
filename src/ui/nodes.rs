@@ -202,7 +202,7 @@ pub fn add_node_circle_outline(
         ),
         NodeOutline,
         
-        PickableBundle::default(),
+        Pickable::IGNORE,
         //RaycastPickable::default(),
 
         On::<Pointer<Over>>::target_component_mut::<Stroke>(move |_over, stroke| {
