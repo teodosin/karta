@@ -99,14 +99,12 @@ pub fn add_node_ui(
     
     for ev in events.read(){
 
-        let data = &ev.data;
-
         println!("Node type: {:?}", ev.ntype);
 
         commands.entity(ev.entity).insert((
             GraphViewNode,
             Velocity2D::default(),
-            //PickableBundle::default(),
+            PickableBundle::default(),
             
             On::<Pointer<Drag>>::send_event::<MoveNodesEvent>(),
             On::<Pointer<Click>>::send_event::<NodeClickEvent>(),
@@ -120,7 +118,7 @@ pub fn add_node_ui(
 
         match ev.ntype {
             NodeTypes::FileImage => {
-                add_image_node_ui(&ev, data, &mut commands, &mut server, &mut view_data)
+                add_image_node_ui(&ev, &mut commands, &mut server, &mut view_data)
             },
             _ => add_base_node_ui(&ev, &mut commands, &mut meshes, &mut materials, &mut view_data),
         }
@@ -135,6 +133,7 @@ pub fn add_node_label(
     commands: &mut Commands,
     ev: &NodeSpawnedEvent, 
     radius: f32,
+    top_z: &f32,
 ){
     
     let name_label = commands.spawn((
@@ -156,7 +155,7 @@ pub fn add_node_label(
                 ..default()
             },
             transform: Transform {
-                translation: Vec3::new(radius + 14.0, 0.0, 100.1),
+                translation: Vec3::new(radius + 14.0, 0.0, 10000.0 + top_z),
                 ..default()
             },
             text_anchor: bevy::sprite::Anchor::CenterLeft,
@@ -176,6 +175,7 @@ pub fn add_node_circle_outline(
     commands: &mut Commands,
     parent: &Entity,
     radius: f32,
+    top_z: &f32,
 ){
     
     let outline_width = 10.0;
@@ -191,6 +191,10 @@ pub fn add_node_circle_outline(
     let node_outline = commands.spawn((
         ShapeBundle {
             path: outline_path,
+            spatial: SpatialBundle {
+                transform: Transform::from_translation(Vec3::new(0.0, 0.0, 1000.0 + top_z)),
+                ..default()
+            },
             ..default()
         },
         Stroke::new(
@@ -199,7 +203,7 @@ pub fn add_node_circle_outline(
         NodeOutline,
         
         PickableBundle::default(),
-        RaycastPickable::default(),
+        //RaycastPickable::default(),
 
         On::<Pointer<Over>>::target_component_mut::<Stroke>(move |_over, stroke| {
             stroke.color = crate::settings::theme::OUTLINE_HOVER_COLOR;
