@@ -96,6 +96,7 @@ pub fn add_image_node_ui(
             if !accepted_image_formats.contains(&ext.to_str().unwrap()) {
                 return;
             }
+            println!("Found extension: {}", ext.to_string_lossy());
         },
         None => return,
     }
