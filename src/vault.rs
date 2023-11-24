@@ -13,7 +13,7 @@ use bevy::{
         Commands, 
         AssetApp, ResMut, Resource,
     }, 
-    app::{PreStartup, Update}, ecs::schedule::{common_conditions::resource_changed, IntoSystemConfigs}
+    app::{PreStartup, Update, PreUpdate, PostUpdate}, ecs::schedule::{common_conditions::resource_changed, IntoSystemConfigs}
 };
  
 
@@ -45,7 +45,7 @@ impl Plugin for VaultPlugin {
 
             .add_systems(Update, on_vault_change.run_if(resource_changed::<CurrentVault>()))
 
-            .add_systems(Update, on_image_load)
+            //.add_systems(PostUpdate, on_image_load)
         ;
 
     }
