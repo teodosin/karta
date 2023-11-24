@@ -63,8 +63,8 @@ pub fn add_base_node_ui(
     // Update the view_data so we can keep track of which zindex is the topmost
     view_data.top_z += 0.0001;
 
-    add_node_label(&mut commands, &ev, radius);
-    add_node_circle_outline(&mut commands, &ev.entity, radius);
+    add_node_label(&mut commands, &ev, radius, &view_data.top_z);
+    add_node_circle_outline(&mut commands, &ev.entity, radius, &view_data.top_z);
 }
 
 // FOLDER/DIRECTORY NODE
@@ -78,7 +78,7 @@ pub fn add_base_node_ui(
 
 pub fn add_image_node_ui(
     ev: &NodeSpawnedEvent,
-    data: &Option<Box<dyn NodeData>>,
+    // data: &Option<Box<dyn NodeData>>,
 
     mut commands: &mut Commands,
 
@@ -126,9 +126,6 @@ pub fn add_image_node_ui(
             },
             ..default()
         },
-        Pickable {
-            ..default()
-        }
         // SpatialBundle {
         //     transform: Transform::from_translation(Vec3::new(
         //         ev.position.x + rng.gen_range(-10.0..10.0),
@@ -143,8 +140,9 @@ pub fn add_image_node_ui(
 
     let radius = 60.0;
 
-    add_node_label(&mut commands, &ev, radius);
-    add_node_circle_outline(&mut commands, &ev.entity, radius);
+    add_node_label(&mut commands, &ev, radius, &view_data.top_z);
+    add_node_circle_outline(&mut commands, &ev.entity, radius, &view_data.top_z);
+
 }
                         
 // TEXT NODE
