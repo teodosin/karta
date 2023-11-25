@@ -45,7 +45,7 @@ impl Plugin for VaultPlugin {
 
             .add_systems(Update, on_vault_change.run_if(resource_changed::<CurrentVault>()))
 
-            //.add_systems(PostUpdate, on_image_load)
+            .add_systems(PostUpdate, on_image_load)
         ;
 
     }
