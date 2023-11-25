@@ -1,10 +1,10 @@
-use bevy::{ecs::{system::{Resource, SystemId, Commands, ResMut}, world::World, event::EventReader}, utils::HashMap, asset::{Assets, AssetServer, Handle}, render::{mesh::{Mesh, shape}, color::Color, texture::Image}, sprite::{ColorMaterial, MaterialMesh2dBundle, SpriteBundle, Sprite}, transform::components::Transform, math::Vec3, prelude::{default, SpatialBundle}};
+use bevy::{ecs::{system::{Resource, SystemId, Commands, ResMut}, world::World, event::EventReader}, utils::HashMap, asset::{Assets, AssetServer, Handle}, render::{mesh::{Mesh, shape}, color::Color, texture::Image}, sprite::{ColorMaterial, MaterialMesh2dBundle, SpriteBundle, Sprite}, transform::components::Transform, math::{Vec3, Vec2}, prelude::{default, SpatialBundle}};
 use bevy_mod_picking::{backends::{raycast::RaycastPickable, sprite::SpriteBackend}, picking_core::Pickable, PickableBundle};
 use rand::Rng;
 
-use crate::{graph::{node_types::{NodeTypes, DataTypes, NodeData}, graph_cam::ViewData}, events::nodes::NodeSpawnedEvent};
+use crate::{graph::{node_types::{NodeTypes, DataTypes, NodeData}, graph_cam::ViewData}, events::nodes::NodeSpawnedEvent, ui::nodes::add_node_rect_outline};
 
-use super::{add_node_label, add_node_circle_outline};
+use super::{add_node_label, add_node_base_outline};
 
 
 // TODO: Convert back to using one-shot systems in 0.13
@@ -46,6 +46,7 @@ pub fn add_base_node_ui(
 ){
     // Positions are slightly randomized to avoid nodes being spawned on top of each other
     let mut rng = rand::thread_rng();
+    let pos = Vec2::new(35.0, 0.0);
     let radius = 25.0;
 
     commands.entity(ev.entity).insert((
@@ -63,8 +64,8 @@ pub fn add_base_node_ui(
     // Update the view_data so we can keep track of which zindex is the topmost
     view_data.top_z += 0.0001;
 
-    add_node_label(&mut commands, &ev, radius, &view_data.top_z);
-    add_node_circle_outline(&mut commands, &ev.entity, radius, &view_data.top_z);
+    add_node_label(&mut commands, &ev, pos, &view_data.top_z);
+    add_node_base_outline(&mut commands, &ev.entity, radius, &view_data.top_z);
 }
 
 // FOLDER/DIRECTORY NODE
@@ -126,22 +127,16 @@ pub fn add_image_node_ui(
             },
             ..default()
         },
-        // SpatialBundle {
-        //     transform: Transform::from_translation(Vec3::new(
-        //         ev.position.x + rng.gen_range(-10.0..10.0),
-        //         ev.position.y + rng.gen_range(-10.0..10.0),
-        //         view_data.top_z,
-        //     )),
-        //     ..default()
-        // },
     ));
 
     view_data.top_z += 0.0001;
 
-    let radius = 60.0;
+    let size = Vec2::new(60.0, 40.0);
+    let pos = Vec2::new(-size.x / 2.0, -size.y / 2.0);
 
-    add_node_label(&mut commands, &ev, radius, &view_data.top_z);
-    add_node_circle_outline(&mut commands, &ev.entity, radius, &view_data.top_z);
+    add_node_label(&mut commands, &ev, pos, &view_data.top_z);
+    // add_node_rect_outline(&mut commands, &ev.entity, size, &view_data.top_z);
+    add_node_base_outline(&mut commands, &ev.entity, size.x, &view_data.top_z);
 
 }
                         

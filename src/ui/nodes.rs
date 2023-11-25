@@ -132,7 +132,7 @@ pub fn add_node_ui(
 pub fn add_node_label(
     commands: &mut Commands,
     ev: &NodeSpawnedEvent, 
-    radius: f32,
+    pos: Vec2,
     top_z: &f32,
 ){
     
@@ -155,7 +155,7 @@ pub fn add_node_label(
                 ..default()
             },
             transform: Transform {
-                translation: Vec3::new(radius + 14.0, 0.0, 10000.0 + top_z),
+                translation: Vec3::new(pos.x, pos.y, 10000.0 + top_z),
                 ..default()
             },
             text_anchor: bevy::sprite::Anchor::CenterLeft,
@@ -169,9 +169,7 @@ pub fn add_node_label(
 // OUTLINE
 // ----------------------------------------------------------------
 // This is the hoverable, interactable outline from which edges are created.
-// The shape of it is determined by the users view settings as well as the
-// type of node it outlines. 
-pub fn add_node_circle_outline(
+pub fn add_node_base_outline(
     commands: &mut Commands,
     parent: &Entity,
     radius: f32,
@@ -202,7 +200,6 @@ pub fn add_node_circle_outline(
         ),
         NodeOutline,
         
-        Pickable::IGNORE,
         //RaycastPickable::default(),
 
         On::<Pointer<Over>>::target_component_mut::<Stroke>(move |_over, stroke| {
