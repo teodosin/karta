@@ -2,7 +2,7 @@ use bevy::{ecs::{system::{Resource, SystemId, Commands, ResMut}, world::World, e
 use bevy_mod_picking::{backends::{raycast::RaycastPickable, sprite::SpriteBackend}, picking_core::Pickable, PickableBundle};
 use rand::Rng;
 
-use crate::{graph::{node_types::{NodeTypes, DataTypes, NodeData}, graph_cam::ViewData}, events::nodes::NodeSpawnedEvent, ui::nodes::add_node_rect_outline};
+use crate::{graph::{node_types::{NodeTypes, DataTypes, NodeData}, graph_cam::ViewData}, events::nodes::NodeSpawnedEvent};
 
 use super::{add_node_label, add_node_base_outline};
 
