@@ -1,6 +1,5 @@
 use bevy::{prelude::*, ui::FocusPolicy};
 
-use crate::events::context;
 
 // Popup groups
 // -----------------------------------------------------------------------------

@@ -10,7 +10,7 @@ use super::scene::CurrentActive;
 
 
 
-pub fn evaluate_active_graph (
+pub fn _evaluate_active_graph (
     world: &mut World,
 ){
     let mut data_nodes = world.query::<&GraphDataNode>();
@@ -36,7 +36,7 @@ pub fn evaluate_active_graph (
     };
 
     // // Check that the entity has a valid data return type
-    let root_entity = match data_nodes.get(world, *root_entity) {
+    let _root_entity = match data_nodes.get(world, *root_entity) {
         Ok(entity) => entity,
         Err(_) => {
             println!("Root entity is not a valid data node");
@@ -45,6 +45,6 @@ pub fn evaluate_active_graph (
     };
 
     // RUN IT
-    root_entity.get_data(world);
+    //root_entity.get_data(world);
 
 }

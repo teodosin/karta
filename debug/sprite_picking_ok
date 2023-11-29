@@ -1,0 +1,156 @@
+Setting up Move actions
+Vault path: "/home/viktor/Pictures/.kartaVault"
+Vault folder already exists
+context_assets: StrongHandle<ContextAsset>{ id: Index(AssetIndex { generation: 0, index: 0 }), path: Some(/home/viktor/Pictures/.kartaVault/thingy.context) }
+Clearing selection
+Changing current context to vault root: "/home/viktor/Pictures"
+Root node doesn't exist, spawning
+Root Path: /home/viktor, Root Name: Pictures
+Current context is vault root, not spawning parent
+Path: /home/viktor/Pictures
+Path: /home/viktor/Pictures/BIGGUMS.png
+Path: /home/viktor/Pictures/CrazyGuy.png
+Path: /home/viktor/Pictures/Gigaskene
+Path: /home/viktor/Pictures/Moovee.mp4
+Path: /home/viktor/Pictures/Dream.png
+Path: /home/viktor/Pictures/bitmap.svg
+Path: /home/viktor/Pictures/MyImages
+Path: /home/viktor/Pictures/EyeSee.jpeg
+Path: /home/viktor/Pictures/Megaskene
+Path: /home/viktor/Pictures/.kartaVault
+Path: /home/viktor/Pictures/DesktopBackgrounds
+Path: /home/viktor/Pictures/Griddy.png
+Path: /home/viktor/Pictures/MorningSoup.png
+Path: /home/viktor/Pictures/inkscapebitmap.svg
+Path: /home/viktor/Pictures/Sketchy.png
+Path: /home/viktor/Pictures/Posty.png
+File: BIGGUMS.png
+File: CrazyGuy.png
+File: DesktopBackgrounds
+File: Dream.png
+File: EyeSee.jpeg
+File: Gigaskene
+File: Griddy.png
+File: Megaskene
+File: Moovee.mp4
+File: MorningSoup.png
+File: MyImages
+File: Posty.png
+File: Sketchy.png
+File: bitmap.svg
+File: inkscapebitmap.svg
+Matching extensions: "png"
+Creating edge from 17v0 to 18v0
+Matching extensions: "png"
+Creating edge from 17v0 to 20v0
+Creating edge from 17v0 to 22v0
+Matching extensions: "png"
+Creating edge from 17v0 to 24v0
+Matching extensions: "jpeg"
+Creating edge from 17v0 to 26v0
+Creating edge from 17v0 to 28v0
+Matching extensions: "png"
+Creating edge from 17v0 to 30v0
+Creating edge from 17v0 to 32v0
+Matching extensions: "mp4"
+Creating edge from 17v0 to 34v0
+Matching extensions: "png"
+Creating edge from 17v0 to 36v0
+Creating edge from 17v0 to 38v0
+Matching extensions: "png"
+Creating edge from 17v0 to 40v0
+Matching extensions: "png"
+Creating edge from 17v0 to 42v0
+Matching extensions: "svg"
+Creating edge from 17v0 to 44v0
+Matching extensions: "svg"
+Creating edge from 17v0 to 46v0
+Path: /home/viktor/Pictures/MorningSoup.png, Entity: 36v0
+Path: /home/viktor/Pictures/inkscapebitmap.svg, Entity: 46v0
+Path: /home/viktor/Pictures/DesktopBackgrounds, Entity: 22v0
+Path: /home/viktor/Pictures/Dream.png, Entity: 24v0
+Path: /home/viktor/Pictures, Entity: 17v0
+Path: /home/viktor/Pictures/Griddy.png, Entity: 30v0
+Path: /home/viktor/Pictures/MyImages, Entity: 38v0
+Path: /home/viktor/Pictures/bitmap.svg, Entity: 44v0
+Path: /home/viktor/Pictures/Gigaskene, Entity: 28v0
+Path: /home/viktor/Pictures/CrazyGuy.png, Entity: 20v0
+Path: /home/viktor/Pictures/EyeSee.jpeg, Entity: 26v0
+Path: /home/viktor/Pictures/Megaskene, Entity: 32v0
+Path: /home/viktor/Pictures/Sketchy.png, Entity: 42v0
+Path: /home/viktor/Pictures/Posty.png, Entity: 40v0
+Path: /home/viktor/Pictures/Moovee.mp4, Entity: 34v0
+Path: /home/viktor/Pictures/BIGGUMS.png, Entity: 18v0
+Node type: Folder
+Node type: FileImage
+Adding image node ui: "/home/viktor/Pictures/BIGGUMS.png"
+Found extension: png
+Position: Vec2(0.0, 0.0)
+Node type: FileImage
+Adding image node ui: "/home/viktor/Pictures/CrazyGuy.png"
+Found extension: png
+Position: Vec2(0.0, 0.0)
+Node type: Folder
+Node type: FileImage
+Adding image node ui: "/home/viktor/Pictures/Dream.png"
+Found extension: png
+Position: Vec2(0.0, 0.0)
+Node type: FileImage
+Adding image node ui: "/home/viktor/Pictures/EyeSee.jpeg"
+Found extension: jpeg
+Position: Vec2(0.0, 0.0)
+Node type: Folder
+Node type: FileImage
+Adding image node ui: "/home/viktor/Pictures/Griddy.png"
+Found extension: png
+Position: Vec2(0.0, 0.0)
+Node type: Folder
+Node type: FileBase
+Node type: FileImage
+Adding image node ui: "/home/viktor/Pictures/MorningSoup.png"
+Found extension: png
+Position: Vec2(0.0, 0.0)
+Node type: Folder
+Node type: FileImage
+Adding image node ui: "/home/viktor/Pictures/Posty.png"
+Found extension: png
+Position: Vec2(0.0, 0.0)
+Node type: FileImage
+Adding image node ui: "/home/viktor/Pictures/Sketchy.png"
+Found extension: png
+Position: Vec2(0.0, 0.0)
+Node type: FileSvg
+Node type: FileSvg
+Image loaded: AssetId<bevy_render::texture::image::Image>{ index: 4, generation: 0}
+Resized image to Vec2(61.018517, 100.0)
+Repositioning label
+Rescaling outline
+Image loaded: AssetId<bevy_render::texture::image::Image>{ index: 5, generation: 0}
+Resized image to Vec2(100.0, 43.56784)
+Repositioning label
+Rescaling outline
+Image loaded: AssetId<bevy_render::texture::image::Image>{ index: 8, generation: 0}
+Resized image to Vec2(80.0, 100.0)
+Repositioning label
+Rescaling outline
+Image loaded: AssetId<bevy_render::texture::image::Image>{ index: 6, generation: 0}
+Resized image to Vec2(100.0, 100.0)
+Repositioning label
+Rescaling outline
+Image loaded: AssetId<bevy_render::texture::image::Image>{ index: 7, generation: 0}
+Resized image to Vec2(100.0, 91.55598)
+Repositioning label
+Rescaling outline
+Image loaded: AssetId<bevy_render::texture::image::Image>{ index: 9, generation: 0}
+Resized image to Vec2(71.55323, 100.0)
+Repositioning label
+Rescaling outline
+Image loaded: AssetId<bevy_render::texture::image::Image>{ index: 10, generation: 0}
+Resized image to Vec2(100.0, 65.5793)
+Repositioning label
+Rescaling outline
+Image loaded: AssetId<bevy_render::texture::image::Image>{ index: 3, generation: 0}
+Resized image to Vec2(100.0, 42.553192)
+Repositioning label
+Rescaling outline
+

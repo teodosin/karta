@@ -2,13 +2,16 @@
 // For now its function will be to keep track of the loading of images and svgs
 // and send update events to the ui when they are loaded
 
-use std::cmp::max;
 
-use bevy::{ecs::{system::{Resource, Commands, ResMut, Query}, event::EventReader, entity::Entity, query::Without}, asset::{Handle, AssetEvent, Assets}, render::{texture::Image, mesh::{shape, Mesh}, color::Color}, sprite::{Sprite, MaterialMesh2dBundle, ColorMaterial, Mesh2dHandle}, transform::components::Transform, math::{Vec2, Vec3, Rect}, hierarchy::{Parent, Children}, prelude::default};
+use bevy::{
+    ecs::{system::{Resource, ResMut, Query}, event::EventReader, entity::Entity, query::Without}, 
+    asset::{Handle, AssetEvent, Assets}, 
+    render::texture::Image, sprite::Sprite, transform::components::Transform, math::{Vec2, Vec3}, 
+    hierarchy::Children
+};
 use bevy_prototype_lyon::{shapes, entity::Path, geometry::GeometryBuilder, draw::Stroke};
-use lyon::lyon_tessellation::StrokeOptions;
 
-use crate::ui::nodes::{GraphViewNode, NodeLabel, NodeOutline};
+use crate::ui::nodes::{NodeLabel, NodeOutline};
 
 #[derive(Resource)]
 pub struct ImageLoadTracker {
@@ -32,7 +35,6 @@ impl ImageLoadTracker {
 }
 
 pub fn on_image_load(
-    mut commands: Commands,
     mut image_tracker: ResMut<ImageLoadTracker>,
     mut image_events: EventReader<AssetEvent<Image>>,
     image_assets: ResMut<Assets<Image>>,
@@ -41,9 +43,6 @@ pub fn on_image_load(
     mut labels: Query<(&NodeLabel, &mut Transform), Without<NodeOutline>>,
     mut outlines: Query<(&NodeOutline, &mut Path, &Stroke), Without<NodeLabel>>,
 
-    // Because sprite picking isn't working in Karta for some reason, we will spawn a mesh to be the pick target
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
 
     
@@ -60,7 +59,7 @@ pub fn on_image_load(
             AssetEvent::LoadedWithDependencies { id } => {
                 image_tracker.remove_image(bevy::prelude::Handle::Weak(id.clone()));
                 
-                for (_node, children, img, mut sprite, form) in nodes.iter_mut() {
+                for (_node, children, img, mut sprite, _form) in nodes.iter_mut() {
                     // if img.is_strong() {
                     if img == &bevy::prelude::Handle::Weak(id.clone()) {
                         println!("Image loaded: {:?}", id);

@@ -1,6 +1,5 @@
-use bevy::{prelude::{Plugin, App}, app::Update};
+use bevy::prelude::{Plugin, App};
 
-use self::engine::evaluate_active_graph;
 
 pub mod scene;
 pub mod engine;

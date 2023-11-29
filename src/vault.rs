@@ -10,10 +10,9 @@ use bevy::{
         Plugin, 
         App, 
         Startup, 
-        Commands, 
         AssetApp, ResMut, Resource,
     }, 
-    app::{PreStartup, Update, PreUpdate, PostUpdate}, ecs::schedule::{common_conditions::resource_changed, IntoSystemConfigs}
+    app::{PreStartup, Update, PreUpdate}, ecs::schedule::{common_conditions::resource_changed, IntoSystemConfigs}
 };
  
 
@@ -45,7 +44,7 @@ impl Plugin for VaultPlugin {
 
             .add_systems(Update, on_vault_change.run_if(resource_changed::<CurrentVault>()))
 
-            .add_systems(PostUpdate, on_image_load)
+            .add_systems(PreUpdate, on_image_load)
         ;
 
     }
@@ -69,19 +68,18 @@ impl VaultOfVaults {
         self.vaults.push(vault);
     }
 
-    pub fn remove_vault(&mut self, vault: KartaVault) {
+    pub fn _remove_vault(&mut self, vault: KartaVault) {
         let index = self.vaults.iter().position(|v| *v == vault).unwrap();
         self.vaults.remove(index);
     }
 }
 
 fn setup_vaults(
-    mut commands: Commands,
     mut vaults: ResMut<VaultOfVaults>,
     mut current_vault: ResMut<CurrentVault>,
 ){
     let project_dirs = ProjectDirs::from("com", "Teodosin", "Karta").unwrap();
-    let config_dir = project_dirs.config_dir();
+    let _config_dir = project_dirs.config_dir();
 
     let vault = KartaVault::new("/home/viktor/Pictures".to_string());
     current_vault.set_vault(vault.clone());
@@ -90,7 +88,6 @@ fn setup_vaults(
 }
 
 fn on_vault_change(
-    mut commands: Commands,
     current_vault: ResMut<CurrentVault>,
     mut current_context: ResMut<CurrentContext>,
 ){

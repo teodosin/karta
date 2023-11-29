@@ -4,7 +4,7 @@
 use bevy::prelude::*;
 use enum_iterator::all;
 
-use crate::{graph::node_types::NodeTypes, actions::{ActionComponent, ActionFactory, node_actions::CreateNodeAction, Action}, input::pointer::InputData};
+use crate::{graph::node_types::NodeTypes, actions::{ActionComponent, ActionFactory, node_actions::CreateNodeAction, Action}, input::pointer::InputData, vault::CurrentVault};
 
 use super::{popup::{PopupGroup, Popup, spawn_popup_root}, context_menu::ContextMenuButton};
 pub struct VaultMenuPlugin;
@@ -15,6 +15,13 @@ impl Plugin for VaultMenuPlugin {
             .add_systems(Update, create_vault_menu)
         ;
     }
+}
+
+// Run trigger condition
+fn no_vault_set(
+    vault: Res<CurrentVault>,
+) -> bool {
+    vault.vault.is_none()
 }
 
 // TODO: Move key trigger to keymap
