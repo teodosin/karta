@@ -48,6 +48,8 @@ fn change_context_path(
         return
     }
 
+    println!("Changing context");
+
     let cxt = match &context.cxt {
         Some(cxt) => cxt,
         None => {
