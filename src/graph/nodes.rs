@@ -3,19 +3,24 @@
 use std::{path::PathBuf, ffi::OsString};
 
 use bevy::{prelude::*, input::keyboard::KeyboardInput};
+use bevy_mod_picking::picking_core::PickSet;
 
 use super::{context::{PathsToEntitiesIndex, ToBeDespawned, Selected}, node_types::{NodeTypes, NodeData, type_to_data}};
 
-use crate::{events::nodes::*, ui::nodes::{NodeOutline, GraphViewNode}, input::pointer::InputData};
+use crate::{events::nodes::*, ui::nodes::{NodeOutline, GraphViewNode}, input::pointer::{InputData, update_cursor_info}};
 
 pub struct NodesPlugin;
 
 impl Plugin for NodesPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_systems(PreUpdate, handle_node_click)
-            .add_systems(PreUpdate, handle_node_press)
-            .add_systems(PreUpdate, handle_node_hover)
+            .add_systems(PreUpdate, (
+                handle_node_click,
+                handle_node_press,
+                handle_node_hover,
+            )
+            .before(update_cursor_info)
+            .after(PickSet::Last))
 
             .add_systems(PostUpdate, despawn_nodes)
         ;

@@ -13,7 +13,7 @@ impl Plugin for InputPlugin {
             .insert_resource(InputData::default())
             .insert_resource(keymap::KeyMap::default())
             
-            .add_systems(PostUpdate, update_cursor_info)
+            .add_systems(PreUpdate, update_cursor_info)
             .add_systems(PreUpdate, keymap::handle_key_input)
 
             

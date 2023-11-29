@@ -41,7 +41,7 @@ pub fn karta_app() {
         )
         .add_plugins(DefaultPickingPlugins
             .build()
-            //.disable::<DebugPickingPlugin>()
+            .disable::<DebugPickingPlugin>()
         )        
 
         // EGUI INSPECTOR BLOCK
