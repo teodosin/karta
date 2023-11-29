@@ -8,7 +8,7 @@ use std::{fs, path::PathBuf, ffi::OsString};
 
 use crate::{
     graph::{graph_cam, edges::create_edge, node_types::get_type_from_path}, vault::CurrentVault, 
-    events::{nodes::{NodeClickEvent, NodeSpawnedEvent}, edges::EdgeSpawnedEvent}, input::pointer::InputData
+    events::{nodes::{NodeClickEvent, NodeSpawnedEvent}, edges::EdgeSpawnedEvent},
 };
 
 use super::nodes::*;
@@ -98,8 +98,6 @@ pub fn update_context(
     mut node_event: EventWriter<NodeSpawnedEvent>,
     mut edge_event: EventWriter<EdgeSpawnedEvent>,
     
-    input_data: Res<InputData>,
-
     mut commands: Commands,
 
     vault: Res<CurrentVault>,

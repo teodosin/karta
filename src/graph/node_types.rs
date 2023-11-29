@@ -3,7 +3,7 @@
 use std::{fs, fmt, path::PathBuf};
 
 use bevy::asset::{AssetServer, Handle};
-use bevy::prelude::{Component, Plugin, App};
+use bevy::prelude::{Plugin, App};
 use bevy::ecs::world::World;
 use bevy::render::texture::Image;
 use bevy_svg::prelude::Svg;
@@ -155,7 +155,7 @@ impl NodeData for TypeText {
         println!("Setting data");
     }
 
-    fn get_data(&self, world: &World, path: &PathBuf) -> Box<dyn NodeData> {
+    fn get_data(&self, _world: &World, _path: &PathBuf) -> Box<dyn NodeData> {
         let data = TypeText {
             text: self.text.clone(),
         };

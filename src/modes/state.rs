@@ -14,7 +14,7 @@ use crate::{
             CurrentContext, update_context
         }, 
     events::nodes::NodeClickEvent,
-    vault::{KartaVault, CurrentVault}, input::pointer::InputData
+    vault::CurrentVault, input::pointer::InputData
 };
 
 use super::KartaModeState;

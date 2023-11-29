@@ -1,7 +1,6 @@
-use bevy::{prelude::*, sprite::MaterialMesh2dBundle, text::Text2dBounds};
-use bevy_mod_picking::{prelude::*, backends::raycast::RaycastPickable};
+use bevy::{prelude::*, text::Text2dBounds};
+use bevy_mod_picking::prelude::*;
 use bevy_prototype_lyon::{shapes, prelude::{GeometryBuilder, ShapeBundle, Stroke, StrokeOptions}};
-use rand::Rng;
 
 use crate::{
     graph::{nodes::{GraphDataNode, PinnedToPosition}, graph_cam::ViewData, context::Selected, node_types::NodeTypes}, 

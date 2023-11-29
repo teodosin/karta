@@ -4,7 +4,7 @@ use std::{path::PathBuf, ffi::OsString};
 
 use bevy::{prelude::*, input::keyboard::KeyboardInput};
 
-use super::{context::{PathsToEntitiesIndex, ToBeDespawned, Selected}, node_types::{NodeTypes, DataTypes, NodeData, type_to_data}};
+use super::{context::{PathsToEntitiesIndex, ToBeDespawned, Selected}, node_types::{NodeTypes, NodeData, type_to_data}};
 
 use crate::{events::nodes::*, ui::nodes::{NodeOutline, GraphViewNode}, input::pointer::InputData};
 
@@ -35,7 +35,7 @@ pub struct GraphDataNode {
 }
 
 impl GraphDataNode {
-    pub fn get_data_type(&self) -> String {
+    pub fn _get_data_type(&self) -> String {
         let ntype = match &self.data {
             None => String::from("No data"),
             Some(data) => data.get_data_type(),
@@ -43,7 +43,7 @@ impl GraphDataNode {
         ntype
     }
 
-    pub fn get_data(&self, world: &World) -> Option<Box<dyn NodeData>> {
+    pub fn _get_data(&self, world: &World) -> Option<Box<dyn NodeData>> {
         let data = match self.data {
             None => {
                 //println!("No data");

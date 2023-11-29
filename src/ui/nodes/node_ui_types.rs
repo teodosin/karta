@@ -1,8 +1,14 @@
-use bevy::{ecs::{system::{Resource, SystemId, Commands, ResMut}, world::World, event::EventReader}, utils::HashMap, asset::{Assets, AssetServer, Handle}, render::{mesh::{Mesh, shape}, color::Color, texture::Image}, sprite::{ColorMaterial, MaterialMesh2dBundle, SpriteBundle, Sprite}, transform::components::Transform, math::{Vec3, Vec2}, prelude::{default, SpatialBundle}};
-use bevy_mod_picking::{backends::{raycast::RaycastPickable, sprite::SpriteBackend}, picking_core::Pickable, PickableBundle};
+use bevy::{
+    ecs::system::Commands, 
+    asset::{Assets, AssetServer, Handle}, 
+    render::{mesh::{Mesh, shape}, color::Color, texture::Image}, 
+    sprite::{ColorMaterial, MaterialMesh2dBundle, SpriteBundle, Sprite}, 
+    transform::components::Transform, math::{Vec3, Vec2}, 
+    prelude::default
+};
 use rand::Rng;
 
-use crate::{graph::{node_types::{NodeTypes, DataTypes, NodeData}, graph_cam::ViewData}, events::nodes::NodeSpawnedEvent};
+use crate::{graph::graph_cam::ViewData, events::nodes::NodeSpawnedEvent};
 
 use super::{add_node_label, add_node_base_outline};
 
