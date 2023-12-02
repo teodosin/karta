@@ -4,11 +4,13 @@
 
 use std::{path::PathBuf, fs::DirEntry};
 
-use bevy::{prelude::Vec2, ecs::system::{Resource, Commands, Res, ResMut}, asset::{AssetServer, Assets, Handle, Asset, AssetLoader, io::{Reader, Writer}, LoadVault, AsyncReadExt, saver::{AssetSaver, SavedAsset}}, reflect::TypePath, utils::BoxedFuture, text::TextSettings};
+use bevy::{prelude::Vec2, ecs::system::{Resource, Commands, Res, ResMut}, asset::{AssetServer, Assets, Handle, Asset, AssetLoader, io::{Reader, Writer}, LoadVault, AsyncReadExt, saver::{AssetSaver, SavedAsset}, AsyncWriteExt}, reflect::TypePath, utils::BoxedFuture, text::TextSettings};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use super::CurrentVault;
+use super::{CurrentVault, VaultOfVaults};
+
+const VAULTS_FILE_NAME: &str = "karta.vault";
 
 pub fn load_vaults(
     mut _commands: Commands,
@@ -17,25 +19,8 @@ pub fn load_vaults(
     assets: ResMut<Assets<VaultAsset>>,
     vault: Res<CurrentVault>,
 ){
-    let file_name = "thingy.Vault";
 
-    let vault = match &vault.vault {
-        Some(vault) => vault,
-        None => {
-            println!("No vault set");
-            return
-        }
-    };
-    
-    let path: PathBuf = vault.get_vault_path().join(file_name);
-    let vault_assets: Handle<VaultAsset> = 
-        asset_server.load(path);
-    println!("Vault_assets: {:?}", vault_assets);
 
-    let _data = assets.get(&vault_assets);
-    // commands.insert_resource(VaultAssets {
-    //     handle: Vault_assets,
-    // });
 }
 
 #[derive(Resource, Default)]
@@ -53,6 +38,18 @@ pub struct VaultAsset {
 #[derive(Debug, Deserialize, Default)]
 pub struct VaultSerial {
     pub vault_root_path: String,
+}
+
+pub struct VaultSettings {
+    //pub vault_root_path: PathBuf,
+}
+
+impl Default for VaultSettings {
+    fn default() -> Self {
+        Self {
+            //vault_root_path: PathBuf::from(""),
+        }
+    }
 }
 
 
@@ -95,29 +92,30 @@ impl AssetLoader for VaultAssetLoader {
 
 }
 
-struct VaultAssetSaver;
-
-#[derive(Default, Serialize, Deserialize)]
-pub struct VaultAssetSaverSettings {
-    appended: String,
+// define a struct and derive `serde::Serialize` for serialization (rust -> ron i this case)
+// `serde::Deserialize` for deserialization (ron -> rust in this case)
+#[derive(serde::Serialize, serde::Deserialize)]
+struct AStruct {
+    a: String,
+    b: i32,
 }
 
-impl AssetSaver for VaultAssetSaver {
-    type Asset = VaultAsset;
-    type Settings = VaultAssetSaverSettings;
-    type OutputLoader = VaultAssetLoader;
-    type Error = std::io::Error;
+// fn save_vault(
+//     vaults: Res<VaultOfVaults>,
+// ){
+//     let vaults_serial;
 
-    fn save<'a>(
-        &'a self,
-        writer: &'a mut Writer,
-        asset: SavedAsset<'a, Self::Asset>,
-        settings: &'a Self::Settings,
-    ) -> BoxedFuture<'a, Result<TextSettings, Self::Error>> {
-        Box::pin(async move {
-            let text = format!("{}{}", asset.text.clone(), settings.appended);
-            writer.write_all(text.as_bytes()).await?;
-            Ok(TextSettings::default())
-        })
-    }
-}
+//     for vault in vaults.vaults.iter() {
+//         vaults_serial.push(VaultSerial {
+//             vault_root_path: vault.root.to_str().unwrap().to_string(),
+//         });
+//     }
+//     let vaults = vec![VaultSerial {
+//             vault_root_path: vault.vault_root_path.to_str().unwrap().to_string(),
+//         }];
+
+//     let data = ron::to_string(&vaults).unwrap();
+
+
+//     writer.write_all(data.as_bytes()).unwrap();
+// }
