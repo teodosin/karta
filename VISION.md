@@ -33,7 +33,7 @@ The node graph interface could transform traditional file management workflows. 
 
 Placing the files in a free-form dynamic canvas and allowing arbitrary connections to be made between them lays the foundation for creative authoring. It would start as quick edits; new virtual node types could be introduced that don't just store data, but transform it. Image files could be connected to resize or crop nodes, and the result from that could be saved into a new image. A composite node could combine multiple images together. By adding just a few node types supporting operations on a few universal file types, there would be enough potential ways to use them to actually be useful. Then, by adding the ability to decompose individual files into constituent nodes *in the same graph*, I suspect, or rather hope, that the potential would snowball from there. 
 
-## Design Goals
+## Design Goals and Inspiration
 
 Many of these I briefly touched upon in the previous section. Here I will highlight them in some more detail, in no particular order. These include UX and technical/architectural goals. Karta should be:
 
@@ -50,7 +50,11 @@ Everything in a Karta vault should connect to the same graph. Navigating this gr
 A core principle of Karta is that it should allow explicitly defining and showing details that would otherwise be relegated to the user's mental model or text documents. Insights about the node network should be available to the user at a click and a glance. Node and file types should have (optional) visual previews right on the nodes themselves. 
 
 #### Immediate
-#### Interconnected
+Immediate and tactile, engaging. Actions should have instant visual feedback. Moving and wiring together nodes should feel fun and intuitive. I want it to feel as much like physical crafts as possible. 
+
+#### Aesthetic
+#### Performative
+
 
 #### Node-based
 As many things as possible in the app should eventually be implemented using the same nodes and edges abstractions. Yes, that includes the UI. UI panels and menus should be nodes. For example, a node properties menu would also be a node. It would be allowed to exist in the pannable and zoomable graph view. But if all nodes gain the ability to be "pinned" to the camera's UI layer, the menu could easily be made to behave as floating menus usually do.  
@@ -58,13 +62,53 @@ As many things as possible in the app should eventually be implemented using the
 
 ## Key Features
 
-#### Contexts and Pinning 
+#### Contexts
+A giant mega-graph with all the files and nodes in a user's vault could be fun for a couple minutes, but is very unwieldy and impractical. It is a requirement that the user can intuitively limit their view to only what they care about. And if you recall the design goal of continuity, the user should be able to travel to any other view from their current one. Contexts accomplish this. Think of them like a node's local graph. Every node has a context, and the graph is always viewed from one. The context stores all of a node's connections as well as their relative positions inside that context. All nodes' positions are stored like this. Nodes do not have absolute positions in the graph, only positions relative to their connections. The context you are in determines the positions of nodes in the interface. 
+
+#### Expansion and Collapsing
+The user should be able to look deeper into the network without leaving their current context. Any connected nodes' own connections could be expanded into the currently visible graph. Any selection of nodes should be able to be collapsed into an alias node or hidden from view. The user should have precise control over the complexity of the network they are engaging with. 
+
+#### Force Direction and Layouting
+This is experimental. The idea is to use force simulations to layout the nodes in the viewport by default instead of the user doing it manually. You could have different forces affecting nodes of different depths. Having a force simulation is useful because the file system itself is treated as a network, so adding files to a folder outside of Karta would add those files to that node's context. With strictly manual positioning the user would have to reposition potentially dozens or hundreds of nodes when they come back to Karta. 
+
+#### Pinning and Filters
+Both of the previous features can be more finely controlled with selections, pins and filters. Any node can be pinned to be unaffected by the force simulation, or to remain in the viewport even after the user changes context. Or both, naturally. Filters are queries for the node network and can be used for a variety of purposes. They can be connected to forces to finetune the layouting simulation, or merely to hide or spawn some group of nodes. Filters can be set to look at the types of nodes and their attributes or the edges and their attributes. 
+
 #### Previews and Composition
-#### Expansion, Collapsing and Filters
+Nodes each contain a piece of data which can often be represented visually. Image previews are a no-brainer. Operators could also be in visualised right in the nodes, taking note from apps like TouchDesigner and Tooll3. Operator chains can be evaluated and cached. Real-time composition should also be feasible; set a node as the active output node, and then Karta displays its data or evaluates its inputs to produce an image and display it in either the graph background or a separate window. For example images would be displayed just as they are. Operator chains would perform real-time composition. 
+
 #### File Decomposition 
+Support should be implemented for creating interpreters for any file so that it can be split up and loaded as a network of nodes. This network is expanded into the current context. Then they can be positioned and connected like any normal node. In the thesis I will attempt to create a rough interpreter for SVG's. 
+
+
 #### Play, Perform, Package
+With such a flexible way to visualize and edit the graph, it makes sense to allow for another type of interaction with it. In play mode, nodes would be buttons with actions associated with them. These actions could modify the active output, move us to different parts of the graph, control the camera, or even modify the graph itself. The ways to interact with the graph and the data in it could be precisely limited and designed for performance or installation purposes. In the future, with a separate runtime, specific networks and their files could be exported as standalone executables to be put on the web or run natively. 
+
+
+## Challenges
+
+#### Technical
+#### Usability
+
+
 
 ## Potential Use-Cases 
 
-## Challenges
+With the foundation described above, Karta should be stable, powerful and versatile enough to be taken in a number of directions. Either the whole app could be specialized, or specialized functionality could be added with modules and/or plugins. These are ideas for where the app could go in the medium and long term, provided that I am able to work on it full or part-time and get help at some point. 
+
+#### Performance and Presentation
+In play mode, Karta could be used for linear presentations or for more freeform performances. The graph could be treated as a state machine, where clicking different nodes modifies the output and moves it to different states. 
+
+#### Demo and Web Exports
+In the future, with a separate runtime, specific networks and their files could be exported as standalone executables to be put on the web or run natively. It would be nice to be able to only package the nodes and features that are used by the exported network. I don't currently have an idea for how to go about implementing this, but I would like to not accrue too much tech debt before giving this some thought.  
+
+#### Bevy Visualization
+I am fascinated by the idea of using Karta as a visualizer and quick editor for Bevy. Entities and their relationships could be represented in the graph as nodes and edges. Systems, system sets and their ordering likewise. Same for events. Being able to flexibly visualise these while a game is running could be really powerful. Now imagine if the Rust files themselves could be parsed and decomposed into a node graph, showing the module and plugin structure of the project. Nodes could be compiled into Rust code. All this would be strictly complementary to code-first development and to the upcoming Bevy editor. Doing all this is well beyond my current skill level, so I don't want to give promises or plans. If you are a fellow Bevy user and this sounds interesting to you, please get in touch. I'd love to bounce some ideas around. 
+
+#### Integrations
+Plugins could be built for other applications that are able to read and edit Karta's context files. Context files don't themselves contain other files but merely their paths and relationships. This could be leveraged to, for example, automatically import files on startup into the other application, making the transition between that application and Karta much more seamless. 
+
+
+
+
 
