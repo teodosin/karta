@@ -78,7 +78,7 @@ Both of the previous features can be more finely controlled with selections, pin
 Nodes each contain a piece of data which can often be represented visually. Image previews are a no-brainer. Operators could also be in visualised right in the nodes, taking note from apps like TouchDesigner and Tooll3. Operator chains can be evaluated and cached. Real-time composition should also be feasible; set a node as the active output node, and then Karta displays its data or evaluates its inputs to produce an image and display it in either the graph background or a separate window. For example images would be displayed just as they are. Operator chains would perform real-time composition. 
 
 #### File Decomposition 
-Support should be implemented for creating interpreters for any file so that it can be split up and loaded as a network of nodes. This network is expanded into the current context. Then they can be positioned and connected like any normal node. In the thesis I will attempt to create a rough interpreter for SVG's. 
+Support should be implemented for creating interpreters for any file type so that it can be split up and loaded as a network of nodes. This network is expanded into the current context. Then they can be positioned and connected like any normal node. In the thesis I will attempt to create a rough interpreter for SVG's. 
 
 
 #### Play, Perform, Package
