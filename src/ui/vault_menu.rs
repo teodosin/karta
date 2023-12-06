@@ -12,6 +12,7 @@ pub struct VaultMenuPlugin;
 impl Plugin for VaultMenuPlugin {
     fn build(&self, app: &mut App) {
         app
+            .add_event::<SpawnVaultMenu>()
             .add_systems(Update, create_vault_menu)
         ;
     }
@@ -24,52 +25,38 @@ fn no_vault_set(
     vault.vault.is_none()
 }
 
+#[derive(Event)]
+pub struct SpawnVaultMenu;
+
 // TODO: Move key trigger to keymap
 fn create_vault_menu(
     mut commands: Commands,
-    // event: EventReader<OpenCreateNodeMenuEvent>,
-    // event: EventWriter<NodeSpawnedEvent>,
-    key: Res<Input<KeyCode>>,
-    input_data: Res<InputData>,
     menus: Query<(Entity, &PopupGroup), With<Popup>>,
     window: Query<&Window>,
+    mut evs: EventReader<SpawnVaultMenu>,
 ){
-    return
 
-    if !key.just_pressed(KeyCode::Tab) {
-        return
-    };
-    // TODO: Handle multiple windows
-    let window = window.single();
-    let pos = window.cursor_position();
-
-    let position = match pos {
-        None => {
-            return
-        }
-        Some(position) => {
-            position
-        }
-    };
-    let global_position = input_data.curr_position;
-    let size: Vec2 = Vec2::new(100.0, 100.0);
-
-    let menu_root = spawn_popup_root(
-        &mut commands, 
-        menus,
-        PopupGroup::ModalStrong,
-        position,
-        size,
-    );
-
-    for ntype in all::<NodeTypes>(){
-        let button = create_context_menu_button(
-            &mut commands,
-            ntype,
-            global_position,
+    for _ev in evs.read(){
+        // TODO: Handle multiple windows
+        let window = window.single();
+    
+        let size: Vec2 = Vec2::new(400.0, 600.0);
+        let pos = Vec2::new(
+            window.height() + size.x / 2.0,
+            window.width() + size.y / 2.0,
         );
-        commands.entity(menu_root).push_children(&[button]);
+    
+        let menu_root = spawn_popup_root(
+            &mut commands, 
+            menus,
+            PopupGroup::ModalStrong,
+            pos,
+            size,
+        );
+
+        break;
     }
+
 }
 
 fn create_context_menu_button<'a>(

@@ -80,20 +80,17 @@ fn cam_setup(
 
 fn graph_pan(
     mut query: Query<&mut Transform, With<Camera2d>>,
-    windows: Query<&Window>,
     mouse: Res<Input<MouseButton>>,
     view_settings: Res<ViewSettings>,
     _cursor: Res<InputData>,
     mut motion: EventReader<MouseMotion>,
 ) {
-    let window = windows.single();
-    let _cursor = window.cursor_position();
 
-    if mouse.pressed(MouseButton::Middle) {
-        for mut transform in query.iter_mut() {
+    for ev in motion.read() {
+        if mouse.pressed(MouseButton::Middle) {
+            for mut transform in query.iter_mut() {
                 // transform.translation.x -= cursor.curr_position.x - cursor.prev_position.x;
                 // transform.translation.y -= cursor.curr_position.y - cursor.prev_position.y; 
-            for ev in motion.read() {
                 transform.translation.x -= ev.delta.x * view_settings.zoom;
                 transform.translation.y += ev.delta.y * view_settings.zoom;
             }      

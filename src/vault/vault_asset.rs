@@ -4,13 +4,13 @@
 
 use std::{path::PathBuf, fs::DirEntry};
 
-use bevy::{prelude::Vec2, ecs::system::{Resource, Commands, Res, ResMut}, asset::{AssetServer, Assets, Handle, Asset, AssetLoader, io::{Reader, Writer}, LoadVault, AsyncReadExt, saver::{AssetSaver, SavedAsset}, AsyncWriteExt}, reflect::TypePath, utils::BoxedFuture, text::TextSettings};
+use bevy::{prelude::Vec2, ecs::system::{Resource, Commands, Res, ResMut}, asset::{AssetServer, Assets, Handle, Asset, AssetLoader, io::{Reader, Writer}, AsyncReadExt, saver::{AssetSaver, SavedAsset}, AsyncWriteExt, LoadContext}, reflect::TypePath, utils::BoxedFuture, text::TextSettings};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use super::{CurrentVault, VaultOfVaults};
 
-const VAULTS_FILE_NAME: &str = "karta.vault";
+pub const VAULTS_FILE_NAME: &str = "karta.vault";
 
 pub fn load_vaults(
     mut _commands: Commands,
@@ -76,7 +76,7 @@ impl AssetLoader for VaultAssetLoader {
         &'a self,
         reader: &'a mut Reader,
         _settings: &'a Self::Settings,
-        _load_vault: &'a mut LoadVault,
+        _load_vault: &'a mut LoadContext,
     ) -> BoxedFuture<'a, Result<Self::Asset, Self::Error>> {
         Box::pin(async move {
             let mut bytes = Vec::new();
@@ -100,7 +100,7 @@ struct AStruct {
     b: i32,
 }
 
-// fn save_vault(
+// fn save_vaults(
 //     vaults: Res<VaultOfVaults>,
 // ){
 //     let vaults_serial;
@@ -119,3 +119,9 @@ struct AStruct {
 
 //     writer.write_all(data.as_bytes()).unwrap();
 // }
+
+fn save_vault (
+
+) {
+
+}
