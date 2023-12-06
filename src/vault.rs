@@ -3,6 +3,7 @@
 
 use std::{path::PathBuf, ffi::OsString};
 
+use bevy_file_dialog::{FileDialogPlugin, FileDialog};
 use directories::ProjectDirs;
 
 use bevy::{
@@ -12,11 +13,11 @@ use bevy::{
         Startup, 
         AssetApp, ResMut, Resource,
     }, 
-    app::{PreStartup, Update, PreUpdate}, ecs::schedule::{common_conditions::resource_changed, IntoSystemConfigs}
+    app::{PreStartup, Update, PreUpdate}, ecs::{schedule::{common_conditions::resource_changed, IntoSystemConfigs}, event::EventWriter}
 };
  
 
-use crate::graph::context::CurrentContext;
+use crate::{graph::context::CurrentContext, vault::vault_asset::{VAULTS_FILE_NAME, VaultAsset}, ui::vault_menu::SpawnVaultMenu};
 
 use self::{context_asset::{ContextAsset, ContextAssetState, ContextAssetLoader, load_contexts}, asset_manager::{ImageLoadTracker, on_image_load}};
 
@@ -29,6 +30,7 @@ pub struct VaultPlugin;
 impl Plugin for VaultPlugin {
     fn build(&self, app: &mut App) {
         app
+            .add_plugins(FileDialogPlugin)
             .insert_resource(VaultOfVaults::new())
             .insert_resource(CurrentVault::new())
 
@@ -79,9 +81,42 @@ fn setup_vaults(
     mut current_vault: ResMut<CurrentVault>,
 ){
     let project_dirs = ProjectDirs::from("com", "Teodosin", "Karta").unwrap();
-    let _config_dir = project_dirs.config_dir();
+    let config_dir = project_dirs.config_dir();
 
-    let vault = KartaVault::new("/home/viktor/Pictures".to_string());
+    println!("Config dir: {:?}", config_dir);
+    let file_name = VAULTS_FILE_NAME;
+    let full_path = config_dir.join(file_name);
+    println!("Full path: {:?}", full_path);
+
+    // Check if the config dir exists
+    if !config_dir.exists() {
+        println!("Config dir does not exist");
+        // Create the config dir
+        std::fs::create_dir(config_dir).expect("Could not create config dir");
+    }
+
+    // Check if the file exists
+    if full_path.exists() {
+        println!("Vaults file exists");
+        // Load the file
+        let vaults_file = std::fs::read_to_string(full_path).expect("Could not read vaults file");
+        println!("Vaults file: {:?}", vaults_file);
+        // Deserialize the file
+        let vaultassets: VaultAsset = ron::de::from_str(&vaults_file).expect("Could not deserialize vaults file");
+        println!("Vaults: {:?}", vaults);
+        // Add the vaults to the vaults resource
+        for vault in &vaultassets.vaults {
+            let vault = KartaVault::new(vault.vault_root_path.clone().into());
+            vaults.add_vault(vault);
+        }
+    }
+    else {
+        println!("Vaults file does not exist");
+        // Create the file
+        //std::fs::File::create(full_path).expect("Could not create vaults file");
+    }
+
+    let vault = KartaVault::new(PathBuf::from("/home/viktor/Pictures"));
     current_vault.set_vault(vault.clone());
     vaults.add_vault(vault);
     
@@ -90,8 +125,26 @@ fn setup_vaults(
 fn on_vault_change(
     current_vault: ResMut<CurrentVault>,
     mut current_context: ResMut<CurrentContext>,
+    mut dialog: ResMut<FileDialog>,
+    mut event: EventWriter<SpawnVaultMenu>,
 ){
-    let vault = current_vault.vault.clone().unwrap();
+    let vault = match &current_vault.vault {
+        Some(vault) => {
+            println!("Vault changed to: {:?}", vault);
+            vault
+        },
+        None => {
+            println!("Vault changed to: None");
+            
+            // let mut vault = dialog.save_file(b"hello".to_vec());
+
+            // Spawn vault modal dialog
+
+            event.send(SpawnVaultMenu);
+
+            return
+        }
+    };
     let path = vault.get_root_path();
     println!("Changing current context to vault root: {:?}", path);
     current_context.set_current_context(path);
@@ -123,7 +176,7 @@ pub struct KartaVault{
 }
 
 impl KartaVault {
-    fn new(path: String) -> Self {
+    fn new(path: PathBuf) -> Self {
         let new_vault = KartaVault {
             vault_folder_name: OsString::from(".kartaVault"),
             root: PathBuf::from(path),
@@ -141,7 +194,6 @@ impl KartaVault {
             println!("Vault folder does not exist");
             std::fs::create_dir(path).expect("Could not create vault folder");
         }
-
 
         new_vault
     }
