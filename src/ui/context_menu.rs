@@ -1,7 +1,5 @@
 // The right click menu
 
-use std::path::PathBuf;
-
 use bevy::{
     prelude::*, 
     ui::{
