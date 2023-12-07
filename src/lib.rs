@@ -1,6 +1,6 @@
 //lib
 
-use bevy::{prelude::*, log::LogPlugin};
+use bevy::{prelude::*, log::LogPlugin, window::WindowResolution};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 // use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_mod_picking::prelude::*;
@@ -32,6 +32,7 @@ pub fn karta_app() {
             .set(WindowPlugin {
                 primary_window: Some(Window {
                     title: "Karta".to_string(),
+                    resolution: WindowResolution::new(1920., 1080.),
                     ..default()
                 }),
                 ..default()
@@ -45,7 +46,7 @@ pub fn karta_app() {
         )        
 
         // EGUI INSPECTOR BLOCK
-        .add_plugins(WorldInspectorPlugin::new())
+        //.add_plugins(WorldInspectorPlugin::new())
 
         // ENVIRONMENT BLOCK
         // The data that needs to remain in memory for the entire duration of the app

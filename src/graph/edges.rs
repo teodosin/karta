@@ -5,7 +5,7 @@ use bevy::prelude::*;
 
 use crate::{graph::attribute::Attributes, events::edges::EdgeSpawnedEvent};
 
-use super::{nodes::GraphDataNode, context::CurrentContext, graph_cam::ViewData};
+use super::{nodes::GraphDataNode, graph_cam::ViewData};
 
 pub struct EdgesPlugin;
 
@@ -14,7 +14,8 @@ impl Plugin for EdgesPlugin {
         app
 
             .add_systems(Last, despawn_edges
-                .run_if(resource_changed::<CurrentContext>())
+                // TODO: Does this have to run every frame?
+                //.run_if(resource_changed::<CurrentContext>())
             )
         ;
     }

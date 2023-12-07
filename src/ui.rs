@@ -19,7 +19,7 @@ use self::{
 // Building blocks of specific components
 mod popup;
 
-mod vault_menu;
+pub(crate) mod vault_menu;
 mod context_menu;
 mod mode_menu;
 mod create_node_menu;

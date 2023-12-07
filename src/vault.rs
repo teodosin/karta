@@ -12,13 +12,14 @@ use bevy::{
         Startup, 
         AssetApp, ResMut, Resource,
     }, 
-    app::{PreStartup, Update, PreUpdate}, ecs::schedule::{common_conditions::resource_changed, IntoSystemConfigs}
+    app::{PreStartup, Update, PreUpdate, AppExit, PostUpdate, Last}, ecs::{schedule::{common_conditions::{resource_changed, on_event}, IntoSystemConfigs, Condition}, event::EventWriter, system::{Query, Commands}, entity::Entity, query::With}, hierarchy::DespawnRecursiveExt
 };
+use serde::{Serialize, Deserialize};
  
 
-use crate::graph::context::CurrentContext;
+use crate::{graph::context::CurrentContext, vault::vault_asset::{VAULTS_FILE_NAME, VaultAsset}, ui::vault_menu::{SpawnVaultMenu, VaultMenu}};
 
-use self::{context_asset::{ContextAsset, ContextAssetState, ContextAssetLoader, load_contexts}, asset_manager::{ImageLoadTracker, on_image_load}};
+use self::{context_asset::{ContextAsset, ContextAssetState, ContextAssetLoader, load_contexts}, asset_manager::{ImageLoadTracker, on_image_load}, vault_asset::save_vaults};
 
 mod context_asset;
 mod vault_asset;
@@ -43,8 +44,13 @@ impl Plugin for VaultPlugin {
             // .add_systems(Update, use_assets)
 
             .add_systems(Update, on_vault_change.run_if(resource_changed::<CurrentVault>()))
+            .add_systems(Last, save_vaults
+                .run_if(resource_changed::<VaultOfVaults>().or_else(
+                    on_event::<AppExit>()
+                ))
+            )
 
-            .add_systems(PreUpdate, on_image_load)
+            .add_systems(PostUpdate, on_image_load)
         ;
 
     }
@@ -79,19 +85,86 @@ fn setup_vaults(
     mut current_vault: ResMut<CurrentVault>,
 ){
     let project_dirs = ProjectDirs::from("com", "Teodosin", "Karta").unwrap();
-    let _config_dir = project_dirs.config_dir();
+    let config_dir = project_dirs.config_dir();
 
-    let vault = KartaVault::new("/home/viktor/Pictures".to_string());
-    current_vault.set_vault(vault.clone());
-    vaults.add_vault(vault);
+    println!("Config dir: {:?}", config_dir);
+    let file_name = VAULTS_FILE_NAME;
+    let full_path = config_dir.join(file_name);
+    println!("Full path: {:?}", full_path);
+
+    // Check if the config dir exists
+    if !config_dir.exists() {
+        println!("Config dir does not exist");
+        // Create the config dir
+        std::fs::create_dir(config_dir).expect("Could not create config dir");
+    }
+
+    // Check if the file exists
+    if full_path.exists() {
+        println!("Vaults file exists");
+        // Load the file
+        let vaults_file = std::fs::read_to_string(full_path).expect("Could not read vaults file");
+        println!("Vaults file: {:?}", vaults_file);
+        // Deserialize the file
+        let vaultassets = match ron::de::from_str(&vaults_file) {
+            Ok(vaultassets) => {
+                println!("Vault assets: {:?}", vaultassets);
+                vaultassets
+            },
+            Err(e) => {
+                println!("Error: {:?}", e);
+                VaultAsset {
+                    latest: None,
+                    vaults: Vec::new(),
+                }
+            }
+        };
+
+        println!("Vaults: {:?}", vaults);
+        // Add the vaults to the vaults resource
+        for vault in &vaultassets.vaults {
+            let vault = KartaVault::new(vault.vault_root_path.clone().into());
+            vaults.add_vault(vault);
+        }
+
+        // Set the current vault to the first one
+        if vaults.vaults.len() > 0 {
+            let vault = vaults.vaults[0].clone();
+            current_vault.set_vault(vault);
+        }
+    }
+
+    else {
+        println!("Vaults file does not exist");
+        // Create the file
+        std::fs::File::create(full_path).expect("Could not create vaults file");
+    }
     
 }
 
 fn on_vault_change(
     current_vault: ResMut<CurrentVault>,
     mut current_context: ResMut<CurrentContext>,
+    mut event: EventWriter<SpawnVaultMenu>,
+    menu: Query<Entity, With<VaultMenu>>,
+    mut commands: Commands,
 ){
-    let vault = current_vault.vault.clone().unwrap();
+    let vault = match &current_vault.vault {
+        Some(vault) => {
+            println!("Vault changed to: {:?}", vault);
+            for menu in menu.iter(){
+                commands.entity(menu).despawn_recursive();
+            }
+            vault
+        },
+        None => {
+            println!("Vault changed to: None");
+
+            event.send(SpawnVaultMenu);
+
+            return
+        }
+    };
     let path = vault.get_root_path();
     println!("Changing current context to vault root: {:?}", path);
     current_context.set_current_context(path);
@@ -104,26 +177,26 @@ pub struct CurrentVault {
 }
 
 impl CurrentVault {
-    fn new() -> Self {
+    pub fn new() -> Self {
         CurrentVault {
             vault: None,
         }
     }
 
-    fn set_vault(&mut self, vault: KartaVault) {
+    pub fn set_vault(&mut self, vault: KartaVault) {
         self.vault = Some(vault);
     }
 }
 
 // VAULT TYPE
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct KartaVault{
     pub vault_folder_name: OsString,
     pub root: PathBuf,
 }
 
 impl KartaVault {
-    fn new(path: String) -> Self {
+    pub fn new(path: PathBuf) -> Self {
         let new_vault = KartaVault {
             vault_folder_name: OsString::from(".kartaVault"),
             root: PathBuf::from(path),
@@ -141,7 +214,6 @@ impl KartaVault {
             println!("Vault folder does not exist");
             std::fs::create_dir(path).expect("Could not create vault folder");
         }
-
 
         new_vault
     }

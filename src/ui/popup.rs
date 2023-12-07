@@ -118,7 +118,10 @@ pub fn popup_position_system(
 ) {
 
     // TODO: Handle multiple windows
-    let window = window.single();
+    let window = match window.iter().next(){
+        None => {return}
+        Some(window) => {window}
+    };
 
     let viewport_size = Vec2::new(window.width(), window.height());
 
