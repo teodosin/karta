@@ -2,32 +2,15 @@
 
 //
 
-use std::{path::PathBuf, fs::DirEntry, io::Write};
+use std::io::Write;
 
-use bevy::{prelude::Vec2, ecs::system::{Resource, Commands, Res, ResMut}, asset::{AssetServer, Assets, Handle, Asset, AssetLoader, io::{Reader, Writer}, AsyncReadExt, saver::{AssetSaver, SavedAsset}, AsyncWriteExt, LoadContext}, reflect::TypePath, utils::BoxedFuture, text::TextSettings};
+use bevy::{ecs::system::Res, reflect::TypePath, asset::Asset};
 use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
-use thiserror::Error;
 
-use super::{CurrentVault, VaultOfVaults};
+use super::VaultOfVaults;
 
 pub const VAULTS_FILE_NAME: &str = "karta.vault";
-
-pub fn load_vaults(
-    mut _commands: Commands,
-    asset_server: Res<AssetServer>,
-    _vault_asset_state: Res<VaultAssetState>,
-    assets: ResMut<Assets<VaultAsset>>,
-    vault: Res<CurrentVault>,
-){
-
-
-}
-
-#[derive(Resource, Default)]
-pub struct VaultAssetState {
-    pub _handle: Handle<VaultAsset>,
-}
 
 #[derive(Asset, Debug, Serialize, Deserialize, TypePath, Default)]
 pub struct VaultAsset {
@@ -51,46 +34,6 @@ impl Default for VaultSettings {
             //vault_root_path: PathBuf::from(""),
         }
     }
-}
-
-
-#[derive(Default)]
-pub struct VaultAssetLoader;
-
-#[non_exhaustive]
-#[derive(Debug, Error)]
-pub enum VaultAssetLoaderError {
-    /// An [IO](std::io) Error
-    #[error("Could load shader: {0}")]
-    Io(#[from] std::io::Error),
-    /// A [RON](ron) Error
-    #[error("Could not parse RON: {0}")]
-    RonSpannedError(#[from] ron::error::SpannedError),
-}
-
-impl AssetLoader for VaultAssetLoader {
-    type Asset = VaultAsset;
-    type Settings = ();
-    type Error = VaultAssetLoaderError;
-
-    fn load<'a>(
-        &'a self,
-        reader: &'a mut Reader,
-        _settings: &'a Self::Settings,
-        _load_vault: &'a mut LoadContext,
-    ) -> BoxedFuture<'a, Result<Self::Asset, Self::Error>> {
-        Box::pin(async move {
-            let mut bytes = Vec::new();
-            reader.read_to_end(&mut bytes).await?;
-            let asset: VaultAsset = ron::de::from_bytes::<VaultAsset>(&bytes)?;
-            Ok(asset)
-        })
-    }
-
-    fn extensions(&self) -> &[&str] {
-        &["vault"]
-    }
-
 }
 
 // define a struct and derive `serde::Serialize` for serialization (rust -> ron i this case)
@@ -141,10 +84,4 @@ pub fn save_vaults(
     let mut file = std::fs::File::create(full_path).expect("Could not create vaults file");
     file.write_all(data.as_bytes()).expect("Could not write to vaults file");
     
-}
-
-fn save_vault (
-
-) {
-
 }
