@@ -8,13 +8,13 @@ use bevy::{ecs::system::Res, reflect::TypePath, asset::Asset};
 use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 
-use super::{VaultOfVaults, CurrentVault, KartaVault};
+use super::{VaultOfVaults, CurrentVault,};
 
 pub const VAULTS_FILE_NAME: &str = "karta.vault";
 
 #[derive(Asset, Debug, Serialize, Deserialize, TypePath, Default)]
 pub struct VaultAsset {
-    pub latest: Option<KartaVault>,
+    pub latest: Option<VaultSerial>,
     #[serde(default = "Vec::new")]
     pub vaults: Vec<VaultSerial>,
 
@@ -49,6 +49,8 @@ pub fn save_vaults(
     vaults: Res<VaultOfVaults>,
     curvault: Res<CurrentVault>,
 ){
+    println!("Saving vaults");
+
     let project_dirs = ProjectDirs::from("com", "Teodosin", "Karta").unwrap();
     let config_dir = project_dirs.config_dir();
 
@@ -78,12 +80,16 @@ pub fn save_vaults(
     }
 
     let latest = match &curvault.vault {
-        Some(root) => Some(root),
+        Some(root) => {
+            Some(VaultSerial {
+                vault_root_path: root.root.to_str().unwrap().to_string(),
+            })
+        },
         None => None,
     };
 
     let asset = VaultAsset {
-        latest: latest.cloned(),
+        latest: latest,
         vaults: vaults_serial,
     };
 
@@ -91,5 +97,7 @@ pub fn save_vaults(
 
     let mut file = std::fs::File::create(full_path).expect("Could not create vaults file");
     file.write_all(data.as_bytes()).expect("Could not write to vaults file");
+
+    println!("Saved vaults");
     
 }
