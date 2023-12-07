@@ -12,7 +12,7 @@ use bevy::{
         Startup, 
         AssetApp, ResMut, Resource,
     }, 
-    app::{PreStartup, Update, PreUpdate, AppExit, PostUpdate}, ecs::{schedule::{common_conditions::{resource_changed, on_event}, IntoSystemConfigs, Condition}, event::EventWriter, system::{Query, Commands}, entity::Entity, query::With}, hierarchy::DespawnRecursiveExt
+    app::{PreStartup, Update, PreUpdate, AppExit, PostUpdate, Last}, ecs::{schedule::{common_conditions::{resource_changed, on_event}, IntoSystemConfigs, Condition}, event::EventWriter, system::{Query, Commands}, entity::Entity, query::With}, hierarchy::DespawnRecursiveExt
 };
 use serde::{Serialize, Deserialize};
  
@@ -44,7 +44,7 @@ impl Plugin for VaultPlugin {
             // .add_systems(Update, use_assets)
 
             .add_systems(Update, on_vault_change.run_if(resource_changed::<CurrentVault>()))
-            .add_systems(PreUpdate, save_vaults
+            .add_systems(Last, save_vaults
                 .run_if(resource_changed::<VaultOfVaults>().or_else(
                     on_event::<AppExit>()
                 ))
