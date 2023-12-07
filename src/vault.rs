@@ -18,7 +18,7 @@ use bevy::{
 
 use crate::{graph::context::CurrentContext, vault::vault_asset::{VAULTS_FILE_NAME, VaultAsset}, ui::vault_menu::{SpawnVaultMenu, VaultMenu}};
 
-use self::{context_asset::{ContextAsset, ContextAssetState, ContextAssetLoader, load_contexts}, asset_manager::{ImageLoadTracker, on_image_load}};
+use self::{context_asset::{ContextAsset, ContextAssetState, ContextAssetLoader, load_contexts}, asset_manager::{ImageLoadTracker, on_image_load}, vault_asset::save_vaults};
 
 mod context_asset;
 mod vault_asset;
@@ -43,6 +43,7 @@ impl Plugin for VaultPlugin {
             // .add_systems(Update, use_assets)
 
             .add_systems(Update, on_vault_change.run_if(resource_changed::<CurrentVault>()))
+            .add_systems(Update, save_vaults.run_if(resource_changed::<VaultOfVaults>()))
 
             .add_systems(PreUpdate, on_image_load)
         ;
@@ -100,18 +101,37 @@ fn setup_vaults(
         let vaults_file = std::fs::read_to_string(full_path).expect("Could not read vaults file");
         println!("Vaults file: {:?}", vaults_file);
         // Deserialize the file
-        let vaultassets: VaultAsset = ron::de::from_str(&vaults_file).expect("Could not deserialize vaults file");
+        let vaultassets = match ron::de::from_str(&vaults_file) {
+            Ok(vaultassets) => {
+                println!("Vault assets: {:?}", vaultassets);
+                vaultassets
+            },
+            Err(e) => {
+                println!("Error: {:?}", e);
+                VaultAsset {
+                    vaults: Vec::new(),
+                }
+            }
+        };
+
         println!("Vaults: {:?}", vaults);
         // Add the vaults to the vaults resource
         for vault in &vaultassets.vaults {
             let vault = KartaVault::new(vault.vault_root_path.clone().into());
             vaults.add_vault(vault);
         }
+
+        // Set the current vault to the first one
+        if vaults.vaults.len() > 0 {
+            let vault = vaults.vaults[0].clone();
+            current_vault.set_vault(vault);
+        }
     }
+
     else {
         println!("Vaults file does not exist");
         // Create the file
-        //std::fs::File::create(full_path).expect("Could not create vaults file");
+        std::fs::File::create(full_path).expect("Could not create vaults file");
     }
 
     // let vault = KartaVault::new(PathBuf::from("/home/viktor/Pictures"));
