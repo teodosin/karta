@@ -175,8 +175,8 @@ pub fn vault_menu_button_system(
                             return
                         }
 
-                        //let vault = vaults.add_vault(folder);
                         let vault = KartaVault::new(folder);
+                        vaults.add_vault(vault.clone());
                         curvault.set_vault(vault);
                     },
                     None => {
