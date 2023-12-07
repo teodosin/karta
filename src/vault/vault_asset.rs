@@ -2,18 +2,19 @@
 
 //
 
-use std::io::Write;
+use std::{io::Write, path::PathBuf};
 
 use bevy::{ecs::system::Res, reflect::TypePath, asset::Asset};
 use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 
-use super::VaultOfVaults;
+use super::{VaultOfVaults, CurrentVault, KartaVault};
 
 pub const VAULTS_FILE_NAME: &str = "karta.vault";
 
 #[derive(Asset, Debug, Serialize, Deserialize, TypePath, Default)]
 pub struct VaultAsset {
+    pub latest: Option<KartaVault>,
     #[serde(default = "Vec::new")]
     pub vaults: Vec<VaultSerial>,
 
@@ -46,6 +47,7 @@ struct AStruct {
 
 pub fn save_vaults(
     vaults: Res<VaultOfVaults>,
+    curvault: Res<CurrentVault>,
 ){
     let project_dirs = ProjectDirs::from("com", "Teodosin", "Karta").unwrap();
     let config_dir = project_dirs.config_dir();
@@ -75,7 +77,13 @@ pub fn save_vaults(
         });
     }
 
+    let latest = match &curvault.vault {
+        Some(root) => Some(root),
+        None => None,
+    };
+
     let asset = VaultAsset {
+        latest: latest.cloned(),
         vaults: vaults_serial,
     };
 

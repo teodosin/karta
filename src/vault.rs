@@ -14,6 +14,7 @@ use bevy::{
     }, 
     app::{PreStartup, Update, PreUpdate}, ecs::{schedule::{common_conditions::resource_changed, IntoSystemConfigs}, event::EventWriter, system::{Query, Commands}, entity::Entity, query::With}, hierarchy::DespawnRecursiveExt
 };
+use serde::{Serialize, Deserialize};
  
 
 use crate::{graph::context::CurrentContext, vault::vault_asset::{VAULTS_FILE_NAME, VaultAsset}, ui::vault_menu::{SpawnVaultMenu, VaultMenu}};
@@ -109,6 +110,7 @@ fn setup_vaults(
             Err(e) => {
                 println!("Error: {:?}", e);
                 VaultAsset {
+                    latest: None,
                     vaults: Vec::new(),
                 }
             }
@@ -133,10 +135,6 @@ fn setup_vaults(
         // Create the file
         std::fs::File::create(full_path).expect("Could not create vaults file");
     }
-
-    // let vault = KartaVault::new(PathBuf::from("/home/viktor/Pictures"));
-    // current_vault.set_vault(vault.clone());
-    // vaults.add_vault(vault);
     
 }
 
@@ -187,7 +185,7 @@ impl CurrentVault {
 }
 
 // VAULT TYPE
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct KartaVault{
     pub vault_folder_name: OsString,
     pub root: PathBuf,
