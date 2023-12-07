@@ -14,7 +14,7 @@ impl Plugin for EdgesPlugin {
         app
 
             .add_systems(Last, despawn_edges
-                .run_if(resource_changed::<CurrentContext>())
+                //.run_if(resource_changed::<CurrentContext>())
             )
         ;
     }

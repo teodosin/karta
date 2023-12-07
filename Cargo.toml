@@ -27,7 +27,8 @@ thiserror = "1.0"
 serde = { version = "1.0.188", features = ["derive"]}
 enum-iterator = "1.4.1"
 directories = "5.0.1"
-bevy_file_dialog = "0.1.0"
+rfd = { version = "0.12", default-features = false, features = ["xdg-portal"] }
+
 
 
 [profile.dev]

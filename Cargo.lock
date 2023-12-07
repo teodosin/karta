@@ -872,17 +872,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bevy_file_dialog"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "30fd9565d8ab6db1612a079f57d367e21f397e5fde35fdddb73097df2a74c137"
-dependencies = [
- "bevy",
- "futures-lite 2.1.0",
- "rfd",
-]
-
-[[package]]
 name = "bevy_gaussian_splatting"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3275,7 +3264,6 @@ dependencies = [
  "bevy",
  "bevy-inspector-egui",
  "bevy_cosmic_edit",
- "bevy_file_dialog",
  "bevy_gaussian_splatting",
  "bevy_mod_picking",
  "bevy_prototype_lyon",
@@ -3285,6 +3273,7 @@ dependencies = [
  "enum-iterator",
  "lyon",
  "rand",
+ "rfd",
  "ron",
  "serde",
  "thiserror",

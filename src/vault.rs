@@ -3,7 +3,6 @@
 
 use std::{path::PathBuf, ffi::OsString};
 
-use bevy_file_dialog::{FileDialogPlugin, FileDialog};
 use directories::ProjectDirs;
 
 use bevy::{
@@ -30,7 +29,6 @@ pub struct VaultPlugin;
 impl Plugin for VaultPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_plugins(FileDialogPlugin)
             .insert_resource(VaultOfVaults::new())
             .insert_resource(CurrentVault::new())
 
@@ -125,7 +123,6 @@ fn setup_vaults(
 fn on_vault_change(
     current_vault: ResMut<CurrentVault>,
     mut current_context: ResMut<CurrentContext>,
-    mut dialog: ResMut<FileDialog>,
     mut event: EventWriter<SpawnVaultMenu>,
 ){
     let vault = match &current_vault.vault {
@@ -135,10 +132,6 @@ fn on_vault_change(
         },
         None => {
             println!("Vault changed to: None");
-            
-            // let mut vault = dialog.save_file(b"hello".to_vec());
-
-            // Spawn vault modal dialog
 
             event.send(SpawnVaultMenu);
 

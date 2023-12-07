@@ -1,5 +1,7 @@
 // The right click menu
 
+use std::path::PathBuf;
+
 use bevy::{
     prelude::*, 
     ui::{
@@ -11,7 +13,7 @@ use bevy::{
 };
 use bevy_mod_picking::prelude::PointerButton;
 
-use crate::{events::nodes::NodeClickEvent, actions::{node_actions::PinToPositionAction, ActionComponent, ActionFactory, ActionManager}};
+use crate::{events::nodes::NodeClickEvent, actions::{node_actions::PinToPositionAction, ActionComponent, ActionFactory, ActionManager, context_actions::MoveToContextAction}, input::pointer::InputData};
 
 use super::popup::*;
 
@@ -47,6 +49,7 @@ pub fn despawn_context_menus_on_any_click(
 pub fn spawn_context_menu(
     mut commands: Commands,
     mut mouse_event: EventReader<NodeClickEvent>,
+    input_data: Res<InputData>,
     menus: Query<(Entity, &PopupGroup), With<Popup>>,
     window: Query<&Window>,
 ){
@@ -59,6 +62,16 @@ pub fn spawn_context_menu(
     
     // let target = mouse_event.read().next().unwrap().target.unwrap();
     let button = mouse_event.read().next().unwrap().button;
+
+    let nodepath = input_data.latest_click_entity.clone();
+    let nodepath = match nodepath {
+        None => {
+            return
+        }
+        Some(nodepath) => {
+            nodepath
+        }
+    };
     
     if button != PointerButton::Secondary {
         return
@@ -97,13 +110,13 @@ pub fn spawn_context_menu(
         &mut commands, "Pin".to_string(),
         Box::new(|| Box::new(PinToPositionAction::new()))
     );
-    // let move_to_context_button = create_context_menu_button(
-    //     &mut commands, "Go to Context".to_string(),
-    //     Box::new(|| Box::new(CreateNodeAction::new("Awesome".to_string())))
-    // );
+    let move_to_context_button = create_context_menu_button(
+        &mut commands, "Go to Context".to_string(),
+        Box::new(move || Box::new(MoveToContextAction::new(nodepath.clone())))
+    );
 
     commands.entity(menu_root).push_children(&[pin_button]);
-    // commands.entity(menu_root).push_children(&[move_to_context_button]);
+    commands.entity(menu_root).push_children(&[move_to_context_button]);
 
 }
 
