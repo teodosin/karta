@@ -12,11 +12,11 @@ use bevy::{
         Startup, 
         AssetApp, ResMut, Resource,
     }, 
-    app::{PreStartup, Update, PreUpdate}, ecs::{schedule::{common_conditions::resource_changed, IntoSystemConfigs}, event::EventWriter}
+    app::{PreStartup, Update, PreUpdate}, ecs::{schedule::{common_conditions::resource_changed, IntoSystemConfigs}, event::EventWriter, system::{Query, Commands}, entity::Entity, query::With}, hierarchy::DespawnRecursiveExt
 };
  
 
-use crate::{graph::context::CurrentContext, vault::vault_asset::{VAULTS_FILE_NAME, VaultAsset}, ui::vault_menu::SpawnVaultMenu};
+use crate::{graph::context::CurrentContext, vault::vault_asset::{VAULTS_FILE_NAME, VaultAsset}, ui::vault_menu::{SpawnVaultMenu, VaultMenu}};
 
 use self::{context_asset::{ContextAsset, ContextAssetState, ContextAssetLoader, load_contexts}, asset_manager::{ImageLoadTracker, on_image_load}};
 
@@ -114,9 +114,9 @@ fn setup_vaults(
         //std::fs::File::create(full_path).expect("Could not create vaults file");
     }
 
-    let vault = KartaVault::new(PathBuf::from("/home/viktor/Pictures"));
-    current_vault.set_vault(vault.clone());
-    vaults.add_vault(vault);
+    // let vault = KartaVault::new(PathBuf::from("/home/viktor/Pictures"));
+    // current_vault.set_vault(vault.clone());
+    // vaults.add_vault(vault);
     
 }
 
@@ -124,10 +124,15 @@ fn on_vault_change(
     current_vault: ResMut<CurrentVault>,
     mut current_context: ResMut<CurrentContext>,
     mut event: EventWriter<SpawnVaultMenu>,
+    menu: Query<Entity, With<VaultMenu>>,
+    mut commands: Commands,
 ){
     let vault = match &current_vault.vault {
         Some(vault) => {
             println!("Vault changed to: {:?}", vault);
+            for menu in menu.iter(){
+                commands.entity(menu).despawn_recursive();
+            }
             vault
         },
         None => {
@@ -150,13 +155,13 @@ pub struct CurrentVault {
 }
 
 impl CurrentVault {
-    fn new() -> Self {
+    pub fn new() -> Self {
         CurrentVault {
             vault: None,
         }
     }
 
-    fn set_vault(&mut self, vault: KartaVault) {
+    pub fn set_vault(&mut self, vault: KartaVault) {
         self.vault = Some(vault);
     }
 }
@@ -169,7 +174,7 @@ pub struct KartaVault{
 }
 
 impl KartaVault {
-    fn new(path: PathBuf) -> Self {
+    pub fn new(path: PathBuf) -> Self {
         let new_vault = KartaVault {
             vault_folder_name: OsString::from(".kartaVault"),
             root: PathBuf::from(path),
