@@ -52,16 +52,44 @@ impl CurrentContext {
     }
 
     pub fn set_current_context(&mut self, path: PathBuf) {
+        let path = path.canonicalize().unwrap();
+        let mut dir_path = path.clone();
+        dir_path.pop();
+        if dir_path.exists() {
+            if dir_path.is_dir() {
+                println!("Path is a directory: {}", dir_path.display());
+            } else {
+                println!("Path is a file: {}", dir_path.display());
+                dir_path.pop();
+
+                if dir_path.exists() {
+                    if dir_path.is_dir() {
+                        println!("Path is a directory: {}", dir_path.display());
+                    } else {
+                        println!("VIRTUAL NODE TOO DEEP: {}", dir_path.display());
+                        return
+                    }
+                } else {
+                    println!("Path doesn't exist: {}", dir_path.display());
+                    return
+                }
+            }
+        } else {
+            println!("Path doesn't exist: {}", path.display());
+            return
+        }
         self.cxt = Some(KartaContext {
-            current_context: path.clone(),
-            current_context_directory: path,
+            current_context: path,
+            current_context_directory: dir_path.to_path_buf(),
         });
     }
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct KartaContext {
+    // Path to the current context, including the file or dir name
     pub current_context: PathBuf,
+    // Path to the current context's parent directory
     pub current_context_directory: PathBuf,
 }
 
@@ -324,3 +352,12 @@ pub fn update_context(
 // If an individual node is expanded and its file format is supported,
 // its contents and their relevant edges are spawned around it (or in it)
 
+// --------------------------------------------------------------------------------
+// TESTS
+// --------------------------------------------------------------------------------
+
+#[cfg(test)]
+fn file_node_has_directory_parent() {
+    // Create a file node
+    // Check that it has a directory parent
+}   
