@@ -8,6 +8,7 @@ use bevy::ecs::world::World;
 use bevy::render::texture::Image;
 use bevy_svg::prelude::Svg;
 use enum_iterator::Sequence;
+use serde::{Serialize, Deserialize};
 
 mod file_types;
 mod filters;
@@ -28,7 +29,7 @@ impl Plugin for NodeTypesPlugin {
 
 // For now, all node types will be stored in a single enum
 // This will be changed to a more flexible system later
-#[derive(Clone, Copy, Debug, PartialEq, Sequence)]
+#[derive(Clone, Copy, Debug, PartialEq, Sequence, Serialize, Deserialize)]
 pub enum NodeTypes {
     Base,
     Folder, 
@@ -52,6 +53,12 @@ impl fmt::Display for NodeTypes {
         }
     }
 
+}
+
+impl Default for NodeTypes {
+    fn default() -> Self {
+        NodeTypes::Base
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Sequence)]

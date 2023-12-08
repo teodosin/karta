@@ -2,6 +2,7 @@
 use std::collections::HashMap;
 
 use bevy::prelude::*;
+use serde::{Deserialize, Serialize};
 
 use crate::{graph::attribute::Attributes, events::edges::EdgeSpawnedEvent};
 
@@ -36,9 +37,16 @@ pub struct EdgeType {
     pub etype: EdgeTypes,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub enum EdgeTypes {
     Base,
-    _Parent,
+    Parent,
+}
+
+impl Default for EdgeTypes {
+    fn default() -> Self {
+        EdgeTypes::Base
+    }
 }
 
 // TODO 0.12: Convert to One-Shot System

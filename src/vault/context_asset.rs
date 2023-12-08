@@ -3,8 +3,10 @@
 use std::{path::PathBuf, fs::DirEntry};
 
 use bevy::{prelude::Vec2, ecs::system::{Resource, Commands, Res, ResMut}, asset::{AssetServer, Assets, Handle, Asset, AssetLoader, io::Reader, LoadContext, AsyncReadExt}, reflect::TypePath, utils::BoxedFuture};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
+
+use crate::graph::{attribute::Attribute, node_types::NodeTypes, edges::EdgeTypes};
 
 use super::CurrentVault;
 
@@ -52,23 +54,42 @@ pub struct ContextAsset {
     pub nodes: Vec<NodeSerial>,
 }
 
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct EdgeSerial {
-    pub path: String,
+    pub source: String,
+    pub target: String,
 
-    #[serde(default = "Vec2::default")]
-    pub relative_position: Vec2,
+    #[serde(default)]
+    pub directed: bool,
+
+    #[serde(default)]
+    pub etype: EdgeTypes,
+
+    #[serde(default)]
+    pub attributes: Option<Vec<Attribute>>,
 }
  
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct NodeSerial {
-    pub name: String,
+    pub path: String,
 
-    #[serde(default = "Vec2::default")]
-    pub relative_position: Vec2,
+    #[serde(default)]
+    pub ntype: NodeTypes,
 
-    #[serde(default = "Vec::new")]
-    pub edges: Vec<String>,
+    #[serde(default)]
+    pub relative_position: Option<Vec2>,
+
+    #[serde(default)]
+    pub relative_size: Option<Vec2>,
+
+    #[serde(default)]
+    pub attributes: Option<Vec<Attribute>>,
+
+    #[serde(default)]
+    pub pin_to_position: bool,
+
+    #[serde(default)]
+    pub pin_to_presence: bool,
 }
 
 

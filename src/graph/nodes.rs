@@ -80,6 +80,11 @@ pub struct PinnedToPresence;
 #[derive(Component)]
 pub struct PinnedToUi;
 
+// Marker Component for nodes that are only visitors to the current context and should not be serialized
+#[derive(Component)]
+pub struct Visitor;
+
+
 // ? Should there be a:
 // DataNode Bundle
 // The basic component bundle of every node. This is shared between all of them,
