@@ -1,0 +1,7 @@
+Welcome to Karta!
+
+Karta is an experimental application for organizing and facilitating creative work. For instructions on how to use it, refer to the repository or ask Teodosin directly. 
+
+To use Karta, you need to choose a folder and create a vault in it. Karta will have access to everything inside the folder you choose but nothing else. Make sure the folder you choose includes the files you wish to work with and organize. 
+
+Press the button to choose where to create your vault.
