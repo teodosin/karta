@@ -36,6 +36,7 @@ impl Plugin for NodesPlugin {
 pub struct GraphDataNode {
     pub path: PathBuf,
     pub name: OsString,
+    pub ntype: NodeTypes,
     pub data: Option<Box<dyn NodeData>>,
 }
 
@@ -65,6 +66,14 @@ impl GraphDataNode {
 #[derive(Component)]
 pub struct GraphNodeEdges {
     pub edges: Vec<Entity>,
+}
+
+impl Default for GraphNodeEdges {
+    fn default() -> Self {
+        GraphNodeEdges {
+            edges: Vec::new(),
+        }
+    }
 }
 
 
@@ -269,8 +278,10 @@ pub fn spawn_node (
         GraphDataNode {
             path: full_path.clone(),
             name: name.clone(),
+            ntype,
             data: None,
         },
+        GraphNodeEdges::default()
     )).id();
 
     event.send(NodeSpawnedEvent {

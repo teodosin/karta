@@ -55,6 +55,7 @@ pub fn create_edge(
     event: &mut EventWriter<EdgeSpawnedEvent>,
     from: &Entity, 
     to: &Entity, 
+    etype: EdgeTypes,
     commands: &mut Commands,
     _view_data: &mut ViewData
 ){
@@ -74,6 +75,9 @@ pub fn create_edge(
         GraphEdge {
             from: *from,
             to: *to,
+        },
+        EdgeType {
+            etype,
         },
         Attributes {
             attributes: initial_attributes,

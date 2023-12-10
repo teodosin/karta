@@ -7,7 +7,7 @@ use bevy_mod_picking::prelude::PointerButton;
 use std::{fs, path::PathBuf, ffi::OsString};
 
 use crate::{
-    graph::{graph_cam, edges::create_edge, node_types::get_type_from_path}, vault::CurrentVault, 
+    graph::{graph_cam, edges::{create_edge, EdgeTypes}, node_types::get_type_from_path}, vault::CurrentVault, 
     events::{nodes::{NodeClickEvent, NodeSpawnedEvent}, edges::EdgeSpawnedEvent},
 };
 
@@ -249,6 +249,7 @@ pub fn update_context(
                 &mut edge_event,
                 &entity, 
                 &root_node, 
+                EdgeTypes::Parent,
                 &mut commands,
                 &mut view_data
             );
@@ -324,6 +325,7 @@ pub fn update_context(
                     &mut edge_event,
                     &root_node, 
                     &node, 
+                    EdgeTypes::Parent,
                     &mut commands,
                     &mut view_data
                 );

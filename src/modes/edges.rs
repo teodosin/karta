@@ -5,7 +5,7 @@
 use bevy::prelude::*;
 
 
-use crate::{input::pointer::{left_click_just_released, InputData}, graph::{context::PathsToEntitiesIndex, edges::create_edge, nodes::GraphDataNode, graph_cam::ViewData}, events::edges::EdgeSpawnedEvent};
+use crate::{input::pointer::{left_click_just_released, InputData}, graph::{context::PathsToEntitiesIndex, edges::{create_edge, EdgeTypes}, nodes::GraphDataNode, graph_cam::ViewData}, events::edges::EdgeSpawnedEvent};
 
 use super::KartaModeState;
 
@@ -67,6 +67,7 @@ fn create_edge_from_drag(
         &mut event,
         from, 
         to, 
+        EdgeTypes::Base,
         &mut commands,
         &mut view_data,
     );
@@ -128,6 +129,7 @@ fn test_create_edge_from_drag() {
     use bevy::utils::HashMap;
     use crate::graph::edges::GraphEdge;
     use std::{path::PathBuf, ffi::OsString};
+    use crate::graph::node_types::NodeTypes;
     // Setup a world and schedule for Bevy ECS (assuming Bevy is being used)
     let mut app = App::new();
 
@@ -135,6 +137,7 @@ fn test_create_edge_from_drag() {
         GraphDataNode {
             path: PathBuf::from("path/to/entity1"),
             name: OsString::from("entity1"),
+            ntype: NodeTypes::Base,
             data: None,
         }
     ).id();
@@ -143,6 +146,7 @@ fn test_create_edge_from_drag() {
         GraphDataNode {
             path: PathBuf::from("path/to/entity2"),
             name: OsString::from("entity2"),
+            ntype: NodeTypes::Base,
             data: None,
         }
     ).id();

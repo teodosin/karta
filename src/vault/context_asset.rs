@@ -2,41 +2,15 @@
 
 use std::{path::PathBuf, fs::DirEntry};
 
-use bevy::{prelude::Vec2, ecs::system::{Resource, Commands, Res, ResMut}, asset::{AssetServer, Assets, Handle, Asset, AssetLoader, io::Reader, LoadContext, AsyncReadExt}, reflect::TypePath, utils::BoxedFuture};
+use bevy::{prelude::Vec2, ecs::{system::{Resource, Commands, Res, ResMut, Query}, entity::Entity}, asset::{AssetServer, Assets, Handle, Asset, AssetLoader, io::Reader, LoadContext, AsyncReadExt}, reflect::TypePath, utils::BoxedFuture, transform::components::Transform};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::graph::{attribute::Attribute, node_types::NodeTypes, edges::EdgeTypes};
+use crate::graph::{attribute::{Attribute, Attributes}, node_types::NodeTypes, edges::{EdgeTypes, EdgeType, GraphEdge}, nodes::{GraphDataNode, GraphNodeEdges, PinnedToPosition, PinnedToPresence, Visitor}, context::CurrentContext};
 
 use super::CurrentVault;
 
-pub fn load_contexts(
-    mut _commands: Commands,
-    asset_server: Res<AssetServer>,
-    _context_asset_state: Res<ContextAssetState>,
-    assets: ResMut<Assets<ContextAsset>>,
-    vault: Res<CurrentVault>,
-){
-    let file_name = "thingy.context";
-
-    let vault = match &vault.vault {
-        Some(vault) => vault,
-        None => {
-            println!("No vault set");
-            return
-        }
-    };
-    
-    let path: PathBuf = vault.get_vault_path().join(file_name);
-    let context_assets: Handle<ContextAsset> = 
-        asset_server.load(path);
-    println!("context_assets: {:?}", context_assets);
-
-    let _data = assets.get(&context_assets);
-    // commands.insert_resource(ContextAssets {
-    //     handle: context_assets,
-    // });
-}
+const CONTEXT_FILE_EXTENSION: &str = "context";
 
 #[derive(Resource, Default)]
 pub struct ContextAssetState {
@@ -45,7 +19,7 @@ pub struct ContextAssetState {
 
 #[derive(Asset, Debug, Deserialize, TypePath, Default)]
 pub struct ContextAsset {
-    pub self_path: String,
+    pub nself: NodeSerial,
 
     #[serde(default = "Vec::new")]
     pub edges: Vec<EdgeSerial>,
@@ -92,6 +66,65 @@ pub struct NodeSerial {
     pub pin_to_presence: bool,
 }
 
+pub fn save_context(
+    vault: Res<CurrentVault>,
+    context: Res<CurrentContext>,
+    nodes: Query<(
+        Entity, 
+        Option<&Visitor>,
+        &GraphDataNode, 
+        &GraphNodeEdges,
+        Option<&Transform>,
+        Option<&PinnedToPosition>,
+        Option<&PinnedToPresence>,
+        Option<&Attributes>,
+    )>,
+    edges: Query<(
+        Entity, 
+        &GraphEdge,
+        &EdgeType,
+        Option<&Attributes>,
+    )>,
+){
+    // Evaluate the correct location for the save file
+    let vault = match &vault.vault {
+        Some(vault) => vault,
+        None => {
+            println!("No vault set");
+            return
+        }
+    };
+    let context = match &context.cxt {
+        Some(context) => context,
+        None => {
+            println!("No context set");
+            return
+        }
+    };
+
+    let vault_root_path = &vault.root;
+    let vault_dir_path = vault_root_path.join(&vault.vault_folder_name);
+    let mut current_context_path = vault_dir_path.join(&context.current_context.strip_prefix(vault_root_path).unwrap());
+
+    // TODO: Add support for non-unicode characters
+    if let Some(stem) = current_context_path.file_name().and_then(|s| s.to_str()) {
+        let new_name = format!("{}.{}", stem, CONTEXT_FILE_EXTENSION);
+        current_context_path.set_file_name(new_name);
+    }
+
+    println!("Vault root path: {:?}", vault_root_path);
+    println!("Vault dir path: {:?}", vault_dir_path);
+    println!("Saving context to: {:?}", current_context_path);
+
+
+
+}
+
+pub fn load_context(
+
+){
+
+}
 
 
 #[derive(Default)]
@@ -142,3 +175,4 @@ pub fn _dir_or_file_is_hidden(
         .map(|s| !s.starts_with("."))
         .unwrap_or(false)
 }
+
