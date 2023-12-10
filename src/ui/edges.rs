@@ -58,14 +58,14 @@ pub fn update_edges(
     nodes: Query<&Transform, With<GraphViewNode>>,
 ){
     for (edge, data, mut path) in edges.iter_mut() {
-        let start = match nodes.get(data.from) {
+        let start = match nodes.get(data.source) {
             Ok(node) => node,
             Err(_) => {
                 // commands.entity(edge).despawn_recursive();
                 continue
             },
         };
-        let end = match nodes.get(data.to){
+        let end = match nodes.get(data.target){
             Ok(node) => node,
             Err(_) => {
                 // commands.entity(edge).despawn_recursive();
@@ -95,14 +95,14 @@ pub fn _draw_edges(
     mut gizmos: Gizmos,
 ) {
     for (edge_entity, edge_data) in edges.iter() {
-        let start = match nodes.get(edge_data.from) {
+        let start = match nodes.get(edge_data.source) {
             Ok(node) => node,
             Err(_) => {
                 commands.entity(edge_entity).despawn_recursive();
                 continue
             },
         };
-        let end = match nodes.get(edge_data.to){
+        let end = match nodes.get(edge_data.target){
             Ok(node) => node,
             Err(_) => {
                 commands.entity(edge_entity).despawn_recursive();

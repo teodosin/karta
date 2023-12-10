@@ -17,7 +17,7 @@ use bevy::{
 use serde::{Serialize, Deserialize};
  
 
-use crate::{graph::context::CurrentContext, vault::vault_asset::{VAULTS_FILE_NAME, VaultAsset}, ui::vault_menu::{SpawnVaultMenu, VaultMenu}};
+use crate::{graph::context::{CurrentContext, update_context}, vault::vault_asset::{VAULTS_FILE_NAME, VaultAsset}, ui::vault_menu::{SpawnVaultMenu, VaultMenu}};
 
 use self::{context_asset::{ContextAsset, ContextAssetState, ContextAssetLoader, save_context}, asset_manager::{ImageLoadTracker, on_image_load}, vault_asset::save_vaults};
 
@@ -52,6 +52,7 @@ impl Plugin for VaultPlugin {
                 .run_if(resource_changed::<CurrentContext>().or_else(
                     on_event::<AppExit>()
                 ))
+                .before(update_context)
             )
 
             .add_systems(PostUpdate, on_image_load)

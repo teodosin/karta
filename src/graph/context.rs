@@ -23,7 +23,7 @@ impl Plugin for ContextPlugin {
 
             .add_systems(Startup, initial_context)
 
-            .add_systems(Update, update_context
+            .add_systems(Last, update_context
                 .run_if(resource_changed::<CurrentContext>())
             )
         ;
@@ -137,7 +137,6 @@ pub fn update_context(
     mut nodes: Query<(Entity, &GraphDataNode, &Transform)>,
     root: Query<Entity, With<ContextRoot>>,
 ) {
-    // lol
     let vault = &vault.vault;
     let vault = match vault {
         Some(vault) => vault,

@@ -76,6 +76,13 @@ impl Default for GraphNodeEdges {
     }
 }
 
+impl GraphNodeEdges {
+    pub fn add_edge(&mut self, edge: Entity) {
+        self.edges.push(edge);
+    }
+
+}
+
 
 #[derive(Component)]
 pub struct ContextRoot;
@@ -271,6 +278,7 @@ pub fn spawn_node (
 ) -> bevy::prelude::Entity {
 
     let full_path = path.join(&name);
+
 
     let data = type_to_data(ntype);
 
