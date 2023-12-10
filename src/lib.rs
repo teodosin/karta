@@ -1,7 +1,7 @@
 //lib
 
 use bevy::{input::mouse::*, prelude::*};
-//use bevy_inspector_egui::quick::WorldInspectorPlugin;
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_mod_picking::prelude::*;
 
 
@@ -19,7 +19,7 @@ pub fn karta_app() {
             .disable::<DebugPickingPlugin>()
         )        
         //.add_plugins(DefaultPlugins)
-        //.add_plugins(WorldInspectorPlugin::new())
+        .add_plugins(WorldInspectorPlugin::new())
 
         .add_plugins(ui::KartaUiPlugin)
 
