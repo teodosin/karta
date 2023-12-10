@@ -2,7 +2,7 @@
 name = "karta"
 version = "0.1.0"
 edition = "2021"
-rust_version = "1.74"
+rust_version = "1.74.1"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
