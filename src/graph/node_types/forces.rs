@@ -55,11 +55,11 @@ pub fn edge_spring_constraints (
     // When this force is implemented as a node, we will need to handle multiple of them.
 
     for (edge, attr) in edges.iter(){
-        let from = match nodes.get(edge.from){
+        let from = match nodes.get(edge.source){
             Ok(node) => node,
             Err(_) => continue,
         };
-        let to = match nodes.get(edge.to){
+        let to = match nodes.get(edge.target){
             Ok(node) => node,
             Err(_) => continue,
         };
@@ -90,7 +90,7 @@ pub fn edge_spring_constraints (
             None => continue,
         } * displacement;      
             
-        match nodes.get_mut(edge.from){
+        match nodes.get_mut(edge.source){
             Ok(mut node) => {
                 node.3.velocity -= diff / dist * attractive_force;
                 
@@ -98,7 +98,7 @@ pub fn edge_spring_constraints (
             Err(_) => continue,
         }
         
-        match nodes.get_mut(edge.to){
+        match nodes.get_mut(edge.target){
             Ok(mut node) => {                
                 node.3.velocity += diff / dist * attractive_force;                
             },

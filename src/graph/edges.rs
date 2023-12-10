@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{graph::attribute::Attributes, events::edges::EdgeSpawnedEvent};
 
-use super::{nodes::GraphDataNode, graph_cam::ViewData};
+use super::{nodes::{GraphDataNode, GraphNodeEdges}, graph_cam::ViewData};
 
 pub struct EdgesPlugin;
 
@@ -18,6 +18,8 @@ impl Plugin for EdgesPlugin {
                 // TODO: Does this have to run every frame?
                 //.run_if(resource_changed::<CurrentContext>())
             )
+            .add_systems(PostUpdate, add_edge_to_node_indexes
+                .run_if(on_event::<EdgeSpawnedEvent>()))
         ;
     }
 }
@@ -28,16 +30,16 @@ impl Plugin for EdgesPlugin {
 // A component for the most basic data of an EDGE
 #[derive(Component, Reflect)]
 pub struct GraphEdge {
-    pub from: Entity,
-    pub to: Entity,
+    pub source: Entity,
+    pub target: Entity,
 }
 
-#[derive(Component)]
+#[derive(Component, Clone, Debug, PartialEq, Reflect)]
 pub struct EdgeType {
     pub etype: EdgeTypes,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Reflect)]
 pub enum EdgeTypes {
     Base,
     Parent,
@@ -73,8 +75,8 @@ pub fn create_edge(
 
     let edge = commands.spawn((
         GraphEdge {
-            from: *from,
-            to: *to,
+            source: *from,
+            target: *to,
         },
         EdgeType {
             etype,
@@ -91,13 +93,30 @@ pub fn create_edge(
     });
 }
 
+pub fn add_edge_to_node_indexes(
+    mut event: EventReader<EdgeSpawnedEvent>,
+    mut edges: Query<&GraphEdge>,
+    mut nodes: Query<&mut GraphNodeEdges>,
+) {
+    for ev in event.read(){
+        let edge_entity = ev.entity;
+        let edge_data = edges.get_mut(edge_entity).unwrap();
+
+        let mut source_node = nodes.get_mut(edge_data.source).unwrap();
+        source_node.add_edge(edge_entity);
+
+        let mut target_node = nodes.get_mut(edge_data.target).unwrap();
+        target_node.add_edge(edge_entity);
+    }
+}
+
 pub fn despawn_edges(
     mut commands: Commands,
     mut edges: Query<(Entity, &GraphEdge)>,
     nodes: Query<&GraphDataNode>,
 ) {
     for (edge_entity, edge_data) in edges.iter_mut() {
-        if nodes.get(edge_data.from).is_err() || nodes.get(edge_data.to).is_err() {
+        if nodes.get(edge_data.source).is_err() || nodes.get(edge_data.target).is_err() {
             println!("Despawning edge");
             commands.entity(edge_entity).despawn_recursive();
         }
