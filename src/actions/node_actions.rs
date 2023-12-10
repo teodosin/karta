@@ -60,6 +60,7 @@ impl Action for CreateNodeAction {
             GraphDataNode {
                 path: full_path.clone(),
                 name: name.clone().into(),
+                ntype: self.ntype,
                 data: type_to_data(self.ntype)
             },
             PinnedToPosition,
