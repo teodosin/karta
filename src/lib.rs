@@ -1,7 +1,6 @@
 //lib
 
 use bevy::{prelude::*, log::LogPlugin, window::WindowResolution};
-use bevy_inspector_egui::quick::WorldInspectorPlugin;
 // use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_mod_picking::prelude::*;
 
