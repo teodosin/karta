@@ -1,0 +1,8 @@
+services:
+  rust-devenv:
+    build:
+      context: .
+    tty: true
+    privileged: true
+    volumes:
+       - .:/project
