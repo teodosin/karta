@@ -113,12 +113,22 @@ pub fn add_edge_to_node_indexes(
 pub fn despawn_edges(
     mut commands: Commands,
     mut edges: Query<(Entity, &GraphEdge)>,
-    nodes: Query<&GraphDataNode>,
+    mut nodes: Query<&mut GraphNodeEdges>,
 ) {
     for (edge_entity, edge_data) in edges.iter_mut() {
         if nodes.get(edge_data.source).is_err() || nodes.get(edge_data.target).is_err() {
             println!("Despawning edge");
             commands.entity(edge_entity).despawn_recursive();
+
+        }
+        // Remove edge from node indexes
+        if nodes.get(edge_data.source).is_ok() {
+            let mut source_node = nodes.get_mut(edge_data.source).unwrap();
+            source_node.remove_edge(edge_entity);
+        }
+        if nodes.get(edge_data.target).is_ok() {
+            let mut target_node = nodes.get_mut(edge_data.target).unwrap();
+            target_node.remove_edge(edge_entity);
         }
     }
 }

@@ -2,7 +2,7 @@
 
 use std::{path::PathBuf, fs::DirEntry, io::Write};
 
-use bevy::{prelude::Vec2, ecs::{system::{Resource, Res, Query}, entity::Entity, query::With}, asset::{Handle, Asset, AssetLoader, io::Reader, LoadContext, AsyncReadExt}, reflect::TypePath, utils::{BoxedFuture, HashMap}, transform::components::Transform};
+use bevy::{prelude::Vec2, ecs::{system::{Resource, Res, Query}, entity::Entity, query::{With, Without}}, asset::{Handle, Asset, AssetLoader, io::Reader, LoadContext, AsyncReadExt}, reflect::TypePath, utils::{BoxedFuture, HashMap}, transform::components::Transform};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -17,15 +17,54 @@ pub struct ContextAssetState {
     pub _handle: Handle<ContextAsset>,
 }
 
+// Serialized Structs
 #[derive(Asset, Debug, Serialize, Deserialize, TypePath, Default)]
 pub struct ContextAsset {
-    pub nself: NodeSerial,
+    pub nself: RootNodeSerial,
 
     #[serde(default = "Vec::new")]
     pub edges: Vec<EdgeSerial>,
+}
 
-    #[serde(default = "Vec::new")]
-    pub nodes: Vec<NodeSerial>,
+// The root node. The only node that stores complete data. 
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct RootNodeSerial {
+    pub path: String,
+
+    #[serde(default)]
+    pub ntype: NodeTypes,
+
+    #[serde(default)]
+    pub attributes: Option<Vec<Attribute>>,
+
+    #[serde(default)]
+    pub pin_to_position: bool,
+
+    #[serde(default)]
+    pub pin_to_presence: bool,
+}
+
+// The nodes present in the context (non-visitors.)
+// Their data is stored in their respective context files. 
+// This struct only stores their relative transforms to the root node and their pins. 
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct NodeSerial {
+    pub path: String,
+
+    // A context file only stores one node, and its connections to other nodes. 
+    // These are the relative transforms of the other node for a connection. 
+    #[serde(default)]
+    pub relative_position: Option<Vec2>,
+    
+    #[serde(default)]
+    pub relative_size: Option<Vec2>,
+
+    // Pins that are only relevant in the current root's context
+    #[serde(default)]
+    pub pin_to_position: bool,
+
+    #[serde(default)]
+    pub pin_to_presence: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
@@ -38,32 +77,43 @@ pub struct EdgeSerial {
 
     #[serde(default)]
     pub etype: EdgeTypes,
+    
+
 
     #[serde(default)]
     pub attributes: Option<Vec<Attribute>>,
 }
- 
-#[derive(Debug, Serialize, Deserialize, Default)]
-pub struct NodeSerial {
-    pub path: String,
 
-    #[serde(default)]
-    pub ntype: NodeTypes,
+pub fn open_context_from_node_path(
+    vault_root_path: &PathBuf,
+    vault_dir_path: &PathBuf,
+    node_path: &PathBuf,
+) -> Result<ContextAsset, String> {
+    let mut context_path = node_path_to_context_path(vault_root_path, vault_dir_path, node_path);
 
-    #[serde(default)]
-    pub relative_position: Option<Vec2>,
+    if context_path.exists() {
 
-    #[serde(default)]
-    pub relative_size: Option<Vec2>,
+        println!("Context file exists: {:?}", context_path);
 
-    #[serde(default)]
-    pub attributes: Option<Vec<Attribute>>,
-
-    #[serde(default)]
-    pub pin_to_position: bool,
-
-    #[serde(default)]
-    pub pin_to_presence: bool,
+        // Load the file
+        let context_file = std::fs::read_to_string(context_path).expect("Could not read context file");
+        println!("Vaults file: {:?}", context_file);
+        // Deserialize the file
+        let context_asset = match ron::de::from_str(&context_file) {
+            Ok(context_asset) => {
+                println!("Vault assets: {:?}", context_asset);
+                Ok(context_asset)
+            },
+            Err(e) => {
+                println!("Error: {:?}", e);
+                Err(e.to_string())
+            }
+        };
+        context_asset
+    } else {
+        println!("Context file does not exist: {:?}", context_path);
+        Err("Context file does not exist".to_string())
+    }
 }
 
 pub fn save_context(
@@ -71,7 +121,13 @@ pub fn save_context(
     context: Res<CurrentContext>,
     root_node: Query<(
         Entity, 
+        Option<&Visitor>,
+        &GraphDataNode, 
+        &GraphNodeEdges,
         Option<&Transform>,
+        Option<&PinnedToPosition>,
+        Option<&PinnedToPresence>,
+        Option<&Attributes>,
         ),
         With<ContextRoot>,
     >,
@@ -85,7 +141,7 @@ pub fn save_context(
         Option<&PinnedToPresence>,
         Option<&Attributes>,
         ),
-        // Without<ContextRoot>,
+        Without<ContextRoot>,
     >,
     all_edges: Query<(
         Entity, 
@@ -111,22 +167,38 @@ pub fn save_context(
     #[cfg(debug_assertions)]
     println!("Vault dir path: {:?}", vault_dir_path);
 
-    let root_node_position: Vec2 = match root_node.iter().next() {
-        Some((_, Some(transform))) => {
-            Vec2::new(transform.translation.x, transform.translation.y)
-        },
-        _ => {
-            println!("No root node found");
+    // What needs to be saved:
+    // - The root node
+    // - All nodes that are not visitors
+    // - All edges between the present nodes
+    // - The relative position of the nodes to the root node
+
+    // The other context files may have connections not present in this context. We do not want to
+    // overwrite those. We only want to modify the edges where the source and target are present in
+    // this context.
+
+    // Root node setup
+    let root_node = match root_node.iter().next() {
+        Some(root_node) => root_node,
+        None => {
+            println!("No root node");
             return
         }
     };
 
-    let node_entity_to_path_index: HashMap<Entity, PathBuf> = all_nodes.iter().map(|(entity, _, node, _, _, _, _, _)| {
+    let (root_node_entity, _, root_node, root_node_edges, root_node_transform, _, _, _) = root_node;
+
+    // Data structure to store the index of the node entity to the path of the node.
+    // Needed for the edge serialization
+    let mut node_entity_to_path_index: HashMap<Entity, PathBuf> = all_nodes.iter().map(|(entity, _, node, _, _, _, _, _)| {
         (entity, node.path.clone())
     }).collect();
+    node_entity_to_path_index.insert(root_node_entity, root_node.path.clone());
 
-
-    for node in all_nodes.iter() {
+    // Save the root node context. 
+    // All the connected nodes are guaranteed to be present in the context. 
+    // Relative positions of the other nodes are saved in their corresponding edges. 
+    for node in all_nodes.iter(){
         let (entity, visitor, node, nedges, transform, pin_to_position, pin_to_presence, attributes) = node;
 
         if visitor.is_some() {
@@ -134,9 +206,21 @@ pub fn save_context(
         }
 
         // Ignore the file .kartaVault
+        // TODO: Could this be done in a more centralized place?
+        println!("Node path file name: {:?}", node.path.file_name().unwrap());
+        println!("Vault folder name: {:?}", vault.vault_folder_name);
+        println!("Are the same: {:?}", node.path.file_name().unwrap() == vault.vault_folder_name);
         if node.path.file_name().unwrap() == vault.vault_folder_name {
             continue
         }
+
+
+
+    }
+
+    // Modify the other context files
+    for node in all_nodes.iter() {
+
 
         let node_path = &node.path;
         let context_path = node_path_to_context_path(vault_root_path, &vault_dir_path, node_path);
@@ -145,13 +229,13 @@ pub fn save_context(
         let relative_position = match transform {
             Some(transform) => {
                 let node_position = Vec2::new(transform.translation.x, transform.translation.y);
-                let relative_position = node_position - root_node_position;
+                let relative_position = node_position - root_node_transform.unwrap().translation.truncate();
                 Some(relative_position)
             },
             None => None,
         };
 
-        let node_serial = NodeSerial {
+        let node_serial = RootNodeSerial {
             path: node.path.to_str().unwrap().to_string(),
             ntype: node.ntype,
             relative_position,
@@ -185,7 +269,6 @@ pub fn save_context(
         let asset = ContextAsset {
             nself: node_serial,
             edges: edges_serial,
-            nodes: Vec::new(),
         };
 
         // Create the directory if it doesn't exist

@@ -81,6 +81,10 @@ impl GraphNodeEdges {
         self.edges.push(edge);
     }
 
+    pub fn remove_edge(&mut self, edge: Entity) {
+        self.edges.retain(|&e| e != edge);
+    }
+
 }
 
 
