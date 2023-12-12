@@ -59,8 +59,19 @@ pub fn create_edge(
     to: &Entity, 
     etype: EdgeTypes,
     commands: &mut Commands,
-    _view_data: &mut ViewData
+    edges: &Query<(&GraphEdge, &EdgeType)>,
 ){
+    // Check if a Parent edge already exists between the node pair
+    if etype == EdgeTypes::Parent {
+        for edge in edges.iter() {
+            let (edge, etype) = edge;
+            if edge.source == *from && edge.target == *to && etype.etype == EdgeTypes::Parent{
+                println!("Parent edge already exists between these nodes");
+                return;
+            }
+        }
+    }
+
     println!("Creating edge from {:?} to {:?}", from, to);
 
     let mut initial_attributes: HashMap<String, Option<f32>> = HashMap::new();

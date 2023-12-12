@@ -11,7 +11,7 @@ use crate::{
     events::{nodes::{NodeClickEvent, NodeSpawnedEvent}, edges::EdgeSpawnedEvent},
 };
 
-use super::nodes::*;
+use super::{nodes::*, edges::{GraphEdge, EdgeType}};
 
 pub struct ContextPlugin;
 
@@ -135,6 +135,7 @@ pub fn update_context(
     mut pe_index: ResMut<PathsToEntitiesIndex>,
 
     mut nodes: Query<(Entity, &GraphDataNode, &Transform)>,
+    edges: Query<(&GraphEdge, &EdgeType)>,
     root: Query<Entity, With<ContextRoot>>,
 ) {
     let vault = &vault.vault;
@@ -250,7 +251,7 @@ pub fn update_context(
                 &root_node, 
                 EdgeTypes::Parent,
                 &mut commands,
-                &mut view_data
+                &edges,
             );
         },
         None => (),
@@ -267,7 +268,7 @@ pub fn update_context(
             // Ignore the vault folder!!!
             .filter(|entry| {
                 let path = entry.as_ref().unwrap().path();
-                println!("Path: {}", path.display());
+                println!("Is path {:?} the vault path: {}:", path, path == vault.get_vault_path());
                 path != vault.get_vault_path()
             })
             // Carry on with everything else
@@ -326,7 +327,7 @@ pub fn update_context(
                     &node, 
                     EdgeTypes::Parent,
                     &mut commands,
-                    &mut view_data
+                    &edges,
                 );
             });
         },
