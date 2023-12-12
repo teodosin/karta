@@ -13,7 +13,7 @@ pub struct Attribute {
     pub value: Option<f32>,
 }
 
-#[derive(Component, Reflect)]
+#[derive(Component, Reflect, Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 pub struct Attributes {
     pub attributes: HashMap<String, Option<f32>>,
 }

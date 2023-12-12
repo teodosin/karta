@@ -78,6 +78,7 @@ impl Default for GraphNodeEdges {
 
 impl GraphNodeEdges {
     pub fn add_edge(&mut self, edge: Entity) {
+        println!("Adding edge: {:?}", edge);
         self.edges.push(edge);
     }
 
