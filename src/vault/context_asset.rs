@@ -5,7 +5,7 @@ use std::{path::PathBuf, fs::DirEntry, io::Write};
 use bevy::{prelude::Vec2, ecs::{system::{Res, Query}, entity::Entity, query::{With, Without}}, reflect::TypePath, utils::HashMap, transform::components::Transform};
 use serde::{Deserialize, Serialize};
 
-use crate::{graph::{attribute::{Attribute, Attributes}, node_types::NodeTypes, edges::{EdgeTypes, EdgeType, GraphEdge}, nodes::{GraphDataNode, GraphNodeEdges, PinnedToPosition, PinnedToPresence, Visitor, ContextRoot}, context::CurrentContext}, events::{context, edges}};
+use crate::{graph::{attribute::Attributes, node_types::NodeTypes, edges::{EdgeTypes, EdgeType, GraphEdge}, nodes::{GraphDataNode, GraphNodeEdges, PinnedToPosition, PinnedToPresence, Visitor, ContextRoot}, context::CurrentContext}, events::{context, edges}};
 
 use super::CurrentVault;
 
@@ -397,7 +397,7 @@ fn save_context_file(
         println!("Not saving context file for .kartaVault.context");
         return
     }
-    
+
     let context_path = node_path_to_context_path(vault_root_path, vault_dir_path, node_path);
 
     // Create the directory if it doesn't exist
@@ -421,7 +421,10 @@ fn node_path_to_context_path(
     vault_dir_path: &PathBuf,
     node_path: &PathBuf,
 ) -> PathBuf {
-    let mut context_path = vault_dir_path.join(&node_path.strip_prefix(vault_root_path).unwrap());
+    let vault_dir_name: PathBuf = vault_root_path.file_name().unwrap().into();
+    
+
+    let mut context_path = vault_dir_path.join(vault_dir_name).join(&node_path.strip_prefix(vault_root_path).unwrap());
 
         // TODO: Add support for non-unicode characters
     if let Some(stem) = context_path.file_name().and_then(|s| s.to_str()) {
@@ -431,8 +434,6 @@ fn node_path_to_context_path(
 
     println!("Saving context to: {:?}", context_path);
     context_path
-
-
 }
 
 pub fn _dir_or_file_is_hidden(
