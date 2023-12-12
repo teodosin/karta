@@ -340,6 +340,8 @@ pub fn save_context(
             node.path.to_str().unwrap().to_string()
         }).collect();
 
+        println!("All node paths: {:?}", all_node_paths);
+
 
         let mut edges_serial: Vec<RootEdgeSerial> = existing_edges.iter().filter_map(|edge_serial| {
             let (source, target) = (&edge_serial.source, &edge_serial.target);
@@ -347,9 +349,12 @@ pub fn save_context(
             if all_node_paths.contains(source) && all_node_paths.contains(target) {
                 None
             } else {
+                println!("Keeping this one: {:?}", edge_serial);
                 Some(edge_serial.clone())
             }
         }).collect();
+
+        println!("Edges serial existing file: {:?}", edges_serial);
 
         for edge in edges.edges.iter() {
             let edge_entity = all_edges.get(*edge);
@@ -366,7 +371,9 @@ pub fn save_context(
                 attributes: attributes.cloned(),
             };
 
-            edges_serial.push(edge_serial);
+            if !edges_serial.iter().any(|existing_edge| existing_edge.source == edge_serial.source && existing_edge.target == edge_serial.target) {
+                edges_serial.push(edge_serial);
+            }        
         }
 
         let asset = ContextAsset {
