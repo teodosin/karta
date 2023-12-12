@@ -207,8 +207,6 @@ pub fn save_context(
         pin_to_presence: rn_pin_pres.is_some(),
     };
 
-    println!("Edges on root node: {:?}", rn_edges.edges.len());
-
     let nodes_serial: Vec<NodeSerial> = rn_edges.edges.iter().map(|edge| {
         let edge_entity = all_edges.get(*edge);
         if edge_entity.is_err() {
@@ -258,8 +256,6 @@ pub fn save_context(
         Some(node_serial)
 
     }).filter(|node_serial| node_serial.is_some()).map(|node_serial| node_serial.unwrap()).collect();
-
-    println!("Saving {} nodes", nodes_serial.len());
 
     let edges_serial: Vec<RootEdgeSerial> = rn_edges.edges.iter().map(|edge| {
         let edge_entity = all_edges.get(*edge);
@@ -340,8 +336,6 @@ pub fn save_context(
             node.path.to_str().unwrap().to_string()
         }).collect();
 
-        println!("All node paths: {:?}", all_node_paths);
-
 
         let mut edges_serial: Vec<RootEdgeSerial> = existing_edges.iter().filter_map(|edge_serial| {
             let (source, target) = (&edge_serial.source, &edge_serial.target);
@@ -354,7 +348,6 @@ pub fn save_context(
             }
         }).collect();
 
-        println!("Edges serial existing file: {:?}", edges_serial);
 
         for edge in edges.edges.iter() {
             let edge_entity = all_edges.get(*edge);
