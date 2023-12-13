@@ -21,7 +21,7 @@ use crate::{graph::context::{CurrentContext, update_context}, vault::vault_asset
 
 use self::{context_asset::{ContextAsset, save_context}, asset_manager::{ImageLoadTracker, on_image_load}, vault_asset::save_vaults};
 
-mod context_asset;
+pub(crate) mod context_asset;
 mod vault_asset;
 mod asset_manager;
 

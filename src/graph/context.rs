@@ -7,7 +7,7 @@ use bevy_mod_picking::prelude::PointerButton;
 use std::{fs, path::PathBuf, ffi::OsString};
 
 use crate::{
-    graph::{graph_cam, edges::{create_edge, EdgeTypes}, node_types::get_type_from_path}, vault::CurrentVault, 
+    graph::{graph_cam, edges::{create_edge, EdgeTypes}, node_types::get_type_from_path}, vault::{CurrentVault, context_asset::open_context_file_from_node_path}, 
     events::{nodes::{NodeClickEvent, NodeSpawnedEvent}, edges::EdgeSpawnedEvent},
 };
 
@@ -121,6 +121,7 @@ fn initial_context(
 }
 
 // Big monolith function
+// Could it be split up? Maybe
 // --------------------------------------------------------------------------------
 pub fn update_context(
     mut node_event: EventWriter<NodeSpawnedEvent>,
@@ -131,7 +132,6 @@ pub fn update_context(
     vault: Res<CurrentVault>,
     context: Res<CurrentContext>,
 
-    mut view_data: ResMut<graph_cam::ViewData>,
     mut pe_index: ResMut<PathsToEntitiesIndex>,
 
     mut nodes: Query<(Entity, &GraphDataNode, &Transform)>,
@@ -155,192 +155,199 @@ pub fn update_context(
             return
         }
     };
-    // Also return if the target path is already the current context
 
-    // Iterate through existing nodes and mark them for deletion
-    for (entity, _node, _pos) in nodes.iter_mut() {
-        commands.entity(entity).insert(ToBeDespawned);
-    }
+    // Get context file result
+    let context_file = open_context_file_from_node_path(
+        &vault.get_root_path(),
+        &vault.get_vault_path(),
+        &path
+    );
 
-    let root_position: Vec2;
+    // Huge branch here, possibly ripe for refactoring later
+    match context_file {
+        Ok(context_file) => {
 
-    // Spawn the context root if it doesn't exist
-    let root_node = match pe_index.0.get(&path) {
-        Some(entity) => {
-            println!("Root node already exists");
-            // Get position of root node
-            root_position = nodes.get(*entity).unwrap().2.translation.truncate();
-            commands.entity(*entity).remove::<ToBeDespawned>();
-            *entity
         },
-        None => {
-            println!("Root node doesn't exist, spawning");
-            let mut root_path = path.clone();
-            let root_name = path.file_name().unwrap();
-            root_path.pop();
-            root_position = Vec2::ZERO;
-            let root_type = get_type_from_path(&root_path).unwrap();
-            println!("Root Path: {}, Root Name: {}", root_path.display(), root_name.to_string_lossy());
-            spawn_node(
-                &mut node_event,
-                &mut commands, 
-                root_path, 
-                root_name.into(),
-                root_type,
-                root_position,
-                &mut pe_index,
-            )
-        }
-    };
-    // Remove ContextRoot marker component from previous root
-    for node in root.iter(){
-        commands.entity(node).remove::<ContextRoot>();
-    }
-    commands.entity(root_node).insert(ContextRoot);
-    commands.entity(root_node).insert(PinnedToPosition);
-
-    // Get position 
 
 
-    // Don't despawn the parent directory of the root
-    let root_parent_path = path.parent().unwrap();
-
-    // Spawn parent if it doesn't exist
-    // AND if we are not already at the root
-
-    let parent_node = match pe_index.0.get(root_parent_path) {
-        Some(entity) => {
-            println!("Parent node already exists");
-            commands.entity(*entity).remove::<ToBeDespawned>();
-            Some(*entity)
-        },
-        None => {
-            if root_parent_path.starts_with(&vault.get_root_path()){
-                println!("Parent node doesn't exist, spawning");
-
-                let parent_name = root_parent_path.file_name().unwrap();
-                let parent_path = root_parent_path.parent().unwrap();
-
-                // Check if the parent is a directory or a file
-
-                let parent_type = get_type_from_path(&path).unwrap();
-
-                println!("Parent Path: {}, Parent Name: {:?}", parent_path.display(), parent_name);
-                Some(spawn_node(
-                    &mut node_event,
-                    &mut commands, 
-                    parent_path.into(), 
-                    parent_name.into(),
-                    parent_type,
-                    root_position,
-                    &mut pe_index,
-                ))
-            } else {
-                println!("Current context is vault root, not spawning parent");
-                None
-            }
-        }
-    };
-
-    // Add an edge from the parent to the root, if the parent exists
-    match parent_node {
-        Some(entity) => {
-            create_edge(
-                &mut edge_event,
-                &entity, 
-                &root_node, 
-                EdgeTypes::Parent,
-                &mut commands,
-                &edges,
-            );
-        },
-        None => (),
-    }
-
-    println!("Path: {}", path.display());
-    let entries = fs::read_dir(&path);
-
-    // Get all file and folder names in 
-    let _entries = match entries {
-        Ok(entries) => {
-            // Get all files
-            let mut file_names: Vec<OsString> = entries
-            // Ignore the vault folder!!!
-            .filter(|entry| {
-                let path = entry.as_ref().unwrap().path();
-                println!("Is path {:?} the vault path: {}:", path, path == vault.get_vault_path());
-                path != vault.get_vault_path()
-            })
-            // Carry on with everything else
-            .filter_map(|entry| {
-                let path = entry.ok()?.path().clone();
-                let file_name: OsString = path.file_name()?.into();
-                Some(file_name)
-            })
-            .collect();
-
-            // file_names.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
-            // Sort the OsStr vec
-            file_names.sort_by(|a, b| a.cmp(&b));
-
-            for file in file_names.iter() {
-                println!("File: {}", file.to_string_lossy());
+        Err(_e) => {
+            // Iterate through existing nodes and mark them for deletion
+            for (entity, _node, _pos) in nodes.iter_mut() {
+                commands.entity(entity).insert(ToBeDespawned);
             }
 
-            file_names.iter().for_each(|name| {
+            let root_position: Vec2;
 
-                // Check if the item already exists
-                let full_path = path.join(name);
-                let item_exists = pe_index.0.get(&full_path).is_some();
-                if item_exists {
-                        println!("Item already exists: {}", full_path.display());
-                        // Remove despawn component
-                        commands.entity(pe_index.0.get(&full_path).unwrap().clone()).remove::<ToBeDespawned>();
-                        return
+            // Spawn the context root if it doesn't exist
+            let root_node = match pe_index.0.get(&path) {
+                Some(entity) => {
+                    println!("Root node already exists");
+                    // Get position of root node
+                    root_position = nodes.get(*entity).unwrap().2.translation.truncate();
+                    commands.entity(*entity).remove::<ToBeDespawned>();
+                    *entity
+                },
+                None => {
+                    println!("Root node doesn't exist, spawning");
+                    let mut root_path = path.clone();
+                    let root_name = path.file_name().unwrap();
+                    root_path.pop();
+                    root_position = Vec2::ZERO;
+                    let root_type = get_type_from_path(&root_path).unwrap();
+                    println!("Root Path: {}, Root Name: {}", root_path.display(), root_name.to_string_lossy());
+                    spawn_node(
+                        &mut node_event,
+                        &mut commands, 
+                        root_path, 
+                        root_name.into(),
+                        root_type,
+                        root_position,
+                        &mut pe_index,
+                    )
                 }
-        
-                // Get the type of the item
-                let item_type = get_type_from_path(&full_path);
-                let item_type = match item_type {
-                    Some(item_type) => item_type,
-                    None => {
-                        println!("Item path unwrap panic: {}", full_path.display());
-                        return
-                    }
-                };
-        
-                // Spawn a node for each item
-                let node = spawn_node(
-                    &mut node_event,
-                    &mut commands,
-                    path.clone().into(),
-                    name.into(),
-                    item_type,
-                    root_position,
-                    &mut pe_index,
-                );
-        
-                // Spawn an edge from the root node to each item
-                create_edge(
-                    &mut edge_event,
-                    &root_node, 
-                    &node, 
-                    EdgeTypes::Parent,
-                    &mut commands,
-                    &edges,
-                );
-            });
-        },
-        Err(e) => {
-            println!("Error: {}", e);
-        }
-    };
-    
+            };
+            // Remove ContextRoot marker component from previous root
+            for node in root.iter(){
+                commands.entity(node).remove::<ContextRoot>();
+            }
+            commands.entity(root_node).insert(ContextRoot);
+            commands.entity(root_node).insert(PinnedToPosition);
 
-    // Print pe_index to see what the hell is going on
-    for (path, entity) in pe_index.0.iter() {
-        println!("Path: {}, Entity: {:?}", path.display(), entity);
-    };
+            // Don't despawn the parent directory of the root
+            let root_parent_path = path.parent().unwrap();
+
+            // Spawn parent if it doesn't exist
+            // AND if we are not already at the root
+
+            let parent_node = match pe_index.0.get(root_parent_path) {
+                Some(entity) => {
+                    println!("Parent node already exists");
+                    commands.entity(*entity).remove::<ToBeDespawned>();
+                    Some(*entity)
+                },
+                None => {
+                    if root_parent_path.starts_with(&vault.get_root_path()){
+                        println!("Parent node doesn't exist, spawning");
+
+                        let parent_name = root_parent_path.file_name().unwrap();
+                        let parent_path = root_parent_path.parent().unwrap();
+
+                        // Check if the parent is a directory or a file
+
+                        let parent_type = get_type_from_path(&path).unwrap();
+
+                        println!("Parent Path: {}, Parent Name: {:?}", parent_path.display(), parent_name);
+                        Some(spawn_node(
+                            &mut node_event,
+                            &mut commands, 
+                            parent_path.into(), 
+                            parent_name.into(),
+                            parent_type,
+                            root_position,
+                            &mut pe_index,
+                        ))
+                    } else {
+                        println!("Current context is vault root, not spawning parent");
+                        None
+                    }
+                }
+            };
+
+            // Add an edge from the parent to the root, if the parent exists
+            match parent_node {
+                Some(entity) => {
+                    create_edge(
+                        &mut edge_event,
+                        &entity, 
+                        &root_node, 
+                        EdgeTypes::Parent,
+                        &mut commands,
+                        &edges,
+                    );
+                },
+                None => (),
+            }
+
+            println!("Path: {}", path.display());
+            let entries = fs::read_dir(&path);
+
+            // Get all file and folder names in 
+            let _entries = match entries {
+                Ok(entries) => {
+                    // Get all files
+                    let mut file_names: Vec<OsString> = entries
+                    // Ignore the vault folder!!!
+                    .filter(|entry| {
+                        let path = entry.as_ref().unwrap().path();
+                        println!("Is path {:?} the vault path: {}:", path, path == vault.get_vault_path());
+                        path != vault.get_vault_path()
+                    })
+                    // Carry on with everything else
+                    .filter_map(|entry| {
+                        let path = entry.ok()?.path().clone();
+                        let file_name: OsString = path.file_name()?.into();
+                        Some(file_name)
+                    })
+                    .collect();
+
+                    // file_names.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
+                    // Sort the OsStr vec
+                    file_names.sort_by(|a, b| a.cmp(&b));
+
+                    for file in file_names.iter() {
+                        println!("File: {}", file.to_string_lossy());
+                    }
+
+                    file_names.iter().for_each(|name| {
+
+                        // Check if the item already exists
+                        let full_path = path.join(name);
+                        let item_exists = pe_index.0.get(&full_path).is_some();
+                        if item_exists {
+                                println!("Item already exists: {}", full_path.display());
+                                // Remove despawn component
+                                commands.entity(pe_index.0.get(&full_path).unwrap().clone()).remove::<ToBeDespawned>();
+                                return
+                        }
+                
+                        // Get the type of the item
+                        let item_type = get_type_from_path(&full_path);
+                        let item_type = match item_type {
+                            Some(item_type) => item_type,
+                            None => {
+                                println!("Item path unwrap panic: {}", full_path.display());
+                                return
+                            }
+                        };
+                
+                        // Spawn a node for each item
+                        let node = spawn_node(
+                            &mut node_event,
+                            &mut commands,
+                            path.clone().into(),
+                            name.into(),
+                            item_type,
+                            root_position,
+                            &mut pe_index,
+                        );
+                
+                        // Spawn an edge from the root node to each item
+                        create_edge(
+                            &mut edge_event,
+                            &root_node, 
+                            &node, 
+                            EdgeTypes::Parent,
+                            &mut commands,
+                            &edges,
+                        );
+                    });
+                },
+                Err(e) => {
+                    println!("Error: {}", e);
+                }
+            };
+        }
+    }    
 }
 
 // Collapse and expand functions

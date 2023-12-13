@@ -2,7 +2,7 @@
 
 use std::{path::PathBuf, ffi::OsString};
 
-use bevy::{prelude::*, input::keyboard::KeyboardInput};
+use bevy::{prelude::*, input::keyboard::KeyboardInput, utils::HashMap};
 use bevy_mod_picking::picking_core::PickSet;
 
 use super::{context::{PathsToEntitiesIndex, ToBeDespawned, Selected}, node_types::{NodeTypes, NodeData, type_to_data}};
@@ -63,29 +63,22 @@ impl GraphDataNode {
 
 // A component to store the edge relationships of a node
 // Stores a vec to the edge entities
-#[derive(Component)]
+#[derive(Component, Clone, Debug, Default)]
 pub struct GraphNodeEdges {
-    pub edges: Vec<Entity>,
-}
-
-impl Default for GraphNodeEdges {
-    fn default() -> Self {
-        GraphNodeEdges {
-            edges: Vec::new(),
-        }
-    }
+    // The key is a reference to the other node entity, the value is the edge entity
+    pub edges: HashMap<Entity, Entity>,
 }
 
 impl GraphNodeEdges {
-    pub fn add_edge(&mut self, edge: Entity) {
-        println!("Adding edge: {:?}", edge);
-        self.edges.push(edge);
+    pub fn add_edge(&mut self, node: Entity, edge: Entity) {
+        println!("Adding edge: {:?} to node {:?}", edge, node);
+        self.edges.insert(node, edge);
     }
 
     pub fn remove_edge(&mut self, edge: Entity) {
-        self.edges.retain(|&e| e != edge);
+        println!("Removing edge: {:?}", edge);
+        self.edges.retain(|_, v| *v != edge);
     }
-
 }
 
 
