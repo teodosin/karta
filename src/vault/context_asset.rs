@@ -86,7 +86,7 @@ pub struct RootEdgeSerial {
 
 // Functions
 // --------------------------------------------------------------------------
-pub fn open_context_from_node_path(
+pub fn open_context_file_from_node_path(
     vault_root_path: &PathBuf,
     vault_dir_path: &PathBuf,
     node_path: &PathBuf,
@@ -158,8 +158,8 @@ pub fn save_context(
         }
     };
 
-    let vault_root_path = &vault.root;
-    let vault_dir_path = vault_root_path.join(&vault.vault_folder_name);
+    let vault_root_path = &vault.get_root_path();
+    let vault_dir_path = &vault.get_vault_path();
 
     #[cfg(debug_assertions)]
     println!("Vault root path: {:?}", vault_root_path);
@@ -207,20 +207,14 @@ pub fn save_context(
         pin_to_presence: rn_pin_pres.is_some(),
     };
 
-    let nodes_serial: Vec<NodeSerial> = rn_edges.edges.iter().map(|edge| {
+    let nodes_serial: Vec<NodeSerial> = rn_edges.edges.iter().map(|(node, edge)| {
         let edge_entity = all_edges.get(*edge);
         if edge_entity.is_err() {
             return None
         }
         let (_entity, edge, _etype, _attributes) = edge_entity.unwrap();
 
-        let other_node_entity = if edge.source == rn_entity {
-            edge.target
-        } else {
-            edge.source
-        };
-
-        let other_node = match all_nodes.get(other_node_entity) {
+        let other_node = match all_nodes.get(*node) {
             Ok(other_node) => other_node,
             Err(_) => return None,
         };
@@ -257,7 +251,7 @@ pub fn save_context(
 
     }).filter(|node_serial| node_serial.is_some()).map(|node_serial| node_serial.unwrap()).collect();
 
-    let edges_serial: Vec<RootEdgeSerial> = rn_edges.edges.iter().map(|edge| {
+    let edges_serial: Vec<RootEdgeSerial> = rn_edges.edges.iter().map(|(node, edge)| {
         let edge_entity = all_edges.get(*edge);
         if edge_entity.is_err() {
             return None
@@ -303,7 +297,7 @@ pub fn save_context(
 
         // Load the context file if it exists
         // Destructure it into its components
-        let (_, existing_nodes, existing_edges): (RootNodeSerial, Vec<NodeSerial>, Vec<RootEdgeSerial>) = match open_context_from_node_path(
+        let (_, existing_nodes, existing_edges): (RootNodeSerial, Vec<NodeSerial>, Vec<RootEdgeSerial>) = match open_context_file_from_node_path(
             vault_root_path,
             &vault_dir_path,
             &node.path,
@@ -349,7 +343,7 @@ pub fn save_context(
         }).collect();
 
 
-        for edge in edges.edges.iter() {
+        for (node, edge) in edges.edges.iter() {
             let edge_entity = all_edges.get(*edge);
             if edge_entity.is_err() {
                 continue

@@ -34,6 +34,15 @@ pub struct GraphEdge {
     pub target: Entity,
 }
 
+impl GraphEdge {
+    pub fn same_pair(&self, other: &GraphEdge) -> bool {
+        if self.source == other.source && self.target == other.target {
+            return true;
+        }
+        false
+    }
+}
+
 #[derive(Component, Clone, Debug, PartialEq, Reflect)]
 pub struct EdgeType {
     pub etype: EdgeTypes,
@@ -61,14 +70,16 @@ pub fn create_edge(
     commands: &mut Commands,
     edges: &Query<(&GraphEdge, &EdgeType)>,
 ){
-    // Check if a Parent edge already exists between the node pair
-    if etype == EdgeTypes::Parent {
-        for edge in edges.iter() {
-            let (edge, etype) = edge;
-            if edge.source == *from && edge.target == *to && etype.etype == EdgeTypes::Parent{
-                println!("Parent edge already exists between these nodes");
-                return;
-            }
+    // Check if an edge already exists between the node pair
+
+
+    for (edge, edge_type) in edges.iter() {
+        if edge.same_pair(&GraphEdge {
+            source: *from,
+            target: *to,
+        }) {
+            println!("Edge already exists between {:?} and {:?}", from, to);
+            return
         }
     }
 
@@ -106,17 +117,21 @@ pub fn create_edge(
 pub fn add_edge_to_node_indexes(
     mut event: EventReader<EdgeSpawnedEvent>,
     mut edges: Query<&GraphEdge>,
-    mut nodes: Query<&mut GraphNodeEdges>,
+    nodes: Query<Entity, With<GraphNodeEdges>>,
+    mut node_edges: Query<&mut GraphNodeEdges>,
 ) {
     for ev in event.read(){
         let edge_entity = ev.entity;
         let edge_data = edges.get_mut(edge_entity).unwrap();
 
-        let mut source_node = nodes.get_mut(edge_data.source).unwrap();
-        source_node.add_edge(edge_entity);
+        let mut source_edges = node_edges.get_mut(edge_data.source).unwrap();
+        let target_entity = nodes.get(edge_data.target).unwrap();
 
-        let mut target_node = nodes.get_mut(edge_data.target).unwrap();
-        target_node.add_edge(edge_entity);
+        source_edges.add_edge(target_entity, edge_entity);
+ 
+        let mut target_edges = node_edges.get_mut(edge_data.target).unwrap();
+        let source_entity = nodes.get(edge_data.source).unwrap();
+        target_edges.add_edge(source_entity, edge_entity);
     }
 }
 
