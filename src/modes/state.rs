@@ -32,6 +32,7 @@ impl Plugin for StatePlugin {
     }
 }
 
+/// Function that runs in the State mode to change the context path on node click. 
 fn change_context_path(
     mut event: EventReader<NodeClickEvent>,
     input_data: Res<InputData>,
@@ -50,7 +51,7 @@ fn change_context_path(
 
     println!("Changing context");
 
-    let cxt = match &context.cxt {
+    let cxt = match &context.context {
         Some(cxt) => cxt,
         None => {
             println!("No context set");
@@ -59,7 +60,7 @@ fn change_context_path(
     };
 
     let path: PathBuf = input_data.latest_click_entity.clone()
-    .unwrap_or(cxt.get_current_context_path());
+    .unwrap_or(cxt.get_path());
 
     let vault = match vault{
         Some(ref vault) => vault,
@@ -69,12 +70,12 @@ fn change_context_path(
         }
     };
 
-    if path == cxt.get_current_context_path() && path != vault.get_root_path(){
+    if path == cxt.get_path() && path != vault.get_root_path(){
         println!("Already in context: {}", path.display());
         return
     }
 
     println!("Changing context to: {}", path.display());
-    context.set_current_context(path.clone());
+    context.set_current_context(vault.get_vault_path(), path.clone());
 
 }
