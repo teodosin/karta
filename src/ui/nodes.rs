@@ -115,6 +115,10 @@ pub fn add_node_ui(
             On::<Pointer<Deselect>>::target_remove::<Selected>(),
         ));
 
+        if ev.pinned_to_position {
+            commands.entity(ev.entity).insert(PinnedToPosition);
+        }
+
         match ev.ntype {
             NodeTypes::FileImage => {
                 add_image_node_ui(&ev, &mut commands, &mut server, &mut view_data)

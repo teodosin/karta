@@ -2,9 +2,9 @@
 
 use std::ffi::OsString;
 
-use bevy::prelude::{Entity, With, Vec2};
+use bevy::{prelude::{Entity, With, Vec2}, transform::components::Transform};
 
-use crate::{graph::{nodes::{PinnedToPosition, GraphDataNode}, context::{PathsToEntitiesIndex, Selected, CurrentContext}, node_types::{NodeTypes, type_to_data}}, input::pointer::InputData, ui::nodes::GraphViewNode, events::nodes::NodeSpawnedEvent};
+use crate::{graph::{nodes::{PinnedToPosition, GraphDataNode, ContextRoot}, context::{PathsToEntitiesIndex, Selected, CurrentContext}, node_types::{NodeTypes, type_to_data}}, input::pointer::InputData, ui::nodes::GraphViewNode, events::nodes::NodeSpawnedEvent};
 
 use super::Action;
 
@@ -29,7 +29,7 @@ impl Action for CreateNodeAction {
         // in the current path.
         let context = world.get_resource::<CurrentContext>().unwrap();
 
-        let cxt = match &context.cxt {
+        let cxt = match &context.context {
             None => {
                 println!("No context set");
                 return
@@ -37,7 +37,7 @@ impl Action for CreateNodeAction {
             Some(cxt) => cxt,
         };
 
-        let cpath = cxt.get_current_context_path();
+        let cpath = cxt.get_path();
         
         let mut name = OsString::from(self.ntype.to_string());
         let mut full_path = cpath.join(&name);
@@ -67,6 +67,8 @@ impl Action for CreateNodeAction {
         )).id();
         
         self.entity = Some(node_entity);
+
+        let root_position = world.query_filtered::<&Transform, With<ContextRoot>>().single(world);
         
         world.send_event(NodeSpawnedEvent {
             entity: node_entity,
@@ -74,7 +76,9 @@ impl Action for CreateNodeAction {
             name: name,
             ntype: self.ntype,
             data: type_to_data(self.ntype),
-            position: self.position,
+            root_position: root_position.translation.truncate(),
+            self_position: Some(self.position),
+            pinned_to_position: false,
         });
         
         // Update the PathsToEntitiesIndex

@@ -105,8 +105,8 @@ impl fmt::Display for DataTypes {
     }
 }
 
-// A helper function to get the type based on a node path
-pub fn get_type_from_path(
+/// A helper function to get the type of a physical node based on its path
+pub fn get_type_from_file_path(
     path: &PathBuf, 
 ) -> Option<NodeTypes> {
     match fs::metadata(&path) {
@@ -136,6 +136,12 @@ pub fn get_type_from_path(
             None
         }
     }
+}
+
+pub fn get_type_from_context_path(
+    path: &PathBuf, 
+) -> Option<NodeTypes> {
+    Some(NodeTypes::Base) 
 }
 
 pub trait NodeData: Send + Sync + 'static {
