@@ -1,6 +1,6 @@
 //
 
-use std::{path::PathBuf, fs::DirEntry, io::Write};
+use std::{path::{PathBuf, Path}, fs::DirEntry, io::Write};
 
 use bevy::{prelude::Vec2, ecs::{system::{Res, Query}, entity::Entity, query::{With, Without}}, reflect::TypePath, utils::HashMap, transform::components::Transform};
 use serde::{Deserialize, Serialize};
@@ -15,7 +15,9 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 // Serialized Structs
 // --------------------------------------------------------------------------
-#[derive(Debug, Serialize, Deserialize, TypePath, Default)]
+/// Serialized struct for the context file. Stores the Karta version in case that data is useful when 
+/// the serialization strategy inevitably changes.
+#[derive(Debug, Clone, Serialize, Deserialize, TypePath, Default)]
 pub struct ContextAsset {
     pub karta_version: String,
 
@@ -28,8 +30,14 @@ pub struct ContextAsset {
     pub edges: Vec<RootEdgeSerial>,
 }
 
+impl ContextAsset {
+    pub fn get_root_node_path(&self) -> PathBuf {
+        PathBuf::from(&self.nself.path)
+    }
+}
+
 // The root node. The only node that stores complete data. 
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct RootNodeSerial {
     pub path: String,
 
@@ -86,23 +94,28 @@ pub struct RootEdgeSerial {
 
 // Functions
 // --------------------------------------------------------------------------
+/// Helper function. Opens a context file for a given node path. 
+/// Takes in the full vault path (name included) and the node path.
 pub fn open_context_file_from_node_path(
-    vault_root_path: &PathBuf,
-    vault_dir_path: &PathBuf,
+    vault_path: &PathBuf,
     node_path: &PathBuf,
 ) -> Result<ContextAsset, String> {
-    let context_path = node_path_to_context_path(vault_root_path, vault_dir_path, node_path);
+    let context_path = node_path_to_context_path(vault_path, node_path);
 
+    open_context_file(&context_path)
+
+}
+
+/// Opens a context file for a given context path. Takes in the full path to the context file.
+pub fn open_context_file(
+    context_path: &PathBuf,
+) -> Result<ContextAsset, String>{
     if context_path.exists() {
 
-        println!("Context file exists: {:?}", context_path);
-
-        // Load the file
         let context_file = std::fs::read_to_string(context_path).expect("Could not read context file");
-        // Deserialize the file
+
         let context_asset = match ron::de::from_str(&context_file) {
             Ok(context_asset) => {
-                println!("Vault assets: {:?}", context_asset);
                 Ok(context_asset)
             },
             Err(e) => {
@@ -110,10 +123,13 @@ pub fn open_context_file_from_node_path(
                 Err(e.to_string())
             }
         };
+
         context_asset
+
     } else {
-        println!("Context file does not exist: {:?}", context_path);
+
         Err("Context file does not exist".to_string())
+
     }
 }
 
@@ -158,13 +174,11 @@ pub fn save_context(
         }
     };
 
-    let vault_root_path = &vault.get_root_path();
-    let vault_dir_path = &vault.get_vault_path();
+    let vault_path = &vault.get_vault_path();
 
     #[cfg(debug_assertions)]
-    println!("Vault root path: {:?}", vault_root_path);
-    #[cfg(debug_assertions)]
-    println!("Vault dir path: {:?}", vault_dir_path);
+    println!("Vault root path: {:?}", vault_path);
+
 
     // What needs to be saved:
     // - The root node
@@ -278,8 +292,7 @@ pub fn save_context(
     };
 
     save_context_file(
-        vault_root_path,
-        &vault_dir_path,
+        vault_path,
         &rn_data.path,
         &root_asset,
     );
@@ -298,8 +311,7 @@ pub fn save_context(
         // Load the context file if it exists
         // Destructure it into its components
         let (_, existing_nodes, existing_edges): (RootNodeSerial, Vec<NodeSerial>, Vec<RootEdgeSerial>) = match open_context_file_from_node_path(
-            vault_root_path,
-            &vault_dir_path,
+            vault_path,
             &node.path,
         ) {
             Ok(context_asset) => {
@@ -337,7 +349,6 @@ pub fn save_context(
             if all_node_paths.contains(source) && all_node_paths.contains(target) {
                 None
             } else {
-                println!("Keeping this one: {:?}", edge_serial);
                 Some(edge_serial.clone())
             }
         }).collect();
@@ -371,8 +382,7 @@ pub fn save_context(
         };
 
         save_context_file(
-            vault_root_path,
-            &vault_dir_path,
+            vault_path,
             &node.path,
             &asset,
         );
@@ -382,7 +392,6 @@ pub fn save_context(
 
 fn save_context_file(
     vault_root_path: &PathBuf,
-    vault_dir_path: &PathBuf,
     node_path: &PathBuf,
     context_asset: &ContextAsset,
 ) {
@@ -392,7 +401,7 @@ fn save_context_file(
         return
     }
 
-    let context_path = node_path_to_context_path(vault_root_path, vault_dir_path, node_path);
+    let context_path = node_path_to_context_path(vault_root_path, node_path);
 
     // Create the directory if it doesn't exist
     if let Some(parent) = context_path.parent() {
@@ -407,18 +416,35 @@ fn save_context_file(
     let mut file = std::fs::File::create(&context_path).expect("Could not create context file");
     file.write_all(data.as_bytes()).expect("Could not write to context file");
     
-    println!("Saved context: {:?}", context_path);
 }
 
-fn node_path_to_context_path(
-    vault_root_path: &PathBuf,
-    vault_dir_path: &PathBuf,
+/// Helper function. Takes in the full vault path (name included) and the node path.
+pub fn node_path_to_context_path(
+    vault_path: &PathBuf,
     node_path: &PathBuf,
 ) -> PathBuf {
-    let vault_dir_name: PathBuf = vault_root_path.file_name().unwrap().into();
+    let vault_dir_name: PathBuf = vault_path.file_name().unwrap().into();
+    let vault_dir_path: &Path;
+
+    // The first parent should be guaranteed to exists since the vault exists in that folder
+    match vault_path.parent().unwrap().parent() {
+        Some(parent) => vault_dir_path = parent,
+        None => panic!("Failed getting parent for {}", vault_path.to_str().unwrap())
+    };
+
+    let node_path_no_vault_prefix: &Path;
+    match node_path.strip_prefix(vault_dir_path) {
+        Ok(no_vault_prefix) => node_path_no_vault_prefix = no_vault_prefix,
+        Err(_) => {
+            println!("Failed stripping prefix {} for {}", vault_path.display(), node_path.to_str().unwrap());
+            node_path_no_vault_prefix = node_path.strip_prefix("/").unwrap();
+        }
+    };
     
 
-    let mut context_path = vault_dir_path.join(vault_dir_name).join(&node_path.strip_prefix(vault_root_path).unwrap());
+    let mut context_path = vault_path.join(node_path_no_vault_prefix);
+
+    println!("Resulting context path: {:?}", context_path);
 
         // TODO: Add support for non-unicode characters
     if let Some(stem) = context_path.file_name().and_then(|s| s.to_str()) {
@@ -426,8 +452,14 @@ fn node_path_to_context_path(
         context_path.set_file_name(new_name);
     }
 
-    println!("Saving context to: {:?}", context_path);
     context_path
+}
+
+pub fn context_path_to_node_parent_path(
+    vault_path: &PathBuf,
+    context_path: &PathBuf,
+) -> PathBuf {
+    PathBuf::new()
 }
 
 pub fn _dir_or_file_is_hidden(

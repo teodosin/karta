@@ -18,7 +18,9 @@ pub struct NodeSpawnedEvent {
     pub name: OsString,
     pub ntype: NodeTypes,
     pub data: Option<Box<dyn NodeData>>,
-    pub position: Vec2,
+    pub root_position: Vec2,
+    pub self_position: Option<Vec2>,
+    pub pinned_to_position: bool,
 }
 
 #[derive(Event)]   

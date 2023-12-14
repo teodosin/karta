@@ -34,7 +34,7 @@ fn update_active_on_context_change(
     context: Res<CurrentContext>,
     mut active: ResMut<CurrentActive>,
 ){
-    let cxt = match &context.cxt {
+    let cxt = match &context.context {
         Some(cxt) => cxt,
         None => {
             println!("No context set");
@@ -42,7 +42,7 @@ fn update_active_on_context_change(
         }
     };
     
-    active.active = Some(cxt.get_current_context_path());
+    active.active = Some(cxt.get_path());
 
 }
 

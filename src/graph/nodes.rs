@@ -5,7 +5,7 @@ use std::{path::PathBuf, ffi::OsString};
 use bevy::{prelude::*, input::keyboard::KeyboardInput, utils::HashMap};
 use bevy_mod_picking::picking_core::PickSet;
 
-use super::{context::{PathsToEntitiesIndex, ToBeDespawned, Selected}, node_types::{NodeTypes, NodeData, type_to_data}};
+use super::{context::{PathsToEntitiesIndex, ToBeDespawned, Selected, CurrentContext}, node_types::{NodeTypes, NodeData, type_to_data}};
 
 use crate::{events::nodes::*, ui::nodes::{NodeOutline, GraphViewNode}, input::pointer::{InputData, update_cursor_info}};
 
@@ -22,7 +22,9 @@ impl Plugin for NodesPlugin {
             .before(update_cursor_info)
             .after(PickSet::Last))
 
-            .add_systems(PostUpdate, despawn_nodes)
+            .add_systems(PostUpdate, despawn_nodes
+                // .run_if(resource_changed::<CurrentContext>())
+            )
         ;
     }
 }
@@ -145,10 +147,10 @@ fn handle_node_click(
             
             match nodes.get(target){
                 Ok(node) => {
-                    let target_path = node.1.path.clone();
+                    let (entity, data) = node;
+                    let target_path = data.path.clone();
                     input_data.latest_click_entity = Some(target_path.clone());
-                    commands.entity(node.0).insert(Selected);
-                    //println!("Clicking path: {}", target_path);
+                    commands.entity(entity).insert(Selected);
                 },
                 Err(_) => {
                     //println!("No node found");
@@ -265,24 +267,27 @@ fn handle_node_hover(
 // TODO: Address this limitation. 
 pub fn spawn_node (
     event: &mut EventWriter<NodeSpawnedEvent>,
-
     commands: &mut Commands,
+
     path: PathBuf,
-    name: OsString,
     ntype: NodeTypes,
-    position: Vec2, // For the viewnodes
+
+    root_position: Vec2, // For the viewnodes
+    self_position: Option<Vec2>, // For the viewnodes
+
+    pinned_to_position: bool,
 
     pe_index: &mut ResMut<PathsToEntitiesIndex>,
+
 ) -> bevy::prelude::Entity {
-
-    let full_path = path.join(&name);
-
 
     let data = type_to_data(ntype);
 
+    let name = path.file_name().unwrap().to_os_string();
+
     let node_entity = commands.spawn((
         GraphDataNode {
-            path: full_path.clone(),
+            path: path.clone(),
             name: name.clone(),
             ntype,
             data: None,
@@ -292,15 +297,17 @@ pub fn spawn_node (
 
     event.send(NodeSpawnedEvent {
         entity: node_entity,
-        path: path,
+        path: path.clone(),
         name: name,
         ntype,
         data,
-        position: position,
+        root_position,
+        self_position,
+        pinned_to_position,
     });
 
     // Update the PathsToEntitiesIndex
-    pe_index.0.insert(full_path, node_entity);
+    pe_index.0.insert(path, node_entity);
 
     // Return the node entity
     node_entity
@@ -311,6 +318,7 @@ fn despawn_nodes(
     mut nodes: Query<(Entity, &GraphDataNode), With<ToBeDespawned>>,
     mut pe_index: ResMut<PathsToEntitiesIndex>,
 ){
+    println!("About to despawn {} nodes", nodes.iter_mut().count());
     for (entity, node) in nodes.iter_mut() {
         commands.entity(entity).despawn_recursive();
         pe_index.0.remove(&node.path);

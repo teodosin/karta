@@ -70,6 +70,8 @@ pub fn spawn_context_menu(
             nodepath
         }
     };
+
+    println!("Context menu for: {:?}", nodepath);
     
     if button != PointerButton::Secondary {
         return

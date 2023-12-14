@@ -141,7 +141,9 @@ pub fn repulsion_constraints (
     }
 
     for (node, _view, _pos, mut vel) in nodes.iter_mut(){
-        vel.velocity = forces[&node];
+        if forces.contains_key(&node){
+            vel.velocity = forces[&node];
+        }
     }
 }
 

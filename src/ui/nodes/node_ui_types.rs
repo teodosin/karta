@@ -52,16 +52,26 @@ pub fn add_base_node_ui(
 ){
     // Positions are slightly randomized to avoid nodes being spawned on top of each other
     let mut rng = rand::thread_rng();
-    let pos = Vec2::new(35.0, 0.0);
+    let label_pos = Vec2::new(35.0, 0.0);
     let radius = 25.0;
+
+    let node_pos: Vec2 = match ev.self_position {
+        Some(pos) => pos,
+        None => {
+            Vec2::new(
+                ev.root_position.x + rng.gen_range(-10.0..10.0),
+                ev.root_position.y + rng.gen_range(-10.0..10.0),
+            )
+        },
+    };
 
     commands.entity(ev.entity).insert((
         MaterialMesh2dBundle {
             mesh: meshes.add(shape::Circle::new(radius).into()).into(),
             material: materials.add(ColorMaterial::from(Color::rgb(0.3, 0.0, 0.0))),
             transform: Transform::from_translation(Vec3::new(
-                ev.position.x + rng.gen_range(-10.0..10.0),
-                ev.position.y + rng.gen_range(-10.0..10.0),
+                node_pos.x,
+                node_pos.y,
                 view_data.top_z,
             )),
             ..default()
@@ -70,7 +80,7 @@ pub fn add_base_node_ui(
     // Update the view_data so we can keep track of which zindex is the topmost
     view_data.top_z += 0.0001;
 
-    add_node_label(&mut commands, &ev, pos, &view_data.top_z);
+    add_node_label(&mut commands, &ev, label_pos, &view_data.top_z);
     add_node_base_outline(&mut commands, &ev.entity, radius, &view_data.top_z);
 }
 
@@ -94,7 +104,7 @@ pub fn add_image_node_ui(
 ){
     let mut rng = rand::thread_rng();
 
-    let full_path = ev.path.join(&ev.name);
+    let full_path = &ev.path;
     println!("Adding image node ui: {:?}", full_path);
 
     let accepted_image_formats = vec!["png", "jpg", "jpeg", "gif", "bmp", "tga", "tif", "tiff", "webp", "ico",];
@@ -113,7 +123,17 @@ pub fn add_image_node_ui(
 
     let image: Handle<Image> = server.load(full_path.clone());
 
-    println!("Position: {:?}", ev.position);
+    println!("Position: {:?}", ev.root_position);
+
+    let node_pos: Vec2 = match ev.self_position {
+        Some(pos) => pos,
+        None => {
+            Vec2::new(
+                ev.root_position.x + rng.gen_range(-10.0..10.0),
+                ev.root_position.y + rng.gen_range(-10.0..10.0),
+            )
+        },
+    };
 
     commands.entity(ev.entity).insert((
 
@@ -125,8 +145,8 @@ pub fn add_image_node_ui(
             },
             transform: Transform {
                 translation: Vec3::new(
-                    ev.position.x + rng.gen_range(-10.0..10.0),
-                    ev.position.y + rng.gen_range(-10.0..10.0),
+                    node_pos.x,
+                    node_pos.y,
                     view_data.top_z,
                 ),
                 ..default()
