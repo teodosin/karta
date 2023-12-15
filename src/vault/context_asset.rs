@@ -221,19 +221,10 @@ pub fn save_context(
         pin_to_presence: rn_pin_pres.is_some(),
     };
 
-    let nodes_serial: Vec<NodeSerial> = rn_edges.edges.iter().map(|(node, edge)| {
-        let edge_entity = all_edges.get(*edge);
-        if edge_entity.is_err() {
+    let nodes_serial: Vec<NodeSerial> = all_nodes.iter().map(|(_, visitor, data, _, on_transform, on_pin_pos, on_pin_pres, _)| {
+        if visitor.is_some() {
             return None
         }
-        let (_entity, edge, _etype, _attributes) = edge_entity.unwrap();
-
-        let other_node = match all_nodes.get(*node) {
-            Ok(other_node) => other_node,
-            Err(_) => return None,
-        };
-
-        let (_, _, on_node, _, on_transform, on_pin_pos, on_pin_pres, _) = other_node;
 
         let relative_position = match on_transform {
             Some(transform) => {
@@ -254,7 +245,7 @@ pub fn save_context(
         };
 
         let node_serial = NodeSerial {
-            path: on_node.path.to_str().unwrap().to_string(),
+            path: data.path.to_str().unwrap().to_string(),
             relative_position,
             relative_size,
             pin_to_position: on_pin_pos.is_some(),
@@ -264,6 +255,53 @@ pub fn save_context(
         Some(node_serial)
 
     }).filter(|node_serial| node_serial.is_some()).map(|node_serial| node_serial.unwrap()).collect();
+
+    // Saving based on root edges was a misstep, because the intention was all along that a node
+    // doesn't have to be connected to root in order to be considered to be in the context.  
+
+    // let nodes_serial: Vec<NodeSerial> = rn_edges.edges.iter().map(|(node, edge)| {
+    //     let edge_entity = all_edges.get(*edge);
+    //     if edge_entity.is_err() {
+    //         return None
+    //     }
+    //     let (_entity, _edge, _etype, _attributes) = edge_entity.unwrap();
+
+    //     let other_node = match all_nodes.get(*node) {
+    //         Ok(other_node) => other_node,
+    //         Err(_) => return None,
+    //     };
+
+    //     let (_, _, on_node, _, on_transform, on_pin_pos, on_pin_pres, _) = other_node;
+
+    //     let relative_position = match on_transform {
+    //         Some(transform) => {
+    //             let node_position = Vec2::new(transform.translation.x, transform.translation.y);
+    //             let relative_position = node_position - rn_transform.unwrap().translation.truncate();
+    //             Some(relative_position)
+    //         },
+    //         None => None,
+    //     };
+
+    //     let relative_size = match on_transform {
+    //         Some(transform) => {
+    //             let node_size = Vec2::new(transform.scale.x, transform.scale.y);
+    //             let rel_size = node_size / rn_transform.unwrap().scale.truncate();
+    //             Some(rel_size)
+    //         },
+    //         None => None,
+    //     };
+
+    //     let node_serial = NodeSerial {
+    //         path: on_node.path.to_str().unwrap().to_string(),
+    //         relative_position,
+    //         relative_size,
+    //         pin_to_position: on_pin_pos.is_some(),
+    //         pin_to_presence: on_pin_pres.is_some(),
+    //     };
+
+    //     Some(node_serial)
+
+    // }).filter(|node_serial| node_serial.is_some()).map(|node_serial| node_serial.unwrap()).collect();
 
     let edges_serial: Vec<RootEdgeSerial> = rn_edges.edges.iter().map(|(node, edge)| {
         let edge_entity = all_edges.get(*edge);
@@ -361,6 +399,13 @@ pub fn save_context(
             }
             let (_entity, edge, etype, attributes) = edge_entity.unwrap();
 
+            let source_entity = node_entity_to_path_index.get(&edge.source);
+            let target_entity = node_entity_to_path_index.get(&edge.target);
+
+            if source_entity.is_none() || target_entity.is_none() {
+                continue
+            }
+
             let edge_serial = RootEdgeSerial {
                 source: node_entity_to_path_index.get(&edge.source).unwrap().to_str().unwrap().to_string(),
                 target: node_entity_to_path_index.get(&edge.target).unwrap().to_str().unwrap().to_string(),
@@ -423,7 +468,6 @@ pub fn node_path_to_context_path(
     vault_path: &PathBuf,
     node_path: &PathBuf,
 ) -> PathBuf {
-    let vault_dir_name: PathBuf = vault_path.file_name().unwrap().into();
     let vault_dir_path: &Path;
 
     // The first parent should be guaranteed to exists since the vault exists in that folder
