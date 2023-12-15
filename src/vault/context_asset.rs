@@ -201,15 +201,6 @@ pub fn save_context(
 
     let (rn_entity, rn_data, rn_edges, rn_transform, rn_pin_pos, rn_pin_pres, rn_attr) = root_node;
 
-    // Data structure to store the index of the node entity to the path of the node.
-    // Needed for the edge serialization
-    let mut node_entity_to_path_index: HashMap<Entity, PathBuf> = all_nodes.iter().map(|(entity, _, node, _, _, _, _, _)| {
-        (entity, node.path.clone())
-    }).collect();
-    node_entity_to_path_index.insert(rn_entity, rn_data.path.clone());
-
-
-
     // Save the root node context. 
     // All the connected nodes are guaranteed to be present in the context. 
     // Relative positions of the other nodes are saved in their corresponding edges.
@@ -311,8 +302,8 @@ pub fn save_context(
         let (_entity, edge, etype, attributes) = edge_entity.unwrap();
 
         let edge_serial = RootEdgeSerial {
-            source: node_entity_to_path_index.get(&edge.source).unwrap().to_str().unwrap().to_string(),
-            target: node_entity_to_path_index.get(&edge.target).unwrap().to_str().unwrap().to_string(),
+            source: edge.source.to_string_lossy().to_string(),
+            target: edge.target.to_string_lossy().to_string(),
             directed: true,
             etype: etype.etype.clone(),
             attributes: attributes.cloned(),
@@ -399,16 +390,9 @@ pub fn save_context(
             }
             let (_entity, edge, etype, attributes) = edge_entity.unwrap();
 
-            let source_entity = node_entity_to_path_index.get(&edge.source);
-            let target_entity = node_entity_to_path_index.get(&edge.target);
-
-            if source_entity.is_none() || target_entity.is_none() {
-                continue
-            }
-
             let edge_serial = RootEdgeSerial {
-                source: node_entity_to_path_index.get(&edge.source).unwrap().to_str().unwrap().to_string(),
-                target: node_entity_to_path_index.get(&edge.target).unwrap().to_str().unwrap().to_string(),
+                source: edge.source.to_string_lossy().to_string(),
+                target: edge.target.to_string_lossy().to_string(),
                 directed: true,
                 etype: etype.etype.clone(),
                 attributes: attributes.cloned(),
