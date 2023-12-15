@@ -1,9 +1,9 @@
-use bevy::{prelude::*, text::Text2dBounds};
+use bevy::{prelude::*, text::{Text2dBounds, TextLayoutInfo}, sprite::Anchor};
 use bevy_mod_picking::prelude::*;
 use bevy_prototype_lyon::{shapes, prelude::{GeometryBuilder, ShapeBundle, Stroke, StrokeOptions}};
 
 use crate::{
-    graph::{nodes::{GraphDataNode, PinnedToPosition}, graph_cam::ViewData, context::Selected, node_types::NodeTypes}, 
+    graph::{nodes::{GraphDataNode, PinnedToPosition, GraphNodeEdges}, graph_cam::ViewData, context::Selected, node_types::NodeTypes}, 
     events::nodes::{MoveNodesEvent, NodeClickEvent, NodePressedEvent, NodeHoverEvent, NodeSpawnedEvent}
 };
 
@@ -25,6 +25,7 @@ impl Plugin for NodesUiPlugin {
 
             // .add_systems(PreUpdate, outlines_pulse)
             // .add_systems(PreUpdate, visualise_pinned_position)
+            .add_systems(PreUpdate, toggle_node_debug_labels)
         ;
     }
 }
@@ -240,6 +241,119 @@ pub fn visualise_pinned_position (
             5.0,
             Color::rgb(0.1, 0.1, 0.9),
         );
+    }
+}
+
+#[derive(Component)]
+pub struct NodeDebugLabel;
+
+pub fn toggle_node_debug_labels(
+    mut commands: Commands,
+
+    mut key_input: ResMut<Input<KeyCode>>,
+
+    mut nodes: Query<(Entity, &GraphNodeEdges)>,
+    mut labels: Query<Entity, &NodeDebugLabel>,
+){
+    if !key_input.just_pressed(KeyCode::P){
+        return
+    }
+
+    if labels.iter_mut().count() > 0 {
+        for label in labels.iter_mut(){
+            commands.entity(label).despawn_recursive();
+        }
+        return;
+    }
+    for (entity, edges) in nodes.iter_mut(){
+        // Self entity number
+        let entity_number_label = commands.spawn((
+            NodeDebugLabel,
+            Text2dBundle {
+                text_anchor: Anchor::TopLeft,
+                text: Text {
+                    sections: vec![TextSection::new(
+                        format!("entity: {:?}", entity),
+                        TextStyle {
+                            font_size: 32.0,
+                            color: Color::WHITE,
+                            ..default()
+                        },
+                    )],
+                    alignment: TextAlignment::Left,
+                    ..default()
+                },
+                transform: Transform {
+                    translation: Vec3::new(40.0, -20.0, 10000.0),
+                    scale: Vec3::new(0.5, 0.5, 1.0),
+                    ..default()
+                },
+                ..default()
+            }
+        )).id();
+        commands.entity(entity).push_children(&[entity_number_label]);
+
+        // Number of edges
+        let edge_count: &str = &edges.edges.len().to_string();
+        let edge_count_label = commands.spawn((
+            NodeDebugLabel,
+            Text2dBundle {
+                text_anchor: Anchor::TopLeft,
+                text: Text {
+                    sections: vec![TextSection::new(
+                        format!("edges: {}", edge_count),
+                        TextStyle {
+                            font_size: 32.0,
+                            color: Color::WHITE,
+                            ..default()
+                        },
+                    )],
+                    alignment: TextAlignment::Left,
+                    ..default()
+                },
+                transform: Transform {
+                    translation: Vec3::new(40.0, -35.0, 10000.0),
+                    scale: Vec3::new(0.5, 0.5, 1.0),
+                    ..default()
+                },
+                ..default()
+            }
+        )).id();
+        commands.entity(entity).push_children(&[edge_count_label]);
+
+        // Edge list
+        let mut edge_list_string = String::new();
+        for edge in edges.edges.iter(){
+            edge_list_string.push_str(&format!("n:{:?} e:{:?}\n", edge.0, edge.1));
+        }
+        let edge_list_label = commands.spawn((
+            NodeDebugLabel,
+            Text2dBundle {
+                text_anchor: Anchor::TopLeft,
+                text_2d_bounds: Text2dBounds {
+                    size: Vec2::new(140.0, 300.0),
+                },
+                text: Text {
+                    sections: vec![TextSection::new(
+                        format!("{}", edge_list_string),
+                        TextStyle {
+                            font_size: 32.0,
+                            color: Color::WHITE,
+                            ..default()
+                        },
+                    )],
+                    alignment: TextAlignment::Left,
+                    ..default()
+                }.with_no_wrap(),
+                transform: Transform {
+                    translation: Vec3::new(40.0, -50.0, 10000.0),
+                    scale: Vec3::new(0.5, 0.5, 1.0),
+                    ..default()
+                },
+                ..default()
+            }
+        )).id();
+        commands.entity(entity).push_children(&[edge_list_label]);
     }
 }
 
