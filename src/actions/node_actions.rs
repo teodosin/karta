@@ -4,7 +4,7 @@ use std::ffi::OsString;
 
 use bevy::{prelude::{Entity, With, Vec2}, transform::components::Transform};
 
-use crate::{graph::{nodes::{PinnedToPosition, GraphDataNode, ContextRoot}, context::{PathsToEntitiesIndex, Selected, CurrentContext}, node_types::{NodeTypes, type_to_data}}, input::pointer::InputData, ui::nodes::GraphViewNode, events::nodes::NodeSpawnedEvent};
+use crate::{graph::{nodes::{PinnedToPosition, GraphDataNode, ContextRoot, GraphNodeEdges}, context::{PathsToEntitiesIndex, Selected, CurrentContext}, node_types::{NodeTypes, type_to_data}}, input::pointer::InputData, ui::nodes::GraphViewNode, events::nodes::NodeSpawnedEvent};
 
 use super::Action;
 
@@ -16,6 +16,8 @@ pub struct CreateNodeAction {
     ntype: NodeTypes,
     position: Vec2,
 }
+
+
 
 impl Action for CreateNodeAction {
     // NOTE: The implementation here must be kept in sync with the implementation of spawn_node,
@@ -37,7 +39,11 @@ impl Action for CreateNodeAction {
             Some(cxt) => cxt,
         };
 
-        let cpath = cxt.get_path();
+        let mut cpath = cxt.get_path();
+
+        while !cpath.is_dir(){
+            cpath.pop();
+        }
         
         let mut name = OsString::from(self.ntype.to_string());
         let mut full_path = cpath.join(&name);
@@ -55,6 +61,8 @@ impl Action for CreateNodeAction {
                 i += 1;
             }
         }
+
+        println!("Creating node with path: {:?}", full_path);
         
         let node_entity = world.spawn((
             GraphDataNode {
@@ -63,6 +71,7 @@ impl Action for CreateNodeAction {
                 ntype: self.ntype,
                 data: type_to_data(self.ntype)
             },
+            GraphNodeEdges::default(),
             PinnedToPosition,
         )).id();
         

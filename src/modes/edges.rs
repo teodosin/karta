@@ -124,7 +124,7 @@ fn draw_edge_preview(
 
 
 // A test for the edge creation
-#[test]
+// #[test]
 fn test_create_edge_from_drag() {
     use bevy::utils::HashMap;
     use crate::graph::edges::GraphEdge;

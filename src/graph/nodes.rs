@@ -280,6 +280,10 @@ pub fn spawn_node (
     pe_index: &mut ResMut<PathsToEntitiesIndex>,
 
 ) -> bevy::prelude::Entity {
+    if pe_index.0.contains_key(&path) {
+        println!("Node already exists");
+        return pe_index.0.get(&path).unwrap().clone();
+    }
 
     let data = type_to_data(ntype);
 
@@ -318,6 +322,10 @@ fn despawn_nodes(
     mut nodes: Query<(Entity, &GraphDataNode), With<ToBeDespawned>>,
     mut pe_index: ResMut<PathsToEntitiesIndex>,
 ){
+    let len = nodes.iter_mut().count();
+    if len == 0 {
+        return
+    }
     println!("About to despawn {} nodes", nodes.iter_mut().count());
     for (entity, node) in nodes.iter_mut() {
         commands.entity(entity).despawn_recursive();

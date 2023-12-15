@@ -68,6 +68,12 @@ impl CurrentContext {
 
         println!("Trying to set context: {}", path.display());
 
+        // If path is outside of vault, return
+        if !path.starts_with(&vault_path.parent().unwrap()) {
+            println!("Path {} is outside of vault: {}", path.display(), vault_path.parent().unwrap().display());
+            return
+        }
+
         let mut path = path;
         let ctype: ContextTypes;
 
@@ -77,19 +83,17 @@ impl CurrentContext {
             path = vault_path.join(path);
         }
 
-        println!("Path before canonicalize: {}", path.display());
-
-        path = path.canonicalize().unwrap();
-
-
-        println!("Path after canonicalize: {}", path.display());
-
+        
         // Determine whether the context is a physical file or a virtual node
         if path.exists() {
             ctype = ContextTypes::Physical;
+            println!("Path before canonicalize: {}", path.display());
+            path = path.canonicalize().unwrap();
+            println!("Path after canonicalize: {}", path.display());
         } else {
             ctype = ContextTypes::Virtual;
         }
+
 
         // Check if the path is a file or a directory
         let mut dir_path = path.clone();
@@ -253,6 +257,47 @@ pub fn update_context(
             debug!("Root node already exists");
             root_position = nodes.get(*entity).unwrap().2.translation.truncate();
             commands.entity(*entity).remove::<ToBeDespawned>();
+
+            match &context_file {
+                Ok(context_file) => {
+                    debug!("Context file exists for already existing node {}", new_cxt_path.display());
+
+                    let root_in_file = context_file.nself.clone();
+                    let root_path: PathBuf = root_in_file.path.into();
+                    let root_path_str = root_path.to_string_lossy().to_string();
+
+                    // Take into account both the nodes in the new context file as well as the edges.
+                    // Nodes in a context file only get updated when the context gets saved with that
+                    // node as root. If the node is not the context root, only its edges will get updated. 
+
+                    for edge in context_file.edges.iter() {
+                        edges_to_spawn.push((edge.source.clone(), edge.target.clone()));
+                        
+                        // If this node is the source or target to a node that is already spawned,
+                        // remove its ToBeDespawned component
+                        println!("Pe index has {} amount of entries", pe_index.0.len());
+                        if root_path_str == edge.source && pe_index.0.contains_key(&PathBuf::from(&edge.target)){
+                            println!("Removing ToBeDespawned component from {}", edge.target);
+                            commands.entity(pe_index.0.get(&PathBuf::from(&edge.target)).unwrap().clone()).remove::<ToBeDespawned>();
+                        }
+                        if root_path_str == edge.target && pe_index.0.contains_key(&PathBuf::from(&edge.source)){
+                            println!("Removing ToBeDespawned component from {}", edge.source);
+                            commands.entity(pe_index.0.get(&PathBuf::from(&edge.source)).unwrap().clone()).remove::<ToBeDespawned>();
+                        }
+                    }
+
+                    for node in context_file.nodes.iter(){
+                        let path = PathBuf::from(&node.path);
+                        if pe_index.0.contains_key(&path){
+                            commands.entity(pe_index.0.get(&path).unwrap().clone()).remove::<ToBeDespawned>();
+                        }
+                    }
+                }
+                Err(_e) => {
+                }
+                    
+            }
+
             *entity
 
         },
@@ -265,9 +310,24 @@ pub fn update_context(
                     root_position = Vec2::ZERO;
                     let root_in_file = context_file.nself.clone();
                     let root_path: PathBuf = root_in_file.path.into();
+                    let root_path_str = root_path.to_string_lossy().to_string();
+
+                    println!("Amount of edges in new context: {}", context_file.edges.len());
 
                     for edge in context_file.edges.iter() {
                         edges_to_spawn.push((edge.source.clone(), edge.target.clone()));
+                        
+                        // If this node is the source or target to a node that is already spawned,
+                        // remove its ToBeDespawned component
+                        println!("Pe index has {} amount of entries", pe_index.0.len());
+                        if root_path_str == edge.source && pe_index.0.contains_key(&PathBuf::from(&edge.target)){
+                            println!("Removing ToBeDespawned component from {}", edge.target);
+                            commands.entity(pe_index.0.get(&PathBuf::from(&edge.target)).unwrap().clone()).remove::<ToBeDespawned>();
+                        }
+                        if root_path_str == edge.target && pe_index.0.contains_key(&PathBuf::from(&edge.source)){
+                            println!("Removing ToBeDespawned component from {}", edge.source);
+                            commands.entity(pe_index.0.get(&PathBuf::from(&edge.source)).unwrap().clone()).remove::<ToBeDespawned>();
+                        }
                     }
 
                     spawn_node(
@@ -327,12 +387,44 @@ pub fn update_context(
     // in sync with the physical files. 
     let mut adjacent_physical_nodes: Vec<PathBuf> = Vec::new();
 
+    // Spawn the remaining nodes. Implemented as a closure that captures the necessary variables
+    // Only used in one place because of borrow issues in others. 
+    let mut spawn_remaining_physicals = | physical_nodes: Vec<PathBuf> | {
+        for node in physical_nodes.iter() {
+            let node_path = node.clone();
+
+            if nodes_spawned.contains_key(&node_path) {
+                continue
+            }
+
+            let node_type = get_type_from_file_path(&node_path).unwrap();
+            let node_pin_to_position = false;
+            let spawned_node = spawn_node(
+                &mut node_event,
+                &mut commands, 
+                node_path.clone(), 
+                node_type,
+                root_position,
+                None,
+                node_pin_to_position,
+                &mut pe_index,
+            );
+
+            let edge_to_root = (node_path.clone().to_string_lossy().to_string(), new_cxt_path.clone().to_string_lossy().to_string());
+            edges_to_spawn.push(edge_to_root);
+
+            // Add the node to the list of nodes that have been spawned
+            nodes_spawned.insert(node_path, spawned_node);
+        }
+    };
+
     match new_ctype {
         // If the context is a physical file 
         ContextTypes::Physical => {
             if new_cxt_path.is_dir(){
                 let parent: PathBuf = new_cxt_path.parent().unwrap().into();
-                if parent.exists(){
+                let parent_in_vault: bool = parent.starts_with(&vault.get_root_path());
+                if parent.exists() && parent_in_vault {
                     adjacent_physical_nodes.push(parent.into());
                 }
 
@@ -340,6 +432,11 @@ pub fn update_context(
                 match entries {
                     Ok(entries) => {
                         entries
+                            // Ignore the vault folder
+                            .filter(|entry| {
+                                let path = entry.as_ref().unwrap().path();
+                                path != vault.get_vault_path()
+                            })
                             .for_each(|entry| {
                                 let path = entry.expect("Entries should be valid").path();
                                 if path.exists(){
@@ -353,7 +450,8 @@ pub fn update_context(
                 }
             } else {
                 let parent: PathBuf = new_cxt_path.parent().unwrap().into();
-                if parent.exists(){
+                let parent_in_vault: bool = parent.starts_with(&vault.get_root_path());
+                if parent.exists() && parent_in_vault {
                     adjacent_physical_nodes.push(parent.into());
                 }
             }
@@ -373,9 +471,12 @@ pub fn update_context(
             
             for node in context_file.nodes.iter() {
                 
+                println!("Node path in next context: {}", node.path);
                 // Find the nodes that are already spawned and remove their ToBeDespawned component
                 let node_path: PathBuf = node.path.clone().into();
+                println!("Exists in pe_index: {}", pe_index.0.get(&node_path).is_some());
                 if pe_index.0.get(&node_path).is_some() {
+                    println!("Removing ToBeDespawned component from {}", node_path.display());
                     commands.entity(pe_index.0.get(&node_path).unwrap().clone()).remove::<ToBeDespawned>();
                     continue
                 }
@@ -420,17 +521,14 @@ pub fn update_context(
                 }
             }
 
-            // Spawn the edges in edges_to_spawn
-            // println!("Nodes spawned: {:?}", nodes_spawned);
-            // println!("Iterating through {} edges", edges_to_spawn.len());
-            
-
-            
-        },
-
-        Err(_e) => {
+            // Tried to use the spawn_remaining_physicals closure here, but there were borrow issues
             for node in adjacent_physical_nodes.iter() {
                 let node_path = node.clone();
+
+                if nodes_spawned.contains_key(&node_path) {
+                    continue
+                }
+
                 let node_type = get_type_from_file_path(&node_path).unwrap();
                 let node_pin_to_position = false;
                 let spawned_node = spawn_node(
@@ -443,42 +541,35 @@ pub fn update_context(
                     node_pin_to_position,
                     &mut pe_index,
                 );
-
+                
+    
                 let edge_to_root = (node_path.clone().to_string_lossy().to_string(), new_cxt_path.clone().to_string_lossy().to_string());
                 edges_to_spawn.push(edge_to_root);
-
-
+    
+    
                 // Add the node to the list of nodes that have been spawned
                 nodes_spawned.insert(node_path, spawned_node);
             }
+
+        },
+
+        Err(_e) => {
+            spawn_remaining_physicals(adjacent_physical_nodes);
         }
     }
 
     for edge in edges_to_spawn.iter() {
         let source_path = PathBuf::from(edge.0.clone());
         let target_path = PathBuf::from(edge.1.clone());
-        // println!("Source path: {}, Target path: {}", source_path.display(), target_path.display());
 
         let source_entity = match nodes_spawned.get(&source_path) {
-            Some(entity) => {
-                println!("Source node exists");
-                *entity
-            },
-            None => {
-                println!("Source node doesn't exist");
-                continue
-            }
+            Some(entity) => *entity,
+            None => continue,
         };
 
         let target_entity = match nodes_spawned.get(&target_path) {
-            Some(entity) => {
-                println!("Target node exists");
-                *entity
-            },
-            None => {
-                println!("Target node doesn't exist");
-                continue
-            }
+            Some(entity) => *entity,
+            None => continue,
         };
 
         create_edge(
@@ -509,7 +600,13 @@ pub fn update_context(
 // --------------------------------------------------------------------------------
 
 #[cfg(test)]
-fn file_node_has_directory_parent() {
-    // Create a file node
-    // Check that it has a directory parent
-}   
+mod context_tests {
+    use crate::tests::vault_utils::vault_utils;
+
+    #[test]
+    fn file_node_has_directory_parent() {
+        let vault = vault_utils::get_test_vault("file_node_has_directory_parent");
+
+        vault_utils::cleanup_test_vault(vault);
+    }   
+}

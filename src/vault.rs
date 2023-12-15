@@ -202,18 +202,19 @@ impl CurrentVault {
 /// and the name of the vault folder. 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct KartaVault{
-    pub vault_folder_name: OsString,
+    pub mirror_folder_name: OsString,
     pub root: PathBuf,
 }
 
 impl KartaVault {
+    /// Takes in the desired path for the vault. .kartaVault will be created inside this folder. 
     pub fn new(path: PathBuf) -> Self {
         let new_vault = KartaVault {
-            vault_folder_name: OsString::from(".kartaVault"),
+            mirror_folder_name: OsString::from(".kartaVault"),
             root: PathBuf::from(path),
         };
 
-        let path: PathBuf = new_vault.root.join(&new_vault.vault_folder_name);
+        let path: PathBuf = new_vault.root.join(&new_vault.mirror_folder_name);
 
         println!("Vault path: {:?}", path);
 
@@ -236,7 +237,12 @@ impl KartaVault {
 
     /// Returns the path to the vault folder, name included
     pub fn get_vault_path(&self) -> PathBuf {
-        let vault_path = self.root.join(&self.vault_folder_name);
+        let vault_path = self.root.join(&self.mirror_folder_name);
         vault_path
+    }
+
+    /// Returns the name of the vault folder, where .kartaVault is located
+    pub fn get_vault_folder_name(&self) -> OsString {
+        self.root.file_name().unwrap().to_os_string()
     }
 }

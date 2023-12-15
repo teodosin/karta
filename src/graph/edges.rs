@@ -124,13 +124,20 @@ pub fn add_edge_to_node_indexes(
         let edge_entity = ev.entity;
         let edge_data = edges.get_mut(edge_entity).unwrap();
 
-        let mut source_edges = node_edges.get_mut(edge_data.source).unwrap();
+        let mut source_edges = match node_edges.get_mut(edge_data.source){
+            Ok(edges) => edges,
+            Err(_) => {continue},
+        };
         let target_entity = nodes.get(edge_data.target).unwrap();
 
         source_edges.add_edge(target_entity, edge_entity);
  
-        let mut target_edges = node_edges.get_mut(edge_data.target).unwrap();
+        let mut target_edges = match node_edges.get_mut(edge_data.target){
+            Ok(edges) => edges,
+            Err(_) => {continue},
+        };
         let source_entity = nodes.get(edge_data.source).unwrap();
+
         target_edges.add_edge(source_entity, edge_entity);
     }
 }
