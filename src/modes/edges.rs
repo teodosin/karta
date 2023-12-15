@@ -58,15 +58,12 @@ fn create_edge_from_drag(
     let from = input_data.latest_press_entity.clone().unwrap();
     let to = input_data.latest_hover_entity.clone().unwrap();
 
-    let from = pe_index.0.get(&from).unwrap();
-    let to = pe_index.0.get(&to).unwrap();
-
     println!("Creating edge from {:?} to {:?}", from, to);
 
     create_edge(
         &mut event,
-        from, 
-        to, 
+        &from, 
+        &to, 
         EdgeTypes::Base,
         &mut commands,
         &edges,

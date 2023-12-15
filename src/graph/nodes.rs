@@ -67,14 +67,16 @@ impl GraphDataNode {
 // Stores a vec to the edge entities
 #[derive(Component, Clone, Debug, Default)]
 pub struct GraphNodeEdges {
-    // The key is a reference to the other node entity, the value is the edge entity
-    pub edges: HashMap<Entity, Entity>,
+    // The key is a reference to the other node, the value is the edge entity
+    // TODO: Entities aren't stable across instances, so getting the correct edge entity
+    // is not guaranteed. No systems need this data yet, but it will be a problem in the future.
+    pub edges: HashMap<PathBuf, Entity>,
 }
 
 impl GraphNodeEdges {
-    pub fn add_edge(&mut self, node: Entity, edge: Entity) {
-        println!("Adding edge: {:?} to node {:?}", edge, node);
-        self.edges.insert(node, edge);
+    pub fn insert_edge(&mut self, node_path: PathBuf, edge: Entity) {
+        println!("Adding edge: {:?} to node {:?}", edge, node_path);
+        self.edges.insert(node_path, edge);
     }
 
     pub fn remove_edge(&mut self, edge: Entity) {

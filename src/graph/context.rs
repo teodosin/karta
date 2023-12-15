@@ -562,20 +562,10 @@ pub fn update_context(
         let source_path = PathBuf::from(edge.0.clone());
         let target_path = PathBuf::from(edge.1.clone());
 
-        let source_entity = match nodes_spawned.get(&source_path) {
-            Some(entity) => *entity,
-            None => continue,
-        };
-
-        let target_entity = match nodes_spawned.get(&target_path) {
-            Some(entity) => *entity,
-            None => continue,
-        };
-
         create_edge(
             &mut edge_event,
-            &source_entity, 
-            &target_entity, 
+            &source_path, 
+            &target_path, 
             EdgeTypes::Base,
             &mut commands,
             &edges,

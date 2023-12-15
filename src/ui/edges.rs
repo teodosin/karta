@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use bevy_prototype_lyon::{shapes, prelude::{ShapeBundle, GeometryBuilder, Path, Stroke}};
 
-use crate::{graph::{edges::GraphEdge, nodes::GraphDataNode, graph_cam::ViewData}, settings::theme::EDGE_PARENT_COLOR, events::edges::EdgeSpawnedEvent};
+use crate::{graph::{edges::GraphEdge, nodes::GraphDataNode, graph_cam::ViewData, context::PathsToEntitiesIndex}, settings::theme::EDGE_PARENT_COLOR, events::edges::EdgeSpawnedEvent};
 
 use super::nodes::GraphViewNode;
 
@@ -56,16 +56,29 @@ pub fn update_edges(
     mut commands: Commands,
     mut edges: Query<(Entity, &GraphEdge, &mut Path)>,
     nodes: Query<&Transform, With<GraphViewNode>>,
+    pe_index: Res<PathsToEntitiesIndex>,
 ){
     for (edge, data, mut path) in edges.iter_mut() {
-        let start = match nodes.get(data.source) {
+        let source_entity = match pe_index.0.get(&data.source){
+            Some(entity) => entity,
+            None => {
+                continue
+            },
+        };
+        let target_entity = match pe_index.0.get(&data.target){
+            Some(entity) => entity,
+            None => {
+                continue
+            },
+        };
+        let start = match nodes.get(*source_entity) {
             Ok(node) => node,
             Err(_) => {
                 // commands.entity(edge).despawn_recursive();
                 continue
             },
         };
-        let end = match nodes.get(data.target){
+        let end = match nodes.get(*target_entity){
             Ok(node) => node,
             Err(_) => {
                 // commands.entity(edge).despawn_recursive();
@@ -83,39 +96,6 @@ pub fn update_edges(
                 Vec2::new(start.translation.x, start.translation.y),
                 Vec2::new(end.translation.x, end.translation.y),
             )
-        );
-    }
-}
-
-// Crude drawing of edges. Deprecated.
-pub fn _draw_edges(
-    mut commands: Commands,
-    edges: Query<(Entity, &GraphEdge)>,
-    nodes: Query<&Transform, With<GraphDataNode>>,
-    mut gizmos: Gizmos,
-) {
-    for (edge_entity, edge_data) in edges.iter() {
-        let start = match nodes.get(edge_data.source) {
-            Ok(node) => node,
-            Err(_) => {
-                commands.entity(edge_entity).despawn_recursive();
-                continue
-            },
-        };
-        let end = match nodes.get(edge_data.target){
-            Ok(node) => node,
-            Err(_) => {
-                commands.entity(edge_entity).despawn_recursive();
-                continue
-            },
-        };
-
-
-
-        gizmos.line_2d(
-            Vec2::new(start.translation.x, start.translation.y),
-            Vec2::new(end.translation.x, end.translation.y),
-            Color::GREEN,
         );
     }
 }
