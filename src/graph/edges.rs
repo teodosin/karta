@@ -151,37 +151,6 @@ pub fn add_edge_to_node_indexes(
     }
 }
 
-pub fn update_node_indexes(
-    mut edges: Query<(Entity, &GraphEdge)>,
-    nodes: Query<&GraphDataNode, With<GraphNodeEdges>>,
-    mut node_edges: Query<&mut GraphNodeEdges>,
-    pe_index: Res<PathsToEntitiesIndex>,
-){
-    for (edge_entity, edge_data) in edges.iter_mut(){
-        let source_entity = match pe_index.0.get(&edge_data.source){
-            Some(entity) => entity,
-            None => {continue},
-        };
-        let mut source_edges = match node_edges.get_mut(*source_entity){
-            Ok(edges) => edges,
-            Err(_) => {continue},
-        };
-
-        source_edges.insert_edge(edge_data.target.clone(), edge_entity);
-
-        let target_entity = match pe_index.0.get(&edge_data.target){
-            Some(entity) => entity,
-            None => {continue},
-        };
-        let mut target_edges = match node_edges.get_mut(*target_entity){
-            Ok(edges) => edges,
-            Err(_) => {continue},
-        };
-
-        target_edges.insert_edge(edge_data.source.clone(), edge_entity);
-    }
-}
-
 pub fn despawn_edges(
     mut commands: Commands,
     mut edges: Query<(Entity, &GraphEdge)>,
@@ -190,8 +159,6 @@ pub fn despawn_edges(
     for (edge_entity, edge_data) in edges.iter_mut() {
         let source_entity = pe_index.0.get(&edge_data.source);
         let target_entity = pe_index.0.get(&edge_data.target);
-
-        println!("Checking if {:?} and {:?} exist", source_entity, target_entity);
 
         if source_entity.is_none() || target_entity.is_none() {
             println!("Despawning edge");

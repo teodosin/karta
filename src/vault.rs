@@ -202,8 +202,8 @@ impl CurrentVault {
 /// and the name of the vault folder. 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct KartaVault{
-    pub mirror_folder_name: OsString,
-    pub root: PathBuf,
+    mirror_folder_name: OsString,
+    root: PathBuf,
 }
 
 impl KartaVault {
