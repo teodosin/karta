@@ -56,9 +56,9 @@ fn apply_forces(
     _gizmos: Gizmos,
     keys: Res<Input<KeyCode>>,
 ) {
-    if !keys.pressed(KeyCode::Space) {
-        return
-    }
+    // if !keys.pressed(KeyCode::Space) {
+    //     return
+    // }
     //for step in 0..sim_settings.simulation_steps {
         for (_node, _view, mut pos, mut vel) in nodes.iter_mut() {
 
