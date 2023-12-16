@@ -1,6 +1,9 @@
+use std::time::Duration;
+
 use bevy::{prelude::*, text::Text2dBounds, sprite::Anchor};
 use bevy_mod_picking::prelude::*;
 use bevy_prototype_lyon::{shapes, prelude::{GeometryBuilder, ShapeBundle, Stroke, StrokeOptions}};
+use bevy_tweening::{Tween, EaseFunction, lens::TransformPositionLens, Animator, TweenCompleted, TweenState, TweeningPlugin};
 
 use crate::{
     graph::{nodes::{GraphDataNode, PinnedToPosition, GraphNodeEdges, ContextRoot}, graph_cam::ViewData, context::Selected, node_types::NodeTypes}, 
@@ -18,7 +21,11 @@ impl Plugin for NodesUiPlugin {
         app
             // .insert_resource(UiNodeSystemsIndex::default())
             // .add_systems(PreStartup, setup_node_ui_systems)
+            .add_plugins(TweeningPlugin)
             .add_systems(PostUpdate, add_node_ui)
+            .add_systems(Last, tween_to_target_position)
+
+            .add_systems(PostUpdate, tween_to_target_position_complete)
             .add_systems(PostUpdate, visualise_pinned_position)
             .add_systems(PostUpdate, visualise_root_node)
 
@@ -121,6 +128,12 @@ pub fn add_node_ui(
             On::<Pointer<DragEnd>>::target_remove::<Selected>(),
             On::<Pointer<Deselect>>::target_remove::<Selected>(),
         ));
+
+        // if true {
+        //     commands.entity(ev.entity).insert(TargetPosition {
+        //         position: ev.root_position + ev.rel_target_position.unwrap_or(Vec2::ZERO),
+        //     });
+        // }
 
         if ev.pinned_to_position {
             commands.entity(ev.entity).insert(PinnedToPosition);
@@ -227,10 +240,44 @@ pub fn add_node_base_outline(
 }
 
 pub fn tween_to_target_position(
-
+    mut commands: Commands,
+    mut nodes: Query<(Entity, &mut Transform, &TargetPosition), (With<GraphViewNode>, Added<TargetPosition>)>,
 ){
-    
+    if nodes.iter_mut().count() == 0 {
+        return
+    }
+    println!("Tween to target position triggered, length: {}", nodes.iter_mut().count());
+    for (entity, transform, target) in nodes.iter_mut() {
+        let tween = Tween::new(
+            EaseFunction::QuadraticInOut,
+            Duration::from_secs_f32(0.35),
+            TransformPositionLens {
+                start: transform.translation,
+                end: Vec3::new(target.position.x, target.position.y, transform.translation.z),
+            }
+        )
+        .with_completed_event(1);
+
+        println!("Should be tweening from {:?} to {:?}", transform.translation, target.position);
+
+        commands.entity(entity).insert(Animator::new(tween));
+
+    }
 }
+
+pub fn tween_to_target_position_complete(
+    mut commands: Commands,
+    mut event: EventReader<TweenCompleted>,
+    mut anim: Query<&Animator<Transform>>,
+){
+    for ev in event.read(){
+        if true {
+            println!("Tween complete");
+            commands.entity(ev.entity).remove::<TargetPosition>();
+        }
+    }
+}
+
 
 // Debug visualisers
 // ----------------------------------------------------------------

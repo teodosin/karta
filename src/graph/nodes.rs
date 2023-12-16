@@ -275,7 +275,7 @@ pub fn spawn_node (
     ntype: NodeTypes,
 
     root_position: Vec2, // For the viewnodes
-    self_position: Option<Vec2>, // For the viewnodes
+    rel_target_position: Option<Vec2>, // For the viewnodes
 
     pinned_to_position: bool,
 
@@ -304,7 +304,7 @@ pub fn spawn_node (
         ntype,
         data,
         root_position,
-        self_position,
+        rel_target_position,
         pinned_to_position,
     });
 

@@ -71,7 +71,7 @@ impl Action for CreateNodeAction {
             ntype: self.ntype,
             data: type_to_data(self.ntype),
             root_position: root_position.translation.truncate(),
-            self_position: Some(self.position - root_position.translation.truncate()),
+            rel_target_position: Some(self.position - root_position.translation.truncate()),
             pinned_to_position: false,
         });
         
