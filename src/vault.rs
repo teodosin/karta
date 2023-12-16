@@ -17,11 +17,11 @@ use bevy::{
 use serde::{Serialize, Deserialize};
  
 
-use crate::{graph::context::CurrentContext, vault::vault_asset::{VAULTS_FILE_NAME, VaultAsset}, ui::vault_menu::{SpawnVaultMenu, VaultMenu}};
+use crate::{graph::context::{CurrentContext, update_context}, vault::vault_asset::{VAULTS_FILE_NAME, VaultAsset}, ui::vault_menu::{SpawnVaultMenu, VaultMenu}};
 
-use self::{context_asset::{ContextAsset, ContextAssetState, ContextAssetLoader, load_contexts}, asset_manager::{ImageLoadTracker, on_image_load}, vault_asset::save_vaults};
+use self::{context_asset::save_context, asset_manager::{ImageLoadTracker, on_image_load}, vault_asset::save_vaults};
 
-mod context_asset;
+pub(crate) mod context_asset;
 mod vault_asset;
 mod asset_manager;
 
@@ -33,13 +33,8 @@ impl Plugin for VaultPlugin {
             .insert_resource(VaultOfVaults::new())
             .insert_resource(CurrentVault::new())
 
-            .init_asset_loader::<ContextAssetLoader>()
-            .init_resource::<ContextAssetState>()
-            .init_asset::<ContextAsset>()
-
             .insert_resource(ImageLoadTracker::new())
             
-            .add_systems(Startup, load_contexts)
             .add_systems(PreStartup, setup_vaults)
             // .add_systems(Update, use_assets)
 
@@ -49,6 +44,12 @@ impl Plugin for VaultPlugin {
                     on_event::<AppExit>()
                 ))
             )
+            .add_systems(Last, save_context
+                .run_if(resource_changed::<CurrentContext>().or_else(
+                    on_event::<AppExit>()
+                ))
+                .before(update_context)
+            )
 
             .add_systems(PostUpdate, on_image_load)
         ;
@@ -56,6 +57,8 @@ impl Plugin for VaultPlugin {
     }
 }
 
+/// Resource that stores all the vaults defined in the user's config directory.
+/// Only use this for switching between vaults. Cross-vault operations are forbidden.
 #[derive(Resource, Debug, PartialEq)]
 pub struct VaultOfVaults {
     pub vaults: Vec<KartaVault>,
@@ -80,6 +83,9 @@ impl VaultOfVaults {
     }
 }
 
+/// Function that runs on startup.
+/// Checks the user's config directory for a vaults file. 
+/// Reads it and places the vaults in the VaultOfVaults resource.
 fn setup_vaults(
     mut vaults: ResMut<VaultOfVaults>,
     mut current_vault: ResMut<CurrentVault>,
@@ -142,6 +148,8 @@ fn setup_vaults(
     
 }
 
+/// Function that runs when the current vault changes.
+/// Responsible for spawning and despawning the vault menu. 
 fn on_vault_change(
     current_vault: ResMut<CurrentVault>,
     mut current_context: ResMut<CurrentContext>,
@@ -167,10 +175,11 @@ fn on_vault_change(
     };
     let path = vault.get_root_path();
     println!("Changing current context to vault root: {:?}", path);
-    current_context.set_current_context(path);
+    current_context.set_current_context(vault.get_vault_path(), path);
 }
 
-// RESOURCE STORING THE CURRENT TYPE
+/// Resource that stores the currently active vault. 
+/// Use this if you need access to the vault path. 
 #[derive(Resource, Debug, PartialEq)]
 pub struct CurrentVault {
     pub vault: Option<KartaVault>,
@@ -186,23 +195,26 @@ impl CurrentVault {
     pub fn set_vault(&mut self, vault: KartaVault) {
         self.vault = Some(vault);
     }
+    
 }
 
-// VAULT TYPE
+/// Main Vault struct. Contains the root path to the vault folder,
+/// and the name of the vault folder. 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct KartaVault{
-    pub vault_folder_name: OsString,
-    pub root: PathBuf,
+    mirror_folder_name: OsString,
+    root: PathBuf,
 }
 
 impl KartaVault {
+    /// Takes in the desired path for the vault. .kartaVault will be created inside this folder. 
     pub fn new(path: PathBuf) -> Self {
         let new_vault = KartaVault {
-            vault_folder_name: OsString::from(".kartaVault"),
+            mirror_folder_name: OsString::from(".kartaVault"),
             root: PathBuf::from(path),
         };
 
-        let path: PathBuf = new_vault.root.join(&new_vault.vault_folder_name);
+        let path: PathBuf = new_vault.root.join(&new_vault.mirror_folder_name);
 
         println!("Vault path: {:?}", path);
 
@@ -218,28 +230,19 @@ impl KartaVault {
         new_vault
     }
 
+    /// Returns the path to the folder the vault is located in, without the vault folder name
     pub fn get_root_path(&self) -> PathBuf {
         self.root.clone()
     }
 
+    /// Returns the path to the vault folder, name included
     pub fn get_vault_path(&self) -> PathBuf {
-        let vault_path = self.root.join(&self.vault_folder_name);
+        let vault_path = self.root.join(&self.mirror_folder_name);
         vault_path
     }
+
+    /// Returns the name of the vault folder, where .kartaVault is located
+    pub fn get_vault_folder_name(&self) -> OsString {
+        self.root.file_name().unwrap().to_os_string()
+    }
 }
-
-// fn use_assets(
-//     ron_assets: Res<Assets<ContextAsset>>,
-//     data_assets: Res<ContextAssets>,
-// ){
-//     let data_str = ron_assets.get(&data_assets.handle);
-//     match data_str {
-//         Some(data) => {
-//             //info!("data: {:?}", data);
-//         },
-//         None => {
-
-//         }
-//     }
-// }
-

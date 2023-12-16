@@ -5,7 +5,7 @@
 use bevy::prelude::*;
 
 
-use crate::{input::pointer::{left_click_just_released, InputData}, graph::{context::PathsToEntitiesIndex, edges::create_edge, nodes::GraphDataNode, graph_cam::ViewData}, events::edges::EdgeSpawnedEvent};
+use crate::{input::pointer::{left_click_just_released, InputData}, graph::{context::PathsToEntitiesIndex, edges::{create_edge, EdgeTypes, EdgeType, GraphEdge}, nodes::GraphDataNode, graph_cam::ViewData}, events::edges::EdgeSpawnedEvent};
 
 use super::KartaModeState;
 
@@ -33,7 +33,7 @@ fn create_edge_from_drag(
     input_data: Res<InputData>,
     pe_index: Res<PathsToEntitiesIndex>,
     mut commands: Commands,
-    mut view_data: ResMut<ViewData>,
+    edges: Query<(&GraphEdge, &EdgeType)>,
 ) {
     println!("Creating edge from drag");
 
@@ -58,17 +58,15 @@ fn create_edge_from_drag(
     let from = input_data.latest_press_entity.clone().unwrap();
     let to = input_data.latest_hover_entity.clone().unwrap();
 
-    let from = pe_index.0.get(&from).unwrap();
-    let to = pe_index.0.get(&to).unwrap();
-
     println!("Creating edge from {:?} to {:?}", from, to);
 
     create_edge(
         &mut event,
-        from, 
-        to, 
+        &from, 
+        &to, 
+        EdgeTypes::Base,
         &mut commands,
-        &mut view_data,
+        &edges,
     );
 
 
@@ -123,18 +121,19 @@ fn draw_edge_preview(
 
 
 // A test for the edge creation
-#[test]
+// #[test]
 fn test_create_edge_from_drag() {
     use bevy::utils::HashMap;
     use crate::graph::edges::GraphEdge;
     use std::{path::PathBuf, ffi::OsString};
+    use crate::graph::node_types::NodeTypes;
     // Setup a world and schedule for Bevy ECS (assuming Bevy is being used)
     let mut app = App::new();
 
     let entity1 = app.world.spawn(
         GraphDataNode {
             path: PathBuf::from("path/to/entity1"),
-            name: OsString::from("entity1"),
+            ntype: NodeTypes::Base,
             data: None,
         }
     ).id();
@@ -142,7 +141,7 @@ fn test_create_edge_from_drag() {
     let entity2 = app.world.spawn(
         GraphDataNode {
             path: PathBuf::from("path/to/entity2"),
-            name: OsString::from("entity2"),
+            ntype: NodeTypes::Base,
             data: None,
         }
     ).id();

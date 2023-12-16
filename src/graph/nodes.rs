@@ -2,10 +2,10 @@
 
 use std::{path::PathBuf, ffi::OsString};
 
-use bevy::{prelude::*, input::keyboard::KeyboardInput};
+use bevy::{prelude::*, input::keyboard::KeyboardInput, utils::HashMap};
 use bevy_mod_picking::picking_core::PickSet;
 
-use super::{context::{PathsToEntitiesIndex, ToBeDespawned, Selected}, node_types::{NodeTypes, NodeData, type_to_data}};
+use super::{context::{PathsToEntitiesIndex, ToBeDespawned, Selected, CurrentContext}, node_types::{NodeTypes, NodeData, type_to_data}};
 
 use crate::{events::nodes::*, ui::nodes::{NodeOutline, GraphViewNode}, input::pointer::{InputData, update_cursor_info}};
 
@@ -22,7 +22,9 @@ impl Plugin for NodesPlugin {
             .before(update_cursor_info)
             .after(PickSet::Last))
 
-            .add_systems(PostUpdate, despawn_nodes)
+            .add_systems(PostUpdate, despawn_nodes
+                // .run_if(resource_changed::<CurrentContext>())
+            )
         ;
     }
 }
@@ -30,12 +32,13 @@ impl Plugin for NodesPlugin {
 // ----------------------------------------------------------------
 // Component definitions
 
-// A component to store the data of a NODE
-// The path and name of the node is something that all node types have in common
+/// A component to store the universal data of a node. 
+/// The path and name of the node is something that all node types have in common.
+/// The name is the file name.
 #[derive(Component)]
 pub struct GraphDataNode {
     pub path: PathBuf,
-    pub name: OsString,
+    pub ntype: NodeTypes,
     pub data: Option<Box<dyn NodeData>>,
 }
 
@@ -62,9 +65,24 @@ impl GraphDataNode {
 
 // A component to store the edge relationships of a node
 // Stores a vec to the edge entities
-#[derive(Component)]
+#[derive(Component, Clone, Debug, Default)]
 pub struct GraphNodeEdges {
-    pub edges: Vec<Entity>,
+    // The key is a reference to the other node, the value is the edge entity
+    // TODO: Entities aren't stable across instances, so getting the correct edge entity
+    // is not guaranteed. No systems need this data yet, but it will be a problem in the future.
+    pub edges: HashMap<PathBuf, Entity>,
+}
+
+impl GraphNodeEdges {
+    pub fn insert_edge(&mut self, node_path: PathBuf, edge: Entity) {
+        println!("Adding edge: {:?} to node {:?}", edge, node_path);
+        self.edges.insert(node_path, edge);
+    }
+
+    pub fn remove_edge(&mut self, edge: Entity) {
+        println!("Removing edge: {:?}", edge);
+        self.edges.retain(|_, v| *v != edge);
+    }
 }
 
 
@@ -79,6 +97,11 @@ pub struct PinnedToPresence;
 
 #[derive(Component)]
 pub struct PinnedToUi;
+
+// Marker Component for nodes that are only visitors to the current context and should not be serialized
+#[derive(Component)]
+pub struct Visitor;
+
 
 // ? Should there be a:
 // DataNode Bundle
@@ -126,10 +149,10 @@ fn handle_node_click(
             
             match nodes.get(target){
                 Ok(node) => {
-                    let target_path = node.1.path.clone();
+                    let (entity, data) = node;
+                    let target_path = data.path.clone();
                     input_data.latest_click_entity = Some(target_path.clone());
-                    commands.entity(node.0).insert(Selected);
-                    //println!("Clicking path: {}", target_path);
+                    commands.entity(entity).insert(Selected);
                 },
                 Err(_) => {
                     //println!("No node found");
@@ -246,39 +269,47 @@ fn handle_node_hover(
 // TODO: Address this limitation. 
 pub fn spawn_node (
     event: &mut EventWriter<NodeSpawnedEvent>,
-
     commands: &mut Commands,
+
     path: PathBuf,
-    name: OsString,
     ntype: NodeTypes,
-    position: Vec2, // For the viewnodes
+
+    root_position: Vec2, // For the viewnodes
+    rel_target_position: Option<Vec2>, // For the viewnodes
+
+    pinned_to_position: bool,
 
     pe_index: &mut ResMut<PathsToEntitiesIndex>,
-) -> bevy::prelude::Entity {
 
-    let full_path = path.join(&name);
+) -> bevy::prelude::Entity {
+    if pe_index.0.contains_key(&path) {
+        println!("Node already exists");
+        return pe_index.0.get(&path).unwrap().clone();
+    }
 
     let data = type_to_data(ntype);
 
     let node_entity = commands.spawn((
         GraphDataNode {
-            path: full_path.clone(),
-            name: name.clone(),
+            path: path.clone(),
+            ntype,
             data: None,
         },
+        GraphNodeEdges::default()
     )).id();
 
     event.send(NodeSpawnedEvent {
         entity: node_entity,
-        path: path,
-        name: name,
+        path: path.clone(),
         ntype,
         data,
-        position: position,
+        root_position,
+        rel_target_position,
+        pinned_to_position,
     });
 
     // Update the PathsToEntitiesIndex
-    pe_index.0.insert(full_path, node_entity);
+    pe_index.0.insert(path, node_entity);
 
     // Return the node entity
     node_entity
@@ -289,6 +320,11 @@ fn despawn_nodes(
     mut nodes: Query<(Entity, &GraphDataNode), With<ToBeDespawned>>,
     mut pe_index: ResMut<PathsToEntitiesIndex>,
 ){
+    let len = nodes.iter_mut().count();
+    if len == 0 {
+        return
+    }
+    println!("About to despawn {} nodes", nodes.iter_mut().count());
     for (entity, node) in nodes.iter_mut() {
         commands.entity(entity).despawn_recursive();
         pe_index.0.remove(&node.path);

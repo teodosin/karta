@@ -161,10 +161,10 @@ fn update_context_label(
     mut query: Query<&mut Text, With<ContextLabel>>,
     context: Res<CurrentContext>,
 ){
-    match context.cxt {
+    match context.context {
         Some(ref cxt) => {
             for mut text in &mut query.iter_mut() {
-                text.sections[0].value = cxt.current_context.to_string_lossy().to_string();
+                text.sections[0].value = cxt.get_path().to_string_lossy().to_string();
             }
         },
         None => {

@@ -11,7 +11,7 @@
 
 use bevy::{prelude::*, utils::HashMap};
 
-use crate::{graph::{edges::GraphEdge, attribute::Attributes}, ui::nodes::{GraphViewNode, Velocity2D}};
+use crate::{graph::{edges::GraphEdge, attribute::Attributes, context::PathsToEntitiesIndex}, ui::nodes::{GraphViewNode, Velocity2D}};
 
 pub struct ForceNodesPlugin;
 
@@ -51,15 +51,25 @@ pub fn edge_spring_constraints (
     _forces: Query<(&GraphViewNode, &mut NodeForce)>,
     mut nodes: Query<(Entity, &GraphViewNode, &Transform, &mut Velocity2D)>,
     edges: Query<(&GraphEdge, &Attributes)>,
+    pe_index: Res<PathsToEntitiesIndex>,
 ){
     // When this force is implemented as a node, we will need to handle multiple of them.
 
     for (edge, attr) in edges.iter(){
-        let from = match nodes.get(edge.from){
+        let source_entity = match pe_index.0.get(&edge.source){
+            Some(entity) => entity,
+            None => continue,
+        };
+        let target_entity = match pe_index.0.get(&edge.target){
+            Some(entity) => entity,
+            None => continue,
+        };
+
+        let from = match nodes.get(*source_entity){
             Ok(node) => node,
             Err(_) => continue,
         };
-        let to = match nodes.get(edge.to){
+        let to = match nodes.get(*target_entity){
             Ok(node) => node,
             Err(_) => continue,
         };
@@ -90,7 +100,7 @@ pub fn edge_spring_constraints (
             None => continue,
         } * displacement;      
             
-        match nodes.get_mut(edge.from){
+        match nodes.get_mut(*source_entity){
             Ok(mut node) => {
                 node.3.velocity -= diff / dist * attractive_force;
                 
@@ -98,7 +108,7 @@ pub fn edge_spring_constraints (
             Err(_) => continue,
         }
         
-        match nodes.get_mut(edge.to){
+        match nodes.get_mut(*target_entity){
             Ok(mut node) => {                
                 node.3.velocity += diff / dist * attractive_force;                
             },
@@ -141,7 +151,9 @@ pub fn repulsion_constraints (
     }
 
     for (node, _view, _pos, mut vel) in nodes.iter_mut(){
-        vel.velocity = forces[&node];
+        if forces.contains_key(&node){
+            vel.velocity = forces[&node];
+        }
     }
 }
 

@@ -1,10 +1,10 @@
 //
 
-use std::ffi::OsString;
+use std::{ffi::{OsString, OsStr}, path::PathBuf};
 
-use bevy::prelude::{Entity, With, Vec2};
+use bevy::{prelude::{Entity, With, Vec2}, transform::components::Transform};
 
-use crate::{graph::{nodes::{PinnedToPosition, GraphDataNode}, context::{PathsToEntitiesIndex, Selected, CurrentContext}, node_types::{NodeTypes, type_to_data}}, input::pointer::InputData, ui::nodes::GraphViewNode, events::nodes::NodeSpawnedEvent};
+use crate::{graph::{nodes::{PinnedToPosition, GraphDataNode, ContextRoot, GraphNodeEdges}, context::{PathsToEntitiesIndex, Selected, CurrentContext}, node_types::{NodeTypes, type_to_data}}, input::pointer::InputData, ui::nodes::GraphViewNode, events::nodes::NodeSpawnedEvent, vault::{context_asset::{node_path_to_context_path, create_single_node_context}, CurrentVault}};
 
 use super::Action;
 
@@ -17,19 +17,18 @@ pub struct CreateNodeAction {
     position: Vec2,
 }
 
-impl Action for CreateNodeAction {
-    // NOTE: The implementation here must be kept in sync with the implementation of spawn_node,
-    // which is mostly called when expanding a node or changing context. 
-    fn execute(&mut self, world: &mut bevy::prelude::World) {
-        println!("Creating: ");
 
-        
-        // DONE: Implement a function to get an available name. Use the Houdini convention.
-        // Two nodes can't share the same path, so we need to check if a node already exists
-        // in the current path.
+
+/// NOTE: The implementation here must be kept in sync with the implementation of spawn_node,
+/// which is mostly called when expanding a node or changing context. 
+impl Action for CreateNodeAction {
+    fn execute(&mut self, world: &mut bevy::prelude::World) {
+
+        let vault = world.get_resource::<CurrentVault>().unwrap();
+        let vault_path = vault.vault.as_ref().unwrap().get_vault_path().clone();
         let context = world.get_resource::<CurrentContext>().unwrap();
 
-        let cxt = match &context.cxt {
+        let cxt = match &context.context {
             None => {
                 println!("No context set");
                 return
@@ -37,48 +36,51 @@ impl Action for CreateNodeAction {
             Some(cxt) => cxt,
         };
 
-        let cpath = cxt.get_current_context_path();
-        
-        let mut name = OsString::from(self.ntype.to_string());
-        let mut full_path = cpath.join(&name);
-        
-        let pe_index = world.get_resource_mut::<PathsToEntitiesIndex>().unwrap(); 
-        if pe_index.0.contains_key(&full_path) {
-            let mut i = 1;
-            loop {
-                name = OsString::from(format!("{}{}", self.ntype.to_string(), i));
-                let path = cpath.join(&name);
-                if !pe_index.0.contains_key(&path) {
-                    full_path = path;
-                    break;
-                }
-                i += 1;
-            }
+        // Find the closest physical parent folder. The created node will be treated like it 
+        // was created in this folder.
+        let mut cpath = cxt.get_path();
+        while !cpath.is_dir(){
+            cpath.pop();
         }
         
+        let name = OsString::from(self.ntype.to_string());
+        let full_path = cpath.join(&name);
+        
+        let valid_path = get_valid_node_path(&vault_path, full_path.clone());
+
+        println!("Creating node with path: {:?}", valid_path);
+        
+        // Could be worth it to map out the difference between spawn_node and this code. 
         let node_entity = world.spawn((
             GraphDataNode {
-                path: full_path.clone(),
-                name: name.clone().into(),
+                path: valid_path.clone(),
+                ntype: self.ntype,
                 data: type_to_data(self.ntype)
             },
+            GraphNodeEdges::default(),
             PinnedToPosition,
         )).id();
         
         self.entity = Some(node_entity);
+
+        let root_position = world.query_filtered::<&Transform, With<ContextRoot>>().single(world);
         
         world.send_event(NodeSpawnedEvent {
             entity: node_entity,
-            path: cpath,
-            name: name,
+            path: valid_path.clone(),
             ntype: self.ntype,
             data: type_to_data(self.ntype),
-            position: self.position,
+            root_position: root_position.translation.truncate(),
+            rel_target_position: Some(self.position - root_position.translation.truncate()),
+            pinned_to_position: false,
         });
         
         // Update the PathsToEntitiesIndex
         let mut pe_index = world.get_resource_mut::<PathsToEntitiesIndex>().unwrap();
         pe_index.0.insert(full_path, node_entity);
+
+        // Create the context file
+        create_single_node_context(&vault_path, self.ntype, &valid_path);
     }
 
     fn undo(&mut self, _world: &mut bevy::prelude::World) {
@@ -88,6 +90,40 @@ impl Action for CreateNodeAction {
     fn redo(&mut self, _world:  &mut bevy::prelude::World) {
         println!("Redoing CreateNodeAction");
     }
+}
+
+/// Function to validate proposed node path. Checks if the path exists as a physical file or a
+/// respective context file exists. All node naming must pass through this function. Takes in the 
+/// proposed node path and the whole vault path (name included) as arguments.
+pub fn get_valid_node_path (
+    vault_path: &PathBuf,
+    node_path: PathBuf,
+) -> PathBuf{
+    
+    let mut proposed_path = node_path.clone();
+    let name: OsString = proposed_path.file_name().unwrap().into();
+    let mut i = 1;
+    loop {
+        let context_exists = node_path_to_context_path(&vault_path, &proposed_path).exists();
+        println!("Context exists: {}: {}", context_exists, node_path_to_context_path(&vault_path, &proposed_path).display());
+        let physical_exists = proposed_path.exists();
+
+        if !context_exists && !physical_exists {
+            break
+        }
+
+        let new_name: OsString = format!("{}{}", name.to_str().unwrap(), i).into();
+
+        proposed_path.set_file_name(new_name);
+
+        println!("Proposed path: {:?}", proposed_path);
+
+        i += 1;
+
+        assert!(node_path.extension() == proposed_path.extension())
+    }
+
+    proposed_path
 }
 
 impl CreateNodeAction {
