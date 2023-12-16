@@ -62,7 +62,6 @@ pub fn on_image_load(
                 for (_node, children, img, mut sprite, _form) in nodes.iter_mut() {
                     // if img.is_strong() {
                     if img == &bevy::prelude::Handle::Weak(id.clone()) {
-                        println!("Image loaded: {:?}", id);
                         // Should be true when loaded with deps
                         if img.is_strong(){
                             
@@ -79,8 +78,6 @@ pub fn on_image_load(
                             
                             let scale = Vec2::new(base_scale / larger * res.x, base_scale / larger * res.y);
 
-                            println!("Resized image to {:?}", scale);
-
                             sprite.custom_size = Some(scale);
 
                             // Resize outline and move label
@@ -91,7 +88,6 @@ pub fn on_image_load(
                                     for child in children.iter() {
                                         match labels.get_mut(*child) {
                                             Ok(mut label) => {
-                                                println!("Repositioning label");
                                                 let z = label.1.translation.z;
                                                 let label_pos = Vec3::new(-scale.x / 2.0, scale.y / 2.0 + 10.0, z);
 
@@ -101,7 +97,6 @@ pub fn on_image_load(
                                         }
                                         match outlines.get_mut(*child) {
                                             Ok(mut outline) => {
-                                                println!("Rescaling outline");
                                                 let outline_width = outline.2.options.line_width;
                                                 let outline_shape = shapes::Rectangle {
                                                     extents: scale + Vec2::new(outline_width, outline_width),

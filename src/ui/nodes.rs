@@ -1,9 +1,12 @@
-use bevy::{prelude::*, text::Text2dBounds};
+use std::time::Duration;
+
+use bevy::{prelude::*, text::Text2dBounds, sprite::Anchor};
 use bevy_mod_picking::prelude::*;
 use bevy_prototype_lyon::{shapes, prelude::{GeometryBuilder, ShapeBundle, Stroke, StrokeOptions}};
+use bevy_tweening::{Tween, EaseFunction, lens::TransformPositionLens, Animator, TweenCompleted, TweenState, TweeningPlugin};
 
 use crate::{
-    graph::{nodes::{GraphDataNode, PinnedToPosition}, graph_cam::ViewData, context::Selected, node_types::NodeTypes}, 
+    graph::{nodes::{GraphDataNode, PinnedToPosition, GraphNodeEdges, ContextRoot}, graph_cam::ViewData, context::Selected, node_types::NodeTypes}, 
     events::nodes::{MoveNodesEvent, NodeClickEvent, NodePressedEvent, NodeHoverEvent, NodeSpawnedEvent}
 };
 
@@ -18,13 +21,17 @@ impl Plugin for NodesUiPlugin {
         app
             // .insert_resource(UiNodeSystemsIndex::default())
             // .add_systems(PreStartup, setup_node_ui_systems)
-            .add_systems(PreUpdate, handle_outline_hover)
-
+            .add_plugins(TweeningPlugin)
             .add_systems(PostUpdate, add_node_ui)
+            .add_systems(Last, tween_to_target_position)
+
+            .add_systems(PostUpdate, tween_to_target_position_complete)
             .add_systems(PostUpdate, visualise_pinned_position)
+            .add_systems(PostUpdate, visualise_root_node)
 
             // .add_systems(PreUpdate, outlines_pulse)
             // .add_systems(PreUpdate, visualise_pinned_position)
+            .add_systems(PreUpdate, toggle_node_debug_labels)
         ;
     }
 }
@@ -32,22 +39,29 @@ impl Plugin for NodesUiPlugin {
 // Component Definitions
 // ----------------------------------------------------------------
 
-// Basic marker component to identify all nodes that have a graphical representation
-// in the graph. 
+/// Basic marker component to identify all nodes that have a graphical representation
+/// in the graph. 
 #[derive(Component)]
 pub struct GraphViewNode;
 
-// Marker component for all nodes that have the interactive outline. 
+/// Marker component for the node outline. 
 #[derive(Component)]
 pub struct NodeOutline;
 
-// Marker component for all nodes that have a visible label. Nodes with this
-// component will have a text label attached to them.
+/// Marker component for node name labels
 #[derive(Component)]
 pub struct NodeLabel;
 
-// Component to store the current velocity of a node. 
-// This component might get abstracted out at some point, because it is very generic. 
+/// Component storing the target position of a node. Nodes with this component will be 
+/// ignored by the simulation. When the node reaches the target position, this component 
+/// will be removed.
+#[derive(Component)]
+pub struct TargetPosition {
+    pub position: Vec2,
+}
+
+/// Component to store the current velocity of a node. 
+/// This component might get abstracted out at some point, because it is very generic. 
 #[derive(Component)]
 pub struct Velocity2D {
     pub velocity: Vec2,
@@ -61,9 +75,9 @@ impl Default for Velocity2D {
     }
 }
 
-// Component to store the scale of a node. This should also affect the simulation,
-// but I don't know how that should behave just yet. So for now there will be a 
-// separate "radius" variable that will be used for the simulation.
+/// Component to store the scale of a node. This should also affect the simulation,
+/// but the precise behavior hasn't been decided. So for now there will be a 
+/// separate "radius" variable that will be used for the simulation.
 #[derive(Component)]
 pub struct ViewNodeScale {
     pub scale: Vec2,
@@ -115,6 +129,16 @@ pub fn add_node_ui(
             On::<Pointer<Deselect>>::target_remove::<Selected>(),
         ));
 
+        // if true {
+        //     commands.entity(ev.entity).insert(TargetPosition {
+        //         position: ev.root_position + ev.rel_target_position.unwrap_or(Vec2::ZERO),
+        //     });
+        // }
+
+        if ev.pinned_to_position {
+            commands.entity(ev.entity).insert(PinnedToPosition);
+        }
+
         match ev.ntype {
             NodeTypes::FileImage => {
                 add_image_node_ui(&ev, &mut commands, &mut server, &mut view_data)
@@ -140,7 +164,7 @@ pub fn add_node_label(
         Text2dBundle {
             text: Text {
                 sections: vec![TextSection::new(
-                    &*ev.name.to_string_lossy(),
+                    &*ev.path.file_name().unwrap().to_string_lossy(),
                     TextStyle {
                         font_size: 20.0,
                         color: Color::WHITE,
@@ -215,14 +239,45 @@ pub fn add_node_base_outline(
     commands.entity(*parent).push_children(&[node_outline]);
 }
 
-pub fn handle_outline_hover(
-    // ev_spawn: EventReader<Node>,
-    _nodes: Query<&Transform, With<GraphDataNode>>,
-    
-    // mut commands: Commands,
+pub fn tween_to_target_position(
+    mut commands: Commands,
+    mut nodes: Query<(Entity, &mut Transform, &TargetPosition), (With<GraphViewNode>, Added<TargetPosition>)>,
 ){
-    
+    if nodes.iter_mut().count() == 0 {
+        return
+    }
+    println!("Tween to target position triggered, length: {}", nodes.iter_mut().count());
+    for (entity, transform, target) in nodes.iter_mut() {
+        let tween = Tween::new(
+            EaseFunction::QuadraticInOut,
+            Duration::from_secs_f32(0.35),
+            TransformPositionLens {
+                start: transform.translation,
+                end: Vec3::new(target.position.x, target.position.y, transform.translation.z),
+            }
+        )
+        .with_completed_event(1);
+
+        println!("Should be tweening from {:?} to {:?}", transform.translation, target.position);
+
+        commands.entity(entity).insert(Animator::new(tween));
+
+    }
 }
+
+pub fn tween_to_target_position_complete(
+    mut commands: Commands,
+    mut event: EventReader<TweenCompleted>,
+    mut anim: Query<&Animator<Transform>>,
+){
+    for ev in event.read(){
+        if true {
+            println!("Tween complete");
+            commands.entity(ev.entity).remove::<TargetPosition>();
+        }
+    }
+}
+
 
 // Debug visualisers
 // ----------------------------------------------------------------
@@ -236,6 +291,137 @@ pub fn visualise_pinned_position (
             5.0,
             Color::rgb(0.1, 0.1, 0.9),
         );
+    }
+}
+
+pub fn visualise_root_node (
+    mut gizmos: Gizmos,
+    root: Query<&Transform, With<ContextRoot>>,
+) {
+    for pos in root.iter() {
+        gizmos.circle_2d(
+            pos.translation.truncate(),
+            10.0,
+            Color::rgb(0.1, 0.9, 0.1),
+        );
+        gizmos.circle_2d(
+            pos.translation.truncate(),
+            13.0,
+            Color::rgb(0.1, 0.9, 0.1),
+        );
+    }
+}
+
+#[derive(Component)]
+pub struct NodeDebugLabel;
+
+pub fn toggle_node_debug_labels(
+    mut commands: Commands,
+
+    key_input: ResMut<Input<KeyCode>>,
+
+    mut nodes: Query<(Entity, &GraphNodeEdges)>,
+    mut labels: Query<Entity, &NodeDebugLabel>,
+){
+    if !key_input.just_pressed(KeyCode::P){
+        return
+    }
+
+    if labels.iter_mut().count() > 0 {
+        for label in labels.iter_mut(){
+            commands.entity(label).despawn_recursive();
+        }
+        return;
+    }
+    for (entity, edges) in nodes.iter_mut(){
+        // Self entity number
+        let entity_number_label = commands.spawn((
+            NodeDebugLabel,
+            Text2dBundle {
+                text_anchor: Anchor::TopLeft,
+                text: Text {
+                    sections: vec![TextSection::new(
+                        format!("entity: {:?}", entity),
+                        TextStyle {
+                            font_size: 32.0,
+                            color: Color::WHITE,
+                            ..default()
+                        },
+                    )],
+                    alignment: TextAlignment::Left,
+                    ..default()
+                },
+                transform: Transform {
+                    translation: Vec3::new(40.0, -20.0, 10000.0),
+                    scale: Vec3::new(0.5, 0.5, 1.0),
+                    ..default()
+                },
+                ..default()
+            }
+        )).id();
+        commands.entity(entity).push_children(&[entity_number_label]);
+
+        // Number of edges
+        let edge_count: &str = &edges.edges.len().to_string();
+        let edge_count_label = commands.spawn((
+            NodeDebugLabel,
+            Text2dBundle {
+                text_anchor: Anchor::TopLeft,
+                text: Text {
+                    sections: vec![TextSection::new(
+                        format!("edges: {}", edge_count),
+                        TextStyle {
+                            font_size: 32.0,
+                            color: Color::WHITE,
+                            ..default()
+                        },
+                    )],
+                    alignment: TextAlignment::Left,
+                    ..default()
+                },
+                transform: Transform {
+                    translation: Vec3::new(40.0, -35.0, 10000.0),
+                    scale: Vec3::new(0.5, 0.5, 1.0),
+                    ..default()
+                },
+                ..default()
+            }
+        )).id();
+        commands.entity(entity).push_children(&[edge_count_label]);
+
+        // Edge list
+        let mut edge_list_string = String::new();
+        for edge in edges.edges.iter(){
+            edge_list_string.push_str(&format!("n:{:?} e:{:?}\n", edge.0, edge.1));
+        }
+        let edge_list_label = commands.spawn((
+            NodeDebugLabel,
+            Text2dBundle {
+                text_anchor: Anchor::TopLeft,
+                text_2d_bounds: Text2dBounds {
+                    size: Vec2::new(140.0, 300.0),
+                },
+                text: Text {
+                    sections: vec![TextSection::new(
+                        format!("{}", edge_list_string),
+                        TextStyle {
+                            font_size: 32.0,
+                            color: Color::WHITE,
+                            ..default()
+                        },
+                    )],
+                    alignment: TextAlignment::Left,
+                    ..default()
+                }.with_no_wrap(),
+                transform: Transform {
+                    translation: Vec3::new(40.0, -50.0, 10000.0),
+                    scale: Vec3::new(0.5, 0.5, 1.0),
+                    ..default()
+                },
+                ..default()
+            }
+        )).id();
+        commands.entity(entity).push_children(&[edge_list_label]);
     }
 }
 
