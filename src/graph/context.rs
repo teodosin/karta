@@ -8,7 +8,7 @@ use std::{fs, path::PathBuf, ffi::OsString};
 
 use crate::{
     graph::{graph_cam, edges::{create_edge, EdgeTypes}, node_types::{get_type_from_file_path, NodeTypes, get_type_from_context_path}}, vault::{CurrentVault, context_asset::{open_context_file_from_node_path, ContextAsset, node_path_to_context_path, open_context_file}}, 
-    events::{nodes::{NodeClickEvent, NodeSpawnedEvent}, edges::EdgeSpawnedEvent},
+    events::{nodes::{NodeClickEvent, NodeSpawnedEvent}, edges::EdgeSpawnedEvent}, ui::nodes::TargetPosition,
 };
 
 use super::{nodes::*, edges::{GraphEdge, EdgeType}};
@@ -270,6 +270,23 @@ pub fn update_context(
                     // Nodes in a context file only get updated when the context gets saved with that
                     // node as root. If the node is not the context root, only its edges will get updated. 
 
+                    for node in context_file.nodes.iter(){
+                        let path = PathBuf::from(&node.path);
+                        if pe_index.0.contains_key(&path){
+                            let entity = pe_index.0.get(&path).unwrap();
+                            commands.entity(*entity).remove::<ToBeDespawned>();
+                            match node.relative_position {
+                                Some(pos) => {
+                                    println!("Inserting target position for {}", node.path);
+                                    commands.entity(*entity).insert(TargetPosition {
+                                        position: root_position + pos,
+                                    });
+                                },
+                                None => {}
+                            }
+                        }
+                    }
+                    
                     for edge in context_file.edges.iter() {
                         edges_to_spawn.push((edge.source.clone(), edge.target.clone()));
                         
@@ -278,20 +295,14 @@ pub fn update_context(
                         println!("Pe index has {} amount of entries", pe_index.0.len());
                         if root_path_str == edge.source && pe_index.0.contains_key(&PathBuf::from(&edge.target)){
                             println!("Removing ToBeDespawned component from {}", edge.target);
-                            commands.entity(pe_index.0.get(&PathBuf::from(&edge.target)).unwrap().clone()).remove::<ToBeDespawned>();
+                            commands.entity(*pe_index.0.get(&PathBuf::from(&edge.target)).unwrap()).remove::<ToBeDespawned>();
                         }
                         if root_path_str == edge.target && pe_index.0.contains_key(&PathBuf::from(&edge.source)){
                             println!("Removing ToBeDespawned component from {}", edge.source);
-                            commands.entity(pe_index.0.get(&PathBuf::from(&edge.source)).unwrap().clone()).remove::<ToBeDespawned>();
+                            commands.entity(*pe_index.0.get(&PathBuf::from(&edge.source)).unwrap()).remove::<ToBeDespawned>();
                         }
                     }
 
-                    for node in context_file.nodes.iter(){
-                        let path = PathBuf::from(&node.path);
-                        if pe_index.0.contains_key(&path){
-                            commands.entity(pe_index.0.get(&path).unwrap().clone()).remove::<ToBeDespawned>();
-                        }
-                    }
                 }
                 Err(_e) => {
                 }
@@ -322,11 +333,11 @@ pub fn update_context(
                         println!("Pe index has {} amount of entries", pe_index.0.len());
                         if root_path_str == edge.source && pe_index.0.contains_key(&PathBuf::from(&edge.target)){
                             println!("Removing ToBeDespawned component from {}", edge.target);
-                            commands.entity(pe_index.0.get(&PathBuf::from(&edge.target)).unwrap().clone()).remove::<ToBeDespawned>();
+                            commands.entity(*pe_index.0.get(&PathBuf::from(&edge.target)).unwrap()).remove::<ToBeDespawned>();
                         }
                         if root_path_str == edge.target && pe_index.0.contains_key(&PathBuf::from(&edge.source)){
                             println!("Removing ToBeDespawned component from {}", edge.source);
-                            commands.entity(pe_index.0.get(&PathBuf::from(&edge.source)).unwrap().clone()).remove::<ToBeDespawned>();
+                            commands.entity(*pe_index.0.get(&PathBuf::from(&edge.source)).unwrap()).remove::<ToBeDespawned>();
                         }
                     }
 

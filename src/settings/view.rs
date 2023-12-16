@@ -12,3 +12,16 @@ impl Default for EdgeDefaults {
         }
     }
 }
+
+#[derive(Resource, Debug)]
+pub struct NodeInterpolationSettings {
+    active: bool,
+}
+
+impl Default for NodeInterpolationSettings {
+    fn default() -> Self {
+        NodeInterpolationSettings {
+            active: true,
+        }
+    }
+}

@@ -55,7 +55,7 @@ pub fn add_base_node_ui(
     let label_pos = Vec2::new(35.0, 0.0);
     let radius = 25.0;
 
-    let node_pos: Vec2 = match ev.self_position {
+    let node_pos: Vec2 = match ev.rel_target_position {
         Some(pos) => ev.root_position + pos,
         None => {
             Vec2::new(
@@ -125,7 +125,7 @@ pub fn add_image_node_ui(
 
     println!("Position: {:?}", ev.root_position);
 
-    let node_pos: Vec2 = match ev.self_position {
+    let node_pos: Vec2 = match ev.rel_target_position {
         Some(pos) => ev.root_position + pos,
         None => {
             Vec2::new(
