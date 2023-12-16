@@ -8,4 +8,6 @@ services:
        - .:/project
     environment:
       - DISPLAY=${DISPLAY}
-    network_mode: host
+      - XDG_RUNTIME_DIR=/project
+    devices: 
+      - /dev/snd
