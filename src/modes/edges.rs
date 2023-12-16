@@ -133,7 +133,6 @@ fn test_create_edge_from_drag() {
     let entity1 = app.world.spawn(
         GraphDataNode {
             path: PathBuf::from("path/to/entity1"),
-            name: OsString::from("entity1"),
             ntype: NodeTypes::Base,
             data: None,
         }
@@ -142,7 +141,6 @@ fn test_create_edge_from_drag() {
     let entity2 = app.world.spawn(
         GraphDataNode {
             path: PathBuf::from("path/to/entity2"),
-            name: OsString::from("entity2"),
             ntype: NodeTypes::Base,
             data: None,
         }

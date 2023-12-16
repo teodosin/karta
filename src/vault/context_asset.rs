@@ -420,7 +420,7 @@ pub fn save_context(
 }
 
 fn save_context_file(
-    vault_root_path: &PathBuf,
+    vault_path: &PathBuf,
     node_path: &PathBuf,
     context_asset: &ContextAsset,
 ) {
@@ -430,7 +430,7 @@ fn save_context_file(
         return
     }
 
-    let context_path = node_path_to_context_path(vault_root_path, node_path);
+    let context_path = node_path_to_context_path(vault_path, node_path);
 
     // Create the directory if it doesn't exist
     if let Some(parent) = context_path.parent() {
@@ -445,6 +445,28 @@ fn save_context_file(
     let mut file = std::fs::File::create(&context_path).expect("Could not create context file");
     file.write_all(data.as_bytes()).expect("Could not write to context file");
     
+}
+
+/// Immediately creates a context file for a node. Used when creating virtual nodes. 
+pub fn create_single_node_context(
+    vault_path: &PathBuf,
+    ntype: NodeTypes,
+    node_path: &PathBuf,
+) {
+    let asset = ContextAsset {
+        karta_version: VERSION.to_string(),
+        nself: RootNodeSerial {
+            path: node_path.to_str().unwrap().to_string(),
+            ntype,
+            attributes: None,
+            pin_to_position: false,
+            pin_to_presence: false,
+        },
+        nodes: Vec::new(),
+        edges: Vec::new(),
+    };
+
+    save_context_file(vault_path, node_path, &asset);
 }
 
 /// Helper function. Takes in the full vault path (name included) and the node path.
