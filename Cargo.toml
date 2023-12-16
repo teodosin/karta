@@ -12,12 +12,12 @@ bevy_mod_picking = { version = "0.17.0", features = ["backend_sprite",]}
 bevy_prototype_lyon = "0.10.0"
 bevy_svg = "0.12.0"
 bevy_cosmic_edit = "0.15.1"
-bevy_gaussian_splatting = "0.4.0"
-bevy_smud = "0.7.0"
+bevy_tweening = "0.9.0"
+# bevy_smud = "0.7.0"
+# bevy_gaussian_splatting = "0.4.0"
 # bevy_mod_debugdump = "0.8.0"
 # bevy-inspector-egui = "0.21.0"
 # bevy_cosmic_edit = "0.13.0"
-# bevy_tweening = "0.8.0"
 
 
 lyon = "1.0.1"

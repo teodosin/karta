@@ -1,8 +1,8 @@
 // FORCE SIMULATION
 
-use bevy::{prelude::{Query, Transform, Without, Vec2, Plugin, App, Entity, Res, Gizmos, PostUpdate, Resource}, time::Time};
+use bevy::{prelude::{Query, Transform, Without, Vec2, Plugin, App, Entity, Res, Gizmos, PostUpdate, Resource}, time::Time, input::{Input, keyboard::KeyCode}};
 
-use crate::ui::nodes::{GraphViewNode, Velocity2D};
+use crate::ui::nodes::{GraphViewNode, Velocity2D, TargetPosition};
 
 use super::{nodes::PinnedToPosition, context::Selected};
 
@@ -45,15 +45,20 @@ impl Default for GraphSimSettings {
     }
 }
 
+/// System that applies the forces calculated by force nodes
 fn apply_forces(
     sim_settings: Res<GraphSimSettings>,
     time: Res<Time>,
     mut nodes: Query<
         (Entity, &GraphViewNode, &mut Transform, &mut Velocity2D), 
-        (Without<PinnedToPosition>, Without<Selected>)
+        (Without<PinnedToPosition>, Without<Selected>, Without<TargetPosition>)
     >,
     _gizmos: Gizmos,
+    keys: Res<Input<KeyCode>>,
 ) {
+    // if !keys.pressed(KeyCode::Space) {
+    //     return
+    // }
     //for step in 0..sim_settings.simulation_steps {
         for (_node, _view, mut pos, mut vel) in nodes.iter_mut() {
 

@@ -15,10 +15,11 @@ use crate::graph::node_types::{NodeTypes, NodeData};
 pub struct NodeSpawnedEvent {
     pub entity: Entity,
     pub path: PathBuf,
-    pub name: OsString,
     pub ntype: NodeTypes,
     pub data: Option<Box<dyn NodeData>>,
-    pub position: Vec2,
+    pub root_position: Vec2,
+    pub rel_target_position: Option<Vec2>,
+    pub pinned_to_position: bool,
 }
 
 #[derive(Event)]   
