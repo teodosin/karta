@@ -15,7 +15,6 @@ use crate::graph::node_types::{NodeTypes, NodeData};
 pub struct NodeSpawnedEvent {
     pub entity: Entity,
     pub path: PathBuf,
-    pub name: OsString,
     pub ntype: NodeTypes,
     pub data: Option<Box<dyn NodeData>>,
     pub root_position: Vec2,

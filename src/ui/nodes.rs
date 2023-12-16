@@ -3,7 +3,7 @@ use bevy_mod_picking::prelude::*;
 use bevy_prototype_lyon::{shapes, prelude::{GeometryBuilder, ShapeBundle, Stroke, StrokeOptions}};
 
 use crate::{
-    graph::{nodes::{GraphDataNode, PinnedToPosition, GraphNodeEdges}, graph_cam::ViewData, context::Selected, node_types::NodeTypes}, 
+    graph::{nodes::{GraphDataNode, PinnedToPosition, GraphNodeEdges, ContextRoot}, graph_cam::ViewData, context::Selected, node_types::NodeTypes}, 
     events::nodes::{MoveNodesEvent, NodeClickEvent, NodePressedEvent, NodeHoverEvent, NodeSpawnedEvent}
 };
 
@@ -22,6 +22,7 @@ impl Plugin for NodesUiPlugin {
 
             .add_systems(PostUpdate, add_node_ui)
             .add_systems(PostUpdate, visualise_pinned_position)
+            .add_systems(PostUpdate, visualise_root_node)
 
             // .add_systems(PreUpdate, outlines_pulse)
             // .add_systems(PreUpdate, visualise_pinned_position)
@@ -145,7 +146,7 @@ pub fn add_node_label(
         Text2dBundle {
             text: Text {
                 sections: vec![TextSection::new(
-                    &*ev.name.to_string_lossy(),
+                    &*ev.path.file_name().unwrap().to_string_lossy(),
                     TextStyle {
                         font_size: 20.0,
                         color: Color::WHITE,
@@ -244,13 +245,31 @@ pub fn visualise_pinned_position (
     }
 }
 
+pub fn visualise_root_node (
+    mut gizmos: Gizmos,
+    root: Query<&Transform, With<ContextRoot>>,
+) {
+    for pos in root.iter() {
+        gizmos.circle_2d(
+            pos.translation.truncate(),
+            10.0,
+            Color::rgb(0.1, 0.9, 0.1),
+        );
+        gizmos.circle_2d(
+            pos.translation.truncate(),
+            13.0,
+            Color::rgb(0.1, 0.9, 0.1),
+        );
+    }
+}
+
 #[derive(Component)]
 pub struct NodeDebugLabel;
 
 pub fn toggle_node_debug_labels(
     mut commands: Commands,
 
-    mut key_input: ResMut<Input<KeyCode>>,
+    key_input: ResMut<Input<KeyCode>>,
 
     mut nodes: Query<(Entity, &GraphNodeEdges)>,
     mut labels: Query<Entity, &NodeDebugLabel>,

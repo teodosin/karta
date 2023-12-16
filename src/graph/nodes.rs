@@ -32,12 +32,12 @@ impl Plugin for NodesPlugin {
 // ----------------------------------------------------------------
 // Component definitions
 
-// A component to store the data of a NODE
-// The path and name of the node is something that all node types have in common
+/// A component to store the universal data of a node. 
+/// The path and name of the node is something that all node types have in common.
+/// The name is the file name.
 #[derive(Component)]
 pub struct GraphDataNode {
     pub path: PathBuf,
-    pub name: OsString,
     pub ntype: NodeTypes,
     pub data: Option<Box<dyn NodeData>>,
 }
@@ -289,12 +289,9 @@ pub fn spawn_node (
 
     let data = type_to_data(ntype);
 
-    let name = path.file_name().unwrap().to_os_string();
-
     let node_entity = commands.spawn((
         GraphDataNode {
             path: path.clone(),
-            name: name.clone(),
             ntype,
             data: None,
         },
@@ -304,7 +301,6 @@ pub fn spawn_node (
     event.send(NodeSpawnedEvent {
         entity: node_entity,
         path: path.clone(),
-        name: name,
         ntype,
         data,
         root_position,
