@@ -6,3 +6,6 @@ services:
     privileged: true
     volumes:
        - .:/project
+    environment:
+      - DISPLAY=${DISPLAY}
+    network_mode: host
