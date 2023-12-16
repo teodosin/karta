@@ -50,4 +50,8 @@ If you install rust- or any other plugin to VSCode, it will be valid only when r
 The project directory is to be found in `/project` directory. Use the terminal from VSCode to run 
 any command within the context of docker container. 
 
+There are multiple ways to run karta, or any other graphical (X11) application from docker container, 
+here is the [article](https://www.baeldung.com/linux/docker-container-gui-applications) which suggests
+at least three ways. 
+
 
