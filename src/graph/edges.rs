@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{graph::attribute::Attributes, events::edges::EdgeSpawnedEvent};
 
-use super::{nodes::{GraphDataNode, GraphNodeEdges}, graph_cam::ViewData, context::PathsToEntitiesIndex};
+use super::{nodes::GraphNodeEdges, context::PathsToEntitiesIndex};
 
 pub struct EdgesPlugin;
 
@@ -71,7 +71,7 @@ pub fn create_edge(
     edges: &Query<(&GraphEdge, &EdgeType)>,
 ){
     // Check if an edge already exists between the node pair
-    for (edge, edge_type) in edges.iter() {
+    for (edge, _edge_type) in edges.iter() {
         if edge.same_pair(&GraphEdge {
             source: (*from).to_path_buf(),
             target: (*to).to_path_buf(),
@@ -118,7 +118,6 @@ pub fn create_edge(
 pub fn add_edge_to_node_indexes(
     mut event: EventReader<EdgeSpawnedEvent>,
     mut edges: Query<&GraphEdge>,
-    nodes: Query<&GraphDataNode, With<GraphNodeEdges>>,
     pe_index: Res<PathsToEntitiesIndex>,
     mut node_edges: Query<&mut GraphNodeEdges>,
 ) {

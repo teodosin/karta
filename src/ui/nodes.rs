@@ -1,4 +1,4 @@
-use bevy::{prelude::*, text::{Text2dBounds, TextLayoutInfo}, sprite::Anchor};
+use bevy::{prelude::*, text::Text2dBounds, sprite::Anchor};
 use bevy_mod_picking::prelude::*;
 use bevy_prototype_lyon::{shapes, prelude::{GeometryBuilder, ShapeBundle, Stroke, StrokeOptions}};
 
@@ -18,8 +18,6 @@ impl Plugin for NodesUiPlugin {
         app
             // .insert_resource(UiNodeSystemsIndex::default())
             // .add_systems(PreStartup, setup_node_ui_systems)
-            .add_systems(PreUpdate, handle_outline_hover)
-
             .add_systems(PostUpdate, add_node_ui)
             .add_systems(PostUpdate, visualise_pinned_position)
             .add_systems(PostUpdate, visualise_root_node)
@@ -34,22 +32,29 @@ impl Plugin for NodesUiPlugin {
 // Component Definitions
 // ----------------------------------------------------------------
 
-// Basic marker component to identify all nodes that have a graphical representation
-// in the graph. 
+/// Basic marker component to identify all nodes that have a graphical representation
+/// in the graph. 
 #[derive(Component)]
 pub struct GraphViewNode;
 
-// Marker component for all nodes that have the interactive outline. 
+/// Marker component for the node outline. 
 #[derive(Component)]
 pub struct NodeOutline;
 
-// Marker component for all nodes that have a visible label. Nodes with this
-// component will have a text label attached to them.
+/// Marker component for node name labels
 #[derive(Component)]
 pub struct NodeLabel;
 
-// Component to store the current velocity of a node. 
-// This component might get abstracted out at some point, because it is very generic. 
+/// Component storing the target position of a node. Nodes with this component will be 
+/// ignored by the simulation. When the node reaches the target position, this component 
+/// will be removed.
+#[derive(Component)]
+pub struct TargetPosition {
+    pub position: Vec2,
+}
+
+/// Component to store the current velocity of a node. 
+/// This component might get abstracted out at some point, because it is very generic. 
 #[derive(Component)]
 pub struct Velocity2D {
     pub velocity: Vec2,
@@ -63,9 +68,9 @@ impl Default for Velocity2D {
     }
 }
 
-// Component to store the scale of a node. This should also affect the simulation,
-// but I don't know how that should behave just yet. So for now there will be a 
-// separate "radius" variable that will be used for the simulation.
+/// Component to store the scale of a node. This should also affect the simulation,
+/// but the precise behavior hasn't been decided. So for now there will be a 
+/// separate "radius" variable that will be used for the simulation.
 #[derive(Component)]
 pub struct ViewNodeScale {
     pub scale: Vec2,
@@ -221,11 +226,8 @@ pub fn add_node_base_outline(
     commands.entity(*parent).push_children(&[node_outline]);
 }
 
-pub fn handle_outline_hover(
-    // ev_spawn: EventReader<Node>,
-    _nodes: Query<&Transform, With<GraphDataNode>>,
-    
-    // mut commands: Commands,
+pub fn tween_to_target_position(
+
 ){
     
 }

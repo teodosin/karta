@@ -19,16 +19,11 @@ pub struct CreateNodeAction {
 
 
 
+/// NOTE: The implementation here must be kept in sync with the implementation of spawn_node,
+/// which is mostly called when expanding a node or changing context. 
 impl Action for CreateNodeAction {
-    // NOTE: The implementation here must be kept in sync with the implementation of spawn_node,
-    // which is mostly called when expanding a node or changing context. 
     fn execute(&mut self, world: &mut bevy::prelude::World) {
-        println!("Creating: ");
 
-        
-        // DONE: Implement a function to get an available name. Use the Houdini convention.
-        // Two nodes can't share the same path, so we need to check if a node already exists
-        // in the current path.
         let vault = world.get_resource::<CurrentVault>().unwrap();
         let vault_path = vault.vault.as_ref().unwrap().get_vault_path().clone();
         let context = world.get_resource::<CurrentContext>().unwrap();
@@ -41,8 +36,9 @@ impl Action for CreateNodeAction {
             Some(cxt) => cxt,
         };
 
+        // Find the closest physical parent folder. The created node will be treated like it 
+        // was created in this folder.
         let mut cpath = cxt.get_path();
-
         while !cpath.is_dir(){
             cpath.pop();
         }
@@ -54,6 +50,7 @@ impl Action for CreateNodeAction {
 
         println!("Creating node with path: {:?}", valid_path);
         
+        // Could be worth it to map out the difference between spawn_node and this code. 
         let node_entity = world.spawn((
             GraphDataNode {
                 path: valid_path.clone(),
@@ -74,7 +71,7 @@ impl Action for CreateNodeAction {
             ntype: self.ntype,
             data: type_to_data(self.ntype),
             root_position: root_position.translation.truncate(),
-            self_position: Some(self.position),
+            self_position: Some(self.position - root_position.translation.truncate()),
             pinned_to_position: false,
         });
         
