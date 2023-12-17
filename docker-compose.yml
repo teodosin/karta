@@ -9,5 +9,7 @@ services:
     environment:
       - DISPLAY=${DISPLAY}
       - XDG_RUNTIME_DIR=/project
+      - WINIT_UNIX_BACKEND=x11
     devices: 
       - /dev/snd
+    network_mode: "host"
