@@ -9,7 +9,7 @@ use bevy::{
     }, 
     window::Window
 };
-use bevy_mod_picking::prelude::PointerButton;
+use bevy_mod_picking::{prelude::PointerButton, selection::NoDeselect};
 
 use crate::{events::nodes::NodeClickEvent, actions::{node_actions::{PinToPositionAction, UnpinToPositionAction}, ActionComponent, ActionFactory, ActionManager, context_actions::MoveToContextAction}, input::pointer::InputData};
 
@@ -140,7 +140,7 @@ fn create_context_menu_button<'a>(
         },
         ButtonBundle {
             style: Style {
-                width: Val::Px(100.0),
+                width: Val::Px(120.0),
                 height: Val::Px(30.0),
                 // horizontally center child text
                 justify_content: JustifyContent::Center,
@@ -153,6 +153,7 @@ fn create_context_menu_button<'a>(
             ..default()
         },
         ContextMenuButton,
+        NoDeselect,
     ))
     .with_children(|parent| {
         parent.spawn((
