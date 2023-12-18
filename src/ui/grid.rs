@@ -16,6 +16,7 @@ impl Plugin for InfiniteGrid2DPlugin {
     fn build(&self, app: &mut App) {
         let material_plugin =
             Material2dPlugin::<GridMaterial>::default();
+            
         app
             .add_plugins(material_plugin)
             .add_systems(Startup, setup_grid)   
@@ -48,15 +49,6 @@ fn setup_grid(
 #[derive(Component)]
 pub struct GraphBackground;
 
-impl Default for GridMaterial {
-    fn default() -> Self {
-        GridMaterial {
-            zoom: 1.0,
-            color: Color::rgba(1.0, 1.0, 1.0, 0.2),
-            grid_cell_size: Vec2::new(0.00002, 0.00002),
-        }
-    }
-}
 
 #[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
 pub struct GridMaterial {
@@ -66,6 +58,16 @@ pub struct GridMaterial {
     pub color: Color,
     #[uniform(2)]
     pub grid_cell_size: Vec2,
+}
+
+impl Default for GridMaterial {
+    fn default() -> Self {
+        GridMaterial {
+            zoom: 1.0,
+            color: Color::rgba(1.0, 1.0, 1.0, 0.2),
+            grid_cell_size: Vec2::new(0.00002, 0.00002),
+        }
+    }
 }
 
 impl Material2d for GridMaterial {
