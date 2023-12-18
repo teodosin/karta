@@ -90,13 +90,45 @@ impl GraphNodeEdges {
 pub struct ContextRoot;
 
 #[derive(Component)]
-pub struct PinnedToPosition;
+pub struct Pins {
+    pub position: bool,
+    pub presence: bool,
+    pub ui: bool,
+}
 
-#[derive(Component)]
-pub struct PinnedToPresence;
+impl Default for Pins {
+    fn default() -> Self {
+        Pins {
+            position: false,
+            presence: false,
+            ui: false,
+        }
+    }
+}
 
-#[derive(Component)]
-pub struct PinnedToUi;
+impl Pins {
+    pub fn pinpos () -> Self {
+        Pins {
+            position: true,
+            presence: false,
+            ui: false,
+        }
+    }
+    pub fn pinpres () -> Self {
+        Pins {
+            position: false,
+            presence: true,
+            ui: false,
+        }
+    }
+    pub fn pinui () -> Self {
+        Pins {
+            position: false,
+            presence: false,
+            ui: true,
+        }
+    }
+}
 
 // Marker Component for nodes that are only visitors to the current context and should not be serialized
 #[derive(Component)]

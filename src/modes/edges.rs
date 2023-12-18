@@ -31,7 +31,6 @@ impl Plugin for EdgesPlugin {
 fn create_edge_from_drag(
     mut event: EventWriter<EdgeSpawnedEvent>,
     input_data: Res<InputData>,
-    pe_index: Res<PathsToEntitiesIndex>,
     mut commands: Commands,
     edges: Query<(&GraphEdge, &EdgeType)>,
 ) {
@@ -51,9 +50,9 @@ fn create_edge_from_drag(
     }
 
     // Enforce only being able to create edges from the outline
-    if !input_data.press_is_outline {
-        return
-    }
+    // if !input_data.press_is_outline {
+    //     return
+    // }
 
     let from = input_data.latest_press_entity.clone().unwrap();
     let to = input_data.latest_hover_entity.clone().unwrap();
