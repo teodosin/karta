@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy_mod_picking::selection::NoDeselect;
 
 use crate::modes::KartaModeState;
 
@@ -69,6 +70,7 @@ pub fn create_mode_menu_button<'a>(
     ))
     .with_children(|parent| {
         parent.spawn((
+            NoDeselect,
             TextBundle::from_section(
                 mode.to_string(),
                 TextStyle {

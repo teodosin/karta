@@ -28,6 +28,7 @@ impl Plugin for NodesUiPlugin {
             .add_systems(PostUpdate, tween_to_target_position_complete)
             .add_systems(PostUpdate, visualise_pinned_position)
             .add_systems(PostUpdate, visualise_root_node)
+            .add_systems(PostUpdate, visualise_selected)
 
             // .add_systems(PreUpdate, outlines_pulse)
             // .add_systems(PreUpdate, visualise_pinned_position)
@@ -114,7 +115,7 @@ pub fn add_node_ui(
 
         println!("Node type: {:?}", ev.ntype);
 
-        commands.entity(ev.entity).insert((
+        let node = commands.entity(ev.entity).insert((
             GraphViewNode,
             Velocity2D::default(),
             PickableBundle::default(),
@@ -125,9 +126,16 @@ pub fn add_node_ui(
             On::<Pointer<Over>>::send_event::<NodeHoverEvent>(),
             
             On::<Pointer<DragStart>>::target_insert(Selected),
-            On::<Pointer<DragEnd>>::target_remove::<Selected>(),
+            //On::<Pointer<DragEnd>>::target_remove::<Selected>(),
+            On::<Pointer<Select>>::target_insert(Selected),
             On::<Pointer<Deselect>>::target_remove::<Selected>(),
-        ));
+        )).id();
+
+        commands.entity(node).insert(
+            On::<Pointer<DragStart>>::target_component_mut::<PickSelection>(| _drag, pick | {
+                pick.is_selected = true;
+            }),
+        );
 
         // if true {
         //     commands.entity(ev.entity).insert(TargetPosition {
@@ -308,6 +316,22 @@ pub fn visualise_root_node (
             pos.translation.truncate(),
             13.0,
             Color::rgb(0.1, 0.9, 0.1),
+        );
+    }
+}
+
+pub fn visualise_selected (
+    mut gizmos: Gizmos,
+    // selected: Query<&Transform, With<Selected>>,
+    selected: Query<(&Transform, &PickSelection)>,
+
+){
+    for (pos, pick) in selected.iter() {
+        if !pick.is_selected {continue};
+        gizmos.line_2d(
+            pos.translation.truncate() + Vec2::new(-20.0, 0.0),
+            pos.translation.truncate() + Vec2::new(20.0, 0.0),
+            Color::rgb(0.9, 0.1, 0.1),
         );
     }
 }
