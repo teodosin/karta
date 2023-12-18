@@ -6,7 +6,7 @@ use bevy_prototype_lyon::{shapes, prelude::{GeometryBuilder, ShapeBundle, Stroke
 use bevy_tweening::{Tween, EaseFunction, lens::TransformPositionLens, Animator, TweenCompleted, TweenState, TweeningPlugin};
 
 use crate::{
-    graph::{nodes::{GraphDataNode, PinnedToPosition, GraphNodeEdges, ContextRoot}, graph_cam::ViewData, context::Selected, node_types::NodeTypes}, 
+    graph::{nodes::{GraphDataNode, GraphNodeEdges, ContextRoot, Pins}, graph_cam::ViewData, context::Selected, node_types::NodeTypes}, 
     events::nodes::{MoveNodesEvent, NodeClickEvent, NodePressedEvent, NodeHoverEvent, NodeSpawnedEvent}
 };
 
@@ -117,6 +117,7 @@ pub fn add_node_ui(
 
         let node = commands.entity(ev.entity).insert((
             GraphViewNode,
+            Pins::default(),
             Velocity2D::default(),
             PickableBundle::default(),
             
@@ -125,10 +126,6 @@ pub fn add_node_ui(
             On::<Pointer<Down>>::send_event::<NodePressedEvent>(),
             On::<Pointer<Over>>::send_event::<NodeHoverEvent>(),
             
-            On::<Pointer<DragStart>>::target_insert(Selected),
-            //On::<Pointer<DragEnd>>::target_remove::<Selected>(),
-            On::<Pointer<Select>>::target_insert(Selected),
-            On::<Pointer<Deselect>>::target_remove::<Selected>(),
         )).id();
 
         commands.entity(node).insert(
@@ -137,14 +134,10 @@ pub fn add_node_ui(
             }),
         );
 
-        // if true {
-        //     commands.entity(ev.entity).insert(TargetPosition {
-        //         position: ev.root_position + ev.rel_target_position.unwrap_or(Vec2::ZERO),
-        //     });
-        // }
-
         if ev.pinned_to_position {
-            commands.entity(ev.entity).insert(PinnedToPosition);
+            commands.entity(ev.entity).insert(Pins::pinpos());
+        } else {
+            commands.entity(ev.entity).insert(Pins::default());
         }
 
         match ev.ntype {
@@ -174,7 +167,7 @@ pub fn add_node_label(
                 sections: vec![TextSection::new(
                     &*ev.path.file_name().unwrap().to_string_lossy(),
                     TextStyle {
-                        font_size: 20.0,
+                        font_size: 100.0,
                         color: Color::WHITE,
                         ..default()
                     },
@@ -187,6 +180,7 @@ pub fn add_node_label(
             },
             transform: Transform {
                 translation: Vec3::new(pos.x, pos.y, 10000.0 + top_z),
+                scale: Vec3::new(0.2, 0.2, 1.0),
                 ..default()
             },
             text_anchor: bevy::sprite::Anchor::CenterLeft,
@@ -227,19 +221,23 @@ pub fn add_node_base_outline(
             ..default()
         },
         Stroke::new(
-            crate::settings::theme::OUTLINE_BASE_COLOR, 10.0
+            // crate::settings::theme::OUTLINE_BASE_COLOR, 10.0
+            Color::rgba(0.0, 0.0, 0.0, 0.0), 10.0
         ),
         NodeOutline,
         
         //RaycastPickable::default(),
 
+
         On::<Pointer<Over>>::target_component_mut::<Stroke>(move |_over, stroke| {
-            stroke.color = crate::settings::theme::OUTLINE_HOVER_COLOR;
+            // stroke.color = crate::settings::theme::OUTLINE_HOVER_COLOR;
+            stroke.color = Color::rgba(0.0, 0.0, 0.0, 0.0);
             stroke.options = StrokeOptions::default().with_line_width(outline_width_hovered);
         }),
         
         On::<Pointer<Out>>::target_component_mut::<Stroke>(move |_out, stroke| {
-            stroke.color = crate::settings::theme::OUTLINE_BASE_COLOR;
+            // stroke.color = crate::settings::theme::OUTLINE_BASE_COLOR;
+            stroke.color = Color::rgba(0.0, 0.0, 0.0, 0.0);
             stroke.options = StrokeOptions::default().with_line_width(outline_width);
         }),
     )).id();
@@ -291,9 +289,10 @@ pub fn tween_to_target_position_complete(
 // ----------------------------------------------------------------
 pub fn visualise_pinned_position (
     mut gizmos: Gizmos,
-    pinned: Query<&Transform, With<PinnedToPosition>>,
+    pinned: Query<(&Transform, &Pins)>,
 ) {
-    for pos in pinned.iter() {
+    for (pos, pins) in pinned.iter() {
+        if !pins.position {continue}
         gizmos.circle_2d(
             pos.translation.truncate(),
             5.0,

@@ -5,7 +5,7 @@ use std::{ffi::{OsString, OsStr}, path::PathBuf};
 use bevy::{prelude::{Entity, With, Vec2}, transform::components::Transform};
 use bevy_mod_picking::selection::PickSelection;
 
-use crate::{graph::{nodes::{PinnedToPosition, GraphDataNode, ContextRoot, GraphNodeEdges}, context::{PathsToEntitiesIndex, Selected, CurrentContext}, node_types::{NodeTypes, type_to_data}}, input::pointer::InputData, ui::nodes::GraphViewNode, events::nodes::NodeSpawnedEvent, vault::{context_asset::{node_path_to_context_path, create_single_node_context}, CurrentVault}};
+use crate::{graph::{nodes::{GraphDataNode, ContextRoot, GraphNodeEdges, Pins}, context::{PathsToEntitiesIndex, CurrentContext}, node_types::{NodeTypes, type_to_data}}, input::pointer::InputData, ui::nodes::GraphViewNode, events::nodes::NodeSpawnedEvent, vault::{context_asset::{node_path_to_context_path, create_single_node_context}, CurrentVault}};
 
 use super::Action;
 
@@ -59,7 +59,6 @@ impl Action for CreateNodeAction {
                 data: type_to_data(self.ntype)
             },
             GraphNodeEdges::default(),
-            PinnedToPosition,
         )).id();
         
         self.entity = Some(node_entity);
@@ -161,8 +160,7 @@ pub struct PinToPositionAction {
 impl Action for PinToPositionAction {
     fn execute(&mut self, world: &mut bevy::prelude::World) {
         // let mut selected = world.query_filtered::<Entity, (With<GraphViewNode>, With<Selected>)>();
-        let mut selected = world.query::<(Entity, Option<&PinnedToPosition>, &PickSelection)>();
-        let mut pinned = world.query_filtered::<Entity, (With<GraphViewNode>, With<PinnedToPosition>)>();
+        let mut selected = world.query::<(Entity, &mut Pins, &PickSelection)>();
 
         let clicked_node = self.get_latest_clicked_node(world);
         
@@ -180,42 +178,30 @@ impl Action for PinToPositionAction {
         for (node, pin, pick) in selected.iter(world) {
             if !pick.is_selected { continue }
 
-            // match pinned.get(world, node){
-            match pin {
-                Some(_) => {
-                    println!("It's a match in pinven");
-                    match self.pins {
-                        Some(ref mut pins) => pins.push((node, true)),
-                        None => self.pins = Some(vec![(node, true)]),
-                    }
+            // If the node is already pinned, we don't want to pin it again
+            if !pin.position {
+                targets.push(node);
+                println!("Not already pinned");
+                match self.pins {
+                    Some(ref mut pins) => pins.push((node, false)),
+                    None => self.pins = Some(vec![(node, false)]),
                 }
-                None => {
-                    targets.push(node);
-                    println!("Not already pinned");
-                    match self.pins {
-                        Some(ref mut pins) => pins.push((node, false)),
-                        None => self.pins = Some(vec![(node, false)]),
-                    }
-                }
+                
             }
         }
+
         for target in targets {
-            println!("Adding pin component");
-            world.entity_mut(target).insert(PinnedToPosition);
+            selected.get_mut(world, target).unwrap().1.position = true;
         }
         
         println!("Performing PinToPositionAction");
     }
 
     fn undo(&mut self, world: &mut bevy::prelude::World) {
-        let node = self.get_latest_clicked_node(world).unwrap();
-        world.entity_mut(node).remove::<PinnedToPosition>();
         println!("Undoing PinToPositionAction");
     }
 
     fn redo(&mut self, world:  &mut bevy::prelude::World) {
-        let node = self.get_latest_clicked_node(world).unwrap();
-        world.entity_mut(node).insert(PinnedToPosition);
         println!("Redoing PinToPositionAction");
     }
 }
@@ -246,9 +232,8 @@ pub struct UnpinToPositionAction {
 
 impl Action for UnpinToPositionAction {
     fn execute(&mut self, world: &mut bevy::prelude::World) {
-            // let mut selected = world.query_filtered::<Entity, (With<GraphViewNode>, With<Selected>)>();
-            let mut selected = world.query::<(Entity, Option<&PinnedToPosition>, &PickSelection)>();
-            let mut pinned = world.query_filtered::<Entity, (With<GraphViewNode>, With<PinnedToPosition>)>();
+            
+            let mut selected = world.query::<(Entity, &mut Pins, &PickSelection)>();
     
             let clicked_node = self.get_latest_clicked_node(world);
             
@@ -262,32 +247,22 @@ impl Action for UnpinToPositionAction {
             }
     
             
-            println!("Size of selection when pinning: {}", selected.iter(world).filter(| (_, _, pick) | pick.is_selected).count());
+            println!("Size of selection when unpinning: {}", selected.iter(world).filter(| (_, _, pick) | pick.is_selected).count());
             for (node, pin, pick) in selected.iter(world) {
                 if !pick.is_selected { continue }
     
-                // match pinned.get(world, node){
-                match pin {
-                    Some(_) => {
-                        println!("It's a match in pinven");
-                        match self.pins {
-                            Some(ref mut pins) => pins.push((node, true)),
-                            None => self.pins = Some(vec![(node, true)]),
-                        }
-                    }
-                    None => {
-                        targets.push(node);
-                        println!("Not already pinned");
-                        match self.pins {
-                            Some(ref mut pins) => pins.push((node, false)),
-                            None => self.pins = Some(vec![(node, false)]),
-                        }
+                if pin.position {
+                    targets.push(node);
+                    match self.pins {
+                        Some(ref mut pins) => pins.push((node, true)),
+                        None => self.pins = Some(vec![(node, true)]),
                     }
                 }
             }
+
             for target in targets {
                 println!("Removing pin component");
-                world.entity_mut(target).remove::<PinnedToPosition>();
+                selected.get_mut(world, target).unwrap().1.position = false;
             }
     }
 

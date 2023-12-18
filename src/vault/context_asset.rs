@@ -5,7 +5,7 @@ use std::{path::{PathBuf, Path}, fs::DirEntry, io::Write};
 use bevy::{prelude::Vec2, ecs::{system::{Res, Query}, entity::Entity, query::{With, Without}}, reflect::TypePath, utils::HashMap, transform::components::Transform};
 use serde::{Deserialize, Serialize};
 
-use crate::{graph::{attribute::Attributes, node_types::NodeTypes, edges::{EdgeTypes, EdgeType, GraphEdge}, nodes::{GraphDataNode, GraphNodeEdges, PinnedToPosition, PinnedToPresence, Visitor, ContextRoot}, context::CurrentContext}, events::{context, edges}};
+use crate::{graph::{attribute::Attributes, node_types::NodeTypes, edges::{EdgeTypes, EdgeType, GraphEdge}, nodes::{GraphDataNode, GraphNodeEdges, Visitor, ContextRoot, Pins}, context::CurrentContext}, events::{context, edges}};
 
 use super::CurrentVault;
 
@@ -140,8 +140,7 @@ pub fn save_context(
         &GraphDataNode, 
         &GraphNodeEdges,
         Option<&Transform>, // TODO: Remove the option?
-        Option<&PinnedToPosition>,
-        Option<&PinnedToPresence>,
+        &Pins,
         Option<&Attributes>,
         ),
         With<ContextRoot>,
@@ -152,8 +151,7 @@ pub fn save_context(
         &GraphDataNode, 
         &GraphNodeEdges,
         Option<&Transform>, // TODO: Remove the option?
-        Option<&PinnedToPosition>,
-        Option<&PinnedToPresence>,
+        &Pins,
         Option<&Attributes>,
         ),
         Without<ContextRoot>,
@@ -223,7 +221,7 @@ pub fn save_context(
         }
     };
 
-    let (rn_entity, rn_data, rn_edges, rn_transform, rn_pin_pos, rn_pin_pres, rn_attr) = root_node;
+    let (rn_entity, rn_data, rn_edges, rn_transform, rn_pins, rn_attr) = root_node;
 
     // Save the root node context. 
     // All the connected nodes are guaranteed to be present in the context. 
@@ -232,11 +230,11 @@ pub fn save_context(
         path: rn_data.path.to_str().unwrap().to_string(),
         ntype: rn_data.ntype,
         attributes: rn_attr.cloned(),
-        pin_to_position: rn_pin_pos.is_some(),
-        pin_to_presence: rn_pin_pres.is_some(),
+        pin_to_position: rn_pins.position,
+        pin_to_presence: rn_pins.presence,
     };
 
-    let nodes_serial: Vec<NodeSerial> = all_nodes.iter().map(|(_, visitor, data, _, on_transform, on_pin_pos, on_pin_pres, _)| {
+    let nodes_serial: Vec<NodeSerial> = all_nodes.iter().map(|(_, visitor, data, _, on_transform, on_pins, _)| {
         if visitor.is_some() {
             return None
         }
@@ -263,8 +261,8 @@ pub fn save_context(
             path: data.path.to_str().unwrap().to_string(),
             relative_position,
             relative_size,
-            pin_to_position: on_pin_pos.is_some(),
-            pin_to_presence: on_pin_pres.is_some(),
+            pin_to_position: on_pins.position,
+            pin_to_presence: on_pins.presence,
         };
 
         Some(node_serial)
@@ -310,7 +308,7 @@ pub fn save_context(
     // Modify the other context files
     // Ignore visitors 
     for node in all_nodes.iter() {
-        let (_, visitor, node, edges, _, pin_pos, pin_pres, attr) = node;
+        let (_, visitor, node, edges, _, pins, attr) = node;
 
         if visitor.is_some() {
             continue
@@ -337,8 +335,8 @@ pub fn save_context(
             path: node.path.to_str().unwrap().to_string(),
             ntype: node.ntype,
             attributes: attr.cloned(),
-            pin_to_position: pin_pos.is_some(),
-            pin_to_presence: pin_pres.is_some(),
+            pin_to_position: pins.position,
+            pin_to_presence: pins.presence,
         };
 
         // Leave nodes as they were originally.
@@ -346,7 +344,7 @@ pub fn save_context(
 
         // We must selectively overwrite only the edges that are present in this context.
 
-        let all_node_paths: Vec<String> = all_nodes.iter().map(|(_, _, node, _, _, _, _, _)| {
+        let all_node_paths: Vec<String> = all_nodes.iter().map(|(_, _, node, _, _, _, _)| {
             node.path.to_str().unwrap().to_string()
         }).collect();
 

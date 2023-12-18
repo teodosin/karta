@@ -46,7 +46,7 @@ pub fn add_edge_ui(
                 },
                 ..default()
             },
-            Stroke::new(edgecol, 8.0)
+            Stroke::new(edgecol, 4.0)
         ));
 
         // commands.entity(ev.entity).insert((
