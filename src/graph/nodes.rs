@@ -2,7 +2,7 @@
 
 use std::{path::PathBuf, ffi::OsString};
 
-use bevy::{prelude::*, input::keyboard::KeyboardInput, utils::HashMap};
+use bevy::{prelude::*, input::{keyboard::KeyboardInput, mouse::MouseButtonInput}, utils::HashMap};
 use bevy_mod_picking::picking_core::PickSet;
 
 use super::{context::{PathsToEntitiesIndex, ToBeDespawned, Selected, CurrentContext}, node_types::{NodeTypes, NodeData, type_to_data}};
@@ -115,6 +115,7 @@ pub struct Visitor;
 fn handle_node_click(
     mut event: EventReader<NodeClickEvent>,
     mut keys: EventReader<KeyboardInput>,
+    mouse: Res<Input<MouseButton>>,
 
     mut commands: Commands,
     mut input_data: ResMut<InputData>,
@@ -127,16 +128,16 @@ fn handle_node_click(
         return
     }
 
-    if !keys.read().any(
-        |k| k.key_code == Some(KeyCode::ShiftLeft) 
-        || k.key_code == Some(KeyCode::ShiftRight)
-    ) //&& !mouse.pressed(MouseButton::Right) 
-    {
-        println!("Clearing selection");
-        for node in selection.iter() {
-            commands.entity(node).remove::<Selected>();
-        }
-    }
+    // if !keys.read().any(
+    //     |k| k.key_code == Some(KeyCode::ShiftLeft) 
+    //     || k.key_code == Some(KeyCode::ShiftRight)
+    // ) && !mouse.pressed(MouseButton::Right) 
+    // {
+    //     println!("Clearing selection");
+    //     for node in selection.iter() {
+    //         commands.entity(node).remove::<Selected>();
+    //     }
+    // }
 
     // TODO: Handle multiple events
     match event.read().next().unwrap().target {

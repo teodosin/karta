@@ -34,36 +34,36 @@ pub fn add_edge_ui(
 
         let edgecol = EDGE_PARENT_COLOR;
 
-        // commands.entity(ev.entity).insert((
-        //     ShapeBundle {
-        //         path: GeometryBuilder::build_as(&line),
-        //         spatial: SpatialBundle {
-        //             transform: Transform {
-        //                 translation: Vec3::new(0.0, 0.0, view_data.bottom_z),
-        //                 ..default()
-        //             },
-        //             ..default()
-        //         },
-        //         ..default()
-        //     },
-        //     Stroke::new(edgecol, 8.0)
-        // ));
-
         commands.entity(ev.entity).insert((
-            MaterialMesh2dBundle {
-                mesh: default(),
-                material: edge_materials.add(EdgeMaterial::default().into()),
-                // material: ColorMaterial::from(edgecol),
-                transform: Transform {
-                    translation: Vec3::new(0.0, 0.0, view_data.bottom_z),
+            ShapeBundle {
+                path: GeometryBuilder::build_as(&line),
+                spatial: SpatialBundle {
+                    transform: Transform {
+                        translation: Vec3::new(0.0, 0.0, view_data.bottom_z),
+                        ..default()
+                    },
                     ..default()
                 },
                 ..default()
             },
-            //Fill::color(edgecol),
-            Path::from(GeometryBuilder::build_as(&line)),
             Stroke::new(edgecol, 8.0)
         ));
+
+        // commands.entity(ev.entity).insert((
+        //     MaterialMesh2dBundle {
+        //         mesh: default(),
+        //         material: edge_materials.add(EdgeMaterial::default().into()),
+        //         // material: ColorMaterial::from(edgecol),
+        //         transform: Transform {
+        //             translation: Vec3::new(0.0, 0.0, view_data.bottom_z),
+        //             ..default()
+        //         },
+        //         ..default()
+        //     },
+        //     //Fill::color(edgecol),
+        //     Path::from(GeometryBuilder::build_as(&line)),
+        //     Stroke::new(edgecol, 8.0)
+        // ));
 
         view_data.bottom_z -= 0.001;
     }       
