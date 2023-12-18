@@ -160,7 +160,7 @@ pub fn despawn_edges(
         let target_entity = pe_index.0.get(&edge_data.target);
 
         if source_entity.is_none() || target_entity.is_none() {
-            println!("Despawning edge");
+            // println!("Despawning edge");
             commands.entity(edge_entity).despawn_recursive();
 
         }
