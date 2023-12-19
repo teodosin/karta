@@ -16,12 +16,12 @@ impl Plugin for EdgesPlugin {
         app
             .add_systems(Update, create_edge_from_drag
                 //.after()
-                .run_if(in_state(KartaModeState::Edges)
-                    .and_then(left_click_just_released)
+                // .run_if(in_state(KartaModeState::Edges)
+                //     .and_then(left_click_just_released)
+                .run_if(left_click_just_released)
                 )
-            )
             .add_systems(Update, draw_edge_preview
-                .run_if(in_state(KartaModeState::Edges))
+                // .run_if(in_state(KartaModeState::Edges))
             )
         ;
 
@@ -50,9 +50,9 @@ fn create_edge_from_drag(
     }
 
     // Enforce only being able to create edges from the outline
-    // if !input_data.press_is_outline {
-    //     return
-    // }
+    if !input_data.press_is_outline {
+        return
+    }
 
     let from = input_data.latest_press_entity.clone().unwrap();
     let to = input_data.latest_hover_entity.clone().unwrap();
