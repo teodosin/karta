@@ -2,7 +2,7 @@
 
 use std::{path::PathBuf, ffi::OsString};
 
-use bevy::{prelude::*, input::keyboard::KeyboardInput, utils::HashMap};
+use bevy::{prelude::*, input::{keyboard::KeyboardInput, mouse::MouseButtonInput}, utils::HashMap};
 use bevy_mod_picking::picking_core::PickSet;
 
 use super::{context::{PathsToEntitiesIndex, ToBeDespawned, Selected, CurrentContext}, node_types::{NodeTypes, NodeData, type_to_data}};
@@ -90,13 +90,45 @@ impl GraphNodeEdges {
 pub struct ContextRoot;
 
 #[derive(Component)]
-pub struct PinnedToPosition;
+pub struct Pins {
+    pub position: bool,
+    pub presence: bool,
+    pub ui: bool,
+}
 
-#[derive(Component)]
-pub struct PinnedToPresence;
+impl Default for Pins {
+    fn default() -> Self {
+        Pins {
+            position: false,
+            presence: false,
+            ui: false,
+        }
+    }
+}
 
-#[derive(Component)]
-pub struct PinnedToUi;
+impl Pins {
+    pub fn pinpos () -> Self {
+        Pins {
+            position: true,
+            presence: false,
+            ui: false,
+        }
+    }
+    pub fn pinpres () -> Self {
+        Pins {
+            position: false,
+            presence: true,
+            ui: false,
+        }
+    }
+    pub fn pinui () -> Self {
+        Pins {
+            position: false,
+            presence: false,
+            ui: true,
+        }
+    }
+}
 
 // Marker Component for nodes that are only visitors to the current context and should not be serialized
 #[derive(Component)]
@@ -115,6 +147,7 @@ pub struct Visitor;
 fn handle_node_click(
     mut event: EventReader<NodeClickEvent>,
     mut keys: EventReader<KeyboardInput>,
+    mouse: Res<Input<MouseButton>>,
 
     mut commands: Commands,
     mut input_data: ResMut<InputData>,
@@ -127,16 +160,16 @@ fn handle_node_click(
         return
     }
 
-    if !keys.read().any(
-        |k| k.key_code == Some(KeyCode::ShiftLeft) 
-        || k.key_code == Some(KeyCode::ShiftRight)
-    ) //&& !mouse.pressed(MouseButton::Right) 
-    {
-        println!("Clearing selection");
-        for node in selection.iter() {
-            commands.entity(node).remove::<Selected>();
-        }
-    }
+    // if !keys.read().any(
+    //     |k| k.key_code == Some(KeyCode::ShiftLeft) 
+    //     || k.key_code == Some(KeyCode::ShiftRight)
+    // ) && !mouse.pressed(MouseButton::Right) 
+    // {
+    //     println!("Clearing selection");
+    //     for node in selection.iter() {
+    //         commands.entity(node).remove::<Selected>();
+    //     }
+    // }
 
     // TODO: Handle multiple events
     match event.read().next().unwrap().target {
@@ -171,6 +204,7 @@ fn handle_node_click(
             }
         },
     }
+    event.clear();
 }
 
 fn handle_node_press(
@@ -215,6 +249,7 @@ fn handle_node_press(
             }
         },
     }
+    event.clear();
 }
 
 
@@ -258,6 +293,7 @@ fn handle_node_hover(
             }
         },
     }
+    event.clear();
 }
 
 

@@ -53,12 +53,16 @@ pub enum ContextTypes {
 /// be stored somewhere. That place is the closest parent folder. 
 #[derive(Resource, Debug)]
 pub struct CurrentContext{
+    undo_stack: Vec<PathBuf>,
+    redo_stack: Vec<PathBuf>,
     pub context: Option<KartaContext>,
 }
 
 impl CurrentContext {
     fn new() -> Self {
         CurrentContext {
+            undo_stack: Vec::new(),
+            redo_stack: Vec::new(),
             context: None,
         }
     }
@@ -122,7 +126,25 @@ impl CurrentContext {
             println!("Path doesn't exist: {}", path.display());
             return
         }
+        self.undo_stack.push(path.clone());
         self.context = Some(KartaContext::new(path).set_type(ctype));
+
+    }
+
+    pub fn undo_context(&mut self, vault_path: PathBuf) {
+        if self.undo_stack.len() > 1 {
+            let path = self.undo_stack.pop().unwrap();
+            self.redo_stack.push(path.clone());
+            let new_path = self.undo_stack.last().unwrap().clone();
+            self.set_current_context(vault_path, new_path);
+        }
+    }
+
+    pub fn redo_context(&mut self, vault_path: PathBuf) {
+        if !self.redo_stack.is_empty() {
+            let path = self.redo_stack.pop().unwrap();
+            self.set_current_context(vault_path, path);
+        }
     }
 }
 

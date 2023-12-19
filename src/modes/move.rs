@@ -1,6 +1,7 @@
 //
 
 use bevy::prelude::*;
+use bevy_mod_picking::selection::PickSelection;
 
 use crate::{
     graph::{context::{update_context, Selected}, nodes::GraphDataNode, graph_cam}, 
@@ -27,12 +28,13 @@ pub fn move_node_selection(
     mut ev_mouse_drag: EventReader<MoveNodesEvent>,
     mouse: Res<Input<MouseButton>>,
     cursor: Res<InputData>,
-    mut query: Query<(Entity, &GraphDataNode, &mut Transform), With<Selected>>,
+    mut query: Query<(Entity, &GraphDataNode, &mut Transform, &PickSelection), /*With<Selected>*/>,
     mut view_data: ResMut<graph_cam::ViewData>,
 ) {
 
     if mouse.just_pressed(MouseButton::Left) {
-        for (_entity, _node, mut transform) in query.iter_mut() {
+        for (_entity, _node, mut transform, selection) in query.iter_mut() {
+            if !selection.is_selected {continue};
             transform.translation.z = 60.0;
             view_data.top_z += 1.0;
         }
@@ -40,9 +42,10 @@ pub fn move_node_selection(
 
     for _ev in ev_mouse_drag.read() {
         if mouse.pressed(MouseButton::Left){
-            for (_entity, _node, mut transform) in query.iter_mut() {
-                    transform.translation.x += cursor.curr_position.x - cursor.prev_position.x;
-                    transform.translation.y += cursor.curr_position.y - cursor.prev_position.y;     
+            for (_entity, _node, mut transform, selection) in query.iter_mut() {
+                if !selection.is_selected {continue};
+                transform.translation.x += cursor.curr_position.x - cursor.prev_position.x;
+                transform.translation.y += cursor.curr_position.y - cursor.prev_position.y;     
             }
         }
         break

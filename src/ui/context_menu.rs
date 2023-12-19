@@ -9,9 +9,9 @@ use bevy::{
     }, 
     window::Window
 };
-use bevy_mod_picking::prelude::PointerButton;
+use bevy_mod_picking::{prelude::PointerButton, selection::NoDeselect};
 
-use crate::{events::nodes::NodeClickEvent, actions::{node_actions::PinToPositionAction, ActionComponent, ActionFactory, ActionManager, context_actions::MoveToContextAction}, input::pointer::InputData};
+use crate::{events::nodes::NodeClickEvent, actions::{node_actions::{PinToPositionAction, UnpinToPositionAction}, ActionComponent, ActionFactory, ActionManager, context_actions::MoveToContextAction}, input::pointer::InputData};
 
 use super::popup::*;
 
@@ -95,7 +95,7 @@ pub fn spawn_context_menu(
     let window = window.single();
 
     let position: Vec2 = window.cursor_position().unwrap();
-    let size: Vec2 = Vec2::new(100.0, 100.0);
+    let size: Vec2 = Vec2::new(120.0, 100.0);
 
     // Get a popup root
     let menu_root = spawn_popup_root(
@@ -110,12 +110,17 @@ pub fn spawn_context_menu(
         &mut commands, "Pin".to_string(),
         Box::new(|| Box::new(PinToPositionAction::new()))
     );
+    let unpin_button = create_context_menu_button(
+        &mut commands, "Unpin".to_string(),
+        Box::new(|| Box::new(UnpinToPositionAction::new()))
+    );
     let move_to_context_button = create_context_menu_button(
         &mut commands, "Go to Context".to_string(),
         Box::new(move || Box::new(MoveToContextAction::new(nodepath.clone())))
     );
 
     commands.entity(menu_root).push_children(&[pin_button]);
+    commands.entity(menu_root).push_children(&[unpin_button]);
     commands.entity(menu_root).push_children(&[move_to_context_button]);
 
 }
@@ -135,7 +140,7 @@ fn create_context_menu_button<'a>(
         },
         ButtonBundle {
             style: Style {
-                width: Val::Px(100.0),
+                width: Val::Px(120.0),
                 height: Val::Px(30.0),
                 // horizontally center child text
                 justify_content: JustifyContent::Center,
@@ -148,6 +153,7 @@ fn create_context_menu_button<'a>(
             ..default()
         },
         ContextMenuButton,
+        NoDeselect,
     ))
     .with_children(|parent| {
         parent.spawn((

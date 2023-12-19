@@ -1,6 +1,7 @@
 use bevy::prelude::*;
+use bevy_mod_picking::selection::NoDeselect;
 
-use crate::modes::KartaModeState;
+use crate::{modes::KartaModeState, events::nodes::*};
 
 // Marker components for the mode buttons and their labels
 #[derive(Component)]
@@ -36,7 +37,7 @@ pub fn create_mode_menu(
         create_mode_menu_button(parent, KartaModeState::Move);
         create_mode_menu_button(parent, KartaModeState::Edges);
         create_mode_menu_button(parent, KartaModeState::State);
-        create_mode_menu_button(parent, KartaModeState::Draw);
+        create_mode_menu_button(parent, KartaModeState::Play);
 
     });
 
@@ -69,6 +70,7 @@ pub fn create_mode_menu_button<'a>(
     ))
     .with_children(|parent| {
         parent.spawn((
+            NoDeselect,
             TextBundle::from_section(
                 mode.to_string(),
                 TextStyle {
@@ -95,6 +97,13 @@ pub fn mode_button_system(
         ),
         (Changed<Interaction>, With<Button>),
     >,
+
+    // We have to manually clear these events because of the silly way 
+    // that bevy has changed the way that events are handled
+    mut event_click: EventReader<NodeClickEvent>,
+    mut event_press: EventReader<NodePressedEvent>,
+    mut event_hover: EventReader<NodeHoverEvent>,
+
     // text_query: Query<&Text, With<ModeButton>>,
     mut next_state: ResMut<NextState<KartaModeState>>,
 ) {
@@ -116,10 +125,14 @@ pub fn mode_button_system(
                     KartaModeState::State => {
                         println!("Context mode");
                     }
-                    KartaModeState::Draw => {
-                        println!("Draw mode");
+                    KartaModeState::Play => {
+                        println!("Play mode");
                     }
                 }
+
+                event_click.clear();
+                event_press.clear();
+                event_hover.clear();
                 next_state.set(mode.mode.clone());
             }
             Interaction::Hovered => {

@@ -5,7 +5,7 @@ use std::{path::{PathBuf, Path}, fs::DirEntry, io::Write};
 use bevy::{prelude::Vec2, ecs::{system::{Res, Query}, entity::Entity, query::{With, Without}}, reflect::TypePath, utils::HashMap, transform::components::Transform};
 use serde::{Deserialize, Serialize};
 
-use crate::{graph::{attribute::Attributes, node_types::NodeTypes, edges::{EdgeTypes, EdgeType, GraphEdge}, nodes::{GraphDataNode, GraphNodeEdges, PinnedToPosition, PinnedToPresence, Visitor, ContextRoot}, context::CurrentContext}, events::{context, edges}};
+use crate::{graph::{attribute::Attributes, node_types::NodeTypes, edges::{EdgeTypes, EdgeType, GraphEdge}, nodes::{GraphDataNode, GraphNodeEdges, Visitor, ContextRoot, Pins}, context::CurrentContext}, events::{context, edges}};
 
 use super::CurrentVault;
 
@@ -140,8 +140,7 @@ pub fn save_context(
         &GraphDataNode, 
         &GraphNodeEdges,
         Option<&Transform>, // TODO: Remove the option?
-        Option<&PinnedToPosition>,
-        Option<&PinnedToPresence>,
+        &Pins,
         Option<&Attributes>,
         ),
         With<ContextRoot>,
@@ -152,8 +151,7 @@ pub fn save_context(
         &GraphDataNode, 
         &GraphNodeEdges,
         Option<&Transform>, // TODO: Remove the option?
-        Option<&PinnedToPosition>,
-        Option<&PinnedToPresence>,
+        &Pins,
         Option<&Attributes>,
         ),
         Without<ContextRoot>,
@@ -190,6 +188,30 @@ pub fn save_context(
     // overwrite those. We only want to modify the edges where the source and target are present in
     // this context.
 
+    let mut edge_destinations: HashMap<String, Vec<RootEdgeSerial>> = HashMap::new();
+
+    for edge in all_edges.iter() {
+        let (_entity, edge, etype, attributes) = edge;
+
+        let edge_serial = RootEdgeSerial {
+            source: edge.source.to_string_lossy().to_string(),
+            target: edge.target.to_string_lossy().to_string(),
+            directed: true,
+            etype: etype.etype.clone(),
+            attributes: attributes.cloned(),
+        };
+
+        if !edge_destinations.contains_key(&edge_serial.source) {
+            edge_destinations.insert(edge_serial.source.clone(), Vec::new());
+        }
+        if !edge_destinations.contains_key(&edge_serial.target) {
+            edge_destinations.insert(edge_serial.target.clone(), Vec::new());
+        }
+
+        edge_destinations.get_mut(&edge_serial.source).unwrap().push(edge_serial.clone());
+        edge_destinations.get_mut(&edge_serial.target).unwrap().push(edge_serial);
+    }
+ 
     // Root node setup
     let root_node = match root_node.iter().next() {
         Some(root_node) => root_node,
@@ -199,7 +221,7 @@ pub fn save_context(
         }
     };
 
-    let (rn_entity, rn_data, rn_edges, rn_transform, rn_pin_pos, rn_pin_pres, rn_attr) = root_node;
+    let (rn_entity, rn_data, rn_edges, rn_transform, rn_pins, rn_attr) = root_node;
 
     // Save the root node context. 
     // All the connected nodes are guaranteed to be present in the context. 
@@ -208,11 +230,11 @@ pub fn save_context(
         path: rn_data.path.to_str().unwrap().to_string(),
         ntype: rn_data.ntype,
         attributes: rn_attr.cloned(),
-        pin_to_position: rn_pin_pos.is_some(),
-        pin_to_presence: rn_pin_pres.is_some(),
+        pin_to_position: rn_pins.position,
+        pin_to_presence: rn_pins.presence,
     };
 
-    let nodes_serial: Vec<NodeSerial> = all_nodes.iter().map(|(_, visitor, data, _, on_transform, on_pin_pos, on_pin_pres, _)| {
+    let nodes_serial: Vec<NodeSerial> = all_nodes.iter().map(|(_, visitor, data, _, on_transform, on_pins, _)| {
         if visitor.is_some() {
             return None
         }
@@ -239,79 +261,34 @@ pub fn save_context(
             path: data.path.to_str().unwrap().to_string(),
             relative_position,
             relative_size,
-            pin_to_position: on_pin_pos.is_some(),
-            pin_to_presence: on_pin_pres.is_some(),
+            pin_to_position: on_pins.position,
+            pin_to_presence: on_pins.presence,
         };
 
         Some(node_serial)
 
     }).filter(|node_serial| node_serial.is_some()).map(|node_serial| node_serial.unwrap()).collect();
 
-    // Saving based on root edges was a misstep, because the intention was all along that a node
-    // doesn't have to be connected to root in order to be considered to be in the context.  
+    let edges_serial: Vec<RootEdgeSerial> = edge_destinations.get(&rn_data.path.to_str().unwrap().to_string()).unwrap().to_vec();
 
-    // let nodes_serial: Vec<NodeSerial> = rn_edges.edges.iter().map(|(node, edge)| {
+    // let edges_serial: Vec<RootEdgeSerial> = rn_edges.edges.iter().map(|(node, edge)| {
     //     let edge_entity = all_edges.get(*edge);
     //     if edge_entity.is_err() {
     //         return None
     //     }
-    //     let (_entity, _edge, _etype, _attributes) = edge_entity.unwrap();
+    //     let (_entity, edge, etype, attributes) = edge_entity.unwrap();
 
-    //     let other_node = match all_nodes.get(*node) {
-    //         Ok(other_node) => other_node,
-    //         Err(_) => return None,
+    //     let edge_serial = RootEdgeSerial {
+    //         source: edge.source.to_string_lossy().to_string(),
+    //         target: edge.target.to_string_lossy().to_string(),
+    //         directed: true,
+    //         etype: etype.etype.clone(),
+    //         attributes: attributes.cloned(),
     //     };
 
-    //     let (_, _, on_node, _, on_transform, on_pin_pos, on_pin_pres, _) = other_node;
+    //     Some(edge_serial)
 
-    //     let relative_position = match on_transform {
-    //         Some(transform) => {
-    //             let node_position = Vec2::new(transform.translation.x, transform.translation.y);
-    //             let relative_position = node_position - rn_transform.unwrap().translation.truncate();
-    //             Some(relative_position)
-    //         },
-    //         None => None,
-    //     };
-
-    //     let relative_size = match on_transform {
-    //         Some(transform) => {
-    //             let node_size = Vec2::new(transform.scale.x, transform.scale.y);
-    //             let rel_size = node_size / rn_transform.unwrap().scale.truncate();
-    //             Some(rel_size)
-    //         },
-    //         None => None,
-    //     };
-
-    //     let node_serial = NodeSerial {
-    //         path: on_node.path.to_str().unwrap().to_string(),
-    //         relative_position,
-    //         relative_size,
-    //         pin_to_position: on_pin_pos.is_some(),
-    //         pin_to_presence: on_pin_pres.is_some(),
-    //     };
-
-    //     Some(node_serial)
-
-    // }).filter(|node_serial| node_serial.is_some()).map(|node_serial| node_serial.unwrap()).collect();
-
-    let edges_serial: Vec<RootEdgeSerial> = rn_edges.edges.iter().map(|(node, edge)| {
-        let edge_entity = all_edges.get(*edge);
-        if edge_entity.is_err() {
-            return None
-        }
-        let (_entity, edge, etype, attributes) = edge_entity.unwrap();
-
-        let edge_serial = RootEdgeSerial {
-            source: edge.source.to_string_lossy().to_string(),
-            target: edge.target.to_string_lossy().to_string(),
-            directed: true,
-            etype: etype.etype.clone(),
-            attributes: attributes.cloned(),
-        };
-
-        Some(edge_serial)
-
-    }).filter(|edge_serial| edge_serial.is_some()).map(|edge_serial| edge_serial.unwrap()).collect();
+    // }).filter(|edge_serial| edge_serial.is_some()).map(|edge_serial| edge_serial.unwrap()).collect();
 
     let root_asset = ContextAsset {
         karta_version: VERSION.to_string(),
@@ -331,7 +308,7 @@ pub fn save_context(
     // Modify the other context files
     // Ignore visitors 
     for node in all_nodes.iter() {
-        let (_, visitor, node, edges, _, pin_pos, pin_pres, attr) = node;
+        let (_, visitor, node, edges, _, pins, attr) = node;
 
         if visitor.is_some() {
             continue
@@ -358,8 +335,8 @@ pub fn save_context(
             path: node.path.to_str().unwrap().to_string(),
             ntype: node.ntype,
             attributes: attr.cloned(),
-            pin_to_position: pin_pos.is_some(),
-            pin_to_presence: pin_pres.is_some(),
+            pin_to_position: pins.position,
+            pin_to_presence: pins.presence,
         };
 
         // Leave nodes as they were originally.
@@ -367,10 +344,9 @@ pub fn save_context(
 
         // We must selectively overwrite only the edges that are present in this context.
 
-        let all_node_paths: Vec<String> = all_nodes.iter().map(|(_, _, node, _, _, _, _, _)| {
+        let all_node_paths: Vec<String> = all_nodes.iter().map(|(_, _, node, _, _, _, _)| {
             node.path.to_str().unwrap().to_string()
         }).collect();
-
 
         let mut edges_serial: Vec<RootEdgeSerial> = existing_edges.iter().filter_map(|edge_serial| {
             let (source, target) = (&edge_serial.source, &edge_serial.target);
@@ -382,26 +358,36 @@ pub fn save_context(
             }
         }).collect();
 
-
-        for (node, edge) in edges.edges.iter() {
-            let edge_entity = all_edges.get(*edge);
-            if edge_entity.is_err() {
-                continue
-            }
-            let (_entity, edge, etype, attributes) = edge_entity.unwrap();
-
-            let edge_serial = RootEdgeSerial {
-                source: edge.source.to_string_lossy().to_string(),
-                target: edge.target.to_string_lossy().to_string(),
-                directed: true,
-                etype: etype.etype.clone(),
-                attributes: attributes.cloned(),
-            };
-
-            if !edges_serial.iter().any(|existing_edge| existing_edge.source == edge_serial.source && existing_edge.target == edge_serial.target) {
-                edges_serial.push(edge_serial);
-            }        
+        let edge_dest = edge_destinations.get(&node.path.to_str().unwrap().to_string());
+        if edge_dest.is_none() {
+            continue
         }
+
+        for edge in edge_dest.unwrap() {
+            if !edges_serial.iter().any(|existing_edge| existing_edge.source == edge.source && existing_edge.target == edge.target) {
+                edges_serial.push(edge.clone());
+            }
+        }
+
+        // for (node, edge) in edges.edges.iter() {
+        //     let edge_entity = all_edges.get(*edge);
+        //     if edge_entity.is_err() {
+        //         continue
+        //     }
+        //     let (_entity, edge, etype, attributes) = edge_entity.unwrap();
+
+        //     let edge_serial = RootEdgeSerial {
+        //         source: edge.source.to_string_lossy().to_string(),
+        //         target: edge.target.to_string_lossy().to_string(),
+        //         directed: true,
+        //         etype: etype.etype.clone(),
+        //         attributes: attributes.cloned(),
+        //     };
+
+        //     if !edges_serial.iter().any(|existing_edge| existing_edge.source == edge_serial.source && existing_edge.target == edge_serial.target) {
+        //         edges_serial.push(edge_serial);
+        //     }        
+        // }
 
         let asset = ContextAsset {
             karta_version: VERSION.to_string(),

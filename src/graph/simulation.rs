@@ -1,10 +1,11 @@
 // FORCE SIMULATION
 
 use bevy::{prelude::{Query, Transform, Without, Vec2, Plugin, App, Entity, Res, Gizmos, PostUpdate, Resource}, time::Time, input::{Input, keyboard::KeyCode}};
+use bevy_mod_picking::selection::PickSelection;
 
 use crate::ui::nodes::{GraphViewNode, Velocity2D, TargetPosition};
 
-use super::{nodes::PinnedToPosition, context::Selected};
+use super::nodes::Pins;
 
 pub struct GraphSimPlugin;
 
@@ -50,8 +51,8 @@ fn apply_forces(
     sim_settings: Res<GraphSimSettings>,
     time: Res<Time>,
     mut nodes: Query<
-        (Entity, &GraphViewNode, &mut Transform, &mut Velocity2D), 
-        (Without<PinnedToPosition>, Without<Selected>, Without<TargetPosition>)
+        (Entity, &GraphViewNode, &mut Transform, &mut Velocity2D, &Pins, &PickSelection), 
+        Without<TargetPosition>
     >,
     _gizmos: Gizmos,
     keys: Res<Input<KeyCode>>,
@@ -60,7 +61,9 @@ fn apply_forces(
     //     return
     // }
     //for step in 0..sim_settings.simulation_steps {
-        for (_node, _view, mut pos, mut vel) in nodes.iter_mut() {
+        for (_node, _view, mut pos, mut vel, pins, pick) in nodes.iter_mut() {
+
+            if pick.is_selected || pins.position {continue};
 
             let mut force = vel.velocity;
             vel.velocity = Vec2::ZERO;

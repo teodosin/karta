@@ -3,8 +3,9 @@
 use std::{ffi::{OsString, OsStr}, path::PathBuf};
 
 use bevy::{prelude::{Entity, With, Vec2}, transform::components::Transform};
+use bevy_mod_picking::selection::PickSelection;
 
-use crate::{graph::{nodes::{PinnedToPosition, GraphDataNode, ContextRoot, GraphNodeEdges}, context::{PathsToEntitiesIndex, Selected, CurrentContext}, node_types::{NodeTypes, type_to_data}}, input::pointer::InputData, ui::nodes::GraphViewNode, events::nodes::NodeSpawnedEvent, vault::{context_asset::{node_path_to_context_path, create_single_node_context}, CurrentVault}};
+use crate::{graph::{nodes::{GraphDataNode, ContextRoot, GraphNodeEdges, Pins}, context::{PathsToEntitiesIndex, CurrentContext}, node_types::{NodeTypes, type_to_data}}, input::pointer::InputData, ui::nodes::GraphViewNode, events::nodes::NodeSpawnedEvent, vault::{context_asset::{node_path_to_context_path, create_single_node_context}, CurrentVault}};
 
 use super::Action;
 
@@ -58,7 +59,6 @@ impl Action for CreateNodeAction {
                 data: type_to_data(self.ntype)
             },
             GraphNodeEdges::default(),
-            PinnedToPosition,
         )).id();
         
         self.entity = Some(node_entity);
@@ -71,13 +71,14 @@ impl Action for CreateNodeAction {
             ntype: self.ntype,
             data: type_to_data(self.ntype),
             root_position: root_position.translation.truncate(),
-            rel_target_position: Some(self.position - root_position.translation.truncate()),
-            pinned_to_position: false,
+            // rel_target_position: Some(self.position - root_position.translation.truncate()),
+            rel_target_position: None,
+            pinned_to_position: true,
         });
         
         // Update the PathsToEntitiesIndex
         let mut pe_index = world.get_resource_mut::<PathsToEntitiesIndex>().unwrap();
-        pe_index.0.insert(full_path, node_entity);
+        pe_index.0.insert(valid_path.clone(), node_entity);
 
         // Create the context file
         create_single_node_context(&vault_path, self.ntype, &valid_path);
@@ -159,47 +160,49 @@ pub struct PinToPositionAction {
 
 impl Action for PinToPositionAction {
     fn execute(&mut self, world: &mut bevy::prelude::World) {
-        let mut selected = world.query_filtered::<Entity, (With<GraphViewNode>, With<Selected>)>();
-        let mut pinned = world.query_filtered::<Entity, (With<GraphViewNode>, With<PinnedToPosition>)>();
+        // let mut selected = world.query_filtered::<Entity, (With<GraphViewNode>, With<Selected>)>();
+        let mut selected = world.query::<(Entity, &mut Pins, &PickSelection)>();
 
-        let mut targets: Vec<Entity> = Vec::new();
+        let clicked_node = self.get_latest_clicked_node(world);
         
-        for node in selected.iter(world) {
-            println!("Looping through selected");
-            match pinned.get(world, node){
-                Ok(_) => {
-                    println!("It's a match in pinven");
-                    match self.pins {
-                        Some(ref mut pins) => pins.push((node, true)),
-                        None => self.pins = Some(vec![(node, true)]),
-                    }
-                }
-                Err(_) => {
-                    targets.push(node);
-                    match self.pins {
-                        Some(ref mut pins) => pins.push((node, false)),
-                        None => self.pins = Some(vec![(node, false)]),
-                    }
-                }
+        let mut targets: Vec<Entity> = Vec::new();
+
+        match clicked_node {
+            None => return,
+            Some(node) => {
+                targets.push(node);
             }
         }
+
+        
+        println!("Size of selection when pinning: {}", selected.iter(world).filter(| (_, _, pick) | pick.is_selected).count());
+        for (node, pin, pick) in selected.iter(world) {
+            if !pick.is_selected { continue }
+
+            // If the node is already pinned, we don't want to pin it again
+            if !pin.position {
+                targets.push(node);
+                println!("Not already pinned");
+                match self.pins {
+                    Some(ref mut pins) => pins.push((node, false)),
+                    None => self.pins = Some(vec![(node, false)]),
+                }
+                
+            }
+        }
+
         for target in targets {
-            println!("Adding pin component");
-            world.entity_mut(target).insert(PinnedToPosition);
+            selected.get_mut(world, target).unwrap().1.position = true;
         }
         
         println!("Performing PinToPositionAction");
     }
 
     fn undo(&mut self, world: &mut bevy::prelude::World) {
-        let node = self.get_latest_clicked_node(world).unwrap();
-        world.entity_mut(node).remove::<PinnedToPosition>();
         println!("Undoing PinToPositionAction");
     }
 
     fn redo(&mut self, world:  &mut bevy::prelude::World) {
-        let node = self.get_latest_clicked_node(world).unwrap();
-        world.entity_mut(node).insert(PinnedToPosition);
         println!("Redoing PinToPositionAction");
     }
 }
@@ -225,32 +228,70 @@ impl PinToPositionAction {
 // ------------------ UnpinToPositionAction ------------------
 #[derive(Clone)]
 pub struct UnpinToPositionAction {
-    node: Entity,
+    pins: Option<Vec<(Entity, bool)>>,
 }
 
 impl Action for UnpinToPositionAction {
     fn execute(&mut self, world: &mut bevy::prelude::World) {
-        world.entity_mut(self.node).remove::<PinnedToPosition>();
-        println!("Performing UnpinToPositionAction");
+            
+            let mut selected = world.query::<(Entity, &mut Pins, &PickSelection)>();
+    
+            let clicked_node = self.get_latest_clicked_node(world);
+            
+            let mut targets: Vec<Entity> = Vec::new();
+    
+            match clicked_node {
+                None => return,
+                Some(node) => {
+                    targets.push(node);
+                }
+            }
+    
+            
+            println!("Size of selection when unpinning: {}", selected.iter(world).filter(| (_, _, pick) | pick.is_selected).count());
+            for (node, pin, pick) in selected.iter(world) {
+                if !pick.is_selected { continue }
+    
+                if pin.position {
+                    targets.push(node);
+                    match self.pins {
+                        Some(ref mut pins) => pins.push((node, true)),
+                        None => self.pins = Some(vec![(node, true)]),
+                    }
+                }
+            }
+
+            for target in targets {
+                println!("Removing pin");
+                selected.get_mut(world, target).unwrap().1.position = false;
+            }
     }
 
     fn undo(&mut self, world: &mut bevy::prelude::World) {
-        world.entity_mut(self.node).insert(PinnedToPosition);
         println!("Undoing UnpinToPositionAction");
     }
 
     fn redo(&mut self, world:  &mut bevy::prelude::World) {
-        world.entity_mut(self.node).remove::<PinnedToPosition>();
         println!("Redoing UnpinToPositionAction");
     }
 
 }
 
 impl UnpinToPositionAction {
-    pub fn _new(node: Entity) -> Self {
+    pub fn new() -> Self {
         UnpinToPositionAction {
-            node,
+            pins: None,
         }
+    }
+
+    fn get_latest_clicked_node(
+        &self, world: &mut bevy::prelude::World
+    ) -> Option<Entity> {
+        let input_data = world.get_resource::<InputData>().unwrap();
+        let path = input_data.latest_click_entity.clone().unwrap();
+        let index = world.get_resource::<PathsToEntitiesIndex>().unwrap();
+        let node = index.0.get(&path);
+        Some(*node.unwrap())
     }
 }
 
