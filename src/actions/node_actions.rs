@@ -71,8 +71,9 @@ impl Action for CreateNodeAction {
             ntype: self.ntype,
             data: type_to_data(self.ntype),
             root_position: root_position.translation.truncate(),
-            rel_target_position: Some(self.position - root_position.translation.truncate()),
-            pinned_to_position: false,
+            // rel_target_position: Some(self.position - root_position.translation.truncate()),
+            rel_target_position: None,
+            pinned_to_position: true,
         });
         
         // Update the PathsToEntitiesIndex
@@ -261,7 +262,7 @@ impl Action for UnpinToPositionAction {
             }
 
             for target in targets {
-                println!("Removing pin component");
+                println!("Removing pin");
                 selected.get_mut(world, target).unwrap().1.position = false;
             }
     }
