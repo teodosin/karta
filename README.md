@@ -6,6 +6,8 @@ Karta is an experimental creative application built on top of a node-based file 
 
 Early development has been quite chaotic and flow state driven, and this is reflected in the code and commits. Steps are being taken to steer the development process to be more systematic and understandable, but that will take time and some learning on my part. 
 
+Also note that this project has not yet been tested on MacOS and Windows. 
+
 ## Introduction
 
 Welcome to **Karta**, a budding project currently in development, aimed at rethinking file management and visualization for creative workflows. This early-stage application introduces a novel concept: a node-based file browser, designed to visually represent the intricate network of files and folders within digital projects.
