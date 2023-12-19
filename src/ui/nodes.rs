@@ -221,8 +221,8 @@ pub fn add_node_base_outline(
             ..default()
         },
         Stroke::new(
-            // crate::settings::theme::OUTLINE_BASE_COLOR, 10.0
-            Color::rgba(0.0, 0.0, 0.0, 0.0), 10.0
+            crate::settings::theme::OUTLINE_BASE_COLOR, 10.0
+            // Color::rgba(0.0, 0.0, 0.0, 0.0), 10.0
         ),
         NodeOutline,
         
@@ -230,14 +230,14 @@ pub fn add_node_base_outline(
 
 
         On::<Pointer<Over>>::target_component_mut::<Stroke>(move |_over, stroke| {
-            // stroke.color = crate::settings::theme::OUTLINE_HOVER_COLOR;
-            stroke.color = Color::rgba(0.0, 0.0, 0.0, 0.0);
+            stroke.color = crate::settings::theme::OUTLINE_HOVER_COLOR;
+            // stroke.color = Color::rgba(0.0, 0.0, 0.0, 0.0);
             stroke.options = StrokeOptions::default().with_line_width(outline_width_hovered);
         }),
         
         On::<Pointer<Out>>::target_component_mut::<Stroke>(move |_out, stroke| {
-            // stroke.color = crate::settings::theme::OUTLINE_BASE_COLOR;
-            stroke.color = Color::rgba(0.0, 0.0, 0.0, 0.0);
+            stroke.color = crate::settings::theme::OUTLINE_BASE_COLOR;
+            // stroke.color = Color::rgba(0.0, 0.0, 0.0, 0.0);
             stroke.options = StrokeOptions::default().with_line_width(outline_width);
         }),
     )).id();
