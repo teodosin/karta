@@ -16,12 +16,12 @@ impl Plugin for EdgesPlugin {
         app
             .add_systems(Update, create_edge_from_drag
                 //.after()
-                .run_if(in_state(KartaModeState::Edges)
-                    .and_then(left_click_just_released)
+                // .run_if(in_state(KartaModeState::Edges)
+                //     .and_then(left_click_just_released)
+                .run_if(left_click_just_released)
                 )
-            )
             .add_systems(Update, draw_edge_preview
-                .run_if(in_state(KartaModeState::Edges))
+                // .run_if(in_state(KartaModeState::Edges))
             )
         ;
 
@@ -31,7 +31,6 @@ impl Plugin for EdgesPlugin {
 fn create_edge_from_drag(
     mut event: EventWriter<EdgeSpawnedEvent>,
     input_data: Res<InputData>,
-    pe_index: Res<PathsToEntitiesIndex>,
     mut commands: Commands,
     edges: Query<(&GraphEdge, &EdgeType)>,
 ) {
