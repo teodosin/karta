@@ -12,7 +12,7 @@ Welcome to **Karta**, a budding project currently in development, aimed at rethi
 
 At this stage, Karta is a prototype, exploring the potential to view and manage files as part of an interconnected graph. Each file and folder is represented as a node, and the relationships between them are visualized as links. This approach is not just about organizing files; it's about understanding the structure and interdependencies of your project at a glance.
 
-For a more detailed explanation of the project's purpose and goals, refer to VISION.md. [[VISION.md]]
+For a more detailed explanation of the project's purpose and goals, refer to VISION.md. #[[VISION.md]]
 
 ## Getting Started
 
