@@ -204,6 +204,7 @@ fn handle_node_click(
             }
         },
     }
+    event.clear();
 }
 
 fn handle_node_press(
@@ -248,6 +249,7 @@ fn handle_node_press(
             }
         },
     }
+    event.clear();
 }
 
 
@@ -291,6 +293,7 @@ fn handle_node_hover(
             }
         },
     }
+    event.clear();
 }
 
 
