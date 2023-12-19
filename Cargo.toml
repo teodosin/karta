@@ -2,14 +2,35 @@
 name = "karta"
 version = "0.1.0"
 edition = "2021"
+rust_version = "1.74.1"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bevy = { version = "0.11.2", features = ["dynamic_linking"] }
-bevy-inspector-egui = "0.19.0"
-bevy_egui = "0.21"
-bevy_mod_picking = "0.15.0"
+bevy = { version = "0.12.1", features = ["dynamic_linking","bevy_asset","jpeg", "bmp", "tga","webp", "file_watcher", "exr", "basis-universal"] }
+
+bevy_mod_picking = { version = "0.17.0", features = ["backend_sprite",]}
+bevy_prototype_lyon = "0.10.0"
+bevy_svg = "0.12.0"
+bevy_cosmic_edit = "0.15.1"
+bevy_tweening = "0.9.0"
+# bevy_smud = "0.7.0"
+# bevy_gaussian_splatting = "0.4.0"
+# bevy_mod_debugdump = "0.8.0"
+# bevy-inspector-egui = "0.21.0"
+# bevy_cosmic_edit = "0.13.0"
+
+
+lyon = "1.0.1"
 rand = "0.8.5"
+ron = "0.8.1"
+thiserror = "1.0"
+serde = { version = "1.0.188", features = ["derive"]}
+enum-iterator = "1.4.1"
+directories = "5.0.1"
+rfd = { version = "0.12.1", default-features = false, features = ["xdg-portal"] }
+native-dialog = "0.7.0"
+
+
 
 [profile.dev]
 opt-level = 1
