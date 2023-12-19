@@ -12,7 +12,7 @@ use self::{
 pub mod r#move;
 pub mod edges;
 pub mod state;
-pub mod draw;
+pub mod play;
 
 #[derive(States, PartialEq, Eq, Debug, Clone, Hash, Default)]
 pub enum KartaModeState {
@@ -20,7 +20,7 @@ pub enum KartaModeState {
     Move,
     Edges,
     State,
-    Draw,
+    Play,
 }
 
 impl fmt::Display for KartaModeState {
@@ -29,7 +29,7 @@ impl fmt::Display for KartaModeState {
             KartaModeState::Move => write!(f, "Move"),
             KartaModeState::Edges => write!(f, "Edges"),
             KartaModeState::State => write!(f, "Context"),
-            KartaModeState::Draw => write!(f, "Draw"),
+            KartaModeState::Play => write!(f, "Play"),
         }
     }
 }
