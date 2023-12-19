@@ -18,16 +18,16 @@ For a more detailed explanation of the project's purpose and goals, refer to VIS
 
 * Make sure you have Rust installed. Karta uses the Bevy game engine so familiarity with it is recommended. 
 * Clone the repo
-* The root path is hardcoded to refer to my system. To correct this, search for "home/" and replace the vault root path with a path of your choosing on your system. 
+* Build and run 
 
 ## Usage
 
-Once your root folder is setup, running the app will display the folder and its contents as nodes in a force-directed graph. On the side there is a tools menu with a few modes of interaction. "Move" moves nodes when clicking and dragging, "Edges" creates new edges when dragging from the outline of a node to another node, and "Context" moves to a different folder or file context when such a node is clicked. 
+Once your root folder is setup, running the app will display the folder and its contents as nodes in a force-directed graph. Middle-mouse click to pan the view and scroll to zoom. Dragging from the edge of a node to another will create a new connection between those nodes. Right-clicking on a node will bring up a menu where you can pin and unpin nodes (to be ignored by the force simulation) and move to another nodes' context. 
 
 ## Contributing
 
 It's much too early for me to ask or hope for contributions. The most valuable thing you might contribute at this stage is sharing your thoughts about the project and discussing it with me, to help clarify the path forward. I am active in the Bevy discord, so you may find me there under the same username. 
-Karta is an experimental creative application built on top of a node-based file browser. It is very bare-bones and not ready for use quite yet. Root paths are hardcoded so the app will not work on your machine without modification. 
+Karta is an experimental creative application built on top of a node-based file browser. It is very bare-bones and not ready for use quite yet. 
 
 Use the develop branch for the most up-to-date version. 
 
