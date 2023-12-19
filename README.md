@@ -12,7 +12,7 @@ Welcome to **Karta**, a budding project currently in development, aimed at rethi
 
 At this stage, Karta is a prototype, exploring the potential to view and manage files as part of an interconnected graph. Each file and folder is represented as a node, and the relationships between them are visualized as links. This approach is not just about organizing files; it's about understanding the structure and interdependencies of your project at a glance.
 
-For a more detailed explanation of the project's purpose and goals, refer to VISION.md. #[[VISION.md]]
+For a more detailed explanation of the project's purpose and goals, refer to VISION.md. For technical details refer to ARCHITECTURE.md. 
 
 ## Getting Started
 
@@ -22,12 +22,15 @@ For a more detailed explanation of the project's purpose and goals, refer to VIS
 
 ## Usage
 
-Once your root folder is setup, running the app will display the folder and its contents as nodes in a force-directed graph. Middle-mouse click to pan the view and scroll to zoom. Dragging from the edge of a node to another will create a new connection between those nodes. Right-clicking on a node will bring up a menu where you can pin and unpin nodes (to be ignored by the force simulation) and move to another nodes' context. 
+At first startup, you will be asked to choose a folder to create your vault in. Once set up, the contents of that folder will be spawned in as a force-directed graph. Middle-mouse click to pan the view and scroll to zoom. Dragging from the edge of a node to another will create a new connection between those nodes. Right-clicking on a node will bring up a menu where you can pin and unpin nodes (to be ignored by the force simulation) and move to another nodes' context. 
+
+## Known issues
+
+* Sometimes image files will not react to mouse inputs. If this happens, close the program and run it again. https://github.com/teodosin/karta/issues/40
 
 ## Contributing
 
 It's much too early for me to ask or hope for contributions. The most valuable thing you might contribute at this stage is sharing your thoughts about the project and discussing it with me, to help clarify the path forward. I am active in the Bevy discord, so you may find me there under the same username. 
-Karta is an experimental creative application built on top of a node-based file browser. It is very bare-bones and not ready for use quite yet. 
 
 Use the develop branch for the most up-to-date version. 
 
