@@ -2,7 +2,7 @@
 /// The Context manages what is in the node graph. 
 /// Responsible for keeping track of what is spawned and despawned.
 
-use bevy::{prelude::*, utils::HashMap};
+use bevy::{prelude::*, utils::{HashMap, HashSet}};
 use bevy_mod_picking::prelude::PointerButton;
 use std::{fs, path::PathBuf, ffi::OsString};
 
@@ -265,8 +265,8 @@ pub fn update_context(
     // edges can only be spawned between nodes that already exist, since the create_edge function 
     // takes Entities as arguments. 
     let mut nodes_spawned: HashMap<PathBuf, Entity> = HashMap::new();
-    let mut edges_to_spawn: Vec<(String, String)> = Vec::new();
-    
+
+    let mut edges_to_spawn: HashSet<(String, String)> = HashSet::new();    
 
 
     // All other nodes' positions will be relative to the root node's position, so we need to track it. 
@@ -310,7 +310,7 @@ pub fn update_context(
                     }
                     
                     for edge in context_file.edges.iter() {
-                        edges_to_spawn.push((edge.source.clone(), edge.target.clone()));
+                        edges_to_spawn.insert((edge.source.clone(), edge.target.clone()));
                         
                         // If this node is the source or target to a node that is already spawned,
                         // remove its ToBeDespawned component
@@ -348,7 +348,7 @@ pub fn update_context(
                     println!("Amount of edges in new context: {}", context_file.edges.len());
 
                     for edge in context_file.edges.iter() {
-                        edges_to_spawn.push((edge.source.clone(), edge.target.clone()));
+                        edges_to_spawn.insert((edge.source.clone(), edge.target.clone()));
                         
                         // If this node is the source or target to a node that is already spawned,
                         // remove its ToBeDespawned component
@@ -444,7 +444,7 @@ pub fn update_context(
             );
 
             let edge_to_root = (node_path.clone().to_string_lossy().to_string(), new_cxt_path.clone().to_string_lossy().to_string());
-            edges_to_spawn.push(edge_to_root);
+            edges_to_spawn.insert(edge_to_root);
 
             // Add the node to the list of nodes that have been spawned
             nodes_spawned.insert(node_path, spawned_node);
@@ -542,7 +542,7 @@ pub fn update_context(
 
                         // Add edges to the list of edges to spawn
                         for edge in node_context_file.edges.iter() {
-                            edges_to_spawn.push((edge.source.clone(), edge.target.clone()));
+                            edges_to_spawn.insert((edge.source.clone(), edge.target.clone()));
                         }
 
                     },
@@ -577,7 +577,7 @@ pub fn update_context(
                 
     
                 let edge_to_root = (node_path.clone().to_string_lossy().to_string(), new_cxt_path.clone().to_string_lossy().to_string());
-                edges_to_spawn.push(edge_to_root);
+                edges_to_spawn.insert(edge_to_root);
     
     
                 // Add the node to the list of nodes that have been spawned
@@ -590,6 +590,9 @@ pub fn update_context(
             spawn_remaining_physicals(adjacent_physical_nodes);
         }
     }
+    // Filter duplicate edges
+
+
 
     for edge in edges_to_spawn.iter() {
         let source_path = PathBuf::from(edge.0.clone());
@@ -632,4 +635,11 @@ mod context_tests {
 
         vault_utils::cleanup_test_vault(vault);
     }   
+
+    // TEST: duplicate edges from context files are ignored when spawning edges
+
+    // TEST: Set current context to context file with two nodes in context. 
+    // Expected 3 GraphDataNode entities, 2 GraphEdge entities
+
+
 }
