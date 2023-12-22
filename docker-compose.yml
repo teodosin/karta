@@ -6,10 +6,11 @@ services:
     privileged: true
     volumes:
        - .:/project
+       - /tmp/.X11-unix:/tmp/.X11-unix
     environment:
       - DISPLAY=${DISPLAY}
-      - XDG_RUNTIME_DIR=/project
       - WINIT_UNIX_BACKEND=x11
     devices: 
-      - /dev/snd
+      - /dev/dxg
     network_mode: "host"
+    user: "${UID}:${GID}"
