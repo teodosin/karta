@@ -65,6 +65,8 @@ pub fn add_base_node_ui(
         },
     };
 
+    let node_z = view_data.get_z_for_node();
+
     commands.entity(ev.entity).insert((
         MaterialMesh2dBundle {
             mesh: meshes.add(shape::Circle::new(radius).into()).into(),
@@ -72,16 +74,14 @@ pub fn add_base_node_ui(
             transform: Transform::from_translation(Vec3::new(
                 node_pos.x,
                 node_pos.y,
-                view_data.top_z,
+                node_z,
             )),
             ..default()
         },
     ));
-    // Update the view_data so we can keep track of which zindex is the topmost
-    view_data.top_z += 0.0001;
 
-    add_node_label(&mut commands, &ev, label_pos, &view_data.top_z);
-    add_node_base_outline(&mut commands, &ev.entity, radius, &view_data.top_z);
+    add_node_label(&mut commands, &ev, label_pos, &node_z);
+    add_node_base_outline(&mut commands, &ev.entity, radius, &node_z);
 }
 
 // FOLDER/DIRECTORY NODE
@@ -135,6 +135,8 @@ pub fn add_image_node_ui(
         },
     };
 
+    let node_z = view_data.get_z_for_node();
+
     commands.entity(ev.entity).insert((
 
         SpriteBundle {
@@ -147,7 +149,7 @@ pub fn add_image_node_ui(
                 translation: Vec3::new(
                     node_pos.x,
                     node_pos.y,
-                    view_data.top_z,
+                    node_z,
                 ),
                 ..default()
             },
@@ -155,14 +157,12 @@ pub fn add_image_node_ui(
         },
     ));
 
-    view_data.top_z += 0.0001;
-
     let size = Vec2::new(60.0, 40.0);
     let pos = Vec2::new(-size.x / 2.0, -size.y / 2.0);
 
-    add_node_label(&mut commands, &ev, pos, &view_data.top_z);
+    add_node_label(&mut commands, &ev, pos, &node_z);
     // add_node_rect_outline(&mut commands, &ev.entity, size, &view_data.top_z);
-    add_node_base_outline(&mut commands, &ev.entity, size.x, &view_data.top_z);
+    add_node_base_outline(&mut commands, &ev.entity, size.x, &node_z);
 
 }
                         

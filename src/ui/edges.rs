@@ -39,7 +39,6 @@ pub fn add_edge_ui(
     mut events: EventReader<EdgeSpawnedEvent>,
     mut commands: Commands,
     mut view_data: ResMut<ViewData>,
-    mut edge_materials: ResMut<Assets<EdgeMaterial>>,
 ){
     for ev in events.read() {
         let line = shapes::Line(
@@ -55,7 +54,7 @@ pub fn add_edge_ui(
                 path: GeometryBuilder::build_as(&line),
                 spatial: SpatialBundle {
                     transform: Transform {
-                        translation: Vec3::new(0.0, 0.0, view_data.bottom_z),
+                        translation: Vec3::new(0.0, 0.0, view_data.get_z_for_edge()),
                         ..default()
                     },
                     ..default()
@@ -63,6 +62,10 @@ pub fn add_edge_ui(
                 ..default()
             },
             Stroke::new(edgecol, 7.0),
+            Pickable {
+                should_block_lower: true,
+                should_emit_events: true, 
+            },
 
             On::<Pointer<Over>>::target_component_mut::<Stroke>(move |_over, stroke| {
                 stroke.color = hovercol;
@@ -92,8 +95,6 @@ pub fn add_edge_ui(
         //     Path::from(GeometryBuilder::build_as(&line)),
         //     Stroke::new(edgecol, 8.0)
         // ));
-
-        view_data.bottom_z -= 0.001;
     }       
 }
 
@@ -169,7 +170,7 @@ pub fn update_edges(
 }
 
 fn visualise_edge_transforms(
-    edges: Query<&GlobalTransform>,
+    edges: Query<&GlobalTransform, With<GraphViewEdge>>,
     mut gizmos: Gizmos,
 ){
     for gtform in edges.iter(){
@@ -189,7 +190,21 @@ impl Plugin for EdgePickingPlugin {
     fn build(&self, app: &mut App) {
         app
             .add_systems(PreUpdate, edge_picking.in_set(PickSet::Backend))
+            .add_systems(PostUpdate, picking_debug)
         ;
+    }
+}
+
+fn picking_debug(
+    map: ResMut<bevy_mod_picking::focus::HoverMap>,
+    key: Res<Input<KeyCode>>,
+){
+    if !key.just_pressed(KeyCode::H) {
+        return
+    }
+    let printable = map.iter().next().unwrap().1;
+    for (_ , hover) in printable.iter() {
+        println!("Hover: {:?}", hover.depth);
     }
 }
 
@@ -234,7 +249,8 @@ pub fn edge_picking(
         };
 
         let mut picks_presort: Vec<(Entity, f32, f32)> = edges
-            .iter_mut()
+            .iter()
+            .filter(|(.., visibility)| visibility.get())
             .filter_map(|(entity, edgetr, edge, pickable, ..)| {
                 // Calculate the distance from the pointer to the edge
                 if blocked {
@@ -256,8 +272,9 @@ pub fn edge_picking(
 
         // Sort the picks by distance
         picks_presort.sort_by(|(_, adist, _), (_, bdist, _)| adist.partial_cmp(&bdist).unwrap());
-        let picks_sort: Vec<(Entity, HitData)> = picks_presort.iter().map(|(entity, _, z)| {
-            (*entity, HitData::new(cam_entity, *z, None, None))
+        let picks_sort: Vec<(Entity, HitData)> = picks_presort.iter().map(|(entity, dist, z)| {
+            // println!("Edge z: {:?}", z);
+            (*entity, HitData::new(cam_entity, -dist, None, None))
         })
         .collect();
 

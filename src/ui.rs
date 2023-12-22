@@ -3,6 +3,7 @@
 
 use bevy::{prelude::*, ui::{FocusPolicy, UiSystem}, render::view::VisibleEntities};
 
+use bevy_mod_picking::backends::raycast::RaycastBackendSettings;
 use bevy_prototype_lyon::prelude::*;
 
 use crate::{
@@ -36,6 +37,7 @@ impl Plugin for KartaUiPlugin {
             .add_plugins(ShapePlugin)
 
             // Resources
+            // .add_systems(First, require_markers_for_raycasting)
             .add_systems(PreStartup, default_font_setup)
             .add_systems(PreUpdate, 
                 default_font_set.run_if(resource_exists::<FontHandle>()))
@@ -93,6 +95,12 @@ fn default_font_setup(
 ) {
     let font = asset_server.load("fonts/Roboto/Roboto-Medium.ttf");
     commands.insert_resource(FontHandle(font));
+}
+
+fn require_markers_for_raycasting(
+    mut settings: ResMut<RaycastBackendSettings>,
+){
+    settings.require_markers = true;
 }
 
 #[derive(Resource)]

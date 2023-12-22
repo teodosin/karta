@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use bevy::{prelude::*, text::Text2dBounds, sprite::Anchor};
-use bevy_mod_picking::prelude::*;
+use bevy_mod_picking::{prelude::*, backends::raycast::RaycastPickable};
 use bevy_prototype_lyon::{shapes, prelude::{GeometryBuilder, ShapeBundle, Stroke, StrokeOptions}};
 use bevy_tweening::{Tween, EaseFunction, lens::TransformPositionLens, Animator, TweenCompleted, TweenState, TweeningPlugin};
 
@@ -119,7 +119,14 @@ pub fn add_node_ui(
             GraphViewNode,
             Pins::default(),
             Velocity2D::default(),
-            PickableBundle::default(),
+            PickableBundle {
+                pickable: Pickable {
+                    should_block_lower: true,
+                    should_emit_events: true,
+                },
+                ..default()
+            },
+            RaycastPickable,
             
             On::<Pointer<Drag>>::send_event::<MoveNodesEvent>(),
             On::<Pointer<Click>>::send_event::<NodeClickEvent>(),
@@ -179,7 +186,7 @@ pub fn add_node_label(
                 ..default()
             },
             transform: Transform {
-                translation: Vec3::new(pos.x, pos.y, 10000.0 + top_z),
+                translation: Vec3::new(pos.x, pos.y, 1000.0 + top_z),
                 scale: Vec3::new(0.2, 0.2, 1.0),
                 ..default()
             },
@@ -215,7 +222,7 @@ pub fn add_node_base_outline(
         ShapeBundle {
             path: outline_path,
             spatial: SpatialBundle {
-                transform: Transform::from_translation(Vec3::new(0.0, 0.0, 1000.0 + top_z)),
+                transform: Transform::from_translation(Vec3::new(0.0, 0.0, 100.0 + top_z)),
                 ..default()
             },
             ..default()
@@ -225,9 +232,7 @@ pub fn add_node_base_outline(
             // Color::rgba(0.0, 0.0, 0.0, 0.0), 10.0
         ),
         NodeOutline,
-        
-        //RaycastPickable::default(),
-
+        RaycastPickable,
 
         On::<Pointer<Over>>::target_component_mut::<Stroke>(move |_over, stroke| {
             stroke.color = crate::settings::theme::OUTLINE_HOVER_COLOR;
