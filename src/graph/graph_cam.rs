@@ -34,16 +34,30 @@ impl Default for ViewSettings {
 
 #[derive(Resource, Debug)]
 pub struct ViewData {
-    pub top_z: f32,
-    pub bottom_z: f32,
+    top_z: f32,
+    bottom_z: f32,
+    increment: f32,
 }
 
 impl Default for ViewData {
     fn default() -> Self {
         ViewData { 
             top_z: 0.0,
-            bottom_z: -1.0,
+            bottom_z: 0.0,
+            increment: 0.001,
         }
+    }
+}
+
+impl ViewData {
+    pub fn get_z_for_edge(&mut self) -> f32 {
+        self.bottom_z = self.bottom_z - self.increment;
+        self.bottom_z
+    }
+
+    pub fn get_z_for_node(&mut self) -> f32 {
+        self.top_z = self.top_z + self.increment;
+        self.top_z
     }
 }
 
