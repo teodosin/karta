@@ -28,7 +28,7 @@ impl Plugin for EdgesPlugin {
 // Component definitions
 
 // A component for the most basic data of an EDGE
-#[derive(Component, Reflect)]
+#[derive(Component, Reflect, Debug)]
 pub struct GraphEdge {
     pub source: PathBuf,
     pub target: PathBuf,
@@ -36,6 +36,7 @@ pub struct GraphEdge {
 
 impl GraphEdge {
     pub fn same_pair(&self, other: &GraphEdge) -> bool {
+        println!("Comparing {:?} and {:?}", self, other);
         if self.source == other.source && self.target == other.target {
             return true;
         }

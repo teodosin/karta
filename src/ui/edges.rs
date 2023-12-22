@@ -208,7 +208,7 @@ pub fn edge_picking(
 
     mut output: EventWriter<PointerHits>,
 ){
-    let threshold = 15.0;
+    let threshold = 25.0;
     
     for (pointer, location) in pointers.iter().filter_map(|(pointer, pointer_location)| {
         pointer_location.location().map(|loc| (pointer, loc))
