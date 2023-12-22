@@ -1,7 +1,7 @@
 // Drawing the edges
 
-use bevy::{prelude::*, sprite::{Material2d, Material2dPlugin, MaterialMesh2dBundle}, render::render_resource::{ShaderRef, AsBindGroup}};
-use bevy_mod_picking::{events::{Pointer, Over, Out}, prelude::On};
+use bevy::{prelude::*, sprite::{Material2d, Material2dPlugin, MaterialMesh2dBundle}, render::render_resource::{ShaderRef, AsBindGroup}, window::PrimaryWindow};
+use bevy_mod_picking::{events::{Pointer, Over, Out}, prelude::On, pointer::{PointerId, PointerLocation}, backend::{PointerHits, HitData}, picking_core::{PickSet, Pickable}};
 use bevy_prototype_lyon::{shapes, prelude::{ShapeBundle, GeometryBuilder, Path, Stroke}};
 use lyon::lyon_tessellation::StrokeOptions;
 
@@ -16,11 +16,23 @@ impl Plugin for EdgeUiPlugin {
         let material_plugin = Material2dPlugin::<EdgeMaterial>::default();
         app
             .add_plugins(material_plugin)
+            .add_plugins(EdgePickingPlugin)
+
             .add_systems(PostUpdate, add_edge_ui.after(super::nodes::add_node_ui))
             .add_systems(PostUpdate, update_edges)
-            //.add_systems(PostUpdate, _draw_edges)
+
+            .add_systems(PostUpdate, visualise_edge_transforms)
         ;
     }
+}
+
+/// Component containing data only relevant for drawn edges
+#[derive(Component, Debug, Default)]
+pub struct GraphViewEdge {
+    /// Start position in global coordinates
+    pub start: Vec2,
+    /// End position in global coordinates
+    pub end: Vec2,
 }
 
 pub fn add_edge_ui(
@@ -38,6 +50,7 @@ pub fn add_edge_ui(
         let hovercol = EDGE_PARENT_HOVER_COLOR;
 
         commands.entity(ev.entity).insert((
+            GraphViewEdge::default(),
             ShapeBundle {
                 path: GeometryBuilder::build_as(&line),
                 spatial: SpatialBundle {
@@ -105,11 +118,11 @@ impl Material2d for EdgeMaterial {
 }
 
 pub fn update_edges(
-    mut edges: Query<(Entity, &GraphEdge, &mut Path)>,
+    mut edges: Query<(Entity, &GraphEdge, &mut Path, &mut GraphViewEdge), Without<GraphViewNode>>,
     nodes: Query<&Transform, With<GraphViewNode>>,
     pe_index: Res<PathsToEntitiesIndex>,
 ){
-    for (_edge, data, mut path) in edges.iter_mut() {
+    for (_edge, data, mut path, mut ends) in edges.iter_mut() {
         let source_entity = match pe_index.0.get(&data.source){
             Some(entity) => entity,
             None => {
@@ -148,5 +161,138 @@ pub fn update_edges(
                 Vec2::new(end.translation.x, end.translation.y),
             )
         );
+
+        ends.start = Vec2::new(start.translation.x, start.translation.y);
+        ends.end = Vec2::new(end.translation.x, end.translation.y);
+
+    }
+}
+
+fn visualise_edge_transforms(
+    edges: Query<&GlobalTransform>,
+    mut gizmos: Gizmos,
+){
+    for gtform in edges.iter(){
+        gizmos.circle_2d(
+            gtform.translation().xy(),
+            2.0,
+            Color::rgba(1.0, 1.0, 1.0, 1.0),
+        );
+    }
+}
+
+/// Edge picking plugin
+/// Custom picking plugin for edges. Currently
+pub struct EdgePickingPlugin;
+
+impl Plugin for EdgePickingPlugin {
+    fn build(&self, app: &mut App) {
+        app
+            .add_systems(PreUpdate, edge_picking.in_set(PickSet::Backend))
+        ;
+    }
+}
+
+pub fn edge_picking(
+    pointers: Query<(&PointerId, &PointerLocation)>,
+    cameras: Query<(Entity, &Camera, &GlobalTransform)>,
+    primary_window: Query<Entity, With<PrimaryWindow>>,
+
+    mut edges: Query<(
+        Entity,
+        &Transform,
+        &GraphViewEdge,
+        Option<&Pickable>,
+        &ViewVisibility,
+    )>,
+
+    mut output: EventWriter<PointerHits>,
+){
+    let threshold = 15.0;
+    
+    for (pointer, location) in pointers.iter().filter_map(|(pointer, pointer_location)| {
+        pointer_location.location().map(|loc| (pointer, loc))
+    }) {
+        let mut blocked = false;
+        let Some((cam_entity, camera, cam_transform)) = cameras
+            .iter()
+            .filter(|(_, camera, _)| camera.is_active)
+            .find(|(_, camera, _)| {
+                camera
+                    .target
+                    .normalize(Some(primary_window.single()))
+                    .unwrap()
+                    == location.target
+            })
+        else {
+            continue;
+        };
+
+        let Some(cursor_pos_world) = camera.viewport_to_world_2d(cam_transform, location.position)
+        else {
+            continue;
+        };
+
+        let mut picks_presort: Vec<(Entity, f32, f32)> = edges
+            .iter_mut()
+            .filter_map(|(entity, edgetr, edge, pickable, ..)| {
+                // Calculate the distance from the pointer to the edge
+                if blocked {
+                    return None;
+                }
+                
+                let distance = distance_to_edge(&cursor_pos_world, edge);
+                let within_bounds = distance < threshold;
+                blocked = within_bounds && pickable.map(|p| p.should_block_lower) != Some(false);
+                
+                within_bounds.then_some((
+                    entity,
+                    distance,
+                    edgetr.translation.z,
+                ))
+
+            })
+            .collect();
+
+        // Sort the picks by distance
+        picks_presort.sort_by(|(_, adist, _), (_, bdist, _)| adist.partial_cmp(&bdist).unwrap());
+        let picks_sort: Vec<(Entity, HitData)> = picks_presort.iter().map(|(entity, _, z)| {
+            (*entity, HitData::new(cam_entity, *z, None, None))
+        })
+        .collect();
+
+        let order = camera.order as f32;
+        output.send(PointerHits::new(*pointer, picks_sort, order))
+    }
+}
+
+fn distance_to_edge(cursor_pos_world: &Vec2, edge: &GraphViewEdge) -> f32 {
+    // Get the start and end points of the edge
+    let p1 = edge.start;
+    let p2 = edge.end;
+
+    // Calculate the square of the distance from the start to the end point
+    let line_sq = p1.distance_squared(p2);
+
+    if line_sq == 0.0 {
+        // The edge is a point, return the distance from the cursor to this point
+        return cursor_pos_world.distance(p1);
+    }
+
+    // Consider the line extending the edge, parameterized as p1 + t (p2 - p1).
+    // We find the projection of the cursor point onto this line.
+    // It falls where t = [(cursor_pos_world-p1) . (p2-p1)] / |p2-p1|^2
+    let t = ((*cursor_pos_world - p1).dot(p2 - p1)) / line_sq;
+
+    if t < 0.0 {
+        // The projection falls on the segment p1 p1
+        cursor_pos_world.distance(p1)
+    } else if t > 1.0 {
+        // The projection falls on the segment p2 p2
+        cursor_pos_world.distance(p2)
+    } else {
+        // The projection falls on the segment p1 p2
+        let projection = p1 + t * (p2 - p1);
+        cursor_pos_world.distance(projection)
     }
 }
