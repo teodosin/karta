@@ -1,9 +1,11 @@
 // Drawing the edges
 
 use bevy::{prelude::*, sprite::{Material2d, Material2dPlugin, MaterialMesh2dBundle}, render::render_resource::{ShaderRef, AsBindGroup}};
+use bevy_mod_picking::{events::{Pointer, Over, Out}, prelude::On};
 use bevy_prototype_lyon::{shapes, prelude::{ShapeBundle, GeometryBuilder, Path, Stroke}};
+use lyon::lyon_tessellation::StrokeOptions;
 
-use crate::{graph::{edges::GraphEdge, nodes::GraphDataNode, graph_cam::ViewData, context::PathsToEntitiesIndex}, settings::theme::EDGE_PARENT_COLOR, events::edges::EdgeSpawnedEvent};
+use crate::{graph::{edges::GraphEdge, nodes::GraphDataNode, graph_cam::ViewData, context::PathsToEntitiesIndex}, settings::theme::{EDGE_PARENT_COLOR, EDGE_PARENT_HOVER_COLOR}, events::edges::EdgeSpawnedEvent};
 
 use super::nodes::GraphViewNode;
 
@@ -33,6 +35,7 @@ pub fn add_edge_ui(
         );
 
         let edgecol = EDGE_PARENT_COLOR;
+        let hovercol = EDGE_PARENT_HOVER_COLOR;
 
         commands.entity(ev.entity).insert((
             ShapeBundle {
@@ -46,7 +49,19 @@ pub fn add_edge_ui(
                 },
                 ..default()
             },
-            Stroke::new(edgecol, 4.0)
+            Stroke::new(edgecol, 7.0),
+
+            On::<Pointer<Over>>::target_component_mut::<Stroke>(move |_over, stroke| {
+                stroke.color = hovercol;
+                // stroke.color = Color::rgba(0.0, 0.0, 0.0, 0.0);
+                stroke.options = StrokeOptions::default().with_line_width(8.);
+            }),
+            
+            On::<Pointer<Out>>::target_component_mut::<Stroke>(move |_out, stroke| {
+                stroke.color = edgecol;
+                // stroke.color = Color::rgba(0.0, 0.0, 0.0, 0.0);
+                stroke.options = StrokeOptions::default().with_line_width(7.);
+            }),
         ));
 
         // commands.entity(ev.entity).insert((
