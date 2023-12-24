@@ -32,7 +32,6 @@ pub fn despawn_context_menus_on_any_click(
     let input = [MouseButton::Left, MouseButton::Right, MouseButton::Middle];
     if mouse.any_just_released(input) {
     // if mouse.is_changed() {
-        println!("Despawning context menus");
         for (menu, group) in menus.iter() {
             match group {
                 PopupGroup::Context => {

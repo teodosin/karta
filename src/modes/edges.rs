@@ -34,8 +34,6 @@ fn create_edge_from_drag(
     mut commands: Commands,
     edges: Query<(&GraphEdge, &EdgeType)>,
 ) {
-    println!("Creating edge from drag");
-
     if input_data.latest_press_entity.is_none() {
         //println!("No press entity");
         return
