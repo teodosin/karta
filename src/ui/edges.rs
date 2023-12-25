@@ -63,7 +63,7 @@ pub fn add_edge_ui(
             },
             Stroke::new(edgecol, 7.0),
             Pickable {
-                should_block_lower: true,
+                should_block_lower: false,
                 should_emit_events: true, 
             },
 
@@ -213,7 +213,7 @@ pub fn edge_picking(
     cameras: Query<(Entity, &Camera, &GlobalTransform)>,
     primary_window: Query<Entity, With<PrimaryWindow>>,
 
-    mut edges: Query<(
+    edges: Query<(
         Entity,
         &Transform,
         &GraphViewEdge,
@@ -222,6 +222,7 @@ pub fn edge_picking(
     )>,
 
     mut output: EventWriter<PointerHits>,
+    mut gizmos: Gizmos,
 ){
     let threshold = 25.0;
     
@@ -259,6 +260,18 @@ pub fn edge_picking(
                 
                 let distance = distance_to_edge(&cursor_pos_world, edge);
                 let within_bounds = distance < threshold;
+                if within_bounds {
+                    gizmos.circle_2d(
+                        edge.start,
+                        2.0,
+                        Color::rgba(1.0, 1.0, 1.0, 1.0),
+                    );
+                    gizmos.circle_2d(
+                        edge.end,
+                        2.0,
+                        Color::rgba(1.0, 1.0, 1.0, 1.0),
+                    );
+                }
                 blocked = within_bounds && pickable.map(|p| p.should_block_lower) != Some(false);
                 
                 within_bounds.then_some((
@@ -270,11 +283,21 @@ pub fn edge_picking(
             })
             .collect();
 
+        println!("Picks presort len: {:?}", picks_presort.len());
+
         // Sort the picks by distance
-        picks_presort.sort_by(|(_, adist, _), (_, bdist, _)| adist.partial_cmp(&bdist).unwrap());
+        // picks_presort.sort_by(|(_, adist, _), (_, bdist, _)| adist.partial_cmp(&bdist).unwrap());
+
+        // Alternative: filter all but the shortest distance
+        if let Some(min_distance) = picks_presort.iter().map(|(_, dist, _)| *dist).min_by(|a, b| a.partial_cmp(b).unwrap()) {
+            picks_presort.retain(|(_, dist, _)| *dist == min_distance);
+        }
+        assert!(picks_presort.len() <= 1, "More than one edge was picked! This should not happen!");
+
         let picks_sort: Vec<(Entity, HitData)> = picks_presort.iter().map(|(entity, dist, z)| {
             // println!("Edge z: {:?}", z);
-            (*entity, HitData::new(cam_entity, -dist, None, None))
+            println!("Edge z: {:?}", z);
+            (*entity, HitData::new(cam_entity, *dist, None, None))
         })
         .collect();
 
