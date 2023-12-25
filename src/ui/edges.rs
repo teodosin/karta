@@ -1,6 +1,6 @@
 // Drawing the edges
 
-use bevy::{prelude::*, sprite::{Material2d, Material2dPlugin, MaterialMesh2dBundle}, render::render_resource::{ShaderRef, AsBindGroup}, window::PrimaryWindow};
+use bevy::{prelude::*, sprite::{Material2d, Material2dPlugin, MaterialMesh2dBundle}, render::{render_resource::{ShaderRef, AsBindGroup}, view::RenderLayers}, window::PrimaryWindow};
 use bevy_mod_picking::{events::{Pointer, Over, Out}, prelude::On, pointer::{PointerId, PointerLocation}, backend::{PointerHits, HitData}, picking_core::{PickSet, Pickable}};
 use bevy_prototype_lyon::{shapes, prelude::{ShapeBundle, GeometryBuilder, Path, Stroke}};
 use lyon::lyon_tessellation::StrokeOptions;
@@ -49,6 +49,7 @@ pub fn add_edge_ui(
         let hovercol = EDGE_PARENT_HOVER_COLOR;
 
         commands.entity(ev.entity).insert((
+            RenderLayers::layer(31),
             GraphViewEdge::default(),
             ShapeBundle {
                 path: GeometryBuilder::build_as(&line),
