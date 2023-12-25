@@ -1,7 +1,7 @@
 
 use bevy::{
     prelude::*, 
-    render::render_resource::{ShaderRef, AsBindGroup}, 
+    render::{render_resource::{ShaderRef, AsBindGroup}, view::RenderLayers}, 
     sprite::{MaterialMesh2dBundle, Material2d, Material2dPlugin}
 };
 use bevy_mod_picking::prelude::*;
@@ -30,6 +30,7 @@ fn setup_grid(
     mut grid_materials: ResMut<Assets<GridMaterial>>,
 ){
     commands.spawn((
+        RenderLayers::layer(31),
         GraphBackground,
         MaterialMesh2dBundle {
             mesh: meshes.add(shape::Quad::new(Vec2::new(1000000.0, 1000000.0)).into()).into(),

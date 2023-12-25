@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use bevy::{prelude::*, text::Text2dBounds, sprite::Anchor};
+use bevy::{prelude::*, text::Text2dBounds, sprite::Anchor, render::view::RenderLayers};
 use bevy_mod_picking::{prelude::*, backends::raycast::RaycastPickable};
 use bevy_prototype_lyon::{shapes, prelude::{GeometryBuilder, ShapeBundle, Stroke, StrokeOptions}};
 use bevy_tweening::{Tween, EaseFunction, lens::TransformPositionLens, Animator, TweenCompleted, TweenState, TweeningPlugin};
@@ -116,6 +116,7 @@ pub fn add_node_ui(
         println!("Node type: {:?}", ev.ntype);
 
         let node = commands.entity(ev.entity).insert((
+            RenderLayers::layer(31),
             GraphViewNode,
             Pins::default(),
             Velocity2D::default(),
@@ -168,6 +169,7 @@ pub fn add_node_label(
 ){
     
     let name_label = commands.spawn((
+        RenderLayers::layer(31),
         NodeLabel,
         Text2dBundle {
             text: Text {
@@ -219,6 +221,7 @@ pub fn add_node_base_outline(
     let outline_path = GeometryBuilder::build_as(&outline_shape);
     
     let node_outline = commands.spawn((
+        RenderLayers::layer(31),
         ShapeBundle {
             path: outline_path,
             spatial: SpatialBundle {
