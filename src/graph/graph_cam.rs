@@ -1,6 +1,6 @@
 // Camera and cursor information for the graph
 
-use bevy::{prelude::*, input::mouse::{MouseWheel, MouseScrollUnit, MouseMotion}};
+use bevy::{prelude::*, input::mouse::{MouseWheel, MouseScrollUnit, MouseMotion}, render::view::RenderLayers};
 
 use crate::input::pointer::InputData;
 
@@ -64,7 +64,12 @@ impl ViewData {
 #[derive(Component)]
 pub struct GraphCamera;
 
-
+/// Set up the camera for the graph. 
+/// Bevy doesn't seem to currently support drawing meshes or arbitrary shapes
+/// in the UI, so the graph exists currently in world space. 
+/// 
+/// To make the graph not interfere with the rest of the world, the graph elements
+/// will be set to render in the 32nd (last) render layer.
 fn cam_setup(
     mut commands: Commands,
 ){
@@ -87,6 +92,8 @@ fn cam_setup(
             },
             ..default()
         },
+        // The graph exists in world space, and we don't want it to interfere with the rest of the world. 
+        RenderLayers::from_layers(&[31])
     ));
 }
 
