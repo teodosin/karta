@@ -1,11 +1,11 @@
 // Drawing the edges
 
 use bevy::{prelude::*, sprite::{Material2d, Material2dPlugin, MaterialMesh2dBundle}, render::{render_resource::{ShaderRef, AsBindGroup}, view::RenderLayers}, window::PrimaryWindow};
-use bevy_mod_picking::{events::{Pointer, Over, Out}, prelude::On, pointer::{PointerId, PointerLocation}, backend::{PointerHits, HitData}, picking_core::{PickSet, Pickable}};
+use bevy_mod_picking::{events::{Pointer, Over, Out, Click}, prelude::On, pointer::{PointerId, PointerLocation}, backend::{PointerHits, HitData}, picking_core::{PickSet, Pickable}};
 use bevy_prototype_lyon::{shapes, prelude::{ShapeBundle, GeometryBuilder, Path, Stroke}};
 use lyon::lyon_tessellation::StrokeOptions;
 
-use crate::{graph::{edges::GraphEdge, nodes::GraphDataNode, graph_cam::ViewData, context::PathsToEntitiesIndex}, settings::theme::{EDGE_PARENT_COLOR, EDGE_PARENT_HOVER_COLOR}, events::edges::EdgeSpawnedEvent};
+use crate::{graph::{edges::GraphDataEdge, nodes::GraphDataNode, graph_cam::ViewData, context::PathsToEntitiesIndex}, settings::theme::{EDGE_PARENT_COLOR, EDGE_PARENT_HOVER_COLOR}, events::edges::{EdgeSpawnedEvent, EdgeClickEvent}};
 
 use super::nodes::GraphViewNode;
 
@@ -48,6 +48,11 @@ pub fn add_edge_ui(
         let edgecol = EDGE_PARENT_COLOR;
         let hovercol = EDGE_PARENT_HOVER_COLOR;
 
+        let ewidth = match ev.edge_type {
+            crate::graph::edges::EdgeTypes::Parent => 8.0,
+            _ => 4.0,
+        };
+
         commands.entity(ev.entity).insert((
             RenderLayers::layer(31),
             GraphViewEdge::default(),
@@ -62,23 +67,23 @@ pub fn add_edge_ui(
                 },
                 ..default()
             },
-            Stroke::new(edgecol, 7.0),
+            Stroke::new(edgecol, ewidth),
             Pickable {
-                should_block_lower: false,
+                should_block_lower: true,
                 should_emit_events: true, 
             },
 
             On::<Pointer<Over>>::target_component_mut::<Stroke>(move |_over, stroke| {
                 stroke.color = hovercol;
                 // stroke.color = Color::rgba(0.0, 0.0, 0.0, 0.0);
-                stroke.options = StrokeOptions::default().with_line_width(8.);
             }),
             
             On::<Pointer<Out>>::target_component_mut::<Stroke>(move |_out, stroke| {
                 stroke.color = edgecol;
                 // stroke.color = Color::rgba(0.0, 0.0, 0.0, 0.0);
-                stroke.options = StrokeOptions::default().with_line_width(7.);
             }),
+
+            On::<Pointer<Click>>::send_event::<EdgeClickEvent>(),
         ));
 
         // commands.entity(ev.entity).insert((
@@ -120,7 +125,7 @@ impl Material2d for EdgeMaterial {
 }
 
 pub fn update_edges(
-    mut edges: Query<(Entity, &GraphEdge, &mut Path, &mut GraphViewEdge), Without<GraphViewNode>>,
+    mut edges: Query<(Entity, &GraphDataEdge, &mut Path, &mut GraphViewEdge), Without<GraphViewNode>>,
     nodes: Query<&Transform, With<GraphViewNode>>,
     pe_index: Res<PathsToEntitiesIndex>,
 ){
@@ -230,7 +235,7 @@ pub fn edge_picking(
     for (pointer, location) in pointers.iter().filter_map(|(pointer, pointer_location)| {
         pointer_location.location().map(|loc| (pointer, loc))
     }) {
-        let mut blocked = false;
+        let blocked = false;
         let Some((cam_entity, camera, cam_transform)) = cameras
             .iter()
             .filter(|(_, camera, _)| camera.is_active)
@@ -253,7 +258,7 @@ pub fn edge_picking(
         let mut picks_presort: Vec<(Entity, f32, f32)> = edges
             .iter()
             .filter(|(.., visibility)| visibility.get())
-            .filter_map(|(entity, edgetr, edge, pickable, ..)| {
+            .filter_map(|(entity, edgetr, edge, _, ..)| {
                 // Calculate the distance from the pointer to the edge
                 if blocked {
                     return None;
@@ -273,7 +278,9 @@ pub fn edge_picking(
                         Color::rgba(1.0, 1.0, 1.0, 1.0),
                     );
                 }
-                blocked = within_bounds && pickable.map(|p| p.should_block_lower) != Some(false);
+
+                // Edges don't block each other, so commented out. 
+                // blocked = within_bounds && pickable.map(|p| p.should_block_lower) != Some(false);
                 
                 within_bounds.then_some((
                     entity,
@@ -284,21 +291,13 @@ pub fn edge_picking(
             })
             .collect();
 
-        println!("Picks presort len: {:?}", picks_presort.len());
 
         // Sort the picks by distance
-        // picks_presort.sort_by(|(_, adist, _), (_, bdist, _)| adist.partial_cmp(&bdist).unwrap());
-
-        // Alternative: filter all but the shortest distance
-        if let Some(min_distance) = picks_presort.iter().map(|(_, dist, _)| *dist).min_by(|a, b| a.partial_cmp(b).unwrap()) {
-            picks_presort.retain(|(_, dist, _)| *dist == min_distance);
-        }
-        assert!(picks_presort.len() <= 1, "More than one edge was picked! This should not happen!");
+        picks_presort.sort_by(|(_, adist, _), (_, bdist, _)| adist.partial_cmp(&bdist).unwrap());
 
         let picks_sort: Vec<(Entity, HitData)> = picks_presort.iter().map(|(entity, dist, z)| {
             // println!("Edge z: {:?}", z);
-            println!("Edge z: {:?}", z);
-            (*entity, HitData::new(cam_entity, *dist, None, None))
+            (*entity, HitData::new(cam_entity, *z, None, None))
         })
         .collect();
 

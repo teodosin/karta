@@ -3,11 +3,11 @@ use std::time::Duration;
 use bevy::{prelude::*, text::Text2dBounds, sprite::Anchor, render::view::RenderLayers};
 use bevy_mod_picking::{prelude::*, backends::raycast::RaycastPickable};
 use bevy_prototype_lyon::{shapes, prelude::{GeometryBuilder, ShapeBundle, Stroke, StrokeOptions}};
-use bevy_tweening::{Tween, EaseFunction, lens::TransformPositionLens, Animator, TweenCompleted, TweenState, TweeningPlugin};
+use bevy_tweening::{Tween, EaseFunction, lens::TransformPositionLens, Animator, TweenCompleted, TweeningPlugin};
 
 use crate::{
-    graph::{nodes::{GraphDataNode, GraphNodeEdges, ContextRoot, Pins}, graph_cam::ViewData, context::Selected, node_types::NodeTypes}, 
-    events::nodes::{MoveNodesEvent, NodeClickEvent, NodePressedEvent, NodeHoverEvent, NodeSpawnedEvent}
+    graph::{nodes::{GraphNodeEdges, ContextRoot, Pins}, graph_cam::ViewData, node_types::NodeTypes}, 
+    events::nodes::{MoveNodesEvent, NodeClickEvent, NodePressedEvent, NodeHoverEvent, NodeSpawnedEvent, NodeHoverStopEvent}
 };
 
 use self::node_ui_types::{add_base_node_ui, add_image_node_ui};
@@ -133,6 +133,7 @@ pub fn add_node_ui(
             On::<Pointer<Click>>::send_event::<NodeClickEvent>(),
             On::<Pointer<Down>>::send_event::<NodePressedEvent>(),
             On::<Pointer<Over>>::send_event::<NodeHoverEvent>(),
+            On::<Pointer<Out>>::send_event::<NodeHoverStopEvent>(),
             
         )).id();
 
@@ -143,7 +144,7 @@ pub fn add_node_ui(
         );
 
         if ev.pinned_to_position {
-            commands.entity(ev.entity).insert(Pins::pinpos());
+            commands.entity(ev.entity).insert(Pins::new_pinpos());
         } else {
             commands.entity(ev.entity).insert(Pins::default());
         }
@@ -158,9 +159,9 @@ pub fn add_node_ui(
     }
 }
 
-// NAME LABEL
-// This is the text label that will be attached to the node.
-// It will be spawned as a child of the node entity.
+/// NAME LABEL
+/// This is the text label that will be attached to the node.
+/// It will be spawned as a child of the node entity.
 pub fn add_node_label(
     commands: &mut Commands,
     ev: &NodeSpawnedEvent, 
@@ -200,9 +201,8 @@ pub fn add_node_label(
     commands.entity(ev.entity).push_children(&[name_label]);
 }
 
-// OUTLINE
-// ----------------------------------------------------------------
-// This is the hoverable, interactable outline from which edges are created.
+/// OUTLINE
+/// Interactive outline for nodes. Spawned as a child of the node entity. 
 pub fn add_node_base_outline(
     commands: &mut Commands,
     parent: &Entity,
@@ -282,7 +282,6 @@ pub fn tween_to_target_position(
 pub fn tween_to_target_position_complete(
     mut commands: Commands,
     mut event: EventReader<TweenCompleted>,
-    mut anim: Query<&Animator<Transform>>,
 ){
     for ev in event.read(){
         if true {
@@ -367,6 +366,7 @@ pub fn toggle_node_debug_labels(
     for (entity, edges) in nodes.iter_mut(){
         // Self entity number
         let entity_number_label = commands.spawn((
+            RenderLayers::layer(31),
             NodeDebugLabel,
             Text2dBundle {
                 text_anchor: Anchor::TopLeft,
@@ -395,6 +395,7 @@ pub fn toggle_node_debug_labels(
         // Number of edges
         let edge_count: &str = &edges.edges.len().to_string();
         let edge_count_label = commands.spawn((
+            RenderLayers::layer(31),
             NodeDebugLabel,
             Text2dBundle {
                 text_anchor: Anchor::TopLeft,
@@ -426,6 +427,7 @@ pub fn toggle_node_debug_labels(
             edge_list_string.push_str(&format!("n:{:?} e:{:?}\n", edge.0, edge.1));
         }
         let edge_list_label = commands.spawn((
+            RenderLayers::layer(31),
             NodeDebugLabel,
             Text2dBundle {
                 text_anchor: Anchor::TopLeft,
