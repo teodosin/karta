@@ -11,7 +11,7 @@ use crate::{
     events::{nodes::{NodeClickEvent, NodeSpawnedEvent}, edges::EdgeSpawnedEvent}, ui::nodes::TargetPosition,
 };
 
-use super::{nodes::*, edges::{GraphEdge, EdgeType}};
+use super::{nodes::*, edges::{GraphDataEdge, EdgeType}};
 
 pub struct ContextPlugin;
 
@@ -21,7 +21,7 @@ impl Plugin for ContextPlugin {
             .insert_resource(PathsToEntitiesIndex(HashMap::new()))
             .insert_resource(CurrentContext::new())
 
-            .add_systems(Startup, initial_context)
+            // .add_systems(Startup, initial_context)
 
             .add_systems(Last, update_context
                 .run_if(resource_changed::<CurrentContext>())
@@ -198,16 +198,6 @@ pub struct Selected;
 pub struct ToBeDespawned;
 
 
-
-fn initial_context(
-    mut event: EventWriter<NodeClickEvent>,
-){
-    event.send(NodeClickEvent {
-        target: None,
-        button: PointerButton::Primary,
-    });
-}
-
 // --------------------------------------------------------------------------------
 /// Big monolith function for updating the context. 
 pub fn update_context(
@@ -222,7 +212,7 @@ pub fn update_context(
     mut pe_index: ResMut<PathsToEntitiesIndex>,
 
     mut nodes: Query<(Entity, &GraphDataNode, &Transform)>,
-    edges: Query<(&GraphEdge, &EdgeType)>,
+    edges: Query<(&GraphDataEdge, &EdgeType)>,
     root: Query<Entity, With<ContextRoot>>,
 ) {
     let vault = &vault.vault;
@@ -598,11 +588,33 @@ pub fn update_context(
         let source_path = PathBuf::from(edge.0.clone());
         let target_path = PathBuf::from(edge.1.clone());
 
+        let etype: EdgeTypes;
+
+        println!("Creating edge from {} to {}", source_path.display(), target_path.display());
+
+        let source_parent = source_path.parent().unwrap();
+        let target_parent = target_path.parent().unwrap();
+
+        println!("Source parent: {}", source_parent.display());
+        println!("Target parent: {}", target_parent.display());
+
+        let one_is_parent_of_other = source_parent == target_path || target_parent == source_path;
+
+        println!("One is parent of other: {}", one_is_parent_of_other);
+
+        // TODO: Should the source of an edge be the parent or the child in a parent connection?
+        if one_is_parent_of_other {
+            println!("Created edge of type PARENT");
+            etype = EdgeTypes::Parent;
+        } else {
+            etype = EdgeTypes::Base;
+        }
+
         create_edge(
             &mut edge_event,
             &source_path, 
             &target_path, 
-            EdgeTypes::Base,
+            etype,
             &mut commands,
             &edges,
         );

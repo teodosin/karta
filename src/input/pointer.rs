@@ -1,16 +1,18 @@
 use std::path::PathBuf;
 
-use bevy::{prelude::{Vec2, ResMut, Input, Res, MouseButton, Query, Camera, GlobalTransform, With, Camera2d, Resource}, window::Window};
+use bevy::{prelude::{Vec2, ResMut, Input, Res, MouseButton, Query, Camera, GlobalTransform, With, Camera2d, Resource}, window::Window, ecs::entity::Entity};
 
 
 
 #[derive(Resource, Debug)]
 pub struct InputData {
-    pub latest_click_entity: Option<PathBuf>,
-    pub latest_press_entity: Option<PathBuf>,
-    pub latest_hover_entity: Option<PathBuf>,
+    pub latest_click_nodepath: Option<PathBuf>,
+    pub latest_press_nodepath: Option<PathBuf>,
+    pub latest_hover_nodepath: Option<PathBuf>,
 
-    pub press_is_outline: bool,
+    pub latest_edge_entity: Option<Entity>,
+
+    pub target_type: GraphPickingTarget,
 
     pub left_just_released: bool,
 
@@ -19,14 +21,24 @@ pub struct InputData {
     pub curr_position: Vec2,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum GraphPickingTarget {
+    Node,
+    NodeOutline,
+    Edge,
+    None,
+}
+
 impl Default for InputData {
     fn default() -> Self {
         InputData {
-            latest_click_entity: None,
-            latest_press_entity: None,
-            latest_hover_entity: None,
+            latest_click_nodepath: None,
+            latest_press_nodepath: None,
+            latest_hover_nodepath: None,
 
-            press_is_outline: false,
+            latest_edge_entity: None,
+
+            target_type: GraphPickingTarget::None,
 
             left_just_released: false,
 
@@ -34,6 +46,33 @@ impl Default for InputData {
             prev_position: Vec2::ZERO,
             curr_position: Vec2::ZERO,
         }
+    }
+}
+
+impl InputData {
+    pub fn latest_is_outline(&self) -> bool {
+        match self.target_type {
+            GraphPickingTarget::NodeOutline => true,
+            _ => false,
+        }
+    }
+    
+    pub fn latest_is_node(&self) -> bool {
+        match self.target_type {
+            GraphPickingTarget::Node => true,
+            _ => false,
+        }
+    }
+    
+    pub fn latest_is_edge(&self) -> bool {
+        match self.target_type {
+            GraphPickingTarget::Edge => true,
+            _ => false,
+        }
+    }
+
+    pub fn set_target_type(&mut self, target_type: GraphPickingTarget) {
+        self.target_type = target_type;
     }
 }
 

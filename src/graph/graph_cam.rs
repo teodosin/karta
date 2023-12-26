@@ -93,7 +93,8 @@ fn cam_setup(
             ..default()
         },
         // The graph exists in world space, and we don't want it to interfere with the rest of the world. 
-        RenderLayers::from_layers(&[31])
+        RenderLayers::from_layers(&[31]),
+        bevy_mod_picking::backends::raycast::RaycastPickable,
     ));
 }
 

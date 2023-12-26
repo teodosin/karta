@@ -41,6 +41,10 @@ fn setup_grid(
             },
             ..default()
         },
+        Pickable {
+            should_block_lower: false,
+            should_emit_events: true,
+        },
 
         On::<Pointer<DragEnd>>::send_event::<RectangleSelectionEndEvent>(),
     ));
