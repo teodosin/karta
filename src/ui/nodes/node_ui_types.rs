@@ -4,8 +4,9 @@ use bevy::{
     render::{mesh::{Mesh, shape}, color::Color, texture::Image}, 
     sprite::{ColorMaterial, MaterialMesh2dBundle, SpriteBundle, Sprite}, 
     transform::components::Transform, math::{Vec3, Vec2}, 
-    prelude::default
+    prelude::default, ui::FocusPolicy
 };
+use bevy_mod_picking::{PickableBundle, picking_core::Pickable, backends::raycast::RaycastPickable};
 use rand::Rng;
 
 use crate::{graph::graph_cam::ViewData, events::nodes::NodeSpawnedEvent};
@@ -53,7 +54,7 @@ pub fn add_base_node_ui(
     // Positions are slightly randomized to avoid nodes being spawned on top of each other
     let mut rng = rand::thread_rng();
     let label_pos = Vec2::new(35.0, 0.0);
-    let radius = 25.0;
+    let radius = 35.0;
 
     let node_pos: Vec2 = match ev.rel_target_position {
         Some(pos) => ev.root_position + pos,
@@ -66,6 +67,8 @@ pub fn add_base_node_ui(
     };
 
     let node_z = view_data.get_z_for_node();
+
+    println!("z depth for base node ui: {}", node_z);
 
     commands.entity(ev.entity).insert((
         MaterialMesh2dBundle {
