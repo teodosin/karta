@@ -42,6 +42,7 @@ pub fn karta_app() {
         )
         .add_plugins(DefaultPickingPlugins
             .build()
+            .disable::<BevyUiBackend>()
             .disable::<DebugPickingPlugin>()
         )        
 
