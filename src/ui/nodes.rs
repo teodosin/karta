@@ -350,7 +350,7 @@ pub fn toggle_node_debug_labels(
 
     key_input: ResMut<Input<KeyCode>>,
 
-    mut nodes: Query<(Entity, &GraphNodeEdges)>,
+    mut nodes: Query<(Entity, &GraphNodeEdges, &Transform)>,
     mut labels: Query<Entity, &NodeDebugLabel>,
 ){
     if !key_input.just_pressed(KeyCode::P){
@@ -363,7 +363,7 @@ pub fn toggle_node_debug_labels(
         }
         return;
     }
-    for (entity, edges) in nodes.iter_mut(){
+    for (entity, edges, tr) in nodes.iter_mut(){
         // Self entity number
         let entity_number_label = commands.spawn((
             RenderLayers::layer(31),
@@ -383,14 +383,42 @@ pub fn toggle_node_debug_labels(
                     ..default()
                 },
                 transform: Transform {
-                    translation: Vec3::new(40.0, -20.0, 10000.0),
-                    scale: Vec3::new(0.5, 0.5, 1.0),
+                    translation: Vec3::new(40.0, -30.0, 10000.0),
+                    scale: Vec3::new(0.2, 0.2, 1.0),
                     ..default()
                 },
                 ..default()
             }
         )).id();
         commands.entity(entity).push_children(&[entity_number_label]);
+
+        // Self transform
+        let entity_transform_label = commands.spawn((
+            RenderLayers::layer(31),
+            NodeDebugLabel,
+            Text2dBundle {
+                text_anchor: Anchor::TopLeft,
+                text: Text {
+                    sections: vec![TextSection::new(
+                        format!("transform: {:?}", tr.translation),
+                        TextStyle {
+                            font_size: 32.0,
+                            color: Color::WHITE,
+                            ..default()
+                        },
+                    )],
+                    alignment: TextAlignment::Left,
+                    ..default()
+                },
+                transform: Transform {
+                    translation: Vec3::new(40.0, -35.0, 10000.0),
+                    scale: Vec3::new(0.2, 0.2, 1.0),
+                    ..default()
+                },
+                ..default()
+            }
+        )).id();
+        commands.entity(entity).push_children(&[entity_transform_label]);
 
         // Number of edges
         let edge_count: &str = &edges.edges.len().to_string();
@@ -412,8 +440,8 @@ pub fn toggle_node_debug_labels(
                     ..default()
                 },
                 transform: Transform {
-                    translation: Vec3::new(40.0, -35.0, 10000.0),
-                    scale: Vec3::new(0.5, 0.5, 1.0),
+                    translation: Vec3::new(40.0, -40.0, 10000.0),
+                    scale: Vec3::new(0.2, 0.2, 1.0),
                     ..default()
                 },
                 ..default()
@@ -447,8 +475,8 @@ pub fn toggle_node_debug_labels(
                     ..default()
                 }.with_no_wrap(),
                 transform: Transform {
-                    translation: Vec3::new(40.0, -50.0, 10000.0),
-                    scale: Vec3::new(0.5, 0.5, 1.0),
+                    translation: Vec3::new(40.0, -45.0, 10000.0),
+                    scale: Vec3::new(0.2, 0.2, 1.0),
                     ..default()
                 },
                 ..default()

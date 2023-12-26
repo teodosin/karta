@@ -82,8 +82,8 @@ fn cam_setup(
                 ..default()
             },
             projection: OrthographicProjection {
-                far: 1000000.,
-                near: -1000000.,
+                far: 777777.,
+                near: -666666.,
                 ..Default::default()
             },
             camera: Camera {

@@ -203,6 +203,7 @@ impl Plugin for EdgePickingPlugin {
 
 fn picking_debug(
     map: ResMut<bevy_mod_picking::focus::HoverMap>,
+    pointer: Query<&bevy_mod_picking::pointer::PointerInteraction>,
     key: Res<Input<KeyCode>>,
 ){
     if !key.just_pressed(KeyCode::H) {
@@ -211,6 +212,9 @@ fn picking_debug(
     let printable = map.iter().next().unwrap().1;
     for (_ , hover) in printable.iter() {
         println!("Hover: {:?}", hover.depth);
+    }
+    for p in pointer.iter() {
+        println!("Pointer: {:?}", p);
     }
 }
 
@@ -235,7 +239,6 @@ pub fn edge_picking(
     for (pointer, location) in pointers.iter().filter_map(|(pointer, pointer_location)| {
         pointer_location.location().map(|loc| (pointer, loc))
     }) {
-        let blocked = false;
         let Some((cam_entity, camera, cam_transform)) = cameras
             .iter()
             .filter(|(_, camera, _)| camera.is_active)
@@ -259,25 +262,22 @@ pub fn edge_picking(
             .iter()
             .filter(|(.., visibility)| visibility.get())
             .filter_map(|(entity, edgetr, edge, _, ..)| {
-                // Calculate the distance from the pointer to the edge
-                if blocked {
-                    return None;
-                }
-                
+                // Calculate the distance from the pointer to the edge                
                 let distance = distance_to_edge(&cursor_pos_world, edge);
                 let within_bounds = distance < threshold;
-                if within_bounds {
-                    gizmos.circle_2d(
-                        edge.start,
-                        2.0,
-                        Color::rgba(1.0, 1.0, 1.0, 1.0),
-                    );
-                    gizmos.circle_2d(
-                        edge.end,
-                        2.0,
-                        Color::rgba(1.0, 1.0, 1.0, 1.0),
-                    );
-                }
+
+                // if within_bounds {
+                //     gizmos.circle_2d(
+                //         edge.start,
+                //         2.0,
+                //         Color::rgba(1.0, 1.0, 1.0, 1.0),
+                //     );
+                //     gizmos.circle_2d(
+                //         edge.end,
+                //         2.0,
+                //         Color::rgba(1.0, 1.0, 1.0, 1.0),
+                //     );
+                // }
 
                 // Edges don't block each other, so commented out. 
                 // blocked = within_bounds && pickable.map(|p| p.should_block_lower) != Some(false);
