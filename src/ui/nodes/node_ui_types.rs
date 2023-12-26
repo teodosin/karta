@@ -155,10 +155,6 @@ pub fn add_image_node_ui(
             },
             ..default()
         },
-        bevy_mod_picking::picking_core::Pickable {
-            should_block_lower: true,
-            should_emit_events: true,
-        }
     ));
 
     let size = Vec2::new(60.0, 40.0);

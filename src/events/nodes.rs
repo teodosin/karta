@@ -78,3 +78,13 @@ impl From<ListenerInput<Pointer<Over>>> for NodeHoverEvent {
         }
     }
 }
+
+#[derive(Event)]
+pub struct NodeHoverStopEvent;
+
+// Implementation required by bevy_mod_picking
+impl From<ListenerInput<Pointer<Out>>> for NodeHoverStopEvent {
+    fn from(_event: ListenerInput<Pointer<Out>>) -> Self {
+        NodeHoverStopEvent
+    }
+}

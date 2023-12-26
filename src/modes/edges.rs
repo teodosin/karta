@@ -5,7 +5,7 @@
 use bevy::prelude::*;
 
 
-use crate::{input::pointer::{left_click_just_released, InputData}, graph::{context::PathsToEntitiesIndex, edges::{create_edge, EdgeTypes, EdgeType, GraphEdge}, nodes::GraphDataNode, graph_cam::ViewData}, events::edges::EdgeSpawnedEvent};
+use crate::{input::pointer::{left_click_just_released, InputData}, graph::{context::PathsToEntitiesIndex, edges::{create_edge, EdgeTypes, EdgeType, GraphDataEdge}, nodes::GraphDataNode, graph_cam::ViewData}, events::edges::EdgeSpawnedEvent};
 
 use super::KartaModeState;
 
@@ -32,30 +32,30 @@ fn create_edge_from_drag(
     mut event: EventWriter<EdgeSpawnedEvent>,
     input_data: Res<InputData>,
     mut commands: Commands,
-    edges: Query<(&GraphEdge, &EdgeType)>,
+    edges: Query<(&GraphDataEdge, &EdgeType)>,
 ) {
     println!("Creating edge from drag");
 
-    if input_data.latest_press_entity.is_none() {
+    if input_data.latest_press_nodepath.is_none() {
         //println!("No press entity");
         return
     }
-    if input_data.latest_hover_entity.is_none() {
+    if input_data.latest_hover_nodepath.is_none() {
         //println!("No hover entity");
         return
     }
-    if input_data.latest_press_entity == input_data.latest_hover_entity {
+    if input_data.latest_press_nodepath == input_data.latest_hover_nodepath {
         println!("Same entity");
         return
     }
 
     // Enforce only being able to create edges from the outline
-    if !input_data.press_is_outline {
+    if !input_data.latest_is_outline() {
         return
     }
 
-    let from = input_data.latest_press_entity.clone().unwrap();
-    let to = input_data.latest_hover_entity.clone().unwrap();
+    let from = input_data.latest_press_nodepath.clone().unwrap();
+    let to = input_data.latest_hover_nodepath.clone().unwrap();
 
     println!("Creating edge from {:?} to {:?}", from, to);
 
@@ -78,21 +78,21 @@ fn draw_edge_preview(
     pe_index: Res<PathsToEntitiesIndex>,
     mut gizmos: Gizmos,
 ) {
-    if input_data.latest_press_entity.is_none() {
+    if input_data.latest_press_nodepath.is_none() {
         return
     }
 
-    if !input_data.press_is_outline {
+    if !input_data.latest_is_outline() {
         return
     }
 
     if input_data.left_just_released {
-        input_data.latest_press_entity = None;
+        input_data.latest_press_nodepath = None;
     }
 
     let cursor = input_data.curr_position;
     
-    let from = match input_data.latest_press_entity.clone() {
+    let from = match input_data.latest_press_nodepath.clone() {
         Some(from) => from,
         None => return,
     };
@@ -123,7 +123,7 @@ fn draw_edge_preview(
 // #[test]
 fn test_create_edge_from_drag() {
     use bevy::utils::HashMap;
-    use crate::graph::edges::GraphEdge;
+    use crate::graph::edges::GraphDataEdge;
     use std::{path::PathBuf, ffi::OsString};
     use crate::graph::node_types::NodeTypes;
     // Setup a world and schedule for Bevy ECS (assuming Bevy is being used)
@@ -148,21 +148,21 @@ fn test_create_edge_from_drag() {
     let node1 = &app.world.get::<GraphDataNode>(entity1).unwrap().path;
     let node2 = &app.world.get::<GraphDataNode>(entity2).unwrap().path;
 
-    // Mock InputData, Valid
-    let input_data_mock_valid = InputData {
-        latest_press_entity: Some(node1.clone()), // Assuming Entity can be created like this
-        latest_hover_entity: Some(node2.clone()),
-        press_is_outline: true,
-        ..default()
-    };
+    // // Mock InputData, Valid
+    // let input_data_mock_valid = InputData {
+    //     latest_press_entity: Some(node1.clone()), // Assuming Entity can be created like this
+    //     latest_hover_entity: Some(node2.clone()),
+    //     target_type: InputTarget::NodeOutline,
+    //     ..default()
+    // };
 
-    // Mock InputData, Invalid: Same entity
-    let input_data_mock_invalid_same_entity = InputData {
-        latest_press_entity: Some(node1.clone()),
-        latest_hover_entity: Some(node1.clone()),
-        press_is_outline: true,
-        ..default()
-    };
+    // // Mock InputData, Invalid: Same entity
+    // let input_data_mock_invalid_same_entity = InputData {
+    //     latest_press_entity: Some(node1.clone()),
+    //     latest_hover_entity: Some(node1.clone()),
+    //     target_type: InputTarget::NodeOutline,
+    //     ..default()
+    // };
 
     // Create a mock PathsToEntitiesIndex
     let mut pe_index = PathsToEntitiesIndex(HashMap::new());
@@ -172,19 +172,19 @@ fn test_create_edge_from_drag() {
 
 
     // 1. Test valid input_data scenario
-    app.world.insert_resource(input_data_mock_valid);
+    // app.world.insert_resource(input_data_mock_valid);
     app.add_systems(Update, create_edge_from_drag);
 
     app.update();
-    assert_eq!(app.world.query::<&GraphEdge>().iter(&app.world).len(), 1);
+    assert_eq!(app.world.query::<&GraphDataEdge>().iter(&app.world).len(), 1);
     
     app.world.remove_resource::<InputData>();
     
     // 2. Test invalid scenario: same entity
-    app.world.insert_resource(input_data_mock_invalid_same_entity);
+    // app.world.insert_resource(input_data_mock_invalid_same_entity);
 
     app.update();
-    assert_eq!(app.world.query::<&GraphEdge>().iter(&app.world).len(), 1);
+    assert_eq!(app.world.query::<&GraphDataEdge>().iter(&app.world).len(), 1);
     
     
     //app.world.insert_resource(input_data_mock_invalid_same_entity);
