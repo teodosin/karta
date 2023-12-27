@@ -220,7 +220,7 @@ fn picking_debug(
 
 pub fn edge_picking(
     pointers: Query<(&PointerId, &PointerLocation)>,
-    cameras: Query<(Entity, &Camera, &GlobalTransform)>,
+    cameras: Query<(Entity, &Camera, &GlobalTransform, &OrthographicProjection)>,
     primary_window: Query<Entity, With<PrimaryWindow>>,
 
     edges: Query<(
@@ -239,10 +239,10 @@ pub fn edge_picking(
     for (pointer, location) in pointers.iter().filter_map(|(pointer, pointer_location)| {
         pointer_location.location().map(|loc| (pointer, loc))
     }) {
-        let Some((cam_entity, camera, cam_transform)) = cameras
+        let Some((cam_entity, camera, cam_transform, cam_ortho)) = cameras
             .iter()
-            .filter(|(_, camera, _)| camera.is_active)
-            .find(|(_, camera, _)| {
+            .filter(|(_, camera, _, _)| camera.is_active)
+            .find(|(_, camera, _,_)| {
                 camera
                     .target
                     .normalize(Some(primary_window.single()))
@@ -257,6 +257,8 @@ pub fn edge_picking(
         else {
             continue;
         };
+
+        let near_clipping_plane = cam_ortho.near;
 
         let mut picks_presort: Vec<(Entity, f32, f32)> = edges
             .iter()
@@ -297,7 +299,7 @@ pub fn edge_picking(
 
         let picks_sort: Vec<(Entity, HitData)> = picks_presort.iter().map(|(entity, dist, z)| {
             // println!("Edge z: {:?}", z);
-            (*entity, HitData::new(cam_entity, *z, None, None))
+            (*entity, HitData::new(cam_entity, *z - near_clipping_plane, None, None))
         })
         .collect();
 
