@@ -42,7 +42,7 @@ pub struct GraphDataEdge {
 impl GraphDataEdge {
     pub fn same_pair(&self, other: &GraphDataEdge) -> bool {
         println!("Comparing {:?} and {:?}", self, other);
-        if self.source == other.source && self.target == other.target {
+        if (self.source == other.source && self.target == other.target) || (self.source == other.target && self.target == other.source) {
             return true;
         }
         false

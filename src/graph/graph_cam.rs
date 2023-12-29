@@ -42,9 +42,9 @@ pub struct ViewData {
 impl Default for ViewData {
     fn default() -> Self {
         ViewData { 
-            top_z: 0.0,
-            bottom_z: 0.0,
-            increment: 0.001,
+            top_z: 1.0,
+            bottom_z: -1.0,
+            increment: 0.01,
         }
     }
 }
