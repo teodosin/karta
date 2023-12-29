@@ -590,17 +590,10 @@ pub fn update_context(
 
         let etype: EdgeTypes;
 
-        println!("Creating edge from {} to {}", source_path.display(), target_path.display());
-
         let source_parent = source_path.parent().unwrap();
         let target_parent = target_path.parent().unwrap();
 
-        println!("Source parent: {}", source_parent.display());
-        println!("Target parent: {}", target_parent.display());
-
         let one_is_parent_of_other = source_parent == target_path || target_parent == source_path;
-
-        println!("One is parent of other: {}", one_is_parent_of_other);
 
         // TODO: Should the source of an edge be the parent or the child in a parent connection?
         if one_is_parent_of_other {
