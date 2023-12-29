@@ -42,7 +42,7 @@ fn setup_grid(
             ..default()
         },
         Pickable {
-            should_block_lower: false,
+            should_block_lower: true,
             should_emit_events: true,
         },
 

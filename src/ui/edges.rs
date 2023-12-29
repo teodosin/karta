@@ -297,9 +297,9 @@ pub fn edge_picking(
         // Sort the picks by distance
         picks_presort.sort_by(|(_, adist, _), (_, bdist, _)| adist.partial_cmp(&bdist).unwrap());
 
-        let picks_sort: Vec<(Entity, HitData)> = picks_presort.iter().map(|(entity, dist, z)| {
+        let picks_sort: Vec<(Entity, HitData)> = picks_presort.iter().map(|(entity, _dist, z)| {
             // println!("Edge z: {:?}", z);
-            (*entity, HitData::new(cam_entity, *z - near_clipping_plane, None, None))
+            (*entity, HitData::new(cam_entity, -near_clipping_plane - *z, None, None))
         })
         .collect();
 

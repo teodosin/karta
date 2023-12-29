@@ -2286,6 +2286,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "etagere"
+version = "0.2.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "306960881d6c46bd0dd6b7f07442a441418c08d0d3e63d8d080b0f64c6343e4e"
+dependencies = [
+ "euclid",
+ "svg_fmt",
+]
+
+[[package]]
 name = "euclid"
 version = "0.22.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2373,6 +2383,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "fello"
+version = "0.1.0"
+source = "git+https://github.com/dfrg/fount?rev=dadbcf75695f035ca46766bfd60555d05bd421b1#dadbcf75695f035ca46766bfd60555d05bd421b1"
+dependencies = [
+ "read-fonts",
+]
+
+[[package]]
 name = "file-id"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2435,6 +2453,12 @@ name = "fnv"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
+
+[[package]]
+name = "font-types"
+version = "0.3.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6978d65d61022aa249fefdd914dc8215757f617f1a697c496ef6b42013366567"
 
 [[package]]
 name = "fontconfig-parser"
@@ -2545,6 +2569,17 @@ name = "futures-core"
 version = "0.3.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eb1d22c66e66d9d72e1758f0bd7d4fd0bee04cad842ee34587d68c07e45d088c"
+
+[[package]]
+name = "futures-intrusive"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1d930c203dd0b6ff06e0201a4a2fe9149b43c684fd4420555b26d21b1a02956f"
+dependencies = [
+ "futures-core",
+ "lock_api",
+ "parking_lot",
+]
 
 [[package]]
 name = "futures-io"
@@ -3158,6 +3193,7 @@ dependencies = [
  "native-dialog",
  "rand",
  "rfd",
+ "rive-bevy",
  "ron",
  "serde",
  "thiserror",
@@ -3991,6 +4027,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "19b17cddbe7ec3f8bc800887bab5e717348c95ea2ca0b1bf0837fb964dc67099"
 
 [[package]]
+name = "peniko"
+version = "0.1.0"
+source = "git+https://github.com/linebender/peniko?rev=cafdac9a211a0fb2fec5656bd663d1ac770bcc81#cafdac9a211a0fb2fec5656bd663d1ac770bcc81"
+dependencies = [
+ "kurbo 0.9.5",
+ "smallvec",
+]
+
+[[package]]
 name = "percent-encoding"
 version = "2.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4229,6 +4274,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3b42e27ef78c35d3998403c1d26f3efd9e135d3e5121b0a4845cc5cc27547f4f"
 
 [[package]]
+name = "read-fonts"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "87d08214643b2df95b0b3955cd9f264bcfab22b73470b83df4992df523b4d6eb"
+dependencies = [
+ "font-types",
+]
+
+[[package]]
 name = "rectangle-pack"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4342,6 +4396,31 @@ dependencies = [
  "wasm-bindgen-futures",
  "web-sys",
  "windows-sys 0.48.0",
+]
+
+[[package]]
+name = "rive-bevy"
+version = "0.1.0"
+source = "git+https://github.com/rive-app/rive-bevy#378cef706ea256807580d045e470d9dcaff314cb"
+dependencies = [
+ "bevy",
+ "etagere",
+ "rive-rs",
+ "vello",
+]
+
+[[package]]
+name = "rive-rs"
+version = "0.1.0"
+source = "git+https://github.com/rive-app/rive-rs#3088d79432cf3eaf3802ac09a7681c5d3d57c7a1"
+dependencies = [
+ "bitflags 2.4.1",
+ "bytemuck",
+ "cc",
+ "image",
+ "smallvec",
+ "vello",
+ "walkdir",
 ]
 
 [[package]]
@@ -5186,6 +5265,31 @@ name = "vec_map"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f1bddf1187be692e79c5ffeab891132dfb0f236ed36a43c7ed39f1165ee20191"
+
+[[package]]
+name = "vello"
+version = "0.0.1"
+source = "git+https://github.com/linebender/vello?rev=ee3a076#ee3a076b291d206c361431cc841407adf265c692"
+dependencies = [
+ "bytemuck",
+ "fello",
+ "futures-intrusive",
+ "peniko",
+ "raw-window-handle",
+ "vello_encoding",
+ "wgpu",
+]
+
+[[package]]
+name = "vello_encoding"
+version = "0.1.0"
+source = "git+https://github.com/linebender/vello?rev=ee3a076#ee3a076b291d206c361431cc841407adf265c692"
+dependencies = [
+ "bytemuck",
+ "fello",
+ "guillotiere",
+ "peniko",
+]
 
 [[package]]
 name = "version_check"
