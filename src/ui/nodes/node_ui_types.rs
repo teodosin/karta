@@ -4,8 +4,9 @@ use bevy::{
     render::{mesh::{Mesh, shape}, color::Color, texture::Image}, 
     sprite::{ColorMaterial, MaterialMesh2dBundle, SpriteBundle, Sprite}, 
     transform::components::Transform, math::{Vec3, Vec2}, 
-    prelude::default
+    prelude::default, ui::FocusPolicy
 };
+use bevy_mod_picking::{PickableBundle, picking_core::Pickable, backends::raycast::RaycastPickable};
 use rand::Rng;
 
 use crate::{graph::graph_cam::ViewData, events::nodes::NodeSpawnedEvent};
@@ -53,7 +54,7 @@ pub fn add_base_node_ui(
     // Positions are slightly randomized to avoid nodes being spawned on top of each other
     let mut rng = rand::thread_rng();
     let label_pos = Vec2::new(35.0, 0.0);
-    let radius = 25.0;
+    let radius = 35.0;
 
     let node_pos: Vec2 = match ev.rel_target_position {
         Some(pos) => ev.root_position + pos,
@@ -65,6 +66,10 @@ pub fn add_base_node_ui(
         },
     };
 
+    let node_z = view_data.get_z_for_node();
+
+    println!("z depth for base node ui: {}", node_z);
+
     commands.entity(ev.entity).insert((
         MaterialMesh2dBundle {
             mesh: meshes.add(shape::Circle::new(radius).into()).into(),
@@ -72,16 +77,14 @@ pub fn add_base_node_ui(
             transform: Transform::from_translation(Vec3::new(
                 node_pos.x,
                 node_pos.y,
-                view_data.top_z,
+                node_z,
             )),
             ..default()
         },
     ));
-    // Update the view_data so we can keep track of which zindex is the topmost
-    view_data.top_z += 0.0001;
 
-    add_node_label(&mut commands, &ev, label_pos, &view_data.top_z);
-    add_node_base_outline(&mut commands, &ev.entity, radius, &view_data.top_z);
+    add_node_label(&mut commands, &ev, label_pos, &node_z);
+    add_node_base_outline(&mut commands, &ev.entity, radius, &node_z);
 }
 
 // FOLDER/DIRECTORY NODE
@@ -135,6 +138,8 @@ pub fn add_image_node_ui(
         },
     };
 
+    let node_z = view_data.get_z_for_node();
+
     commands.entity(ev.entity).insert((
 
         SpriteBundle {
@@ -147,7 +152,7 @@ pub fn add_image_node_ui(
                 translation: Vec3::new(
                     node_pos.x,
                     node_pos.y,
-                    view_data.top_z,
+                    node_z,
                 ),
                 ..default()
             },
@@ -155,14 +160,12 @@ pub fn add_image_node_ui(
         },
     ));
 
-    view_data.top_z += 0.0001;
-
     let size = Vec2::new(60.0, 40.0);
     let pos = Vec2::new(-size.x / 2.0, -size.y / 2.0);
 
-    add_node_label(&mut commands, &ev, pos, &view_data.top_z);
+    add_node_label(&mut commands, &ev, pos, &node_z);
     // add_node_rect_outline(&mut commands, &ev.entity, size, &view_data.top_z);
-    add_node_base_outline(&mut commands, &ev.entity, size.x, &view_data.top_z);
+    add_node_base_outline(&mut commands, &ev.entity, size.x, &node_z);
 
 }
                         

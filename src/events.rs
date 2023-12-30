@@ -23,10 +23,12 @@ impl Plugin for EventPlugin {
             .add_event::<NodeClickEvent>()
             .add_event::<NodePressedEvent>()
             .add_event::<NodeHoverEvent>()
+            .add_event::<NodeHoverStopEvent>()
             .add_event::<MoveNodesEvent>()
 
             // Edge Events
             .add_event::<EdgeSpawnedEvent>()
+            .add_event::<EdgeClickEvent>()
         ;
     }
 }

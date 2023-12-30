@@ -11,7 +11,7 @@ use bevy::{
 };
 use bevy_mod_picking::{prelude::PointerButton, selection::NoDeselect};
 
-use crate::{events::nodes::NodeClickEvent, actions::{node_actions::{PinToPositionAction, UnpinToPositionAction}, ActionComponent, ActionFactory, ActionManager, context_actions::MoveToContextAction}, input::pointer::InputData};
+use crate::{events::{nodes::NodeClickEvent, edges::EdgeClickEvent}, actions::{node_actions::{PinToPositionAction, UnpinToPositionAction}, ActionComponent, ActionFactory, ActionManager, context_actions::MoveToContextAction, edge_actions::DeleteEdgeAction}, input::pointer::InputData};
 
 use super::popup::*;
 
@@ -43,7 +43,8 @@ pub fn despawn_context_menus_on_any_click(
     }
 }
 
-pub fn spawn_context_menu(
+/// System for spawning the context menu on right click of a node. 
+pub fn spawn_node_context_menu(
     mut commands: Commands,
     mut mouse_event: EventReader<NodeClickEvent>,
     input_data: Res<InputData>,
@@ -59,8 +60,12 @@ pub fn spawn_context_menu(
     
     // let target = mouse_event.read().next().unwrap().target.unwrap();
     let button = mouse_event.read().next().unwrap().button;
+    
+    if button != PointerButton::Secondary {
+        return
+    }
 
-    let nodepath = input_data.latest_click_entity.clone();
+    let nodepath = input_data.latest_click_nodepath.clone();
     let nodepath = match nodepath {
         None => {
             return
@@ -72,9 +77,6 @@ pub fn spawn_context_menu(
 
     println!("Context menu for: {:?}", nodepath);
     
-    if button != PointerButton::Secondary {
-        return
-    }
 
     println!("Spawning context menu");
 
@@ -121,6 +123,53 @@ pub fn spawn_context_menu(
     commands.entity(menu_root).push_children(&[pin_button]);
     commands.entity(menu_root).push_children(&[unpin_button]);
     commands.entity(menu_root).push_children(&[move_to_context_button]);
+
+}
+
+pub fn spawn_edge_context_menu(
+    mut commands: Commands,
+    mut mouse_event: EventReader<EdgeClickEvent>,
+    menus: Query<(Entity, &PopupGroup), With<Popup>>,
+    window: Query<&Window>,
+){
+
+    let _inputs = [PointerButton::Primary, PointerButton::Secondary, PointerButton::Middle];
+    
+    if mouse_event.is_empty() {
+        return
+    }
+    
+    // let target = mouse_event.read().next().unwrap().target.unwrap();
+    let button = mouse_event.read().next().unwrap().button;
+    
+    if button != PointerButton::Secondary {
+        return
+    }    
+
+    println!("Spawning context menu");
+
+    // TODO: Handle multiple windows
+    let window = window.single();
+
+    let position: Vec2 = window.cursor_position().unwrap();
+    let size: Vec2 = Vec2::new(120.0, 100.0);
+
+    // Get a popup root
+    let menu_root = spawn_popup_root(
+        &mut commands, 
+        menus,
+        PopupGroup::Context,
+        position,
+        size,
+    );
+
+    let delete_button = create_context_menu_button(
+        &mut commands, "Delete edge".to_string(),
+        Box::new(|| Box::new(DeleteEdgeAction::new()))
+    );
+
+    commands.entity(menu_root).push_children(&[delete_button]);
+
 
 }
 
