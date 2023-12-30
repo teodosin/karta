@@ -3,11 +3,10 @@
 /// Responsible for keeping track of what is spawned and despawned.
 
 use bevy::{prelude::*, utils::{HashMap, HashSet}};
-use bevy_mod_picking::prelude::PointerButton;
-use std::{fs, path::PathBuf, ffi::OsString};
+use std::{fs, path::PathBuf,};
 
 use crate::{
-    graph::{graph_cam, edges::{create_edge, EdgeTypes}, node_types::{get_type_from_file_path, NodeTypes, get_type_from_context_path}}, vault::{CurrentVault, context_asset::{open_context_file_from_node_path, ContextAsset, node_path_to_context_path, open_context_file}}, 
+    graph::{edges::{create_edge, EdgeTypes}, node_types::{get_type_from_file_path, NodeTypes, get_type_from_context_path}}, vault::{CurrentVault, context_asset::{open_context_file_from_node_path, ContextAsset, node_path_to_context_path, open_context_file}}, 
     events::{nodes::{NodeClickEvent, NodeSpawnedEvent}, edges::EdgeSpawnedEvent}, ui::nodes::TargetPosition,
 };
 

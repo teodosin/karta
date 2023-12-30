@@ -6,11 +6,13 @@ use bevy_prototype_lyon::{shapes, prelude::{GeometryBuilder, ShapeBundle, Stroke
 use bevy_tweening::{Tween, EaseFunction, lens::TransformPositionLens, Animator, TweenCompleted, TweeningPlugin};
 
 use crate::{
-    graph::{nodes::{GraphNodeEdges, ContextRoot, Pins}, graph_cam::ViewData, node_types::NodeTypes}, 
+    graph::{nodes::{GraphNodeEdges, ContextRoot, Pins}, node_types::NodeTypes}, 
     events::nodes::{MoveNodesEvent, NodeClickEvent, NodePressedEvent, NodeHoverEvent, NodeSpawnedEvent, NodeHoverStopEvent}
 };
 
 use self::node_ui_types::{add_base_node_ui, add_image_node_ui};
+
+use super::graph_cam::ViewData;
 
 mod node_ui_types;
 
