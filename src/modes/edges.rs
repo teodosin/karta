@@ -5,7 +5,7 @@
 use bevy::prelude::*;
 
 
-use crate::{input::pointer::{left_click_just_released, InputData}, graph::{context::PathsToEntitiesIndex, edges::{create_edge, EdgeTypes, EdgeType, GraphDataEdge}, nodes::GraphDataNode, graph_cam::ViewData}, events::edges::EdgeSpawnedEvent};
+use crate::{input::pointer::{left_click_just_released, InputData}, graph::{context::PathsToEntitiesIndex, edges::{create_edge, EdgeTypes, EdgeType, GraphDataEdge}, nodes::GraphDataNode}, events::edges::EdgeSpawnedEvent};
 
 use super::KartaModeState;
 

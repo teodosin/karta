@@ -5,9 +5,9 @@ use bevy_mod_picking::{events::{Pointer, Over, Out, Click}, prelude::On, pointer
 use bevy_prototype_lyon::{shapes, prelude::{ShapeBundle, GeometryBuilder, Path, Stroke}};
 use lyon::lyon_tessellation::StrokeOptions;
 
-use crate::{graph::{edges::GraphDataEdge, nodes::GraphDataNode, graph_cam::ViewData, context::PathsToEntitiesIndex}, settings::theme::{EDGE_PARENT_COLOR, EDGE_PARENT_HOVER_COLOR}, events::edges::{EdgeSpawnedEvent, EdgeClickEvent}};
+use crate::{graph::{edges::GraphDataEdge, nodes::GraphDataNode, context::PathsToEntitiesIndex}, settings::theme::{EDGE_PARENT_COLOR, EDGE_PARENT_HOVER_COLOR}, events::edges::{EdgeSpawnedEvent, EdgeClickEvent}};
 
-use super::nodes::GraphViewNode;
+use super::{nodes::GraphViewNode, graph_cam::ViewData};
 
 pub struct EdgeUiPlugin;
 
