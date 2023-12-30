@@ -6,6 +6,7 @@ use bevy::{
     prelude::*,
     render::render_resource::{Extent3d, TextureDimension, TextureFormat},
 };
+use bevy_mod_picking::PickableBundle;
 
 use crate::{graph::context::CurrentContext, ui::update_active_mode_label};
 
@@ -88,6 +89,8 @@ fn spawn_some_spheres(
                 ..default()
             },
             Shape,
+            PickableBundle::default(),
+            bevy_mod_picking::backends::raycast::RaycastPickable,
         ));
     }
 

@@ -29,14 +29,12 @@ pub fn move_node_selection(
     mouse: Res<Input<MouseButton>>,
     cursor: Res<InputData>,
     mut query: Query<(Entity, &GraphDataNode, &mut Transform, &PickSelection), /*With<Selected>*/>,
-    mut view_data: ResMut<graph_cam::ViewData>,
 ) {
 
     if mouse.just_pressed(MouseButton::Left) {
         for (_entity, _node, mut transform, selection) in query.iter_mut() {
             if !selection.is_selected {continue};
-            transform.translation.z = 60.0;
-            view_data.top_z += 1.0;
+            // transform.translation.z = 60.0;
         }
     }
 

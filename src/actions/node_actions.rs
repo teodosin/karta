@@ -218,7 +218,7 @@ impl PinToPositionAction {
         &self, world: &mut bevy::prelude::World
     ) -> Option<Entity> {
         let input_data = world.get_resource::<InputData>().unwrap();
-        let path = input_data.latest_click_entity.clone().unwrap();
+        let path = input_data.latest_click_nodepath.clone().unwrap();
         let index = world.get_resource::<PathsToEntitiesIndex>().unwrap();
         let node = index.0.get(&path);
         Some(*node.unwrap())
@@ -288,7 +288,7 @@ impl UnpinToPositionAction {
         &self, world: &mut bevy::prelude::World
     ) -> Option<Entity> {
         let input_data = world.get_resource::<InputData>().unwrap();
-        let path = input_data.latest_click_entity.clone().unwrap();
+        let path = input_data.latest_click_nodepath.clone().unwrap();
         let index = world.get_resource::<PathsToEntitiesIndex>().unwrap();
         let node = index.0.get(&path);
         Some(*node.unwrap())

@@ -16,6 +16,7 @@ mod forces;
 mod operators;
 mod panels;
 mod query;
+mod riv;
 
 pub struct NodeTypesPlugin;
 

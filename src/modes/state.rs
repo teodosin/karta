@@ -59,7 +59,7 @@ fn change_context_path(
         }
     };
 
-    let path: PathBuf = input_data.latest_click_entity.clone()
+    let path: PathBuf = input_data.latest_click_nodepath.clone()
     .unwrap_or(cxt.get_path());
 
     let vault = match vault{
