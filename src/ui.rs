@@ -3,14 +3,15 @@
 
 use bevy::{prelude::*, ui::{FocusPolicy, UiSystem}, render::view::VisibleEntities};
 
+use bevy_mod_picking::backends::raycast::RaycastBackendSettings;
 use bevy_prototype_lyon::prelude::*;
 
 use crate::{
     graph::{context::CurrentContext, nodes::ContextRoot, graph_cam::GraphCamera},
-    events::nodes::*, scene::scene::CurrentActive};
+    events::{nodes::*, edges::EdgeClickEvent}, scene::scene::CurrentActive};
 
 use self::{
-    context_menu::{context_menu_button_system, spawn_context_menu}, 
+    context_menu::{context_menu_button_system, spawn_node_context_menu, spawn_edge_context_menu}, 
     mode_menu::{create_mode_menu, mode_button_system, update_active_mode_highlight}, 
     nodes::NodesUiPlugin, edges::EdgeUiPlugin, 
     create_node_menu::CreateNodeMenuPlugin, grid::InfiniteGrid2DPlugin, vault_menu::VaultMenuPlugin,
@@ -36,6 +37,7 @@ impl Plugin for KartaUiPlugin {
             .add_plugins(ShapePlugin)
 
             // Resources
+            .add_systems(PreStartup, require_markers_for_raycasting)
             .add_systems(PreStartup, default_font_setup)
             .add_systems(PreUpdate, 
                 default_font_set.run_if(resource_exists::<FontHandle>()))
@@ -66,7 +68,10 @@ impl Plugin for KartaUiPlugin {
             
             .add_systems(
                 Update, 
-                spawn_context_menu.run_if(on_event::<NodeClickEvent>())
+                (
+                    spawn_node_context_menu.run_if(on_event::<NodeClickEvent>()),
+                    spawn_edge_context_menu.run_if(on_event::<EdgeClickEvent>())
+                )
             )
             .add_systems(Update, context_menu::despawn_context_menus_on_any_click)
             
@@ -95,6 +100,12 @@ fn default_font_setup(
     commands.insert_resource(FontHandle(font));
 }
 
+fn require_markers_for_raycasting(
+    mut settings: ResMut<RaycastBackendSettings>,
+){
+    settings.require_markers = true;
+}
+
 #[derive(Resource)]
 struct FontHandle(Handle<Font>);
 
@@ -102,6 +113,7 @@ fn gizmo_settings(
     mut gizmo: ResMut<GizmoConfig>,
 ){
     gizmo.depth_bias = 1.0;
+    gizmo.render_layers = bevy::render::view::RenderLayers::layer(31);
 }
 
 

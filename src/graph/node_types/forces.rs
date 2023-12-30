@@ -11,7 +11,7 @@
 
 use bevy::{prelude::*, utils::HashMap};
 
-use crate::{graph::{edges::GraphEdge, attribute::Attributes, context::PathsToEntitiesIndex}, ui::nodes::{GraphViewNode, Velocity2D}};
+use crate::{graph::{edges::GraphDataEdge, attribute::Attributes, context::PathsToEntitiesIndex}, ui::nodes::{GraphViewNode, Velocity2D}};
 
 pub struct ForceNodesPlugin;
 
@@ -50,7 +50,7 @@ pub struct NodeForce {
 pub fn edge_spring_constraints (
     _forces: Query<(&GraphViewNode, &mut NodeForce)>,
     mut nodes: Query<(Entity, &GraphViewNode, &Transform, &mut Velocity2D)>,
-    edges: Query<(&GraphEdge, &Attributes)>,
+    edges: Query<(&GraphDataEdge, &Attributes)>,
     pe_index: Res<PathsToEntitiesIndex>,
 ){
     // When this force is implemented as a node, we will need to handle multiple of them.

@@ -1,13 +1,13 @@
 use std::time::Duration;
 
-use bevy::{prelude::*, text::Text2dBounds, sprite::Anchor};
-use bevy_mod_picking::prelude::*;
+use bevy::{prelude::*, text::Text2dBounds, sprite::Anchor, render::view::RenderLayers};
+use bevy_mod_picking::{prelude::*, backends::raycast::RaycastPickable};
 use bevy_prototype_lyon::{shapes, prelude::{GeometryBuilder, ShapeBundle, Stroke, StrokeOptions}};
-use bevy_tweening::{Tween, EaseFunction, lens::TransformPositionLens, Animator, TweenCompleted, TweenState, TweeningPlugin};
+use bevy_tweening::{Tween, EaseFunction, lens::TransformPositionLens, Animator, TweenCompleted, TweeningPlugin};
 
 use crate::{
-    graph::{nodes::{GraphDataNode, GraphNodeEdges, ContextRoot, Pins}, graph_cam::ViewData, context::Selected, node_types::NodeTypes}, 
-    events::nodes::{MoveNodesEvent, NodeClickEvent, NodePressedEvent, NodeHoverEvent, NodeSpawnedEvent}
+    graph::{nodes::{GraphNodeEdges, ContextRoot, Pins}, graph_cam::ViewData, node_types::NodeTypes}, 
+    events::nodes::{MoveNodesEvent, NodeClickEvent, NodePressedEvent, NodeHoverEvent, NodeSpawnedEvent, NodeHoverStopEvent}
 };
 
 use self::node_ui_types::{add_base_node_ui, add_image_node_ui};
@@ -116,15 +116,24 @@ pub fn add_node_ui(
         println!("Node type: {:?}", ev.ntype);
 
         let node = commands.entity(ev.entity).insert((
+            RenderLayers::layer(31),
             GraphViewNode,
             Pins::default(),
             Velocity2D::default(),
-            PickableBundle::default(),
+            PickableBundle {
+                pickable: Pickable {
+                    should_block_lower: true,
+                    should_emit_events: true,
+                },
+                ..default()
+            },
+            RaycastPickable,
             
             On::<Pointer<Drag>>::send_event::<MoveNodesEvent>(),
             On::<Pointer<Click>>::send_event::<NodeClickEvent>(),
             On::<Pointer<Down>>::send_event::<NodePressedEvent>(),
             On::<Pointer<Over>>::send_event::<NodeHoverEvent>(),
+            On::<Pointer<Out>>::send_event::<NodeHoverStopEvent>(),
             
         )).id();
 
@@ -135,7 +144,7 @@ pub fn add_node_ui(
         );
 
         if ev.pinned_to_position {
-            commands.entity(ev.entity).insert(Pins::pinpos());
+            commands.entity(ev.entity).insert(Pins::new_pinpos());
         } else {
             commands.entity(ev.entity).insert(Pins::default());
         }
@@ -150,9 +159,9 @@ pub fn add_node_ui(
     }
 }
 
-// NAME LABEL
-// This is the text label that will be attached to the node.
-// It will be spawned as a child of the node entity.
+/// NAME LABEL
+/// This is the text label that will be attached to the node.
+/// It will be spawned as a child of the node entity.
 pub fn add_node_label(
     commands: &mut Commands,
     ev: &NodeSpawnedEvent, 
@@ -161,6 +170,7 @@ pub fn add_node_label(
 ){
     
     let name_label = commands.spawn((
+        RenderLayers::layer(31),
         NodeLabel,
         Text2dBundle {
             text: Text {
@@ -179,7 +189,7 @@ pub fn add_node_label(
                 ..default()
             },
             transform: Transform {
-                translation: Vec3::new(pos.x, pos.y, 10000.0 + top_z),
+                translation: Vec3::new(pos.x, pos.y, 1000.0 + top_z),
                 scale: Vec3::new(0.2, 0.2, 1.0),
                 ..default()
             },
@@ -191,9 +201,8 @@ pub fn add_node_label(
     commands.entity(ev.entity).push_children(&[name_label]);
 }
 
-// OUTLINE
-// ----------------------------------------------------------------
-// This is the hoverable, interactable outline from which edges are created.
+/// OUTLINE
+/// Interactive outline for nodes. Spawned as a child of the node entity. 
 pub fn add_node_base_outline(
     commands: &mut Commands,
     parent: &Entity,
@@ -212,10 +221,11 @@ pub fn add_node_base_outline(
     let outline_path = GeometryBuilder::build_as(&outline_shape);
     
     let node_outline = commands.spawn((
+        RenderLayers::layer(31),
         ShapeBundle {
             path: outline_path,
             spatial: SpatialBundle {
-                transform: Transform::from_translation(Vec3::new(0.0, 0.0, 1000.0 + top_z)),
+                transform: Transform::from_translation(Vec3::new(0.0, 0.0, 100.0 + top_z)),
                 ..default()
             },
             ..default()
@@ -225,9 +235,7 @@ pub fn add_node_base_outline(
             // Color::rgba(0.0, 0.0, 0.0, 0.0), 10.0
         ),
         NodeOutline,
-        
-        //RaycastPickable::default(),
-
+        RaycastPickable,
 
         On::<Pointer<Over>>::target_component_mut::<Stroke>(move |_over, stroke| {
             stroke.color = crate::settings::theme::OUTLINE_HOVER_COLOR;
@@ -274,7 +282,6 @@ pub fn tween_to_target_position(
 pub fn tween_to_target_position_complete(
     mut commands: Commands,
     mut event: EventReader<TweenCompleted>,
-    mut anim: Query<&Animator<Transform>>,
 ){
     for ev in event.read(){
         if true {
@@ -343,7 +350,7 @@ pub fn toggle_node_debug_labels(
 
     key_input: ResMut<Input<KeyCode>>,
 
-    mut nodes: Query<(Entity, &GraphNodeEdges)>,
+    mut nodes: Query<(Entity, &GraphNodeEdges, &Transform)>,
     mut labels: Query<Entity, &NodeDebugLabel>,
 ){
     if !key_input.just_pressed(KeyCode::P){
@@ -356,9 +363,10 @@ pub fn toggle_node_debug_labels(
         }
         return;
     }
-    for (entity, edges) in nodes.iter_mut(){
+    for (entity, edges, tr) in nodes.iter_mut(){
         // Self entity number
         let entity_number_label = commands.spawn((
+            RenderLayers::layer(31),
             NodeDebugLabel,
             Text2dBundle {
                 text_anchor: Anchor::TopLeft,
@@ -375,8 +383,8 @@ pub fn toggle_node_debug_labels(
                     ..default()
                 },
                 transform: Transform {
-                    translation: Vec3::new(40.0, -20.0, 10000.0),
-                    scale: Vec3::new(0.5, 0.5, 1.0),
+                    translation: Vec3::new(40.0, -30.0, 10000.0),
+                    scale: Vec3::new(0.2, 0.2, 1.0),
                     ..default()
                 },
                 ..default()
@@ -384,9 +392,38 @@ pub fn toggle_node_debug_labels(
         )).id();
         commands.entity(entity).push_children(&[entity_number_label]);
 
+        // Self transform
+        let entity_transform_label = commands.spawn((
+            RenderLayers::layer(31),
+            NodeDebugLabel,
+            Text2dBundle {
+                text_anchor: Anchor::TopLeft,
+                text: Text {
+                    sections: vec![TextSection::new(
+                        format!("transform: {:?}", tr.translation),
+                        TextStyle {
+                            font_size: 32.0,
+                            color: Color::WHITE,
+                            ..default()
+                        },
+                    )],
+                    alignment: TextAlignment::Left,
+                    ..default()
+                },
+                transform: Transform {
+                    translation: Vec3::new(40.0, -35.0, 10000.0),
+                    scale: Vec3::new(0.2, 0.2, 1.0),
+                    ..default()
+                },
+                ..default()
+            }
+        )).id();
+        commands.entity(entity).push_children(&[entity_transform_label]);
+
         // Number of edges
         let edge_count: &str = &edges.edges.len().to_string();
         let edge_count_label = commands.spawn((
+            RenderLayers::layer(31),
             NodeDebugLabel,
             Text2dBundle {
                 text_anchor: Anchor::TopLeft,
@@ -403,8 +440,8 @@ pub fn toggle_node_debug_labels(
                     ..default()
                 },
                 transform: Transform {
-                    translation: Vec3::new(40.0, -35.0, 10000.0),
-                    scale: Vec3::new(0.5, 0.5, 1.0),
+                    translation: Vec3::new(40.0, -40.0, 10000.0),
+                    scale: Vec3::new(0.2, 0.2, 1.0),
                     ..default()
                 },
                 ..default()
@@ -418,6 +455,7 @@ pub fn toggle_node_debug_labels(
             edge_list_string.push_str(&format!("n:{:?} e:{:?}\n", edge.0, edge.1));
         }
         let edge_list_label = commands.spawn((
+            RenderLayers::layer(31),
             NodeDebugLabel,
             Text2dBundle {
                 text_anchor: Anchor::TopLeft,
@@ -437,8 +475,8 @@ pub fn toggle_node_debug_labels(
                     ..default()
                 }.with_no_wrap(),
                 transform: Transform {
-                    translation: Vec3::new(40.0, -50.0, 10000.0),
-                    scale: Vec3::new(0.5, 0.5, 1.0),
+                    translation: Vec3::new(40.0, -45.0, 10000.0),
+                    scale: Vec3::new(0.2, 0.2, 1.0),
                     ..default()
                 },
                 ..default()

@@ -1,6 +1,6 @@
 // Camera and cursor information for the graph
 
-use bevy::{prelude::*, input::mouse::{MouseWheel, MouseScrollUnit, MouseMotion}};
+use bevy::{prelude::*, input::mouse::{MouseWheel, MouseScrollUnit, MouseMotion}, render::view::RenderLayers};
 
 use crate::input::pointer::InputData;
 
@@ -34,23 +34,42 @@ impl Default for ViewSettings {
 
 #[derive(Resource, Debug)]
 pub struct ViewData {
-    pub top_z: f32,
-    pub bottom_z: f32,
+    top_z: f32,
+    bottom_z: f32,
+    increment: f32,
 }
 
 impl Default for ViewData {
     fn default() -> Self {
         ViewData { 
-            top_z: 0.0,
+            top_z: 1.0,
             bottom_z: -1.0,
+            increment: 0.01,
         }
+    }
+}
+
+impl ViewData {
+    pub fn get_z_for_edge(&mut self) -> f32 {
+        self.bottom_z = self.bottom_z - self.increment;
+        self.bottom_z
+    }
+
+    pub fn get_z_for_node(&mut self) -> f32 {
+        self.top_z = self.top_z + self.increment;
+        self.top_z
     }
 }
 
 #[derive(Component)]
 pub struct GraphCamera;
 
-
+/// Set up the camera for the graph. 
+/// Bevy doesn't seem to currently support drawing meshes or arbitrary shapes
+/// in the UI, so the graph exists currently in world space. 
+/// 
+/// To make the graph not interfere with the rest of the world, the graph elements
+/// will be set to render in the 32nd (last) render layer.
 fn cam_setup(
     mut commands: Commands,
 ){
@@ -63,8 +82,8 @@ fn cam_setup(
                 ..default()
             },
             projection: OrthographicProjection {
-                far: 1000000.,
-                near: -1000000.,
+                far: 777777.,
+                near: -666666.,
                 ..Default::default()
             },
             camera: Camera {
@@ -73,6 +92,9 @@ fn cam_setup(
             },
             ..default()
         },
+        // The graph exists in world space, and we don't want it to interfere with the rest of the world. 
+        RenderLayers::from_layers(&[31]),
+        bevy_mod_picking::backends::raycast::RaycastPickable,
     ));
 }
 
