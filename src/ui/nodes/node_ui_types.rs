@@ -9,7 +9,7 @@ use bevy::{
 use bevy_mod_picking::{PickableBundle, picking_core::Pickable, backends::raycast::RaycastPickable};
 use rand::Rng;
 
-use crate::{graph::graph_cam::ViewData, events::nodes::NodeSpawnedEvent};
+use crate::{events::nodes::NodeSpawnedEvent, ui::graph_cam::ViewData};
 
 use super::{add_node_label, add_node_base_outline};
 

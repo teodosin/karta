@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use bevy_mod_picking::selection::PickSelection;
 
 use crate::{
-    graph::{context::{update_context, Selected}, nodes::GraphDataNode, graph_cam}, 
+    graph::{context::{update_context, Selected}, nodes::GraphDataNode}, 
     events::nodes::MoveNodesEvent, input::pointer::InputData
 };
 

@@ -7,14 +7,14 @@ use bevy_mod_picking::backends::raycast::RaycastBackendSettings;
 use bevy_prototype_lyon::prelude::*;
 
 use crate::{
-    graph::{context::CurrentContext, nodes::ContextRoot, graph_cam::GraphCamera},
+    graph::{context::CurrentContext, nodes::ContextRoot},
     events::{nodes::*, edges::EdgeClickEvent}, scene::scene::CurrentActive};
 
 use self::{
     context_menu::{context_menu_button_system, spawn_node_context_menu, spawn_edge_context_menu}, 
     mode_menu::{create_mode_menu, mode_button_system, update_active_mode_highlight}, 
     nodes::NodesUiPlugin, edges::EdgeUiPlugin, 
-    create_node_menu::CreateNodeMenuPlugin, grid::InfiniteGrid2DPlugin, vault_menu::VaultMenuPlugin,
+    create_node_menu::CreateNodeMenuPlugin, grid::InfiniteGrid2DPlugin, vault_menu::VaultMenuPlugin, graph_cam::GraphCamera,
 };
 
 // Building blocks of specific components
@@ -27,6 +27,8 @@ mod create_node_menu;
 pub mod grid;
 pub(crate) mod nodes;
 pub(crate) mod edges;
+pub(crate) mod graph_cam;
+pub(crate) mod simulation;
 
 pub struct KartaUiPlugin;
 
@@ -35,6 +37,9 @@ impl Plugin for KartaUiPlugin {
         app
             // Plugins
             .add_plugins(ShapePlugin)
+
+            .add_plugins(graph_cam::GraphCamPlugin)
+            .add_plugins(simulation::GraphSimPlugin)
 
             // Resources
             .add_systems(PreStartup, require_markers_for_raycasting)
