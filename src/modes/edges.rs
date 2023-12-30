@@ -37,6 +37,7 @@ fn create_edge_from_drag(
     println!("Creating edge from drag");
 
     if input_data.latest_press_nodepath.is_none() {
+
         //println!("No press entity");
         return
     }

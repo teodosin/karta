@@ -151,6 +151,8 @@ pub fn vault_menu_button_system(
     >,
     mut vaults: ResMut<VaultOfVaults>,
     mut curvault: ResMut<CurrentVault>,
+
+    _: NonSend<bevy::winit::WinitWindows>,
 ) {
     for (interaction, mut color, _mode) in &mut interaction_query {
         // let mode = mode_query.get(children[0]).unwrap();
