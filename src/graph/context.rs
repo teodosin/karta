@@ -603,7 +603,7 @@ pub fn update_context(
         }
 
         create_edge(
-            &mut edge_event,
+            // &mut edge_event,
             &source_path, 
             &target_path, 
             etype,
