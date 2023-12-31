@@ -61,7 +61,6 @@ fn create_edge_from_drag(
     println!("Creating edge from {:?} to {:?}", from, to);
 
     create_edge(
-        &mut event,
         &from, 
         &to, 
         EdgeTypes::Base,

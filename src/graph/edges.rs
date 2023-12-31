@@ -102,7 +102,6 @@ fn handle_edge_click(
 
 
 pub fn create_edge(
-    event: &mut EventWriter<EdgeSpawnedEvent>,
     from: &PathBuf, 
     to: &PathBuf, 
     etype: EdgeTypes,
@@ -131,7 +130,7 @@ pub fn create_edge(
         "length".to_string(), Some(210.0),
     );
 
-    let edge = commands.spawn((
+    commands.spawn((
         GraphDataEdge {
             source: (*from).to_path_buf(),
             target: (*to).to_path_buf(),
@@ -142,13 +141,7 @@ pub fn create_edge(
         Attributes {
             attributes: initial_attributes,
         }),
-    ).id();
-
-    event.send(EdgeSpawnedEvent {
-        entity: edge,
-        connected_to_focal: true,
-        edge_type: etype,
-    });
+    );
 }
 
 /// Function to update the GraphNodeEdges component of nodes when an edge is spawned
