@@ -24,6 +24,9 @@ impl Plugin for NodesUiPlugin {
             // .insert_resource(UiNodeSystemsIndex::default())
             // .add_systems(PreStartup, setup_node_ui_systems)
             .add_plugins(TweeningPlugin)
+
+            .insert_resource(GraphStartingPosition::default())
+            
             .add_systems(PostUpdate, add_node_ui)
             .add_systems(Last, tween_to_target_position)
 
@@ -36,6 +39,23 @@ impl Plugin for NodesUiPlugin {
             // .add_systems(PreUpdate, visualise_pinned_position)
             .add_systems(PreUpdate, toggle_node_debug_labels)
         ;
+    }
+}
+
+/// Resource to store the default spawn position for nodes in the graph. 
+/// Modify this resource if you want to spawn nodes somewhere other than the world origin. 
+#[derive(Resource, Default)]
+pub struct GraphStartingPosition {
+    position: Vec2,
+}
+
+impl GraphStartingPosition {
+    pub fn get_pos(&self) -> Vec2 {
+        self.position
+    }
+
+    pub fn set_pos(&mut self, pos: Vec2) {
+        self.position = pos;
     }
 }
 
@@ -106,6 +126,11 @@ pub fn add_node_ui(
 
     mut commands: Commands,
 
+    // Note: Resource defined in a different module and specific to Karta. 
+    // Users of this graph library will not have this resource. 
+    // TODO: Come up with an alternate way to specify starting positions. 
+    context: Res<GraphStartingPosition>,
+
     mut server: ResMut<AssetServer>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
@@ -116,6 +141,7 @@ pub fn add_node_ui(
     for ev in events.read(){
 
         println!("Node type: {:?}", ev.ntype);
+        println!("Context origin: {:?} compared to root position {:?}", context.get_pos(), ev.root_position);
 
         let node = commands.entity(ev.entity).insert((
             RenderLayers::layer(31),
