@@ -7,7 +7,7 @@ use std::{fs, path::PathBuf,};
 
 use crate::{
     graph::{edges::{create_edge, EdgeTypes}, node_types::{get_type_from_file_path, NodeTypes, get_type_from_context_path}}, vault::{CurrentVault, context_asset::{open_context_file_from_node_path, ContextAsset, node_path_to_context_path, open_context_file}}, 
-    events::{nodes::{NodeClickEvent, NodeSpawnedEvent}, edges::EdgeSpawnedEvent}, ui::nodes::TargetPosition,
+    events::{nodes::{NodeClickEvent, NodeSpawnedEvent}, edges::EdgeSpawnedEvent}, ui::nodes::{TargetPosition, GraphStartingPosition},
 };
 
 use super::{nodes::*, edges::{GraphDataEdge, EdgeType}};
@@ -201,12 +201,12 @@ pub struct ToBeDespawned;
 /// Big monolith function for updating the context. 
 pub fn update_context(
     mut node_event: EventWriter<NodeSpawnedEvent>,
-    mut edge_event: EventWriter<EdgeSpawnedEvent>,
     
     mut commands: Commands,
 
     vault: Res<CurrentVault>,
     context: Res<CurrentContext>,
+    mut origin: ResMut<GraphStartingPosition>,
 
     mut pe_index: ResMut<PathsToEntitiesIndex>,
 
@@ -400,6 +400,7 @@ pub fn update_context(
         commands.entity(node).remove::<ContextRoot>();
     }
     commands.entity(root_node).insert(ContextRoot);
+    origin.set_pos(root_position);
 
 
     // ----------------- Handle other nodes -----------------
