@@ -7,7 +7,7 @@ use std::{fs, path::PathBuf,};
 
 use crate::{
     graph::{edges::{create_edge, EdgeTypes}, node_types::{get_type_from_file_path, NodeTypes, get_type_from_context_path}}, vault::{CurrentVault, context_asset::{open_context_file_from_node_path, ContextAsset, node_path_to_context_path, open_context_file}}, 
-    events::{nodes::{NodeClickEvent, NodeSpawnedEvent}, edges::EdgeSpawnedEvent}, ui::nodes::{TargetPosition, GraphStartingPosition},
+    events::{nodes::{NodeClickEvent, NodeSpawnedEvent}, edges::EdgeSpawnedEvent}, ui::nodes::{TargetPosition, GraphStartingPositions},
 };
 
 use super::{nodes::*, edges::{GraphDataEdge, EdgeType}};
@@ -206,7 +206,7 @@ pub fn update_context(
 
     vault: Res<CurrentVault>,
     context: Res<CurrentContext>,
-    mut origin: ResMut<GraphStartingPosition>,
+    mut origin: ResMut<GraphStartingPositions>,
 
     mut pe_index: ResMut<PathsToEntitiesIndex>,
 
