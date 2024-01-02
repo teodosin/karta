@@ -199,9 +199,7 @@ pub struct ToBeDespawned;
 
 // --------------------------------------------------------------------------------
 /// Big monolith function for updating the context. 
-pub fn update_context(
-    mut node_event: EventWriter<NodeSpawnedEvent>,
-    
+pub fn update_context(    
     mut commands: Commands,
 
     vault: Res<CurrentVault>,
@@ -353,7 +351,6 @@ pub fn update_context(
                     }
 
                     spawn_node(
-                        &mut node_event,
                         &mut commands, 
                         root_path.clone(), 
                         root_in_file.ntype,
@@ -379,7 +376,6 @@ pub fn update_context(
                     };
 
                     spawn_node(
-                        &mut node_event,
                         &mut commands, 
                         root_path, 
                         root_type,
@@ -402,6 +398,9 @@ pub fn update_context(
     commands.entity(root_node).insert(ContextRoot);
     origin.set_pos(root_position);
 
+    println!("-----------------------------------------------------------------------");
+    println!("Origin: {}", origin.get_pos());
+
 
     // ----------------- Handle other nodes -----------------
 
@@ -423,7 +422,6 @@ pub fn update_context(
             let node_type = get_type_from_file_path(&node_path).unwrap();
             let node_pin_to_position = false;
             let spawned_node = spawn_node(
-                &mut node_event,
                 &mut commands, 
                 node_path.clone(), 
                 node_type,
@@ -517,7 +515,6 @@ pub fn update_context(
                         let node_position = node.relative_position;
                         let node_pin_to_position = node.pin_to_position;
                         let spawned_node = spawn_node(
-                            &mut node_event,
                             &mut commands, 
                             node_path.clone(), 
                             node_type,
@@ -555,7 +552,6 @@ pub fn update_context(
                 let node_type = get_type_from_file_path(&node_path).unwrap();
                 let node_pin_to_position = false;
                 let spawned_node = spawn_node(
-                    &mut node_event,
                     &mut commands, 
                     node_path.clone(), 
                     node_type,

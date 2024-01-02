@@ -57,6 +57,7 @@ impl GraphStartingPositions {
     }
 
     pub fn set_pos(&mut self, pos: Vec2) {
+        println!("Setting spawn position to {:?}", pos);
         self.position = pos;
     }
 }
@@ -124,9 +125,7 @@ impl Default for ViewNodeScale {
 // TODO: Convert to One-Shot System
 // Is that even possible? This function requires input parameters. 
 pub fn add_node_ui(
-    mut events: EventReader<NodeSpawnedEvent>,
-
-    new_nodes: Query<(&GraphDataNode, &Pins, Option<&TargetPosition>), Added<GraphDataNode>>,
+    new_nodes: Query<(Entity, &GraphDataNode, Option<&TargetPosition>), Added<GraphDataNode>>,
     spawn: Res<GraphStartingPositions>,
 
     mut commands: Commands,
@@ -137,16 +136,13 @@ pub fn add_node_ui(
     mut view_data: ResMut<ViewData>,
     // systems: Res<UiNodeSystemsIndex>,
 ){
-    
-    for ev in events.read(){
+    for (entity, data, tpos) in new_nodes.iter(){
 
-        println!("Node type: {:?}", ev.ntype);
-        println!("Context origin: {:?} compared to root position {:?}", spawn.get_pos(), ev.root_position);
+        println!("Node type: {:?}", data.ntype);
 
-        let node = commands.entity(ev.entity).insert((
+        let node = commands.entity(entity).insert((
             RenderLayers::layer(31),
             GraphViewNode,
-            Pins::default(),
             Velocity2D::default(),
             PickableBundle {
                 pickable: Pickable {
@@ -171,17 +167,17 @@ pub fn add_node_ui(
             }),
         );
 
-        if ev.pinned_to_position {
-            commands.entity(ev.entity).insert(Pins::new_pinpos());
-        } else {
-            commands.entity(ev.entity).insert(Pins::default());
-        }
-
-        match ev.ntype {
+        match data.ntype {
             NodeTypes::FileImage => {
-                add_image_node_ui(&ev, &mut commands, &mut server, &mut view_data)
+                add_image_node_ui(
+                    entity, &data, spawn.get_pos(), tpos,
+                    &mut commands, &mut server, &mut view_data
+                )
             },
-            _ => add_base_node_ui(&ev, &mut commands, &mut meshes, &mut materials, &mut view_data),
+            _ => add_base_node_ui(
+                entity, &data, spawn.get_pos(), tpos,
+                &mut commands, &mut meshes, &mut materials, &mut view_data
+            ),
         }
 
     }
@@ -192,7 +188,8 @@ pub fn add_node_ui(
 /// It will be spawned as a child of the node entity.
 pub fn add_node_label(
     commands: &mut Commands,
-    ev: &NodeSpawnedEvent, 
+    entity: &Entity, 
+    path: &PathBuf, 
     pos: Vec2,
     top_z: &f32,
 ){
@@ -203,7 +200,7 @@ pub fn add_node_label(
         Text2dBundle {
             text: Text {
                 sections: vec![TextSection::new(
-                    &*ev.path.file_name().unwrap().to_string_lossy(),
+                    &*path.file_name().unwrap().to_string_lossy(),
                     TextStyle {
                         font_size: 100.0,
                         color: Color::WHITE,
@@ -226,7 +223,7 @@ pub fn add_node_label(
         }
     )).id();
     
-    commands.entity(ev.entity).push_children(&[name_label]);
+    commands.entity(*entity).push_children(&[name_label]);
 }
 
 /// OUTLINE
