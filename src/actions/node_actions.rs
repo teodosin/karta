@@ -59,21 +59,18 @@ impl Action for CreateNodeAction {
                 data: type_to_data(self.ntype)
             },
             GraphNodeEdges::default(),
+            Pins::new_pinpos(),
         )).id();
         
         self.entity = Some(node_entity);
 
         let root_position = world.query_filtered::<&Transform, With<ContextRoot>>().single(world);
-        
-        world.send_event(NodeSpawnedEvent {
-            entity: node_entity,
-            path: valid_path.clone(),
-            ntype: self.ntype,
-            data: type_to_data(self.ntype),
-            root_position: root_position.translation.truncate(),
-            rel_target_position: Some(self.position - root_position.translation.truncate()),
-            // rel_target_position: None,
-            pinned_to_position: true,
+        let root_position = root_position.translation.truncate();
+        let rel_target_position = self.position - root_position;
+
+    
+        world.entity_mut(node_entity).insert(crate::ui::nodes::TargetPosition {
+            position: root_position + rel_target_position,
         });
         
         // Update the PathsToEntitiesIndex
