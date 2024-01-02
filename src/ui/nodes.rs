@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{time::Duration, path::PathBuf};
 
 use bevy::{prelude::*, text::Text2dBounds, sprite::Anchor, render::view::RenderLayers};
 use bevy_mod_picking::{prelude::*, backends::raycast::RaycastPickable};
@@ -6,7 +6,7 @@ use bevy_prototype_lyon::{shapes, prelude::{GeometryBuilder, ShapeBundle, Stroke
 use bevy_tweening::{Tween, EaseFunction, lens::TransformPositionLens, Animator, TweenCompleted, TweeningPlugin};
 
 use crate::{
-    graph::{nodes::{GraphNodeEdges, ContextRoot, Pins}, node_types::NodeTypes}, 
+    graph::{nodes::{GraphNodeEdges, ContextRoot, Pins, GraphDataNode}, node_types::NodeTypes}, 
     events::nodes::{MoveNodesEvent, NodeClickEvent, NodePressedEvent, NodeHoverEvent, NodeSpawnedEvent, NodeHoverStopEvent}
 };
 
@@ -25,8 +25,8 @@ impl Plugin for NodesUiPlugin {
             // .add_systems(PreStartup, setup_node_ui_systems)
             .add_plugins(TweeningPlugin)
 
-            .insert_resource(GraphStartingPosition::default())
-            
+            .insert_resource(GraphStartingPositions::default())
+
             .add_systems(PostUpdate, add_node_ui)
             .add_systems(Last, tween_to_target_position)
 
@@ -42,14 +42,16 @@ impl Plugin for NodesUiPlugin {
     }
 }
 
-/// Resource to store the default spawn position for nodes in the graph. 
+/// Resource to store the default spawn position(s) for nodes in the graph. 
 /// Modify this resource if you want to spawn nodes somewhere other than the world origin. 
+/// This resource will likely be extended in the future to allow for more complex/specific
+/// spawn layouts such as grids. 
 #[derive(Resource, Default)]
-pub struct GraphStartingPosition {
+pub struct GraphStartingPositions {
     position: Vec2,
 }
 
-impl GraphStartingPosition {
+impl GraphStartingPositions {
     pub fn get_pos(&self) -> Vec2 {
         self.position
     }
@@ -124,12 +126,10 @@ impl Default for ViewNodeScale {
 pub fn add_node_ui(
     mut events: EventReader<NodeSpawnedEvent>,
 
-    mut commands: Commands,
+    new_nodes: Query<(&GraphDataNode, &Pins, Option<&TargetPosition>), Added<GraphDataNode>>,
+    spawn: Res<GraphStartingPositions>,
 
-    // Note: Resource defined in a different module and specific to Karta. 
-    // Users of this graph library will not have this resource. 
-    // TODO: Come up with an alternate way to specify starting positions. 
-    context: Res<GraphStartingPosition>,
+    mut commands: Commands,
 
     mut server: ResMut<AssetServer>,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -141,7 +141,7 @@ pub fn add_node_ui(
     for ev in events.read(){
 
         println!("Node type: {:?}", ev.ntype);
-        println!("Context origin: {:?} compared to root position {:?}", context.get_pos(), ev.root_position);
+        println!("Context origin: {:?} compared to root position {:?}", spawn.get_pos(), ev.root_position);
 
         let node = commands.entity(ev.entity).insert((
             RenderLayers::layer(31),
