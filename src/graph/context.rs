@@ -7,7 +7,7 @@ use std::{fs, path::PathBuf,};
 
 use crate::{
     graph::{edges::{create_edge, EdgeTypes}, node_types::{get_type_from_file_path, NodeTypes, get_type_from_context_path}}, vault::{CurrentVault, context_asset::{open_context_file_from_node_path, ContextAsset, node_path_to_context_path, open_context_file}}, 
-    events::{nodes::{NodeClickEvent, NodeSpawnedEvent}, edges::EdgeSpawnedEvent}, ui::nodes::{TargetPosition, GraphStartingPositions},
+    events::{nodes::{NodeClickEvent, NodeSpawnedEvent}, edges::EdgeSpawnedEvent, context::RequestContextExpand}, ui::nodes::{TargetPosition, GraphStartingPositions},
 };
 
 use super::{nodes::*, edges::{GraphDataEdge, EdgeType}};
@@ -612,6 +612,14 @@ pub fn update_context(
 }
 
 // Collapse and expand functions
+
+/// Expand the context of a node upon request.
+/// Used both upon changing a context as well as when requesting to expand a node recursively. 
+fn expand_context(
+    req_event: EventReader<RequestContextExpand>,
+){
+    
+}
 
 // Similar to the spawn functions, but manages aliases also 
 // So that when a node group is collapsed, it is replaced by its alias edge
