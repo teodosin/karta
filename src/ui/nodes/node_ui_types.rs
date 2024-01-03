@@ -60,7 +60,7 @@ pub fn add_base_node_ui(
     let radius = 35.0;
 
     let node_pos: Vec2 = match tpos {
-        Some(pos) => spawn_pos + pos.position,
+        Some(pos) => pos.position,
         None => {
             Vec2::new(
                 spawn_pos.x + rng.gen_range(-10.0..10.0),
@@ -132,7 +132,7 @@ pub fn add_image_node_ui(
     let image: Handle<Image> = server.load(full_path.clone());
 
     let node_pos: Vec2 = match tpos {
-        Some(pos) => spawn_pos + pos.position,
+        Some(pos) => pos.position,
         None => {
             Vec2::new(
                 spawn_pos.x + rng.gen_range(-10.0..10.0),
