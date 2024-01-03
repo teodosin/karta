@@ -1,6 +1,7 @@
 use bevy::prelude::{Plugin, App};
 
 use self::background::*;
+use self::context::*;
 use self::nodes::*;
 use self::edges::*;
 
@@ -17,6 +18,9 @@ impl Plugin for EventPlugin {
             // Background events
             .add_event::<RectangleSelectionEvent>()
             .add_event::<RectangleSelectionEndEvent>()
+
+            // Context events
+            .add_event::<RequestContextExpand>()
 
             // Node Events
             .add_event::<NodeSpawnedEvent>()
