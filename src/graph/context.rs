@@ -198,7 +198,12 @@ pub struct ToBeDespawned;
 
 
 // --------------------------------------------------------------------------------
-/// Big monolith function for updating the context. 
+/// System that runs when the CurrentContext resource changes.
+/// This system changes the root of the context, spawning it if it doesn't
+/// exist. It also marks all other nodes for despawning except the ones that 
+/// also exist in the current context. The actual expansion of the context is 
+/// requested by sending a RequestContextExpand event, which is later handled 
+/// by a different system. 
 pub fn update_context(    
     mut commands: Commands,
 
@@ -209,7 +214,6 @@ pub fn update_context(
     mut pe_index: ResMut<PathsToEntitiesIndex>,
 
     mut nodes: Query<(Entity, &GraphDataNode, &Transform)>,
-    edges: Query<(&GraphDataEdge, &EdgeType)>,
     root: Query<Entity, With<ContextRoot>>,
 
     mut req_event: EventWriter<RequestContextExpand>,
@@ -413,223 +417,6 @@ pub fn update_context(
         target_path: new_cxt_path,
         target_entity: root_node,
     });
-
-    return;
-
-    // ----------------- Handle other nodes -----------------
-
-    let mut edges_to_spawn: HashSet<(String, String)> = HashSet::new();   
-
-    println!("Size of nodes spawned: {}", nodes_spawned.len());
- 
-
-    // Find the physical nodes that are parent or children of the current context. 
-    // This vec will be used to compare against the context files, to keep the context files
-    // in sync with the physical files. 
-    let mut adjacent_physical_nodes: Vec<PathBuf> = Vec::new();
-
-    // Spawn the remaining nodes. Implemented as a closure that captures the necessary variables
-    // Only used in one place because of borrow issues in others. 
-    let mut spawn_remaining_physicals = | physical_nodes: Vec<PathBuf> | {
-        println!("Physical nodes size: {}", physical_nodes.len());
-        for node in physical_nodes.iter() {
-            let node_path = node.clone();
-
-            if nodes_spawned.contains_key(&node_path) {
-                continue
-            }
-
-            let node_type = get_type_from_file_path(&node_path).unwrap();
-            let node_pin_to_position = false;
-            let spawned_node = spawn_node(
-                &mut commands, 
-                node_path.clone(), 
-                node_type,
-                root_position,
-                None,
-                node_pin_to_position,
-                &mut pe_index,
-            );
-
-            let edge_to_root = (node_path.clone().to_string_lossy().to_string(), new_cxt_path.clone().to_string_lossy().to_string());
-            edges_to_spawn.insert(edge_to_root);
-
-            // Add the node to the list of nodes that have been spawned
-            nodes_spawned.insert(node_path, spawned_node);
-        }
-    };
-
-    println!("New context type: {:?}", new_ctype);
-    match new_ctype {
-        // If the context is a physical file 
-        ContextTypes::Physical => {
-            println!("New context is physical: {}", new_cxt_path.display());
-            if new_cxt_path.is_dir(){
-                let parent: PathBuf = new_cxt_path.parent().unwrap().into();
-                let parent_in_vault: bool = parent.starts_with(&vault.get_root_path());
-                if parent.exists() && parent_in_vault {
-                    adjacent_physical_nodes.push(parent.into());
-                }
-
-                let entries = fs::read_dir(&new_cxt_path);
-                match entries {
-                    Ok(entries) => {
-                        entries
-                            // Ignore the vault folder
-                            .filter(|entry| {
-                                let path = entry.as_ref().unwrap().path();
-                                path != vault.get_vault_path()
-                            })
-                            .for_each(|entry| {
-                                let path = entry.expect("Entries should be valid").path();
-                                if path.exists(){
-                                    adjacent_physical_nodes.push(path);
-                                }
-                            });
-                    }
-                    Err(e) => {
-                        println!("Error: {}", e);
-                    }
-                }
-            } else {
-                let parent: PathBuf = new_cxt_path.parent().unwrap().into();
-                let parent_in_vault: bool = parent.starts_with(&vault.get_root_path());
-                if parent.exists() && parent_in_vault {
-                    adjacent_physical_nodes.push(parent.into());
-                }
-            }
-        }
-        // Virtual nodes should be treated as if they exist in the file system, under closest parent folder.
-        // TODO implement this behavior
-        ContextTypes::Virtual => {
-
-        }
-        _ => {}
-            
-    }
-
-    match context_file {
-        Ok(context_file) => {
-            // Spawn all nodes in the context file
-            
-            for node in context_file.nodes.iter() {
-                
-                println!("Node path in next context: {}", node.path);
-                // Find the nodes that are already spawned and remove their ToBeDespawned component
-                let node_path: PathBuf = node.path.clone().into();
-                println!("Exists in pe_index: {}", pe_index.0.get(&node_path).is_some());
-                if pe_index.0.get(&node_path).is_some() {
-                    println!("Removing ToBeDespawned component from {}", node_path.display());
-                    commands.entity(pe_index.0.get(&node_path).unwrap().clone()).remove::<ToBeDespawned>();
-                    continue
-                }
-
-                let node_context_file = open_context_file_from_node_path(
-                    &vault.get_vault_path(),
-                    &node.path.clone().into()
-                );
-
-                match node_context_file {
-                    Ok(node_context_file) => {
-                        println!("Node context file exists");
-                        let node_path: PathBuf = node.path.clone().into();
-                        let node_type = node_context_file.nself.ntype;
-                        let node_position = node.relative_position;
-                        let node_pin_to_position = node.pin_to_position;
-                        let spawned_node = spawn_node(
-                            &mut commands, 
-                            node_path.clone(), 
-                            node_type,
-                            root_position,
-                            node_position,
-                            node_pin_to_position,
-                            &mut pe_index,
-                        );
-
-                        // Add the node to the list of nodes to spawn
-                        nodes_spawned.insert(node_path, spawned_node);
-
-                        // Add edges to the list of edges to spawn
-                        for edge in node_context_file.edges.iter() {
-                            edges_to_spawn.insert((edge.source.clone(), edge.target.clone()));
-                        }
-
-                    },
-
-                    Err(_e) => {
-                        println!("Node context file doesn't exist");
-                        continue
-                    }
-                }
-            }
-
-            // Tried to use the spawn_remaining_physicals closure here, but there were borrow issues
-            for node in adjacent_physical_nodes.iter() {
-                let node_path = node.clone();
-
-                if nodes_spawned.contains_key(&node_path) {
-                    continue
-                }
-
-                let node_type = get_type_from_file_path(&node_path).unwrap();
-                let node_pin_to_position = false;
-                let spawned_node = spawn_node(
-                    &mut commands, 
-                    node_path.clone(), 
-                    node_type,
-                    root_position,
-                    None,
-                    node_pin_to_position,
-                    &mut pe_index,
-                );
-                
-    
-                let edge_to_root = (node_path.clone().to_string_lossy().to_string(), new_cxt_path.clone().to_string_lossy().to_string());
-                edges_to_spawn.insert(edge_to_root);
-    
-    
-                // Add the node to the list of nodes that have been spawned
-                nodes_spawned.insert(node_path, spawned_node);
-            }
-
-        },
-
-        Err(_e) => {
-            spawn_remaining_physicals(adjacent_physical_nodes);
-        }
-    }
-    // Filter duplicate edges
-
-
-
-    for edge in edges_to_spawn.iter() {
-        let source_path = PathBuf::from(edge.0.clone());
-        let target_path = PathBuf::from(edge.1.clone());
-
-        let etype: EdgeTypes;
-
-        let source_parent = source_path.parent().unwrap();
-        let target_parent = target_path.parent().unwrap();
-
-        let one_is_parent_of_other = source_parent == target_path || target_parent == source_path;
-
-        // TODO: Should the source of an edge be the parent or the child in a parent connection?
-        if one_is_parent_of_other {
-            println!("Created edge of type PARENT");
-            etype = EdgeTypes::Parent;
-        } else {
-            etype = EdgeTypes::Base;
-        }
-
-        create_edge(
-            // &mut edge_event,
-            &source_path, 
-            &target_path, 
-            etype,
-            &mut commands,
-            &edges,
-        );
-    }
     
 }
 
@@ -638,7 +425,6 @@ pub fn update_context(
 /// Expand the context of a node upon request.
 /// Used both upon changing a context as well as when requesting to expand a node recursively. 
 /// Not to be used directly. Trigger it by sending a RequestContextExpand event. 
-
 fn expand_context(
     mut req_event: EventReader<RequestContextExpand>,
 
