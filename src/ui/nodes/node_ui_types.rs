@@ -1,5 +1,5 @@
 use bevy::{
-    ecs::system::Commands, 
+    ecs::{system::Commands, entity::Entity}, 
     asset::{Assets, AssetServer, Handle}, 
     render::{mesh::{Mesh, shape}, color::Color, texture::Image}, 
     sprite::{ColorMaterial, MaterialMesh2dBundle, SpriteBundle, Sprite}, 
@@ -9,9 +9,9 @@ use bevy::{
 use bevy_mod_picking::{PickableBundle, picking_core::Pickable, backends::raycast::RaycastPickable};
 use rand::Rng;
 
-use crate::{events::nodes::NodeSpawnedEvent, ui::graph_cam::ViewData};
+use crate::{events::nodes::NodeSpawnedEvent, ui::graph_cam::ViewData, graph::nodes::GraphDataNode};
 
-use super::{add_node_label, add_node_base_outline};
+use super::{add_node_label, add_node_base_outline, TargetPosition};
 
 
 // TODO: Convert back to using one-shot systems in 0.13
@@ -43,8 +43,11 @@ use super::{add_node_label, add_node_base_outline};
 // For the node types that don't have a specific ui 
 
 pub fn add_base_node_ui(
-    ev: &NodeSpawnedEvent,
-
+    entity: Entity,
+    data: &GraphDataNode,
+    spawn_pos: Vec2,
+    tpos: Option<&TargetPosition>,
+    
     mut commands: &mut Commands,
 
     meshes: &mut Assets<Mesh>,
@@ -56,12 +59,12 @@ pub fn add_base_node_ui(
     let label_pos = Vec2::new(35.0, 0.0);
     let radius = 35.0;
 
-    let node_pos: Vec2 = match ev.rel_target_position {
-        Some(pos) => ev.root_position + pos,
+    let node_pos: Vec2 = match tpos {
+        Some(pos) => pos.position,
         None => {
             Vec2::new(
-                ev.root_position.x + rng.gen_range(-10.0..10.0),
-                ev.root_position.y + rng.gen_range(-10.0..10.0),
+                spawn_pos.x + rng.gen_range(-10.0..10.0),
+                spawn_pos.y + rng.gen_range(-10.0..10.0),
             )
         },
     };
@@ -70,7 +73,7 @@ pub fn add_base_node_ui(
 
     println!("z depth for base node ui: {}", node_z);
 
-    commands.entity(ev.entity).insert((
+    commands.entity(entity).insert((
         MaterialMesh2dBundle {
             mesh: meshes.add(shape::Circle::new(radius).into()).into(),
             material: materials.add(ColorMaterial::from(Color::rgb(0.3, 0.0, 0.0))),
@@ -83,8 +86,8 @@ pub fn add_base_node_ui(
         },
     ));
 
-    add_node_label(&mut commands, &ev, label_pos, &node_z);
-    add_node_base_outline(&mut commands, &ev.entity, radius, &node_z);
+    add_node_label(&mut commands, &entity, &data.path, label_pos, &node_z);
+    add_node_base_outline(&mut commands, &entity, radius, &node_z);
 }
 
 // FOLDER/DIRECTORY NODE
@@ -97,8 +100,10 @@ pub fn add_base_node_ui(
 // ----------------------------------------------------------------
 
 pub fn add_image_node_ui(
-    ev: &NodeSpawnedEvent,
-    // data: &Option<Box<dyn NodeData>>,
+    entity: Entity,
+    data: &GraphDataNode,
+    spawn_pos: Vec2,
+    tpos: Option<&TargetPosition>,
 
     mut commands: &mut Commands,
 
@@ -107,7 +112,7 @@ pub fn add_image_node_ui(
 ){
     let mut rng = rand::thread_rng();
 
-    let full_path = &ev.path;
+    let full_path = &data.path;
     println!("Adding image node ui: {:?}", full_path);
 
     let accepted_image_formats = vec!["png", "jpg", "jpeg", "gif", "bmp", "tga", "tif", "tiff", "webp", "ico",];
@@ -126,21 +131,19 @@ pub fn add_image_node_ui(
 
     let image: Handle<Image> = server.load(full_path.clone());
 
-    println!("Position: {:?}", ev.root_position);
-
-    let node_pos: Vec2 = match ev.rel_target_position {
-        Some(pos) => ev.root_position + pos,
+    let node_pos: Vec2 = match tpos {
+        Some(pos) => pos.position,
         None => {
             Vec2::new(
-                ev.root_position.x + rng.gen_range(-10.0..10.0),
-                ev.root_position.y + rng.gen_range(-10.0..10.0),
+                spawn_pos.x + rng.gen_range(-10.0..10.0),
+                spawn_pos.y + rng.gen_range(-10.0..10.0),
             )
         },
     };
 
     let node_z = view_data.get_z_for_node();
 
-    commands.entity(ev.entity).insert((
+    commands.entity(entity).insert((
 
         SpriteBundle {
             texture: image,
@@ -163,9 +166,9 @@ pub fn add_image_node_ui(
     let size = Vec2::new(60.0, 40.0);
     let pos = Vec2::new(-size.x / 2.0, -size.y / 2.0);
 
-    add_node_label(&mut commands, &ev, pos, &node_z);
+    add_node_label(&mut commands, &entity, &data.path, pos, &node_z);
     // add_node_rect_outline(&mut commands, &ev.entity, size, &view_data.top_z);
-    add_node_base_outline(&mut commands, &ev.entity, size.x, &node_z);
+    add_node_base_outline(&mut commands, &entity, size.x, &node_z);
 
 }
                         
