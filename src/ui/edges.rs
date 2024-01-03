@@ -5,7 +5,7 @@ use bevy_mod_picking::{events::{Pointer, Over, Out, Click}, prelude::On, pointer
 use bevy_prototype_lyon::{shapes, prelude::{ShapeBundle, GeometryBuilder, Path, Stroke}};
 use lyon::lyon_tessellation::StrokeOptions;
 
-use crate::{graph::{edges::GraphDataEdge, nodes::GraphDataNode, context::PathsToEntitiesIndex}, settings::theme::{EDGE_PARENT_COLOR, EDGE_PARENT_HOVER_COLOR}, events::edges::{EdgeSpawnedEvent, EdgeClickEvent}};
+use crate::{graph::{edges::{GraphDataEdge, EdgeType}, nodes::GraphDataNode, context::PathsToEntitiesIndex}, settings::theme::{EDGE_PARENT_COLOR, EDGE_PARENT_HOVER_COLOR}, events::edges::{EdgeSpawnedEvent, EdgeClickEvent}};
 
 use super::{nodes::GraphViewNode, graph_cam::ViewData};
 
@@ -36,11 +36,11 @@ pub struct GraphViewEdge {
 }
 
 pub fn add_edge_ui(
-    mut events: EventReader<EdgeSpawnedEvent>,
+    new_edges: Query<(Entity, &GraphDataEdge, &EdgeType), Added<GraphDataEdge>>, 
     mut commands: Commands,
     mut view_data: ResMut<ViewData>,
 ){
-    for ev in events.read() {
+    for (entity, _, etype) in new_edges.iter() {
         let line = shapes::Line(
             Vec2::ZERO, Vec2::ZERO
         );
@@ -48,12 +48,12 @@ pub fn add_edge_ui(
         let edgecol = EDGE_PARENT_COLOR;
         let hovercol = EDGE_PARENT_HOVER_COLOR;
 
-        let ewidth = match ev.edge_type {
+        let ewidth = match etype.etype {
             crate::graph::edges::EdgeTypes::Parent => 8.0,
             _ => 4.0,
         };
 
-        commands.entity(ev.entity).insert((
+        commands.entity(entity).insert((
             RenderLayers::layer(31),
             GraphViewEdge::default(),
             ShapeBundle {

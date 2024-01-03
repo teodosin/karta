@@ -41,7 +41,6 @@ pub struct GraphDataEdge {
 
 impl GraphDataEdge {
     pub fn same_pair(&self, other: &GraphDataEdge) -> bool {
-        println!("Comparing {:?} and {:?}", self, other);
         if (self.source == other.source && self.target == other.target) || (self.source == other.target && self.target == other.source) {
             return true;
         }
@@ -102,7 +101,6 @@ fn handle_edge_click(
 
 
 pub fn create_edge(
-    event: &mut EventWriter<EdgeSpawnedEvent>,
     from: &PathBuf, 
     to: &PathBuf, 
     etype: EdgeTypes,
@@ -131,7 +129,7 @@ pub fn create_edge(
         "length".to_string(), Some(210.0),
     );
 
-    let edge = commands.spawn((
+    commands.spawn((
         GraphDataEdge {
             source: (*from).to_path_buf(),
             target: (*to).to_path_buf(),
@@ -142,13 +140,7 @@ pub fn create_edge(
         Attributes {
             attributes: initial_attributes,
         }),
-    ).id();
-
-    event.send(EdgeSpawnedEvent {
-        entity: edge,
-        connected_to_focal: true,
-        edge_type: etype,
-    });
+    );
 }
 
 /// Function to update the GraphNodeEdges component of nodes when an edge is spawned
