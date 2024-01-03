@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{time::Duration, path::PathBuf};
 
 use bevy::{prelude::*, text::Text2dBounds, sprite::Anchor, render::view::RenderLayers};
 use bevy_mod_picking::{prelude::*, backends::raycast::RaycastPickable};
@@ -6,7 +6,7 @@ use bevy_prototype_lyon::{shapes, prelude::{GeometryBuilder, ShapeBundle, Stroke
 use bevy_tweening::{Tween, EaseFunction, lens::TransformPositionLens, Animator, TweenCompleted, TweeningPlugin};
 
 use crate::{
-    graph::{nodes::{GraphNodeEdges, ContextRoot, Pins}, node_types::NodeTypes}, 
+    graph::{nodes::{GraphNodeEdges, ContextRoot, Pins, GraphDataNode}, node_types::NodeTypes}, 
     events::nodes::{MoveNodesEvent, NodeClickEvent, NodePressedEvent, NodeHoverEvent, NodeSpawnedEvent, NodeHoverStopEvent}
 };
 
@@ -24,6 +24,9 @@ impl Plugin for NodesUiPlugin {
             // .insert_resource(UiNodeSystemsIndex::default())
             // .add_systems(PreStartup, setup_node_ui_systems)
             .add_plugins(TweeningPlugin)
+
+            .insert_resource(GraphStartingPositions::default())
+
             .add_systems(PostUpdate, add_node_ui)
             .add_systems(Last, tween_to_target_position)
 
@@ -36,6 +39,26 @@ impl Plugin for NodesUiPlugin {
             // .add_systems(PreUpdate, visualise_pinned_position)
             .add_systems(PreUpdate, toggle_node_debug_labels)
         ;
+    }
+}
+
+/// Resource to store the default spawn position(s) for nodes in the graph. 
+/// Modify this resource if you want to spawn nodes somewhere other than the world origin. 
+/// This resource will likely be extended in the future to allow for more complex/specific
+/// spawn layouts such as grids. 
+#[derive(Resource, Default)]
+pub struct GraphStartingPositions {
+    position: Vec2,
+}
+
+impl GraphStartingPositions {
+    pub fn get_pos(&self) -> Vec2 {
+        self.position
+    }
+
+    pub fn set_pos(&mut self, pos: Vec2) {
+        println!("Setting spawn position to {:?}", pos);
+        self.position = pos;
     }
 }
 
@@ -102,7 +125,8 @@ impl Default for ViewNodeScale {
 // TODO: Convert to One-Shot System
 // Is that even possible? This function requires input parameters. 
 pub fn add_node_ui(
-    mut events: EventReader<NodeSpawnedEvent>,
+    new_nodes: Query<(Entity, &GraphDataNode, Option<&TargetPosition>), Added<GraphDataNode>>,
+    spawn: Res<GraphStartingPositions>,
 
     mut commands: Commands,
 
@@ -112,15 +136,13 @@ pub fn add_node_ui(
     mut view_data: ResMut<ViewData>,
     // systems: Res<UiNodeSystemsIndex>,
 ){
-    
-    for ev in events.read(){
+    for (entity, data, tpos) in new_nodes.iter(){
 
-        println!("Node type: {:?}", ev.ntype);
+        println!("Node type: {:?}", data.ntype);
 
-        let node = commands.entity(ev.entity).insert((
+        let node = commands.entity(entity).insert((
             RenderLayers::layer(31),
             GraphViewNode,
-            Pins::default(),
             Velocity2D::default(),
             PickableBundle {
                 pickable: Pickable {
@@ -145,17 +167,17 @@ pub fn add_node_ui(
             }),
         );
 
-        if ev.pinned_to_position {
-            commands.entity(ev.entity).insert(Pins::new_pinpos());
-        } else {
-            commands.entity(ev.entity).insert(Pins::default());
-        }
-
-        match ev.ntype {
+        match data.ntype {
             NodeTypes::FileImage => {
-                add_image_node_ui(&ev, &mut commands, &mut server, &mut view_data)
+                add_image_node_ui(
+                    entity, &data, spawn.get_pos(), tpos,
+                    &mut commands, &mut server, &mut view_data
+                )
             },
-            _ => add_base_node_ui(&ev, &mut commands, &mut meshes, &mut materials, &mut view_data),
+            _ => add_base_node_ui(
+                entity, &data, spawn.get_pos(), tpos,
+                &mut commands, &mut meshes, &mut materials, &mut view_data
+            ),
         }
 
     }
@@ -166,7 +188,8 @@ pub fn add_node_ui(
 /// It will be spawned as a child of the node entity.
 pub fn add_node_label(
     commands: &mut Commands,
-    ev: &NodeSpawnedEvent, 
+    entity: &Entity, 
+    path: &PathBuf, 
     pos: Vec2,
     top_z: &f32,
 ){
@@ -177,7 +200,7 @@ pub fn add_node_label(
         Text2dBundle {
             text: Text {
                 sections: vec![TextSection::new(
-                    &*ev.path.file_name().unwrap().to_string_lossy(),
+                    &*path.file_name().unwrap().to_string_lossy(),
                     TextStyle {
                         font_size: 100.0,
                         color: Color::WHITE,
@@ -200,7 +223,7 @@ pub fn add_node_label(
         }
     )).id();
     
-    commands.entity(ev.entity).push_children(&[name_label]);
+    commands.entity(*entity).push_children(&[name_label]);
 }
 
 /// OUTLINE

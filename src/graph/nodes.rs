@@ -302,7 +302,6 @@ fn handle_node_hover_stop(
 // the two must be kept in sync. 
 // TODO: Address this limitation. 
 pub fn spawn_node (
-    event: &mut EventWriter<NodeSpawnedEvent>,
     commands: &mut Commands,
 
     path: PathBuf,
@@ -321,8 +320,6 @@ pub fn spawn_node (
         return pe_index.0.get(&path).unwrap().clone();
     }
 
-    let data = type_to_data(ntype);
-
     let node_entity = commands.spawn((
         GraphDataNode {
             path: path.clone(),
@@ -332,15 +329,17 @@ pub fn spawn_node (
         GraphNodeEdges::default()
     )).id();
 
-    event.send(NodeSpawnedEvent {
-        entity: node_entity,
-        path: path.clone(),
-        ntype,
-        data,
-        root_position,
-        rel_target_position,
-        pinned_to_position,
-    });
+    if pinned_to_position {
+        commands.entity(node_entity).insert(Pins::new_pinpos());
+    } else {
+        commands.entity(node_entity).insert(Pins::default());
+    }
+
+    if rel_target_position.is_some() {
+        commands.entity(node_entity).insert(crate::ui::nodes::TargetPosition {
+            position: root_position + rel_target_position.unwrap(),
+        });
+    }
 
     // Update the PathsToEntitiesIndex
     pe_index.0.insert(path, node_entity);

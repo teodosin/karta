@@ -7,7 +7,7 @@ use std::{fs, path::PathBuf,};
 
 use crate::{
     graph::{edges::{create_edge, EdgeTypes}, node_types::{get_type_from_file_path, NodeTypes, get_type_from_context_path}}, vault::{CurrentVault, context_asset::{open_context_file_from_node_path, ContextAsset, node_path_to_context_path, open_context_file}}, 
-    events::{nodes::{NodeClickEvent, NodeSpawnedEvent}, edges::EdgeSpawnedEvent}, ui::nodes::TargetPosition,
+    events::{nodes::{NodeClickEvent, NodeSpawnedEvent}, edges::EdgeSpawnedEvent}, ui::nodes::{TargetPosition, GraphStartingPositions},
 };
 
 use super::{nodes::*, edges::{GraphDataEdge, EdgeType}};
@@ -199,14 +199,12 @@ pub struct ToBeDespawned;
 
 // --------------------------------------------------------------------------------
 /// Big monolith function for updating the context. 
-pub fn update_context(
-    mut node_event: EventWriter<NodeSpawnedEvent>,
-    mut edge_event: EventWriter<EdgeSpawnedEvent>,
-    
+pub fn update_context(    
     mut commands: Commands,
 
     vault: Res<CurrentVault>,
     context: Res<CurrentContext>,
+    mut origin: ResMut<GraphStartingPositions>,
 
     mut pe_index: ResMut<PathsToEntitiesIndex>,
 
@@ -353,7 +351,6 @@ pub fn update_context(
                     }
 
                     spawn_node(
-                        &mut node_event,
                         &mut commands, 
                         root_path.clone(), 
                         root_in_file.ntype,
@@ -379,7 +376,6 @@ pub fn update_context(
                     };
 
                     spawn_node(
-                        &mut node_event,
                         &mut commands, 
                         root_path, 
                         root_type,
@@ -400,6 +396,10 @@ pub fn update_context(
         commands.entity(node).remove::<ContextRoot>();
     }
     commands.entity(root_node).insert(ContextRoot);
+    origin.set_pos(root_position);
+
+    println!("-----------------------------------------------------------------------");
+    println!("Origin: {}", origin.get_pos());
 
 
     // ----------------- Handle other nodes -----------------
@@ -422,7 +422,6 @@ pub fn update_context(
             let node_type = get_type_from_file_path(&node_path).unwrap();
             let node_pin_to_position = false;
             let spawned_node = spawn_node(
-                &mut node_event,
                 &mut commands, 
                 node_path.clone(), 
                 node_type,
@@ -516,7 +515,6 @@ pub fn update_context(
                         let node_position = node.relative_position;
                         let node_pin_to_position = node.pin_to_position;
                         let spawned_node = spawn_node(
-                            &mut node_event,
                             &mut commands, 
                             node_path.clone(), 
                             node_type,
@@ -554,7 +552,6 @@ pub fn update_context(
                 let node_type = get_type_from_file_path(&node_path).unwrap();
                 let node_pin_to_position = false;
                 let spawned_node = spawn_node(
-                    &mut node_event,
                     &mut commands, 
                     node_path.clone(), 
                     node_type,
@@ -603,7 +600,7 @@ pub fn update_context(
         }
 
         create_edge(
-            &mut edge_event,
+            // &mut edge_event,
             &source_path, 
             &target_path, 
             etype,
