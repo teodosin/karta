@@ -1,0 +1,99 @@
+digraph "" {
+	"compound"="true";
+	"splines"="spline";
+	"rankdir"="LR";
+	"bgcolor"="#0d1117";
+	"fontname"="Helvetica";
+	"nodesep"="0.15";
+	edge ["penwidth"="2"];
+	node ["shape"="box", "style"="filled"];
+	subgraph "clusternode_Set(18)" {
+		"style"="rounded,filled";
+		"label"="AnimationUpdate";
+		"tooltip"="AnimationUpdate";
+		"fillcolor"="#ffffff44";
+		"fontcolor"="#ffffff";
+		"color"="#ffffff50";
+		"penwidth"="2";
+		"set_marker_node_Set(18)" ["style"="invis", "label"="", "height"="0", "shape"="point"]
+		"node_System(16)" ["label"="component_animator_system<Transform>", "tooltip"="bevy_tweening::plugin::component_animator_system<bevy_transform::components::transform::Transform>", "fillcolor"="#eff1f3", "fontname"="Helvetica", "fontcolor"="#15191d", "color"="#b4bec7", "penwidth"="1"]
+		"node_System(17)" ["label"="component_animator_system<Style>", "tooltip"="bevy_tweening::plugin::component_animator_system<bevy_ui::ui_node::Style>", "fillcolor"="#eff1f3", "fontname"="Helvetica", "fontcolor"="#15191d", "color"="#b4bec7", "penwidth"="1"]
+		"node_System(18)" ["label"="component_animator_system<BackgroundColor>", "tooltip"="bevy_tweening::plugin::component_animator_system<bevy_ui::ui_node::BackgroundColor>", "fillcolor"="#eff1f3", "fontname"="Helvetica", "fontcolor"="#15191d", "color"="#b4bec7", "penwidth"="1"]
+		"node_System(19)" ["label"="component_animator_system<Sprite>", "tooltip"="bevy_tweening::plugin::component_animator_system<bevy_sprite::sprite::Sprite>", "fillcolor"="#eff1f3", "fontname"="Helvetica", "fontcolor"="#15191d", "color"="#b4bec7", "penwidth"="1"]
+		"node_System(20)" ["label"="asset_animator_system<ColorMaterial>", "tooltip"="bevy_tweening::plugin::asset_animator_system<bevy_sprite::mesh2d::color_material::ColorMaterial>", "fillcolor"="#eff1f3", "fontname"="Helvetica", "fontcolor"="#15191d", "color"="#b4bec7", "penwidth"="1"]
+		"node_System(21)" ["label"="component_animator_system<Text>", "tooltip"="bevy_tweening::plugin::component_animator_system<bevy_text::text::Text>", "fillcolor"="#eff1f3", "fontname"="Helvetica", "fontcolor"="#15191d", "color"="#b4bec7", "penwidth"="1"]
+	}
+	
+	"node_System(0)" ["label"="close_when_requested", "tooltip"="bevy_window::system::close_when_requested"]
+	"node_System(1)" ["label"="log_debug<Select>", "tooltip"="bevy_mod_picking::debug::log_debug<bevy_picking_selection::Select>"]
+	"node_System(2)" ["label"="log_debug<Deselect>", "tooltip"="bevy_mod_picking::debug::log_debug<bevy_picking_selection::Deselect>"]
+	"node_System(3)" ["label"="world_inspector_ui", "tooltip"="bevy_inspector_egui::quick::world_inspector_ui"]
+	"node_System(4)" ["label"="on_vault_change", "tooltip"="karta::vault::on_vault_change"]
+	"node_System(5)" ["label"="change_context_path", "tooltip"="karta::modes::state::change_context_path"]
+	"node_System(6)" ["label"="move_node_selection", "tooltip"="karta::modes::move::move_node_selection"]
+	"node_System(7)" ["label"="create_edge_from_drag", "tooltip"="karta::modes::edges::create_edge_from_drag"]
+	"node_System(8)" ["label"="draw_edge_preview", "tooltip"="karta::modes::edges::draw_edge_preview"]
+	"node_System(9)" ["label"="execute_actions", "tooltip"="karta::actions::execute_actions"]
+	"node_System(10)" ["label"="repulsion_constraints", "tooltip"="karta::graph::node_types::forces::repulsion_constraints"]
+	"node_System(11)" ["label"="edge_spring_constraints", "tooltip"="karta::graph::node_types::forces::edge_spring_constraints"]
+	"node_System(12)" ["label"="graph_zoom", "tooltip"="karta::ui::graph_cam::graph_zoom"]
+	"node_System(13)" ["label"="graph_pan", "tooltip"="karta::ui::graph_cam::graph_pan"]
+	"node_System(14)" ["label"="create_vault_menu", "tooltip"="karta::ui::vault_menu::create_vault_menu"]
+	"node_System(15)" ["label"="vault_menu_button_system", "tooltip"="karta::ui::vault_menu::vault_menu_button_system"]
+	"node_System(22)" ["label"="create_node_menu", "tooltip"="karta::ui::create_node_menu::create_node_menu"]
+	"node_System(23)" ["label"="update_context_label", "tooltip"="karta::ui::update_context_label"]
+	"node_System(24)" ["label"="context_menu_button_system", "tooltip"="karta::ui::context_menu::context_menu_button_system"]
+	"node_System(25)" ["label"="spawn_node_context_menu", "tooltip"="karta::ui::context_menu::spawn_node_context_menu"]
+	"node_System(26)" ["label"="spawn_edge_context_menu", "tooltip"="karta::ui::context_menu::spawn_edge_context_menu"]
+	"node_System(27)" ["label"="despawn_context_menus_on_any_click", "tooltip"="karta::ui::context_menu::despawn_context_menus_on_any_click"]
+	"node_System(5)" -> "UNKNOWN SystemTypeSet(fn karta::graph::context::update_context())" ["lhead"="", "ltail"="", "tooltip"="change_context_path → SystemTypeSet(update_context())", "color"="#eede00"]
+	"node_System(6)" -> "UNKNOWN SystemTypeSet(fn karta::graph::context::update_context())" ["lhead"="", "ltail"="", "tooltip"="move_node_selection → SystemTypeSet(update_context())", "color"="#881877"]
+	"node_System(10)" -> "node_System(11)" ["lhead"="", "ltail"="", "tooltip"="repulsion_constraints → edge_spring_constraints", "color"="#00b0cc"]
+	"node_System(5)" -> "node_System(4)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">CurrentVault</td></tr><tr><td bgcolor="#c6e6ff">CurrentContext</td></tr></table>>, "labeltooltip"="change_context_path — on_vault_change"]
+	"node_System(8)" -> "node_System(5)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">InputData</td></tr></table>>, "labeltooltip"="draw_edge_preview — change_context_path"]
+	"node_System(8)" -> "node_System(6)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">InputData</td></tr><tr><td bgcolor="#c6e6ff">Transform</td></tr></table>>, "labeltooltip"="draw_edge_preview — move_node_selection"]
+	"node_System(8)" -> "node_System(7)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">InputData</td></tr></table>>, "labeltooltip"="draw_edge_preview — create_edge_from_drag"]
+	"node_System(8)" -> "node_System(25)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">InputData</td></tr></table>>, "labeltooltip"="draw_edge_preview — spawn_node_context_menu"]
+	"node_System(10)" -> "node_System(6)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">Transform</td></tr></table>>, "labeltooltip"="repulsion_constraints — move_node_selection"]
+	"node_System(11)" -> "node_System(6)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">Transform</td></tr></table>>, "labeltooltip"="edge_spring_constraints — move_node_selection"]
+	"node_System(12)" -> "node_System(6)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">Transform</td></tr></table>>, "labeltooltip"="graph_zoom — move_node_selection"]
+	"node_System(12)" -> "node_System(8)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">InputData</td></tr><tr><td bgcolor="#c6e6ff">Transform</td></tr></table>>, "labeltooltip"="graph_zoom — draw_edge_preview"]
+	"node_System(12)" -> "node_System(10)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">Transform</td></tr></table>>, "labeltooltip"="graph_zoom — repulsion_constraints"]
+	"node_System(12)" -> "node_System(11)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">Transform</td></tr></table>>, "labeltooltip"="graph_zoom — edge_spring_constraints"]
+	"node_System(13)" -> "node_System(6)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">Transform</td></tr></table>>, "labeltooltip"="graph_pan — move_node_selection"]
+	"node_System(13)" -> "node_System(8)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">InputData</td></tr><tr><td bgcolor="#c6e6ff">Transform</td></tr></table>>, "labeltooltip"="graph_pan — draw_edge_preview"]
+	"node_System(13)" -> "node_System(10)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">Transform</td></tr></table>>, "labeltooltip"="graph_pan — repulsion_constraints"]
+	"node_System(13)" -> "node_System(11)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">Transform</td></tr></table>>, "labeltooltip"="graph_pan — edge_spring_constraints"]
+	"node_System(13)" -> "node_System(12)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">ViewSettings</td></tr><tr><td bgcolor="#c6e6ff">Transform</td></tr></table>>, "labeltooltip"="graph_pan — graph_zoom"]
+	"node_System(13)" -> "node_System(16)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">Transform</td></tr></table>>, "labeltooltip"="graph_pan — component_animator_system<Transform>"]
+	"node_System(14)" -> "node_System(4)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">Events&lt;SpawnVaultMenu&gt;</td></tr></table>>, "labeltooltip"="create_vault_menu — on_vault_change"]
+	"node_System(15)" -> "node_System(4)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">CurrentVault</td></tr></table>>, "labeltooltip"="vault_menu_button_system — on_vault_change"]
+	"node_System(15)" -> "node_System(5)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">CurrentVault</td></tr></table>>, "labeltooltip"="vault_menu_button_system — change_context_path"]
+	"node_System(16)" -> "node_System(6)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">Transform</td></tr></table>>, "labeltooltip"="component_animator_system<Transform> — move_node_selection"]
+	"node_System(16)" -> "node_System(8)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">Transform</td></tr></table>>, "labeltooltip"="component_animator_system<Transform> — draw_edge_preview"]
+	"node_System(16)" -> "node_System(10)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">Transform</td></tr></table>>, "labeltooltip"="component_animator_system<Transform> — repulsion_constraints"]
+	"node_System(16)" -> "node_System(11)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">Transform</td></tr></table>>, "labeltooltip"="component_animator_system<Transform> — edge_spring_constraints"]
+	"node_System(16)" -> "node_System(12)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">Transform</td></tr></table>>, "labeltooltip"="component_animator_system<Transform> — graph_zoom"]
+	"node_System(16)" -> "node_System(17)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">Events&lt;TweenCompleted&gt;</td></tr></table>>, "labeltooltip"="component_animator_system<Transform> — component_animator_system<Style>"]
+	"node_System(16)" -> "node_System(18)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">Events&lt;TweenCompleted&gt;</td></tr></table>>, "labeltooltip"="component_animator_system<Transform> — component_animator_system<BackgroundColor>"]
+	"node_System(16)" -> "node_System(19)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">Events&lt;TweenCompleted&gt;</td></tr></table>>, "labeltooltip"="component_animator_system<Transform> — component_animator_system<Sprite>"]
+	"node_System(16)" -> "node_System(20)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">Events&lt;TweenCompleted&gt;</td></tr></table>>, "labeltooltip"="component_animator_system<Transform> — asset_animator_system<ColorMaterial>"]
+	"node_System(16)" -> "node_System(21)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">Events&lt;TweenCompleted&gt;</td></tr></table>>, "labeltooltip"="component_animator_system<Transform> — component_animator_system<Text>"]
+	"node_System(18)" -> "node_System(15)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">BackgroundColor</td></tr></table>>, "labeltooltip"="component_animator_system<BackgroundColor> — vault_menu_button_system"]
+	"node_System(18)" -> "node_System(17)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">Events&lt;TweenCompleted&gt;</td></tr></table>>, "labeltooltip"="component_animator_system<BackgroundColor> — component_animator_system<Style>"]
+	"node_System(18)" -> "node_System(19)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">Events&lt;TweenCompleted&gt;</td></tr></table>>, "labeltooltip"="component_animator_system<BackgroundColor> — component_animator_system<Sprite>"]
+	"node_System(18)" -> "node_System(20)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">Events&lt;TweenCompleted&gt;</td></tr></table>>, "labeltooltip"="component_animator_system<BackgroundColor> — asset_animator_system<ColorMaterial>"]
+	"node_System(18)" -> "node_System(21)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">Events&lt;TweenCompleted&gt;</td></tr></table>>, "labeltooltip"="component_animator_system<BackgroundColor> — component_animator_system<Text>"]
+	"node_System(19)" -> "node_System(17)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">Events&lt;TweenCompleted&gt;</td></tr></table>>, "labeltooltip"="component_animator_system<Sprite> — component_animator_system<Style>"]
+	"node_System(19)" -> "node_System(21)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">Events&lt;TweenCompleted&gt;</td></tr></table>>, "labeltooltip"="component_animator_system<Sprite> — component_animator_system<Text>"]
+	"node_System(20)" -> "node_System(17)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">Events&lt;TweenCompleted&gt;</td></tr></table>>, "labeltooltip"="asset_animator_system<ColorMaterial> — component_animator_system<Style>"]
+	"node_System(20)" -> "node_System(19)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">Events&lt;TweenCompleted&gt;</td></tr></table>>, "labeltooltip"="asset_animator_system<ColorMaterial> — component_animator_system<Sprite>"]
+	"node_System(20)" -> "node_System(21)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">Events&lt;TweenCompleted&gt;</td></tr></table>>, "labeltooltip"="asset_animator_system<ColorMaterial> — component_animator_system<Text>"]
+	"node_System(21)" -> "node_System(17)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">Events&lt;TweenCompleted&gt;</td></tr></table>>, "labeltooltip"="component_animator_system<Text> — component_animator_system<Style>"]
+	"node_System(22)" -> "node_System(8)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">InputData</td></tr></table>>, "labeltooltip"="create_node_menu — draw_edge_preview"]
+	"node_System(23)" -> "node_System(4)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">CurrentContext</td></tr></table>>, "labeltooltip"="update_context_label — on_vault_change"]
+	"node_System(23)" -> "node_System(5)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">CurrentContext</td></tr></table>>, "labeltooltip"="update_context_label — change_context_path"]
+	"node_System(23)" -> "node_System(21)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">Text</td></tr></table>>, "labeltooltip"="update_context_label — component_animator_system<Text>"]
+	"node_System(24)" -> "node_System(15)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">BackgroundColor</td></tr></table>>, "labeltooltip"="context_menu_button_system — vault_menu_button_system"]
+	"node_System(24)" -> "node_System(18)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">BackgroundColor</td></tr></table>>, "labeltooltip"="context_menu_button_system — component_animator_system<BackgroundColor>"]
+}

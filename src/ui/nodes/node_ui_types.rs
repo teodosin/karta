@@ -183,3 +183,9 @@ pub fn add_svg_node_ui(
 ){
 
 }
+
+pub fn debug_sprite_picking(
+    
+){
+    
+}
