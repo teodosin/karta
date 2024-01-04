@@ -1,7 +1,7 @@
 //lib
 
 use bevy::{prelude::*, log::LogPlugin, window::WindowResolution};
-// use bevy_inspector_egui::quick::WorldInspectorPlugin;
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_mod_picking::prelude::*;
 
 mod tests;
@@ -47,7 +47,7 @@ pub fn karta_app() {
         )        
 
         // EGUI INSPECTOR BLOCK
-        //.add_plugins(WorldInspectorPlugin::new())
+        .add_plugins(WorldInspectorPlugin::new())
 
         // ENVIRONMENT BLOCK
         // The data that needs to remain in memory for the entire duration of the app
@@ -79,23 +79,23 @@ pub fn karta_app() {
         // Drawing is done PostUpdate
         .add_plugins(ui::KartaUiPlugin)
 
-        //.run()
-
-        // It's been brought to my attention that my way of structuring my plugins might suck a bit.
-        // My plugins are strongly coupled to each other. I can't test plugins in isolation.
-        // I can create test cases still, and import everything I need to test a plugin, but it's 
-        // not ideal. So, TODO!
-        // Events and actions are prime candidates to be dissolved into other plugins.
-        // I am not confident that the others can be dissolved.
+        // .run()
     ;
 
-    // let dot = bevy_mod_debugdump::schedule_graph_dot(&mut app, Update, &bevy_mod_debugdump::schedule_graph::Settings::default());
-    // // Save dot output as a file
-    // std::fs::write("strings_notworking_update.dot", dot).expect("Unable to write file");
+    let dot = bevy_mod_debugdump::schedule_graph_dot(&mut app, Startup, &bevy_mod_debugdump::schedule_graph::Settings::default());
+    std::fs::write("src/schedule_graphs/startup.dot", dot).expect("Unable to write file");
 
-    // let dot = bevy_mod_debugdump::schedule_graph_dot(&mut app, PostUpdate, &bevy_mod_debugdump::schedule_graph::Settings::default());
-    // // Save dot output as a file
-    // std::fs::write("strings_notworking_postupdate.dot", dot).expect("Unable to write file");
+    let dot = bevy_mod_debugdump::schedule_graph_dot(&mut app, PreUpdate, &bevy_mod_debugdump::schedule_graph::Settings::default());
+    std::fs::write("src/schedule_graphs/preupdate.dot", dot).expect("Unable to write file");
+
+    let dot = bevy_mod_debugdump::schedule_graph_dot(&mut app, Update, &bevy_mod_debugdump::schedule_graph::Settings::default());
+    std::fs::write("src/schedule_graphs/update.dot", dot).expect("Unable to write file");
+
+    let dot = bevy_mod_debugdump::schedule_graph_dot(&mut app, PostUpdate, &bevy_mod_debugdump::schedule_graph::Settings::default());
+    std::fs::write("src/schedule_graphs/postupdate.dot", dot).expect("Unable to write file");
+
+    let dot = bevy_mod_debugdump::schedule_graph_dot(&mut app, Last, &bevy_mod_debugdump::schedule_graph::Settings::default());
+    std::fs::write("src/schedule_graphs/last.dot", dot).expect("Unable to write file");
 
     app.run();
 }
