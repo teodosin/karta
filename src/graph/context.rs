@@ -7,7 +7,7 @@ use std::{fs, path::PathBuf,};
 
 use crate::{
     graph::{edges::{create_edge, EdgeTypes}, node_types::{get_type_from_file_path, NodeTypes, get_type_from_context_path}}, vault::{CurrentVault, context_asset::{open_context_file_from_node_path, ContextAsset, node_path_to_context_path, open_context_file}}, 
-    events::context::RequestContextExpand, ui::nodes::{TargetPosition, GraphStartingPositions},
+    events::context::{RequestContextExpand, RequestContextCollapse}, ui::nodes::{TargetPosition, GraphStartingPositions},
 };
 
 use super::{nodes::*, edges::{GraphDataEdge, EdgeType}};
@@ -22,10 +22,9 @@ impl Plugin for ContextPlugin {
 
             // .add_systems(Startup, initial_context)
 
-            .add_systems(Last, update_context
-                .run_if(resource_changed::<CurrentContext>())
-            )
+            .add_systems(Last, update_context.run_if(resource_changed::<CurrentContext>()))
             .add_systems(Last, expand_context.after(update_context).run_if(on_event::<RequestContextExpand>()))
+            .add_systems(Last, collapse_context.after(update_context).run_if(on_event::<RequestContextCollapse>()))
         ;
     }
 }
@@ -405,9 +404,6 @@ pub fn update_context(
     commands.entity(root_node).insert(ContextRoot);
     origin.set_pos(root_position);
 
-    println!("-----------------------------------------------------------------------");
-    println!("Origin: {}", origin.get_pos());
-
     // Send the request to expand the rest of this root node's context. 
     // Before this it is possible to check for the amount of nodes in the context
     // in order to delay expansion and provide additional options. 
@@ -416,6 +412,7 @@ pub fn update_context(
     req_event.send(RequestContextExpand {
         target_path: new_cxt_path,
         target_entity: root_node,
+        as_visitors: false,
     });
     
 }
@@ -444,11 +441,8 @@ fn expand_context(
         }
     };
     
-    println!("Processing expand context events: {} events", req_event.len());
-    println!("What? Can't even process the event? Huh?");
     for ev in req_event.read(){
 
-        println!("Do you get here even");
         let mut nodes_spawned: HashMap<PathBuf, Entity> = HashMap::new();
         let mut edges_to_spawn: HashSet<(String, String)> = HashSet::new();
         
@@ -462,7 +456,6 @@ fn expand_context(
         let context_file = open_context_file(&context_path);
 
         nodes_spawned.insert(ev.target_path.clone(), ev.target_entity);
-        println!("Size of nodes spawned: {}", nodes_spawned.len());
         
         // Find the physical nodes that are parent or children of the current context. 
         // This vec will be used to compare against the context files, to keep the context files
@@ -472,7 +465,6 @@ fn expand_context(
         // Spawn the remaining nodes. Implemented as a closure that captures the necessary variables
         // Only used in one place because of borrow issues in others. 
         let mut spawn_remaining_physicals = | physical_nodes: Vec<PathBuf> | {
-            println!("Physical nodes size: {}", physical_nodes.len());
             for node in physical_nodes.iter() {
                 let node_path = node.clone();
 
@@ -640,9 +632,7 @@ fn expand_context(
             }
         }
         // Filter duplicate edges
-        
-        
-        
+    
         for edge in edges_to_spawn.iter() {
             let source_path = PathBuf::from(edge.0.clone());
             let target_path = PathBuf::from(edge.1.clone());
@@ -671,8 +661,50 @@ fn expand_context(
                 &edges,
             );
         }
+
+        // Mark nodes as visitors if applicable.
+        // Visitors will not be saved to the context file. 
+        // Ignore the root because it was already in the context. 
+        if ev.as_visitors {
+            for (path, entity) in nodes_spawned.iter() {
+                println!("Visitor: {:?} {:?}", path, *entity);
+                if *entity == ev.target_entity {
+                    continue
+                }
+                commands.entity(*entity).insert(Visitor);
+            }
+        }
     }
     
+}
+
+fn collapse_context(
+    mut req_event: EventReader<RequestContextCollapse>,
+    
+    mut commands: Commands,
+    pe_index: Res<PathsToEntitiesIndex>,
+    nodes: Query<(Entity, &GraphNodeEdges)>,
+    visitors: Query<Entity, With<Visitor>>,
+){
+    for ev in req_event.read(){
+        let target_path = ev.target_path.clone();
+        let target_entity = ev.target_entity;
+        
+        let target_edges = nodes.get(target_entity).unwrap().1.edges.clone();
+
+        // Remove the target edges that are in visitors
+        println!("Size of target edges: {}", target_edges.len());
+        println!("Size of visitors: {}", visitors.iter().count());
+        let mut dspwnd: u32 = 0;
+        for path in target_edges.keys(){
+            let entity = pe_index.0.get(path).unwrap();
+            if visitors.get(*entity).is_ok(){
+                commands.entity(*entity).insert(ToBeDespawned);
+                dspwnd += 1;
+            }
+        }
+        println!("Despawned {} edges", dspwnd);
+    }
 }
 
 // Similar to the spawn functions, but manages aliases also 
