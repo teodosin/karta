@@ -356,7 +356,7 @@ pub fn update_context(
                         }
                     }
 
-                    spawn_node(
+                    let (entity, is_new) = spawn_node(
                         &mut commands, 
                         root_path.clone(), 
                         root_in_file.ntype,
@@ -364,7 +364,8 @@ pub fn update_context(
                         None,
                         root_in_file.pin_to_position,
                         &mut pe_index,
-                    )
+                    );
+                    entity
                 },
 
                 Err(_e) => {
@@ -381,7 +382,7 @@ pub fn update_context(
                         _ => NodeTypes::Base,
                     };
 
-                    spawn_node(
+                    let (entity, is_new) = spawn_node(
                         &mut commands, 
                         root_path, 
                         root_type,
@@ -389,7 +390,8 @@ pub fn update_context(
                         None,
                         true,
                         &mut pe_index,
-                    )
+                    );
+                    entity
                 }
             }
         }
@@ -474,7 +476,7 @@ fn expand_context(
                 
                 let node_type = get_type_from_file_path(&node_path).unwrap();
                 let node_pin_to_position = false;
-                let spawned_node = spawn_node(
+                let (spawned_node, is_new) = spawn_node(
                     &mut commands, 
                     node_path.clone(), 
                     node_type,
@@ -488,7 +490,9 @@ fn expand_context(
                 edges_to_spawn.insert(edge_to_root);
                 
                 // Add the node to the list of nodes that have been spawned
-                nodes_spawned.insert(node_path, spawned_node);
+                if is_new {
+                    nodes_spawned.insert(node_path, spawned_node);
+                }
             }
         };
         
@@ -569,7 +573,7 @@ fn expand_context(
                             let node_type = node_context_file.nself.ntype;
                             let node_position = node.relative_position;
                             let node_pin_to_position = node.pin_to_position;
-                            let spawned_node = spawn_node(
+                            let (spawned_node, is_new) = spawn_node(
                                 &mut commands, 
                                 node_path.clone(), 
                                 node_type,
@@ -580,8 +584,10 @@ fn expand_context(
                             );
 
                             // Add the node to the list of spawned nodes
-                            nodes_spawned.insert(node_path, spawned_node);
-                            
+                            if is_new {
+                                nodes_spawned.insert(node_path, spawned_node);
+                            }
+
                             // Add edges to the list of edges to spawn
                             for edge in node_context_file.edges.iter() {
                                 edges_to_spawn.insert((edge.source.clone(), edge.target.clone()));
@@ -606,7 +612,7 @@ fn expand_context(
 
                     let node_type = get_type_from_file_path(&node_path).unwrap();
                     let node_pin_to_position = false;
-                    let spawned_node = spawn_node(
+                    let (spawned_node, is_new) = spawn_node(
                         &mut commands, 
                         node_path.clone(), 
                         node_type,
@@ -622,7 +628,9 @@ fn expand_context(
                     
                     
                     // Add the node to the list of nodes that have been spawned
-                    nodes_spawned.insert(node_path, spawned_node);
+                    if is_new {
+                        nodes_spawned.insert(node_path, spawned_node);
+                    }
                 }
                 
             },

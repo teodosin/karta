@@ -298,9 +298,11 @@ fn handle_node_hover_stop(
 // ----------------------------------------------------------------
 // Spawning and despawning systems
 
-// NOTE: This function can't be used in the CreateNodeAction directly, but
-// the two must be kept in sync. 
-// TODO: Address this limitation. 
+/// Function for spawning a GraphDataNode entity. Not a system itself, is used inside
+/// other systems.
+/// NOTE: This function can't be used in the CreateNodeAction directly, but
+/// the two must be kept in sync. 
+/// TODO: Address this limitation. 
 pub fn spawn_node (
     commands: &mut Commands,
 
@@ -314,11 +316,15 @@ pub fn spawn_node (
 
     pe_index: &mut ResMut<PathsToEntitiesIndex>,
 
-) -> bevy::prelude::Entity {
-    
+) -> (bevy::prelude::Entity, bool) { // (Entity, is_new)
+    // The return type is what it is because even though we want this function to always
+    // return a valid entity, we also want to know if the entity was newly created or not.
+    // For example, when expanding a node we want to mark the newly created nodes as visitors,
+    // but exclude the ones that already existed.
+
     if pe_index.0.contains_key(&path) {
         println!("Node already exists");
-        return pe_index.0.get(&path).unwrap().clone();
+        return (pe_index.0.get(&path).unwrap().clone(), false);
     }
 
     let node_entity = commands.spawn((
@@ -346,7 +352,7 @@ pub fn spawn_node (
     pe_index.0.insert(path, node_entity);
 
     // Return the node entity
-    node_entity
+    (node_entity, true)
 }
 
 fn despawn_nodes(
