@@ -18,8 +18,8 @@ rive-bevy = { git = "https://github.com/rive-app/rive-bevy" }
 
 # bevy_smud = "0.7.0"
 # bevy_gaussian_splatting = "0.4.0"
-# bevy_mod_debugdump = "0.8.0"
-# bevy-inspector-egui = "0.21.0"
+bevy_mod_debugdump = "0.9.0"
+bevy-inspector-egui = "0.21.0"
 # bevy_cosmic_edit = "0.13.0"
 
 

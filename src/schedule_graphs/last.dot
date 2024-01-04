@@ -1,0 +1,35 @@
+digraph "" {
+	"compound"="true";
+	"splines"="spline";
+	"rankdir"="LR";
+	"bgcolor"="#0d1117";
+	"fontname"="Helvetica";
+	"nodesep"="0.15";
+	edge ["penwidth"="2"];
+	node ["shape"="box", "style"="filled"];
+	"node_System(0)" ["label"="tick_global_task_pools", "tooltip"="bevy_core::tick_global_task_pools"]
+	"node_System(1)" ["label"="update_frame_count", "tooltip"="bevy_core::update_frame_count"]
+	"node_System(2)" ["label"="check_hierarchy_component_has_valid_parent<GlobalTransform>", "tooltip"="bevy_hierarchy::valid_parent_check_plugin::check_hierarchy_component_has_valid_parent<bevy_transform::components::global_transform::GlobalTransform>"]
+	"node_System(3)" ["label"="changed_windows", "tooltip"="bevy_winit::system::changed_windows"]
+	"node_System(4)" ["label"="despawn_windows", "tooltip"="bevy_winit::system::despawn_windows"]
+	"node_System(5)" ["label"="check_hierarchy_component_has_valid_parent<InheritedVisibility>", "tooltip"="bevy_hierarchy::valid_parent_check_plugin::check_hierarchy_component_has_valid_parent<bevy_render::view::visibility::InheritedVisibility>"]
+	"node_System(6)" ["label"="update_gizmo_meshes", "tooltip"="bevy_gizmos::update_gizmo_meshes"]
+	"node_System(7)" ["label"="deactivate_touch_pointers", "tooltip"="bevy_picking_input::touch::deactivate_touch_pointers"]
+	"node_System(8)" ["label"="free_egui_textures_system", "tooltip"="bevy_egui::free_egui_textures_system"]
+	"node_System(9)" ["label"="save_vaults", "tooltip"="karta::vault::vault_asset::save_vaults"]
+	"node_System(10)" ["label"="save_context", "tooltip"="karta::vault::context_asset::save_context"]
+	"node_System(11)" ["label"="update_context", "tooltip"="karta::graph::context::update_context"]
+	"node_System(12)" ["label"="expand_context", "tooltip"="karta::graph::context::expand_context"]
+	"node_System(13)" ["label"="collapse_context", "tooltip"="karta::graph::context::collapse_context"]
+	"node_System(14)" ["label"="despawn_edges", "tooltip"="karta::graph::edges::despawn_edges"]
+	"node_System(15)" ["label"="tween_to_target_position", "tooltip"="karta::ui::nodes::tween_to_target_position"]
+	"node_System(3)" -> "node_System(4)" ["lhead"="", "ltail"="", "tooltip"="changed_windows → despawn_windows", "color"="#eede00"]
+	"node_System(10)" -> "node_System(11)" ["lhead"="", "ltail"="", "tooltip"="save_context → SystemTypeSet(update_context())", "color"="#881877"]
+	"node_System(11)" -> "node_System(12)" ["lhead"="", "ltail"="", "tooltip"="SystemTypeSet(update_context()) → expand_context", "color"="#00b0cc"]
+	"node_System(11)" -> "node_System(13)" ["lhead"="", "ltail"="", "tooltip"="SystemTypeSet(update_context()) → collapse_context", "color"="#aa3a55"]
+	"node_System(10)" -> "node_System(15)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">Transform</td></tr></table>>, "labeltooltip"="save_context — tween_to_target_position"]
+	"node_System(11)" -> "node_System(15)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">Transform</td></tr></table>>, "labeltooltip"="update_context — tween_to_target_position"]
+	"node_System(13)" -> "node_System(12)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">PathsToEntitiesIndex</td></tr></table>>, "labeltooltip"="collapse_context — expand_context"]
+	"node_System(14)" -> "node_System(11)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">PathsToEntitiesIndex</td></tr></table>>, "labeltooltip"="despawn_edges — update_context"]
+	"node_System(14)" -> "node_System(12)" ["dir"="none", "constraint"="false", "color"="#c93526", "fontcolor"="#c93526", "label"=<<table border="0" cellborder="0"><tr><td bgcolor="#c6e6ff">PathsToEntitiesIndex</td></tr></table>>, "labeltooltip"="despawn_edges — expand_context"]
+}

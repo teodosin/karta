@@ -1,7 +1,7 @@
 use std::{time::Duration, path::PathBuf};
 
-use bevy::{prelude::*, text::Text2dBounds, sprite::Anchor, render::view::RenderLayers};
-use bevy_mod_picking::{prelude::*, backends::raycast::RaycastPickable};
+use bevy::{prelude::*, text::Text2dBounds, sprite::Anchor, render::view::RenderLayers, window::PrimaryWindow};
+use bevy_mod_picking::{prelude::*, backends::raycast::RaycastPickable, backend::{PointerHits, HitData}};
 use bevy_prototype_lyon::{shapes, prelude::{GeometryBuilder, ShapeBundle, Stroke, StrokeOptions}};
 use bevy_tweening::{Tween, EaseFunction, lens::TransformPositionLens, Animator, TweenCompleted, TweeningPlugin};
 
@@ -279,6 +279,8 @@ pub fn add_node_base_outline(
     commands.entity(*parent).push_children(&[node_outline]);
 }
 
+// Positional tweening systems
+// --------------------------------------------------------------------------------------------------------------------------------------------
 pub fn tween_to_target_position(
     mut commands: Commands,
     mut nodes: Query<(Entity, &mut Transform, &TargetPosition), (With<GraphViewNode>, Added<TargetPosition>)>,
@@ -317,9 +319,100 @@ pub fn tween_to_target_position_complete(
     }
 }
 
+// Custom picking backend because for some reason sprite picking is absolutely broken.
+// --------------------------------------------------------------------------------------------------------------------------------------------
+// fn node_picking(
+//     pointers: Query<(&PointerId, &PointerLocation)>,
+//     cameras: Query<(Entity, &Camera, &GlobalTransform, &OrthographicProjection)>,
+//     primary_window: Query<Entity, With<PrimaryWindow>>,
+
+//     edges: Query<(
+//         Entity,
+//         &Transform,
+//         &GraphViewNode,
+//         Option<&Pickable>,
+//         &ViewVisibility,
+//     )>,
+
+//     mut output: EventWriter<PointerHits>,
+//     mut gizmos: Gizmos,
+// ){
+//     let threshold = 25.0;
+    
+//     for (pointer, location) in pointers.iter().filter_map(|(pointer, pointer_location)| {
+//         pointer_location.location().map(|loc| (pointer, loc))
+//     }) {
+//         let Some((cam_entity, camera, cam_transform, cam_ortho)) = cameras
+//             .iter()
+//             .filter(|(_, camera, _, _)| camera.is_active)
+//             .find(|(_, camera, _,_)| {
+//                 camera
+//                     .target
+//                     .normalize(Some(primary_window.single()))
+//                     .unwrap()
+//                     == location.target
+//             })
+//         else {
+//             continue;
+//         };
+
+//         let Some(cursor_pos_world) = camera.viewport_to_world_2d(cam_transform, location.position)
+//         else {
+//             continue;
+//         };
+
+//         let near_clipping_plane = cam_ortho.near;
+
+//         let mut picks_presort: Vec<(Entity, f32, f32)> = edges
+//             .iter()
+//             .filter(|(.., visibility)| visibility.get())
+//             .filter_map(|(entity, edgetr, edge, _, ..)| {
+//                 // Calculate the distance from the pointer to the edge                
+//                 let distance = distance_to_edge(&cursor_pos_world, edge);
+//                 let within_bounds = distance < threshold;
+
+//                 // if within_bounds {
+//                 //     gizmos.circle_2d(
+//                 //         edge.start,
+//                 //         2.0,
+//                 //         Color::rgba(1.0, 1.0, 1.0, 1.0),
+//                 //     );
+//                 //     gizmos.circle_2d(
+//                 //         edge.end,
+//                 //         2.0,
+//                 //         Color::rgba(1.0, 1.0, 1.0, 1.0),
+//                 //     );
+//                 // }
+
+//                 // Edges don't block each other, so commented out. 
+//                 // blocked = within_bounds && pickable.map(|p| p.should_block_lower) != Some(false);
+                
+//                 within_bounds.then_some((
+//                     entity,
+//                     distance,
+//                     edgetr.translation.z,
+//                 ))
+
+//             })
+//             .collect();
+
+
+//         // Sort the picks by distance
+//         picks_presort.sort_by(|(_, adist, _), (_, bdist, _)| adist.partial_cmp(&bdist).unwrap());
+
+//         let picks_sort: Vec<(Entity, HitData)> = picks_presort.iter().map(|(entity, _dist, z)| {
+//             // println!("Edge z: {:?}", z);
+//             (*entity, HitData::new(cam_entity, -near_clipping_plane - *z, None, None))
+//         })
+//         .collect();
+
+//         let order = camera.order as f32;
+//         output.send(PointerHits::new(*pointer, picks_sort, order))
+//     }
+// }
 
 // Debug visualisers
-// ----------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------------------------------
 pub fn visualise_pinned_position (
     mut gizmos: Gizmos,
     pinned: Query<(&Transform, &Pins)>,
@@ -352,7 +445,7 @@ pub fn visualise_root_node (
     }
 }
 
-pub fn visualise_selected (
+fn visualise_selected (
     mut gizmos: Gizmos,
     // selected: Query<&Transform, With<Selected>>,
     selected: Query<(&Transform, &PickSelection)>,
@@ -368,7 +461,7 @@ pub fn visualise_selected (
     }
 }
 
-pub fn visualise_visitors ( 
+fn visualise_visitors ( 
     mut gizmos: Gizmos,
     visitors: Query<&Transform, With<Visitor>>,
 ){
