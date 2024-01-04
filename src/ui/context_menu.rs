@@ -11,7 +11,7 @@ use bevy::{
 };
 use bevy_mod_picking::{prelude::PointerButton, selection::NoDeselect};
 
-use crate::{events::{nodes::NodeClickEvent, edges::EdgeClickEvent}, actions::{node_actions::{PinToPositionAction, UnpinToPositionAction}, ActionComponent, ActionFactory, ActionManager, context_actions::MoveToContextAction, edge_actions::DeleteEdgeAction}, input::pointer::InputData};
+use crate::{events::{nodes::NodeClickEvent, edges::EdgeClickEvent}, actions::{node_actions::{PinToPositionAction, UnpinToPositionAction}, ActionComponent, ActionFactory, ActionManager, context_actions::{MoveToContextAction, ExpandContextAction, CollapseContextAction}, edge_actions::DeleteEdgeAction}, input::pointer::InputData};
 
 use super::popup::*;
 
@@ -115,14 +115,28 @@ pub fn spawn_node_context_menu(
         &mut commands, "Unpin".to_string(),
         Box::new(|| Box::new(UnpinToPositionAction::new()))
     );
+
+    let npath = nodepath.clone();
     let move_to_context_button = create_context_menu_button(
         &mut commands, "Go to Context".to_string(),
-        Box::new(move || Box::new(MoveToContextAction::new(nodepath.clone())))
+        Box::new(move || Box::new(MoveToContextAction::new(npath.clone())))
+    );
+    let npath = nodepath.clone();
+    let expand_context_button = create_context_menu_button(
+        &mut commands, "Expand Context".to_string(),
+        Box::new(move || Box::new(ExpandContextAction::new(npath.clone())))
+    );
+    let npath = nodepath.clone();
+    let collapse_context_button = create_context_menu_button(
+        &mut commands, "Collapse Context".to_string(),
+        Box::new(move || Box::new(CollapseContextAction::new(npath.clone())))
     );
 
     commands.entity(menu_root).push_children(&[pin_button]);
     commands.entity(menu_root).push_children(&[unpin_button]);
     commands.entity(menu_root).push_children(&[move_to_context_button]);
+    commands.entity(menu_root).push_children(&[expand_context_button]);
+    commands.entity(menu_root).push_children(&[collapse_context_button]);
 
 }
 

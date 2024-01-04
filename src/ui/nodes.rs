@@ -6,7 +6,7 @@ use bevy_prototype_lyon::{shapes, prelude::{GeometryBuilder, ShapeBundle, Stroke
 use bevy_tweening::{Tween, EaseFunction, lens::TransformPositionLens, Animator, TweenCompleted, TweeningPlugin};
 
 use crate::{
-    graph::{nodes::{GraphNodeEdges, ContextRoot, Pins, GraphDataNode}, node_types::NodeTypes}, 
+    graph::{nodes::{GraphNodeEdges, ContextRoot, Pins, GraphDataNode, Visitor}, node_types::NodeTypes}, 
     events::nodes::{MoveNodesEvent, NodeClickEvent, NodePressedEvent, NodeHoverEvent, NodeSpawnedEvent, NodeHoverStopEvent}
 };
 
@@ -34,6 +34,7 @@ impl Plugin for NodesUiPlugin {
             .add_systems(PostUpdate, visualise_pinned_position)
             .add_systems(PostUpdate, visualise_root_node)
             .add_systems(PostUpdate, visualise_selected)
+            .add_systems(PostUpdate, visualise_visitors)
 
             // .add_systems(PreUpdate, outlines_pulse)
             // .add_systems(PreUpdate, visualise_pinned_position)
@@ -363,6 +364,19 @@ pub fn visualise_selected (
             pos.translation.truncate() + Vec2::new(-20.0, 0.0),
             pos.translation.truncate() + Vec2::new(20.0, 0.0),
             Color::rgb(0.9, 0.1, 0.1),
+        );
+    }
+}
+
+pub fn visualise_visitors ( 
+    mut gizmos: Gizmos,
+    visitors: Query<&Transform, With<Visitor>>,
+){
+    for node in visitors.iter() {
+        gizmos.circle_2d(
+            node.translation.truncate() + Vec2::new(-25.0, -25.0),
+            5.0,
+            Color::rgb(0.1, 0.9, 0.1),
         );
     }
 }
