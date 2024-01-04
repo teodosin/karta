@@ -21,6 +21,7 @@ impl Plugin for EventPlugin {
 
             // Context events
             .add_event::<RequestContextExpand>()
+            .add_event::<RequestContextCollapse>()
 
             // Node Events
             .add_event::<NodeSpawnedEvent>()

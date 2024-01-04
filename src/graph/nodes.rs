@@ -315,6 +315,7 @@ pub fn spawn_node (
     pe_index: &mut ResMut<PathsToEntitiesIndex>,
 
 ) -> bevy::prelude::Entity {
+    
     if pe_index.0.contains_key(&path) {
         println!("Node already exists");
         return pe_index.0.get(&path).unwrap().clone();
