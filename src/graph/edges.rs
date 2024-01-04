@@ -23,8 +23,7 @@ impl Plugin for EdgesPlugin {
                 // TODO: Does this have to run every frame?
                 //.run_if(resource_changed::<CurrentContext>())
             )
-            .add_systems(PostUpdate, add_edge_to_node_indexes
-                .run_if(on_event::<EdgeSpawnedEvent>()))
+            .add_systems(PostUpdate, add_edge_to_node_indexes)
         ;
     }
 }
@@ -147,15 +146,11 @@ pub fn create_edge(
 /// The event could possibly be modified to include the source and target paths, 
 /// to simplify the function. 
 pub fn add_edge_to_node_indexes(
-    mut event: EventReader<EdgeSpawnedEvent>,
-    mut edges: Query<&GraphDataEdge>,
+    new_edges: Query<(Entity, &GraphDataEdge), Added<GraphDataEdge>>,
     pe_index: Res<PathsToEntitiesIndex>,
     mut node_edges: Query<&mut GraphNodeEdges>,
 ) {
-    for ev in event.read(){
-        let edge_entity = ev.entity;
-        let edge_data = edges.get_mut(edge_entity).unwrap();
-
+    for (edge_entity, edge_data) in new_edges.iter() {
 
         let source_entity = match pe_index.0.get(&edge_data.source){
             Some(entity) => entity,
