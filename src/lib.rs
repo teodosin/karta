@@ -82,20 +82,20 @@ pub fn karta_app() {
         // .run()
     ;
 
-    let dot = bevy_mod_debugdump::schedule_graph_dot(&mut app, Startup, &bevy_mod_debugdump::schedule_graph::Settings::default());
-    std::fs::write("src/schedule_graphs/startup.dot", dot).expect("Unable to write file");
+    // let dot = bevy_mod_debugdump::schedule_graph_dot(&mut app, Startup, &bevy_mod_debugdump::schedule_graph::Settings::default());
+    // std::fs::write("src/schedule_graphs/startup.dot", dot).expect("Unable to write file");
 
-    let dot = bevy_mod_debugdump::schedule_graph_dot(&mut app, PreUpdate, &bevy_mod_debugdump::schedule_graph::Settings::default());
-    std::fs::write("src/schedule_graphs/preupdate.dot", dot).expect("Unable to write file");
+    // let dot = bevy_mod_debugdump::schedule_graph_dot(&mut app, PreUpdate, &bevy_mod_debugdump::schedule_graph::Settings::default());
+    // std::fs::write("src/schedule_graphs/preupdate.dot", dot).expect("Unable to write file");
 
-    let dot = bevy_mod_debugdump::schedule_graph_dot(&mut app, Update, &bevy_mod_debugdump::schedule_graph::Settings::default());
-    std::fs::write("src/schedule_graphs/update.dot", dot).expect("Unable to write file");
+    // let dot = bevy_mod_debugdump::schedule_graph_dot(&mut app, Update, &bevy_mod_debugdump::schedule_graph::Settings::default());
+    // std::fs::write("src/schedule_graphs/update.dot", dot).expect("Unable to write file");
 
-    let dot = bevy_mod_debugdump::schedule_graph_dot(&mut app, PostUpdate, &bevy_mod_debugdump::schedule_graph::Settings::default());
-    std::fs::write("src/schedule_graphs/postupdate.dot", dot).expect("Unable to write file");
+    // let dot = bevy_mod_debugdump::schedule_graph_dot(&mut app, PostUpdate, &bevy_mod_debugdump::schedule_graph::Settings::default());
+    // std::fs::write("src/schedule_graphs/postupdate.dot", dot).expect("Unable to write file");
 
-    let dot = bevy_mod_debugdump::schedule_graph_dot(&mut app, Last, &bevy_mod_debugdump::schedule_graph::Settings::default());
-    std::fs::write("src/schedule_graphs/last.dot", dot).expect("Unable to write file");
+    // let dot = bevy_mod_debugdump::schedule_graph_dot(&mut app, Last, &bevy_mod_debugdump::schedule_graph::Settings::default());
+    // std::fs::write("src/schedule_graphs/last.dot", dot).expect("Unable to write file");
 
     app.run();
 }
