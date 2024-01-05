@@ -19,12 +19,10 @@ use serde::{Serialize, Deserialize};
 
 use crate::{graph::context::{CurrentContext, update_context}, vault::vault_asset::{VAULTS_FILE_NAME, VaultAsset}, ui::vault_menu::{SpawnVaultMenu, VaultMenu}};
 
-use self::{context_asset::save_context, asset_manager::{ImageLoadTracker, on_image_load}, vault_asset::save_vaults};
+use self::{context_asset::save_context, vault_asset::save_vaults};
 
 pub(crate) mod context_asset;
 mod vault_asset;
-mod asset_manager;
-
 pub struct VaultPlugin;
 
 impl Plugin for VaultPlugin {
@@ -33,7 +31,6 @@ impl Plugin for VaultPlugin {
             .insert_resource(VaultOfVaults::new())
             .insert_resource(CurrentVault::new())
 
-            .insert_resource(ImageLoadTracker::new())
             
             .add_systems(PreStartup, setup_vaults)
             // .add_systems(Update, use_assets)
@@ -51,7 +48,6 @@ impl Plugin for VaultPlugin {
                 .before(update_context)
             )
 
-            .add_systems(PostUpdate, on_image_load)
         ;
 
     }

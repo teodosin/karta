@@ -11,7 +11,7 @@ use bevy::{
 };
 use bevy_prototype_lyon::{shapes, entity::Path, geometry::GeometryBuilder, draw::Stroke};
 
-use crate::ui::nodes::{NodeLabel, NodeOutline};
+use crate::ui::nodes::{NodeLabel, NodeOutline, ViewNodeShape};
 
 #[derive(Resource)]
 pub struct ImageLoadTracker {
@@ -34,17 +34,13 @@ impl ImageLoadTracker {
     }
 }
 
-pub fn on_image_load(
-    mut commands: bevy::ecs::system::Commands,
-    mut meshes: ResMut<Assets<bevy::render::mesh::Mesh>>,
-    mut materials: ResMut<Assets<bevy::sprite::ColorMaterial>>,
-    
+pub fn on_image_load(    
     mut image_tracker: ResMut<ImageLoadTracker>,
     mut image_events: EventReader<AssetEvent<Image>>,
     image_assets: ResMut<Assets<Image>>,
 
     mut nodes: Query<(
-        Entity, Option<&Children>, &Handle<Image>, &mut Sprite, &mut Transform), 
+        Entity, Option<&Children>, &Handle<Image>, &mut ViewNodeShape, &mut Sprite, &mut Transform), 
         (Without<NodeOutline>, Without<NodeLabel>, Without<Mesh2dHandle>)>,
     mut labels: Query<(&NodeLabel, &mut Transform), Without<NodeOutline>>,
     mut outlines: Query<(&NodeOutline, &mut Path, &Stroke), Without<NodeLabel>>,
@@ -65,7 +61,7 @@ pub fn on_image_load(
             AssetEvent::LoadedWithDependencies { id } => {
                 image_tracker.remove_image(bevy::prelude::Handle::Weak(id.clone()));
                 
-                for (node, children, img, mut sprite, form) in nodes.iter_mut() {
+                for (node, children, img, mut vshp, mut sprite, form) in nodes.iter_mut() {
                     // if img.is_strong() {
                     if img == &bevy::prelude::Handle::Weak(id.clone()) {
                         // Should be true when loaded with deps
@@ -85,23 +81,7 @@ pub fn on_image_load(
                             let scale = Vec2::new(base_scale / larger * res.x, base_scale / larger * res.y);
 
                             sprite.custom_size = Some(scale);
-
-                            commands.entity(node).insert(bevy::sprite::MaterialMesh2dBundle {
-                                mesh: bevy::sprite::Mesh2dHandle(meshes.add(shape::Quad {
-                                    size: scale,
-                                    flip: false,
-                                }.into())),
-                                material: materials.add(ColorMaterial::from(Color::rgba(0.0, 0.5, 0.0, 0.5))),
-                                transform: *form,
-                                ..default()
-                            });
-
-                            // commands.entity(node).insert((
-                            //     Mesh2dHandle(meshes.add(shape::Quad {
-                            //         size: scale,
-                            //         flip: false,
-                            //     }.into())),
-                            // ));
+                            *vshp = ViewNodeShape::Rectangle(scale);
 
                             // Resize outline and move label
 
