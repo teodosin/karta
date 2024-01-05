@@ -14,7 +14,7 @@ use self::{
     context_menu::{context_menu_button_system, spawn_node_context_menu, spawn_edge_context_menu}, 
     mode_menu::{create_mode_menu, mode_button_system, update_active_mode_highlight}, 
     nodes::NodesUiPlugin, edges::EdgeUiPlugin, 
-    create_node_menu::CreateNodeMenuPlugin, grid::InfiniteGrid2DPlugin, vault_menu::VaultMenuPlugin, graph_cam::GraphCamera,
+    create_node_menu::CreateNodeMenuPlugin, grid::InfiniteGrid2DPlugin, vault_menu::VaultMenuPlugin, graph_cam::GraphCamera, asset_manager::{ImageLoadTracker, on_image_load},
 };
 
 // Building blocks of specific components
@@ -29,6 +29,7 @@ pub(crate) mod nodes;
 pub(crate) mod edges;
 pub(crate) mod graph_cam;
 pub(crate) mod simulation;
+pub(crate) mod asset_manager;
 
 pub struct KartaUiPlugin;
 
@@ -40,6 +41,8 @@ impl Plugin for KartaUiPlugin {
 
             .add_plugins(graph_cam::GraphCamPlugin)
             .add_plugins(simulation::GraphSimPlugin)
+
+            .insert_resource(ImageLoadTracker::new())
 
             // Resources
             .add_systems(PreStartup, require_markers_for_raycasting)
@@ -81,6 +84,8 @@ impl Plugin for KartaUiPlugin {
             .add_systems(Update, context_menu::despawn_context_menus_on_any_click)
             
             .add_systems(PostUpdate, point_to_root_if_offscreen)
+            
+            .add_systems(PostUpdate, on_image_load)
         ;
     }
 }
