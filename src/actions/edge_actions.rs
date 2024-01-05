@@ -2,7 +2,7 @@
 
 use std::path::PathBuf;
 
-use crate::{input::pointer::InputData, graph::edges::{GraphDataEdge, EdgeType}};
+use crate::{graph::edges::{GraphDataEdge, EdgeType}, bevy_overlay_graph::input::pointer::InputData};
 
 use super::Action;
 

@@ -5,9 +5,7 @@
 use bevy::prelude::*;
 
 
-use crate::{input::pointer::{left_click_just_released, InputData}, graph::{context::PathsToEntitiesIndex, edges::{create_edge, EdgeTypes, EdgeType, GraphDataEdge}, nodes::GraphDataNode}, events::edges::EdgeSpawnedEvent};
-
-use super::KartaModeState;
+use crate::{ graph::{context::PathsToEntitiesIndex, edges::{create_edge, EdgeTypes, EdgeType, GraphDataEdge}, nodes::GraphDataNode}, bevy_overlay_graph::input::pointer::{InputData, left_click_just_released}};
 
 pub struct EdgesPlugin;
 
@@ -29,7 +27,6 @@ impl Plugin for EdgesPlugin {
 }
 
 fn create_edge_from_drag(
-    mut event: EventWriter<EdgeSpawnedEvent>,
     input_data: Res<InputData>,
     mut commands: Commands,
     edges: Query<(&GraphDataEdge, &EdgeType)>,
@@ -123,8 +120,7 @@ fn draw_edge_preview(
 // #[test]
 fn test_create_edge_from_drag() {
     use bevy::utils::HashMap;
-    use crate::graph::edges::GraphDataEdge;
-    use std::{path::PathBuf, ffi::OsString};
+    use std::path::PathBuf;
     use crate::graph::node_types::NodeTypes;
     // Setup a world and schedule for Bevy ECS (assuming Bevy is being used)
     let mut app = App::new();

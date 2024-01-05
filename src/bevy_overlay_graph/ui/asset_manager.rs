@@ -6,12 +6,12 @@
 use bevy::{
     ecs::{system::{Resource, ResMut, Query}, event::EventReader, entity::Entity, query::Without}, 
     asset::{Handle, AssetEvent, Assets}, 
-    render::{texture::Image, mesh::shape, color::Color}, sprite::{Sprite, ColorMaterial, Mesh2dHandle}, transform::components::Transform, math::{Vec2, Vec3}, 
-    hierarchy::Children, prelude::default
+    render::texture::Image, sprite::{Sprite, Mesh2dHandle}, transform::components::Transform, math::{Vec2, Vec3}, 
+    hierarchy::Children, 
 };
 use bevy_prototype_lyon::{shapes, entity::Path, geometry::GeometryBuilder, draw::Stroke};
 
-use crate::ui::nodes::{NodeLabel, NodeOutline, ViewNodeShape};
+use super::nodes::{ViewNodeShape, NodeOutline, NodeLabel};
 
 #[derive(Resource)]
 pub struct ImageLoadTracker {

@@ -4,9 +4,8 @@
 use bevy::prelude::*;
 use native_dialog::FileDialog;
 
-use crate::vault::{CurrentVault, VaultOfVaults, KartaVault};
+use crate::{vault::{CurrentVault, VaultOfVaults, KartaVault}, bevy_overlay_graph::ui::popup::{PopupGroup, Popup}};
 
-use super::{popup::{PopupGroup, Popup,}, context_menu::{HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON}};
 pub struct VaultMenuPlugin;
 
 impl Plugin for VaultMenuPlugin {
@@ -119,7 +118,7 @@ fn create_vault_menu_button<'a>(
                 ..default()
             },
             border_color: BorderColor(Color::BLACK),
-            background_color: super::context_menu::NORMAL_BUTTON.into(),
+            background_color: Color::rgb(0.1, 0.1, 0.1).into(),
             ..default()
         },
         VaultMenuButton,
@@ -156,6 +155,9 @@ pub fn vault_menu_button_system(
 ) {
     for (interaction, mut color, _mode) in &mut interaction_query {
         // let mode = mode_query.get(children[0]).unwrap();
+        const NORMAL_BUTTON: Color = Color::rgb(0.1, 0.1, 0.1);
+        const HOVERED_BUTTON: Color = Color::rgb(0.2, 0.2, 0.2);
+        const PRESSED_BUTTON: Color = Color::rgb(0.3, 0.3, 0.3);
 
         match *interaction {
             Interaction::Pressed => {

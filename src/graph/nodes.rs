@@ -1,13 +1,14 @@
 //Code pertaining to the graph nodes
 
-use std::{path::PathBuf, ffi::OsString};
+use std::path::PathBuf;
 
-use bevy::{prelude::*, input::{keyboard::KeyboardInput, mouse::MouseButtonInput}, utils::HashMap};
+use bevy::{prelude::*, utils::HashMap};
 use bevy_mod_picking::picking_core::PickSet;
 
-use super::{context::{PathsToEntitiesIndex, ToBeDespawned, Selected, CurrentContext}, node_types::{NodeTypes, NodeData, type_to_data}};
+use crate::bevy_overlay_graph::{input::pointer::{update_cursor_info, InputData, GraphPickingTarget}, events::nodes::*, ui::nodes::{NodeOutline, TargetPosition}};
 
-use crate::{events::nodes::*, ui::nodes::{NodeOutline, GraphViewNode}, input::pointer::{InputData, update_cursor_info, GraphPickingTarget}};
+use super::{context::{PathsToEntitiesIndex, ToBeDespawned}, node_types::{NodeTypes, NodeData}};
+
 
 pub struct NodesPlugin;
 
@@ -343,7 +344,7 @@ pub fn spawn_node (
     }
 
     if rel_target_position.is_some() {
-        commands.entity(node_entity).insert(crate::ui::nodes::TargetPosition {
+        commands.entity(node_entity).insert(TargetPosition {
             position: root_position + rel_target_position.unwrap(),
         });
     }

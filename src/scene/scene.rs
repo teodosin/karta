@@ -8,7 +8,7 @@ use bevy::{
 };
 use bevy_mod_picking::PickableBundle;
 
-use crate::{graph::context::CurrentContext, ui::update_active_mode_label};
+use crate::{graph::context::CurrentContext, bevy_overlay_graph::ui::update_active_mode_label};
 
 pub struct ScenePlugin;
 
