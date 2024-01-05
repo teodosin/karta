@@ -347,7 +347,6 @@ fn node_picking(
 
     mut output: EventWriter<PointerHits>,
 ){    
-    println!("Node picking, size of query: {}", nodes.iter().count());
     let mut sorted_nodes: Vec<_> = nodes.iter().collect();
     sorted_nodes.sort_by(|a, b| {
         (b.1.translation().z)
@@ -398,19 +397,16 @@ fn node_picking(
                 // let center = transform.translation().truncate();
                 let center = Vec2::ZERO;
                 let rect = Rect::from_center_half_size(center, extents / 2.0);
-                println!("rect: {:?}", rect);
 
                 // Transform cursor pos to sprite coordinate system
                 let cursor_pos_sprite = transform
                     .affine()
                     .inverse()
                     .transform_point3((cursor_pos_world, 0.0).into());
-                println!("cursor pos sprite: {:?}", cursor_pos_sprite.truncate());
 
                 let is_cursor_in_sprite = rect.contains(cursor_pos_sprite.truncate());
                 blocked =
                     is_cursor_in_sprite && pickable.map(|p| p.should_block_lower) != Some(false);
-                println!("is cursor in sprite: {:?} blocked: {:?}", is_cursor_in_sprite, blocked);
 
                 is_cursor_in_sprite.then_some((
                     entity,
