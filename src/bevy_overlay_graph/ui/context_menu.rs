@@ -11,7 +11,7 @@ use bevy::{
 };
 use bevy_mod_picking::{prelude::PointerButton, selection::NoDeselect};
 
-use crate::{events::{nodes::NodeClickEvent, edges::EdgeClickEvent}, actions::{node_actions::{PinToPositionAction, UnpinToPositionAction}, ActionComponent, ActionFactory, ActionManager, context_actions::{MoveToContextAction, ExpandContextAction, CollapseContextAction}, edge_actions::DeleteEdgeAction}, input::pointer::InputData};
+use crate::{ actions::{node_actions::{PinToPositionAction, UnpinToPositionAction}, ActionComponent, ActionFactory, ActionManager, context_actions::{MoveToContextAction, ExpandContextAction, CollapseContextAction}, edge_actions::DeleteEdgeAction}, bevy_overlay_graph::events::{nodes::NodeClickEvent, edges::EdgeClickEvent}};
 
 use super::popup::*;
 
@@ -47,7 +47,7 @@ pub fn despawn_context_menus_on_any_click(
 pub fn spawn_node_context_menu(
     mut commands: Commands,
     mut mouse_event: EventReader<NodeClickEvent>,
-    input_data: Res<InputData>,
+    input_data: Res<crate::bevy_overlay_graph::input::pointer::InputData>,
     menus: Query<(Entity, &PopupGroup), With<Popup>>,
     window: Query<&Window>,
 ){

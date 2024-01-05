@@ -11,7 +11,7 @@
 
 use bevy::{prelude::*, utils::HashMap};
 
-use crate::{graph::{edges::GraphDataEdge, attribute::Attributes, context::PathsToEntitiesIndex}, ui::nodes::{GraphViewNode, Velocity2D}};
+use crate::{graph::{edges::GraphDataEdge, attribute::Attributes, context::PathsToEntitiesIndex}, bevy_overlay_graph::ui::nodes::{GraphViewNode, Velocity2D}};
 
 pub struct ForceNodesPlugin;
 

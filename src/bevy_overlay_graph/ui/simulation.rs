@@ -3,7 +3,9 @@
 use bevy::{prelude::{Query, Transform, Without, Vec2, Plugin, App, Entity, Res, Gizmos, PostUpdate, Resource}, time::Time, input::{Input, keyboard::KeyCode}};
 use bevy_mod_picking::selection::PickSelection;
 
-use crate::{ui::nodes::{GraphViewNode, Velocity2D, TargetPosition}, graph::nodes::Pins};
+use crate::graph::nodes::Pins;
+
+use super::nodes::{GraphViewNode, TargetPosition, Velocity2D};
 
 pub struct GraphSimPlugin;
 
