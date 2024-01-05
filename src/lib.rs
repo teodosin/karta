@@ -7,10 +7,7 @@ use bevy_mod_picking::prelude::*;
 mod tests;
 
 mod vault;
-mod settings;
 
-mod modes;
-mod input;
 mod actions;
 
 mod events;
@@ -18,7 +15,7 @@ mod events;
 mod graph;
 mod scene;
 
-mod ui;
+mod bevy_overlay_graph;
 
 
 
@@ -46,24 +43,23 @@ pub fn karta_app() {
             // .disable::<DebugPickingPlugin>()
         )        
 
+        .add_plugins(bevy_overlay_graph::OverlayGraphPlugin)
+
         // EGUI INSPECTOR BLOCK
         .add_plugins(WorldInspectorPlugin::new())
 
         // ENVIRONMENT BLOCK
         // The data that needs to remain in memory for the entire duration of the app
         .add_plugins(vault::VaultPlugin)// PreStartup
-        .add_plugins(settings::SettingsPlugin)
         
         // INPUT BLOCK
         // Plugins that handle input and interaction. 
         // Stage: PreUpdate
-        .add_plugins(modes::ModePlugin)
-        .add_plugins(input::InputPlugin)
 
         // Actions that handle communication between input and the rest of the app.
         // Mostly PreUpdate. 
         .add_plugins(actions::ActionPlugin)
-        .add_plugins(events::EventPlugin)
+        .add_plugins(events::KartaEventPlugin)
 
         // GRAPH BLOCK
         // Handle update to the graph. Evaluate operator graph. 
@@ -77,7 +73,6 @@ pub fn karta_app() {
         // Handle update to the UI.
         // UI input is handled in PreUpdate
         // Drawing is done PostUpdate
-        .add_plugins(ui::KartaUiPlugin)
 
         // .run()
     ;

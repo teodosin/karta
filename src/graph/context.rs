@@ -7,7 +7,7 @@ use std::{fs, path::PathBuf,};
 
 use crate::{
     graph::{edges::{create_edge, EdgeTypes}, node_types::{get_type_from_file_path, NodeTypes, get_type_from_context_path}}, vault::{CurrentVault, context_asset::{open_context_file_from_node_path, ContextAsset, node_path_to_context_path, open_context_file}}, 
-    events::context::{RequestContextExpand, RequestContextCollapse}, ui::nodes::{TargetPosition, GraphStartingPositions},
+    events::context::{RequestContextExpand, RequestContextCollapse}, bevy_overlay_graph::ui::nodes::{GraphStartingPositions, TargetPosition},
 };
 
 use super::{nodes::*, edges::{GraphDataEdge, EdgeType}};

@@ -6,8 +6,7 @@ use bevy::{
 };
 use bevy_mod_picking::prelude::*;
 
-use crate::events::background::RectangleSelectionEndEvent;
-
+use crate::bevy_overlay_graph::events::background::RectangleSelectionEndEvent;
 // Modeled after lib.rs of bevy_infinite_grid
 
 pub struct InfiniteGrid2DPlugin;

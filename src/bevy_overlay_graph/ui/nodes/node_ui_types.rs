@@ -4,12 +4,11 @@ use bevy::{
     render::{mesh::{Mesh, shape}, color::Color, texture::Image}, 
     sprite::{ColorMaterial, MaterialMesh2dBundle, SpriteBundle, Sprite}, 
     transform::components::Transform, math::{Vec3, Vec2}, 
-    prelude::default, ui::FocusPolicy
+    prelude::default,
 };
-use bevy_mod_picking::{PickableBundle, picking_core::Pickable, backends::raycast::RaycastPickable};
 use rand::Rng;
 
-use crate::{events::nodes::NodeSpawnedEvent, ui::{graph_cam::ViewData, nodes::ViewNodeShape}, graph::nodes::GraphDataNode};
+use crate::{graph::nodes::GraphDataNode, bevy_overlay_graph::ui::{graph_cam::ViewData, nodes::ViewNodeShape}};
 
 use super::{add_node_label, add_node_base_outline, TargetPosition};
 

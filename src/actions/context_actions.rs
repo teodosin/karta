@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use crate::{graph::context::{CurrentContext, PathsToEntitiesIndex}, vault::CurrentVault};
+use crate::{graph::context::{CurrentContext, PathsToEntitiesIndex}, vault::CurrentVault, bevy_overlay_graph::ui::nodes::GraphStartingPositions};
 
 use super::Action;
 
@@ -128,7 +128,7 @@ impl Action for ExpandContextAction {
         // that we are expanding from
         let pos = world.get::<bevy::transform::components::Transform>(entity).unwrap();
         let pos = pos.translation.truncate();
-        let mut spawn = world.get_resource_mut::<crate::ui::nodes::GraphStartingPositions>().unwrap();
+        let mut spawn = world.get_resource_mut::<GraphStartingPositions>().unwrap();
         spawn.set_pos(pos);
 
         world.send_event(crate::events::context::RequestContextExpand {
