@@ -1,7 +1,7 @@
 use std::{time::Duration, path::PathBuf};
 
-use bevy::{prelude::*, text::Text2dBounds, sprite::Anchor, render::view::RenderLayers};
-use bevy_mod_picking::{prelude::*, backends::raycast::RaycastPickable};
+use bevy::{prelude::*, text::Text2dBounds, sprite::Anchor, render::view::RenderLayers, window::PrimaryWindow};
+use bevy_mod_picking::{prelude::*, backends::raycast::RaycastPickable, backend::{PointerHits, HitData}};
 use bevy_prototype_lyon::{shapes, prelude::{GeometryBuilder, ShapeBundle, Stroke, StrokeOptions}};
 use bevy_tweening::{Tween, EaseFunction, lens::TransformPositionLens, Animator, TweenCompleted, TweeningPlugin};
 
@@ -26,6 +26,8 @@ impl Plugin for NodesUiPlugin {
             .add_plugins(TweeningPlugin)
 
             .insert_resource(GraphStartingPositions::default())
+
+            .add_systems(PreUpdate, node_picking.in_set(picking_core::PickSet::Backend))
 
             .add_systems(PostUpdate, add_node_ui)
             .add_systems(Last, tween_to_target_position)
@@ -68,8 +70,15 @@ impl GraphStartingPositions {
 
 /// Basic marker component to identify all nodes that have a graphical representation
 /// in the graph. 
+/// Also stores the dimensions of the view node for the purpose of the custom picking backend.
 #[derive(Component)]
 pub struct GraphViewNode;
+
+#[derive(Component)]
+pub enum ViewNodeShape {
+    Circle(f32),
+    Rectangle(Vec2),
+}
 
 /// Marker component for the node outline. 
 #[derive(Component)]
@@ -279,6 +288,8 @@ pub fn add_node_base_outline(
     commands.entity(*parent).push_children(&[node_outline]);
 }
 
+// Positional tweening systems
+// --------------------------------------------------------------------------------------------------------------------------------------------
 pub fn tween_to_target_position(
     mut commands: Commands,
     mut nodes: Query<(Entity, &mut Transform, &TargetPosition), (With<GraphViewNode>, Added<TargetPosition>)>,
@@ -317,9 +328,100 @@ pub fn tween_to_target_position_complete(
     }
 }
 
+// Custom picking backend because for some reason sprite picking is absolutely broken.
+// --------------------------------------------------------------------------------------------------------------------------------------------
+/// Custom picking backend for nodes. Intended to become deprecated once Bevy UI
+/// is more developed and the node system gets ported over to it.
+fn node_picking(
+    pointers: Query<(&PointerId, &PointerLocation)>,
+    cameras: Query<(Entity, &Camera, &GlobalTransform, &OrthographicProjection)>,
+    primary_window: Query<Entity, With<PrimaryWindow>>,
+
+    nodes: Query<(
+        Entity,
+        &GlobalTransform,
+        &ViewNodeShape,
+        Option<&Pickable>,
+        &ViewVisibility,
+    )>,
+
+    mut output: EventWriter<PointerHits>,
+){    
+    let mut sorted_nodes: Vec<_> = nodes.iter().collect();
+    sorted_nodes.sort_by(|a, b| {
+        (b.1.translation().z)
+            .partial_cmp(&a.1.translation().z)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+
+    for (pointer, location) in pointers.iter().filter_map(|(pointer, pointer_location)| {
+        pointer_location.location().map(|loc| (pointer, loc))
+    }) {
+        let mut blocked = false;
+        let Some((cam_entity, camera, cam_transform, cam_ortho)) = cameras
+            .iter()
+            .filter(|(_, camera, _, _)| camera.is_active)
+            .find(|(_, camera, _,_)| {
+                camera
+                    .target
+                    .normalize(Some(primary_window.single()))
+                    .unwrap()
+                    == location.target
+            })
+        else {
+            continue;
+        };
+
+        let Some(cursor_pos_world) = camera.viewport_to_world_2d(cam_transform, location.position)
+        else {
+            continue;
+        };
+
+        let near_clipping_plane = cam_ortho.near;
+
+        let picks: Vec<(Entity, HitData)> = sorted_nodes
+            .iter()
+            .copied()
+            .filter(|(.., visibility)| visibility.get())
+            .filter_map(|(entity, transform, shape, pickable, ..)| {
+                if blocked {
+                    return None;
+                }
+
+                // Hit box in sprite coordinate system
+                let extents = match shape {
+                    ViewNodeShape::Circle(radius) => Vec2::new(*radius, *radius),
+                    ViewNodeShape::Rectangle(extents) => *extents,
+                };
+
+                // let center = transform.translation().truncate();
+                let center = Vec2::ZERO;
+                let rect = Rect::from_center_half_size(center, extents / 2.0);
+
+                // Transform cursor pos to sprite coordinate system
+                let cursor_pos_sprite = transform
+                    .affine()
+                    .inverse()
+                    .transform_point3((cursor_pos_world, 0.0).into());
+
+                let is_cursor_in_sprite = rect.contains(cursor_pos_sprite.truncate());
+                blocked =
+                    is_cursor_in_sprite && pickable.map(|p| p.should_block_lower) != Some(false);
+
+                is_cursor_in_sprite.then_some((
+                    entity,
+                    HitData::new(cam_entity, -near_clipping_plane -transform.translation().z, None, None),
+                ))
+            })
+            .collect();
+
+        let order = camera.order as f32;
+        output.send(PointerHits::new(*pointer, picks, order))
+    }
+}
 
 // Debug visualisers
-// ----------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------------------------------
 pub fn visualise_pinned_position (
     mut gizmos: Gizmos,
     pinned: Query<(&Transform, &Pins)>,
@@ -352,7 +454,7 @@ pub fn visualise_root_node (
     }
 }
 
-pub fn visualise_selected (
+fn visualise_selected (
     mut gizmos: Gizmos,
     // selected: Query<&Transform, With<Selected>>,
     selected: Query<(&Transform, &PickSelection)>,
@@ -368,7 +470,7 @@ pub fn visualise_selected (
     }
 }
 
-pub fn visualise_visitors ( 
+fn visualise_visitors ( 
     mut gizmos: Gizmos,
     visitors: Query<&Transform, With<Visitor>>,
 ){

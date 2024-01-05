@@ -9,7 +9,7 @@ use bevy::{
 use bevy_mod_picking::{PickableBundle, picking_core::Pickable, backends::raycast::RaycastPickable};
 use rand::Rng;
 
-use crate::{events::nodes::NodeSpawnedEvent, ui::graph_cam::ViewData, graph::nodes::GraphDataNode};
+use crate::{events::nodes::NodeSpawnedEvent, ui::{graph_cam::ViewData, nodes::ViewNodeShape}, graph::nodes::GraphDataNode};
 
 use super::{add_node_label, add_node_base_outline, TargetPosition};
 
@@ -142,9 +142,13 @@ pub fn add_image_node_ui(
     };
 
     let node_z = view_data.get_z_for_node();
+    let size = Vec2::new(60.0, 40.0);
 
     commands.entity(entity).insert((
 
+        // The actual dimensions of the image are not known until it is loaded.
+        // The dimensions are set in on_image_load() in asset_manager.rs
+        ViewNodeShape::Rectangle(size),
         SpriteBundle {
             texture: image,
             sprite: Sprite {
@@ -163,7 +167,6 @@ pub fn add_image_node_ui(
         },
     ));
 
-    let size = Vec2::new(60.0, 40.0);
     let pos = Vec2::new(-size.x / 2.0, -size.y / 2.0);
 
     add_node_label(&mut commands, &entity, &data.path, pos, &node_z);
@@ -182,4 +185,10 @@ pub fn add_svg_node_ui(
 
 ){
 
+}
+
+pub fn debug_sprite_picking(
+    
+){
+    
 }
