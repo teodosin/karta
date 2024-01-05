@@ -2,7 +2,7 @@
 
 use bevy::{prelude::*, input::mouse::{MouseWheel, MouseScrollUnit, MouseMotion}, render::view::RenderLayers};
 
-use crate::input::pointer::InputData;
+use crate::bevy_overlay_graph::input::pointer::InputData;
 
 pub struct GraphCamPlugin;
 

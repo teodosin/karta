@@ -2,9 +2,7 @@
 use bevy::prelude::*;
 use enum_iterator::all;
 
-use crate::{graph::node_types::NodeTypes, actions::{ActionComponent, ActionFactory, node_actions::CreateNodeAction, Action}, input::pointer::InputData};
-
-use super::{popup::{PopupGroup, Popup, spawn_popup_root}, context_menu::ContextMenuButton};
+use crate::{graph::node_types::NodeTypes, actions::{ActionComponent, ActionFactory, node_actions::CreateNodeAction, Action}, bevy_overlay_graph::{input::pointer::InputData, ui::{popup::*, context_menu::{NORMAL_BUTTON, ContextMenuButton}}}};
 pub struct CreateNodeMenuPlugin;
 
 impl Plugin for CreateNodeMenuPlugin {
@@ -93,7 +91,7 @@ fn create_context_menu_button<'a>(
                 ..default()
             },
             border_color: BorderColor(Color::BLACK),
-            background_color: super::context_menu::NORMAL_BUTTON.into(),
+            background_color: NORMAL_BUTTON.into(),
             ..default()
         },
         ContextMenuButton,

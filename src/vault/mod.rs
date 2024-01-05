@@ -9,19 +9,29 @@ use bevy::{
     prelude::{
         Plugin, 
         App, 
-        Startup, 
-        AssetApp, ResMut, Resource,
+        ResMut, 
+        Resource,
     }, 
-    app::{PreStartup, Update, PreUpdate, AppExit, PostUpdate, Last}, ecs::{schedule::{common_conditions::{resource_changed, on_event}, IntoSystemConfigs, Condition}, event::EventWriter, system::{Query, Commands}, entity::Entity, query::With}, hierarchy::DespawnRecursiveExt
+    app::{
+        PreStartup, Update, AppExit, Last
+    }, ecs::{
+        schedule::{
+            common_conditions::{resource_changed, on_event}, IntoSystemConfigs, Condition
+        }, event::EventWriter, system::{
+            Query, Commands
+        }, entity::Entity, query::With
+    }, hierarchy::DespawnRecursiveExt
 };
 use serde::{Serialize, Deserialize};
  
 
-use crate::{graph::context::{CurrentContext, update_context}, vault::vault_asset::{VAULTS_FILE_NAME, VaultAsset}, ui::vault_menu::{SpawnVaultMenu, VaultMenu}};
+use crate::{graph::context::{CurrentContext, update_context}, vault::vault_asset::{VAULTS_FILE_NAME, VaultAsset}};
 
-use self::{context_asset::save_context, vault_asset::save_vaults};
+use self::{context_asset::save_context, vault_asset::save_vaults, vault_menu::{VaultMenuPlugin, SpawnVaultMenu, VaultMenu}};
 
 pub(crate) mod context_asset;
+pub(crate) mod vault_menu;
+
 mod vault_asset;
 pub struct VaultPlugin;
 
@@ -31,6 +41,7 @@ impl Plugin for VaultPlugin {
             .insert_resource(VaultOfVaults::new())
             .insert_resource(CurrentVault::new())
 
+            .add_plugins(VaultMenuPlugin)
             
             .add_systems(PreStartup, setup_vaults)
             // .add_systems(Update, use_assets)

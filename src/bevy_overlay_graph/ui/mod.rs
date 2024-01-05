@@ -7,23 +7,22 @@ use bevy_mod_picking::backends::raycast::RaycastBackendSettings;
 use bevy_prototype_lyon::prelude::*;
 
 use crate::{
-    graph::{context::CurrentContext, nodes::ContextRoot},
-    events::{nodes::*, edges::EdgeClickEvent}, scene::scene::CurrentActive};
+    graph::{context::CurrentContext, nodes::ContextRoot}, scene::scene::CurrentActive,
+};
 
 use self::{
     context_menu::{context_menu_button_system, spawn_node_context_menu, spawn_edge_context_menu}, 
-    mode_menu::{create_mode_menu, mode_button_system, update_active_mode_highlight}, 
     nodes::NodesUiPlugin, edges::EdgeUiPlugin, 
-    create_node_menu::CreateNodeMenuPlugin, grid::InfiniteGrid2DPlugin, vault_menu::VaultMenuPlugin, graph_cam::GraphCamera, asset_manager::{ImageLoadTracker, on_image_load},
+    grid::InfiniteGrid2DPlugin, graph_cam::GraphCamera, asset_manager::{ImageLoadTracker, on_image_load},
 };
 
-// Building blocks of specific components
-mod popup;
+use super::events::{nodes::NodeClickEvent, edges::EdgeClickEvent};
 
-pub(crate) mod vault_menu;
-mod context_menu;
+// Building blocks of specific components
+pub mod popup;
+
+pub mod context_menu;
 mod mode_menu;
-mod create_node_menu;
 pub mod grid;
 pub(crate) mod nodes;
 pub(crate) mod edges;
@@ -52,10 +51,8 @@ impl Plugin for KartaUiPlugin {
 
             .add_systems(Startup, gizmo_settings)
 
-            .add_plugins(VaultMenuPlugin)
             .add_plugins(NodesUiPlugin)
             .add_plugins(EdgeUiPlugin)
-            .add_plugins(CreateNodeMenuPlugin)
             .add_plugins(InfiniteGrid2DPlugin)
             
             // Element Systems
