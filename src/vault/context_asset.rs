@@ -5,7 +5,13 @@ use std::{path::{PathBuf, Path}, fs::DirEntry, io::Write};
 use bevy::{prelude::Vec2, ecs::{system::{Res, Query}, entity::Entity, query::{With, Without}}, reflect::TypePath, utils::HashMap, transform::components::Transform};
 use serde::{Deserialize, Serialize};
 
-use crate::{graph::{attribute::Attributes, node_types::NodeTypes, edges::{EdgeTypes, EdgeType, GraphDataEdge}, nodes::{GraphDataNode, GraphNodeEdges, Visitor, ContextRoot, Pins}, context::CurrentContext}, events::{context, edges}};
+use crate::graph::{
+    attribute::Attributes, node_types::NodeTypes, edges::{
+        EdgeTypes, EdgeType, GraphDataEdge
+    }, nodes::{
+        GraphDataNode, GraphNodeEdges, Visitor, ContextRoot, Pins
+    }
+};
 
 use super::CurrentVault;
 

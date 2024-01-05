@@ -1,11 +1,10 @@
 // Drawing the edges
 
-use bevy::{prelude::*, sprite::{Material2d, Material2dPlugin, MaterialMesh2dBundle}, render::{render_resource::{ShaderRef, AsBindGroup}, view::RenderLayers}, window::PrimaryWindow};
+use bevy::{prelude::*, sprite::{Material2d, Material2dPlugin}, render::{render_resource::{ShaderRef, AsBindGroup}, view::RenderLayers}, window::PrimaryWindow};
 use bevy_mod_picking::{events::{Pointer, Over, Out, Click}, prelude::On, pointer::{PointerId, PointerLocation}, backend::{PointerHits, HitData}, picking_core::{PickSet, Pickable}};
 use bevy_prototype_lyon::{shapes, prelude::{ShapeBundle, GeometryBuilder, Path, Stroke}};
-use lyon::lyon_tessellation::StrokeOptions;
 
-use crate::{graph::{edges::{GraphDataEdge, EdgeType}, nodes::GraphDataNode, context::PathsToEntitiesIndex}, settings::theme::{EDGE_PARENT_COLOR, EDGE_PARENT_HOVER_COLOR}, events::edges::{EdgeSpawnedEvent, EdgeClickEvent}};
+use crate::{graph::{edges::{GraphDataEdge, EdgeType}, context::PathsToEntitiesIndex}, bevy_overlay_graph::{settings::theme::*, events::edges::EdgeClickEvent}};
 
 use super::{nodes::GraphViewNode, graph_cam::ViewData};
 

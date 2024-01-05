@@ -1,7 +1,8 @@
 use bevy::prelude::*;
 use bevy_mod_picking::selection::NoDeselect;
 
-use crate::{modes::KartaModeState, events::nodes::*};
+use crate::bevy_overlay_graph::{modes::KartaModeState, events::nodes::*};
+
 
 // Marker components for the mode buttons and their labels
 #[derive(Component)]

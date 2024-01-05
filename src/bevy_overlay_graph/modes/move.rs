@@ -3,10 +3,7 @@
 use bevy::prelude::*;
 use bevy_mod_picking::selection::PickSelection;
 
-use crate::{
-    graph::{context::{update_context, Selected}, nodes::GraphDataNode}, 
-    events::nodes::MoveNodesEvent, input::pointer::InputData
-};
+use crate::{graph::{context::update_context, nodes::GraphDataNode}, bevy_overlay_graph::{events::nodes::MoveNodesEvent, input::pointer::InputData}};
 
 use super::KartaModeState;
 

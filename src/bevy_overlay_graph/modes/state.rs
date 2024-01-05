@@ -13,8 +13,7 @@ use crate::{
     graph::context::{
             CurrentContext, update_context
         }, 
-    events::nodes::NodeClickEvent,
-    vault::CurrentVault, input::pointer::InputData
+    vault::CurrentVault, bevy_overlay_graph::{events::nodes::NodeClickEvent, input::pointer::InputData}, 
 };
 
 use super::KartaModeState;
