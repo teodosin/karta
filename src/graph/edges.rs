@@ -5,7 +5,8 @@ use bevy::prelude::*;
 use bevy_mod_picking::picking_core::PickSet;
 use serde::{Deserialize, Serialize};
 
-use crate::{graph::attribute::Attributes, events::edges::{EdgeSpawnedEvent, EdgeClickEvent}, input::pointer::{InputData, update_cursor_info}, ui::edges::GraphViewEdge};
+
+use crate::{bevy_overlay_graph::{events::edges::*, input::pointer::*}, graph::attribute::Attributes};
 
 use super::{nodes::GraphNodeEdges, context::PathsToEntitiesIndex};
 

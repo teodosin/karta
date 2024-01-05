@@ -1,26 +1,9 @@
 //
 
-use std::{path::PathBuf, ffi::OsString};
 
-use bevy::prelude::{Event, Entity, Vec2};
+use bevy::prelude::{Event, Entity};
 use bevy_mod_picking::prelude::*;
 
-use crate::graph::node_types::{NodeTypes, NodeData};
-
-
-// Informing the World that a node has been spawned
-// Mostly needed to add ui to the node, which before this is just the 
-// bare data.
-#[derive(Event)]
-pub struct NodeSpawnedEvent {
-    pub entity: Entity,
-    pub path: PathBuf,
-    pub ntype: NodeTypes,
-    pub data: Option<Box<dyn NodeData>>,
-    pub root_position: Vec2,
-    pub rel_target_position: Option<Vec2>,
-    pub pinned_to_position: bool,
-}
 
 #[derive(Event)]   
 pub struct MoveNodesEvent;

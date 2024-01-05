@@ -6,8 +6,7 @@ use bevy_prototype_lyon::{shapes, prelude::{GeometryBuilder, ShapeBundle, Stroke
 use bevy_tweening::{Tween, EaseFunction, lens::TransformPositionLens, Animator, TweenCompleted, TweeningPlugin};
 
 use crate::{
-    graph::{nodes::{GraphNodeEdges, ContextRoot, Pins, GraphDataNode, Visitor}, node_types::NodeTypes}, 
-    events::nodes::{MoveNodesEvent, NodeClickEvent, NodePressedEvent, NodeHoverEvent, NodeSpawnedEvent, NodeHoverStopEvent}
+    graph::{nodes::{GraphNodeEdges, ContextRoot, Pins, GraphDataNode, Visitor}, node_types::NodeTypes}, bevy_overlay_graph::{events::nodes::*, settings::theme::*}, 
 };
 
 use self::node_ui_types::{add_base_node_ui, add_image_node_ui};
@@ -266,20 +265,20 @@ pub fn add_node_base_outline(
             ..default()
         },
         Stroke::new(
-            crate::settings::theme::OUTLINE_BASE_COLOR, 10.0
+            OUTLINE_BASE_COLOR, 10.0
             // Color::rgba(0.0, 0.0, 0.0, 0.0), 10.0
         ),
         NodeOutline,
         RaycastPickable,
 
         On::<Pointer<Over>>::target_component_mut::<Stroke>(move |_over, stroke| {
-            stroke.color = crate::settings::theme::OUTLINE_HOVER_COLOR;
+            stroke.color = OUTLINE_HOVER_COLOR;
             // stroke.color = Color::rgba(0.0, 0.0, 0.0, 0.0);
             stroke.options = StrokeOptions::default().with_line_width(outline_width_hovered);
         }),
         
         On::<Pointer<Out>>::target_component_mut::<Stroke>(move |_out, stroke| {
-            stroke.color = crate::settings::theme::OUTLINE_BASE_COLOR;
+            stroke.color = OUTLINE_BASE_COLOR;
             // stroke.color = Color::rgba(0.0, 0.0, 0.0, 0.0);
             stroke.options = StrokeOptions::default().with_line_width(outline_width);
         }),
