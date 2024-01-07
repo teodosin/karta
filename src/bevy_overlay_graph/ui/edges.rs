@@ -124,11 +124,11 @@ impl Material2d for EdgeMaterial {
 }
 
 pub fn update_edges(
-    mut edges: Query<(Entity, &GraphDataEdge, &mut Path, &mut GraphViewEdge), Without<GraphViewNode>>,
+    mut edges: Query<(Entity, &GraphDataEdge, &mut Path, &mut GraphViewEdge, &mut Transform), Without<GraphViewNode>>,
     nodes: Query<&Transform, With<GraphViewNode>>,
     pe_index: Res<PathsToEntitiesIndex>,
 ){
-    for (_edge, data, mut path, mut ends) in edges.iter_mut() {
+    for (_edge, data, mut path, mut ends, mut tform) in edges.iter_mut() {
         let source_entity = match pe_index.0.get(&data.source){
             Some(entity) => entity,
             None => {
@@ -161,15 +161,20 @@ pub fn update_edges(
             continue
         }
 
+        
+        tform.translation.x = start.translation.x;
+        tform.translation.y = start.translation.y;
+        
+        // ends.start = Vec2::new(start.translation.x, start.translation.y);
+        ends.start = Vec2::new(0.0, 0.0);
+        ends.end = Vec2::new(end.translation.x - start.translation.x, end.translation.y - start.translation.y);
+
         *path = GeometryBuilder::build_as(
             &shapes::Line(
-                Vec2::new(start.translation.x, start.translation.y),
-                Vec2::new(end.translation.x, end.translation.y),
+                ends.start,
+                ends.end,
             )
         );
-
-        ends.start = Vec2::new(start.translation.x, start.translation.y);
-        ends.end = Vec2::new(end.translation.x, end.translation.y);
 
     }
 }
