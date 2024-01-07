@@ -8,7 +8,7 @@ rust_version = "1.74.1"
 [dependencies]
 bevy = { version = "0.12.1", features = ["dynamic_linking","bevy_asset","jpeg", "bmp", "tga","webp", "file_watcher", "exr", "basis-universal"] }
 
-bevy_mod_picking = { version = "0.17.0", features = []}
+bevy_mod_picking = { version = "0.17.0", features = ["backend_bevy_ui"]}
 bevy_prototype_lyon = "0.10.0"
 bevy_svg = "0.12.0"
 bevy_cosmic_edit = "0.15.1"
