@@ -182,7 +182,7 @@ fn on_vault_change(
     };
     let path = vault.get_root_path();
     println!("Changing current context to vault root: {:?}", path);
-    current_context.set_current_context(vault.get_vault_path(), path);
+    current_context.set_current_context(&vault.get_vault_path(), path);
 }
 
 /// Resource that stores the currently active vault. 

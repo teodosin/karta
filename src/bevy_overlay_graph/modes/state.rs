@@ -75,6 +75,6 @@ fn change_context_path(
     }
 
     println!("Changing context to: {}", path.display());
-    context.set_current_context(vault.get_vault_path(), path.clone());
+    context.set_current_context(&vault.get_vault_path(), path.clone());
 
 }

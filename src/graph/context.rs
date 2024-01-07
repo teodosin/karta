@@ -54,6 +54,7 @@ pub enum ContextTypes {
 pub struct CurrentContext{
     undo_stack: Vec<PathBuf>,
     redo_stack: Vec<PathBuf>,
+    setting_from_undo_redo: bool,
     pub context: Option<KartaContext>,
 }
 
@@ -62,12 +63,14 @@ impl CurrentContext {
         CurrentContext {
             undo_stack: Vec::new(),
             redo_stack: Vec::new(),
+            setting_from_undo_redo: false,
             context: None,
         }
     }
 
     /// Main function for setting the current context. Only use this, never mutate the resource directly.
-    pub fn set_current_context(&mut self, vault_path: PathBuf, path: PathBuf) {
+    /// Takes in the vault path (not root path) and the path to the desired context. 
+    pub fn set_current_context(&mut self, vault_path: &PathBuf, path: PathBuf) {
 
         println!("Trying to set context: {}", path.display());
 
@@ -112,24 +115,36 @@ impl CurrentContext {
             println!("Path doesn't exist: {}", path.display());
             return
         }
-        self.undo_stack.push(path.clone());
+        if !self.setting_from_undo_redo {
+            self.undo_stack.push(path.clone());
+        }
+        self.setting_from_undo_redo = false;
         self.context = Some(KartaContext::new(path));
 
     }
 
-    pub fn undo_context(&mut self, vault_path: PathBuf) {
+    /// Move to the previous context in the undo stack.
+    /// If the undo stack is empty, do nothing.
+    /// Takes in the vault path (not root path).
+    pub fn undo_context(&mut self, vault_path: &PathBuf) {
         if self.undo_stack.len() > 1 {
+            let new_path = self.undo_stack[self.undo_stack.len() - 2].clone();
             let path = self.undo_stack.pop().unwrap();
             self.redo_stack.push(path.clone());
-            let new_path = self.undo_stack.last().unwrap().clone();
-            self.set_current_context(vault_path, new_path);
+            self.setting_from_undo_redo = true;
+            self.set_current_context(&vault_path, new_path);
         }
     }
 
-    pub fn redo_context(&mut self, vault_path: PathBuf) {
+    /// Move to the next context in the redo stack.
+    /// If the redo stack is empty, do nothing.
+    /// Takes in the vault path (not root path).
+    pub fn redo_context(&mut self, vault_path: &PathBuf) {
         if !self.redo_stack.is_empty() {
             let path = self.redo_stack.pop().unwrap();
-            self.set_current_context(vault_path, path);
+            self.setting_from_undo_redo = true;
+            self.set_current_context(&vault_path, path.clone());
+            self.undo_stack.push(path);
         }
     }
 }

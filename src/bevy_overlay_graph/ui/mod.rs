@@ -7,7 +7,7 @@ use bevy_mod_picking::backends::raycast::RaycastBackendSettings;
 use bevy_prototype_lyon::prelude::*;
 
 use crate::{
-    graph::{context::CurrentContext, nodes::ContextRoot}, scene::scene::CurrentActive,
+    graph::{context::CurrentContext, nodes::ContextRoot}, scene::scene::CurrentActive, vault::CurrentVault,
 };
 
 use self::{
@@ -21,9 +21,10 @@ use super::events::{nodes::NodeClickEvent, edges::EdgeClickEvent};
 // Building blocks of specific components
 pub mod popup;
 
-pub mod context_menu;
+pub(crate) mod context_menu;
 mod mode_menu;
-pub mod grid;
+pub(crate) mod grid;
+pub(crate) mod ui_base_panel;
 pub(crate) mod nodes;
 pub(crate) mod edges;
 pub(crate) mod graph_cam;
@@ -41,12 +42,14 @@ impl Plugin for KartaUiPlugin {
             .add_plugins(graph_cam::GraphCamPlugin)
             .add_plugins(simulation::GraphSimPlugin)
 
+            .add_plugins(ui_base_panel::UiNodePlugin)
+
             .insert_resource(ImageLoadTracker::new())
 
             // Resources
             .add_systems(PreStartup, require_markers_for_raycasting)
-            .add_systems(PreStartup, default_font_setup)
-            .add_systems(PreUpdate, 
+            // .add_systems(PreStartup, default_font_setup)
+            .add_systems(PreStartup, 
                 default_font_set.run_if(resource_exists::<FontHandle>()))
 
             .add_systems(Startup, gizmo_settings)
@@ -64,6 +67,8 @@ impl Plugin for KartaUiPlugin {
             // .add_systems(Startup, create_mode_menu)
             // .add_systems(Update, mode_button_system)
             // .add_systems(Update, update_active_mode_highlight.after(mode_button_system))
+
+            .add_systems(PreUpdate, undo_redo_context)
 
             .add_systems(Startup, create_context_and_active_bar)
             
@@ -90,12 +95,16 @@ impl Plugin for KartaUiPlugin {
 fn default_font_set(
     mut commands: Commands,
     mut fonts: ResMut<Assets<Font>>,
+    asset_server: Res<AssetServer>,
     font_handle: Res<FontHandle>,
 ){
     if let Some(font) = fonts.remove(&font_handle.0) {
         fonts.add(font);
         commands.remove_resource::<FontHandle>();
     }
+
+    let font = asset_server.load("fonts/Roboto/Roboto-Medium.ttf");
+    commands.insert_resource(FontHandle(font));
 }
 
 fn default_font_setup(
@@ -129,6 +138,24 @@ pub struct ContextLabel;
 
 #[derive(Component)]
 pub struct ActiveLabel;
+
+fn undo_redo_context(
+    vault: Res<CurrentVault>,
+    mut context: ResMut<CurrentContext>,
+    mut input: ResMut<Input<KeyCode>>,
+){
+    let vault_path = match &vault.vault {
+        Some(vault) => vault.get_vault_path(),
+        None => return,
+    };
+
+    if input.just_pressed(KeyCode::Q) {
+        context.undo_context(&vault_path);
+    }
+    if input.just_pressed(KeyCode::E) {
+        context.redo_context(&vault_path);
+    }
+}
 
 fn create_context_and_active_bar(
     mut commands: Commands,
