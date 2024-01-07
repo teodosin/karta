@@ -20,7 +20,7 @@ impl Plugin for EdgeUiPlugin {
             .add_systems(PostUpdate, add_edge_ui.after(super::nodes::add_node_ui))
             .add_systems(PostUpdate, update_edges)
 
-            .add_systems(PostUpdate, visualise_edge_transforms)
+            // .add_systems(PostUpdate, visualise_edge_transforms)
         ;
     }
 }

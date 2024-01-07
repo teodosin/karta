@@ -42,7 +42,7 @@ impl Plugin for KartaUiPlugin {
             .add_plugins(graph_cam::GraphCamPlugin)
             .add_plugins(simulation::GraphSimPlugin)
 
-            .add_plugins(ui_base_panel::UiNodePlugin)
+            // .add_plugins(ui_base_panel::UiNodePlugin)
 
             .insert_resource(ImageLoadTracker::new())
 
