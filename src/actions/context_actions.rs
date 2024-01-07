@@ -36,7 +36,7 @@ impl Action for MoveToContextAction {
             }
         };
 
-        current_context.set_current_context(vault_path, self.next.clone());
+        current_context.set_current_context(&vault_path, self.next.clone());
 
         println!("Performing MoveToContextAction");
     }
@@ -53,7 +53,7 @@ impl Action for MoveToContextAction {
         let mut current_context = world.get_resource_mut::<CurrentContext>().unwrap();
         match self.previous.clone() {
             Some(previous) => {
-                current_context.set_current_context(vault_path, previous);
+                current_context.set_current_context(&vault_path, previous);
                 println!("Undoing MoveToContextAction");
             },
             None => {
@@ -72,7 +72,7 @@ impl Action for MoveToContextAction {
             }
         };
         let mut current_context = world.get_resource_mut::<CurrentContext>().unwrap();
-        current_context.set_current_context(vault_path, self.next.clone());
+        current_context.set_current_context(&vault_path, self.next.clone());
         println!("Redoing MoveToContextAction");
     }
 }
