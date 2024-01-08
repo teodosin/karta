@@ -4,7 +4,7 @@ use bevy::{
     render::{render_resource::{ShaderRef, AsBindGroup}, view::RenderLayers}, 
     sprite::{MaterialMesh2dBundle, Material2d, Material2dPlugin}
 };
-use bevy_mod_picking::prelude::*;
+use bevy_mod_picking::{prelude::*, backends::raycast::RaycastPickable};
 
 use crate::bevy_overlay_graph::events::background::RectangleSelectionEndEvent;
 // Modeled after lib.rs of bevy_infinite_grid
@@ -18,7 +18,7 @@ impl Plugin for InfiniteGrid2DPlugin {
             
         app
             .add_plugins(material_plugin)
-            .add_systems(Startup, setup_grid)   
+            .add_systems(PreStartup, setup_grid)   
         ;
     }
 }
@@ -40,9 +40,10 @@ fn setup_grid(
             },
             ..default()
         },
+        RaycastPickable,
         Pickable {
             should_block_lower: true,
-            should_emit_events: true,
+            should_emit_events: false,
         },
 
         On::<Pointer<DragEnd>>::send_event::<RectangleSelectionEndEvent>(),
