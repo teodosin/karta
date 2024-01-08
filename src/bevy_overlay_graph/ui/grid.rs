@@ -76,6 +76,6 @@ impl Default for GridMaterial {
 
 impl Material2d for GridMaterial {
     fn fragment_shader() -> ShaderRef {
-        "grid_material.wgsl".into()
+        "embedded://grid_material.wgsl".into()
     }
 }

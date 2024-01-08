@@ -1,6 +1,7 @@
 //lib
 
 use bevy::{prelude::*, log::LogPlugin, window::WindowResolution};
+use bevy_embedded_assets::EmbeddedAssetPlugin;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_mod_picking::prelude::*;
 
@@ -37,6 +38,9 @@ pub fn karta_app() {
             .build()
             .disable::<LogPlugin>()
         )
+        .add_plugins(EmbeddedAssetPlugin{
+            mode: bevy_embedded_assets::PluginMode::AutoLoad,
+        })
         .add_plugins(DefaultPickingPlugins
             .build()
             .disable::<BevyUiBackend>()

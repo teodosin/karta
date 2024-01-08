@@ -832,6 +832,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy_embedded_assets"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dcbaa2716dd665f2197071268f5fd720bc23b0207894451f0a0912b3e80e86a1"
+dependencies = [
+ "bevy",
+ "cargo-emit",
+ "futures-io",
+ "futures-lite 2.1.0",
+]
+
+[[package]]
 name = "bevy_encase_derive"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1764,6 +1776,12 @@ name = "bytes"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2bd12c1caf447e69cd4528f47f94d203fd2582878ecb9e9465484c4148a8223"
+
+[[package]]
+name = "cargo-emit"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1582e1c9e755dd6ad6b224dcffb135d199399a4568d454bd89fe515ca8425695"
 
 [[package]]
 name = "cc"
@@ -3311,6 +3329,7 @@ dependencies = [
  "bevy",
  "bevy-inspector-egui",
  "bevy_cosmic_edit",
+ "bevy_embedded_assets",
  "bevy_mod_debugdump",
  "bevy_mod_picking",
  "bevy_prototype_lyon",
