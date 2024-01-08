@@ -428,9 +428,9 @@ pub fn visualise_pinned_position (
     for (pos, pins) in pinned.iter() {
         if !pins.position {continue}
         gizmos.circle_2d(
-            pos.translation.truncate(),
+            pos.translation.truncate() + Vec2::new(0.0, 30.0),
             5.0,
-            Color::rgb(0.1, 0.1, 0.9),
+            Color::rgb(0.9, 0.9, 0.9),
         );
     }
 }
