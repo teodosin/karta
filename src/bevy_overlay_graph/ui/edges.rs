@@ -162,12 +162,13 @@ pub fn update_edges(
         }
 
         
-        tform.translation.x = start.translation.x;
-        tform.translation.y = start.translation.y;
+        // tform.translation.x = start.translation.x;
+        // tform.translation.y = start.translation.y;
         
-        // ends.start = Vec2::new(start.translation.x, start.translation.y);
-        ends.start = Vec2::new(0.0, 0.0);
-        ends.end = Vec2::new(end.translation.x - start.translation.x, end.translation.y - start.translation.y);
+        ends.start = Vec2::new(start.translation.x, start.translation.y);
+        // ends.start = Vec2::new(0.0, 0.0);
+        // ends.end = Vec2::new(end.translation.x - start.translation.x, end.translation.y - start.translation.y);
+        ends.end = Vec2::new(end.translation.x, end.translation.y);
 
         *path = GeometryBuilder::build_as(
             &shapes::Line(
