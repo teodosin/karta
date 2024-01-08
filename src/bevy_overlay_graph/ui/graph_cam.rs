@@ -1,6 +1,7 @@
 // Camera and cursor information for the graph
 
 use bevy::{prelude::*, input::{mouse::{MouseWheel, MouseScrollUnit, MouseMotion}, touchpad::TouchpadMagnify}, render::view::RenderLayers};
+use bevy_inspector_egui::egui::Key;
 
 use crate::bevy_overlay_graph::input::pointer::InputData;
 
@@ -99,17 +100,25 @@ fn cam_setup(
 }
 
 
-
+/// System for handling the panning of the graph.
+/// 
+/// TODO: Compute pan distance based on pixels. 
+///  
+/// TODO BLOCKED: Add support for trackpad panning
 fn graph_pan(
     mut query: Query<&mut Transform, With<Camera2d>>,
+
     mouse: Res<Input<MouseButton>>,
+    // Alternative trigger for panning for trackpad users, since bevy doesn't have panning support for trackpads yet
+    key: Res<Input<KeyCode>>,
+
     view_settings: Res<ViewSettings>,
     _cursor: Res<InputData>,
     mut motion: EventReader<MouseMotion>,
 ) {
 
     for ev in motion.read() {
-        if mouse.pressed(MouseButton::Middle) {
+        if mouse.pressed(MouseButton::Middle) || key.pressed(KeyCode::Space){
             for mut transform in query.iter_mut() {
                 // transform.translation.x -= cursor.curr_position.x - cursor.prev_position.x;
                 // transform.translation.y -= cursor.curr_position.y - cursor.prev_position.y; 
@@ -121,6 +130,10 @@ fn graph_pan(
     }
 }
 
+/// System for handling graph zoom.
+/// 
+/// Supports mouse scroll and trackpad zooming. Function itself could be improved, there's 
+/// repeated code for example. 
 fn graph_zoom(
     mut query: Query<(&mut OrthographicProjection, &mut Transform), With<Camera2d>>,
     input_data: Res<InputData>,
