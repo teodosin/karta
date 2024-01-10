@@ -2,14 +2,12 @@ name: release-flow
  
 on:
   push:
-    branches:
-      [ "main" ]
     tags:
-      - "[0-9]+.[0-9]+.[0-9]+*"
+      - "v[0-9]+.[0-9]+.[0-9]+*"
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version - in the form of 1.2.3'
+        description: 'Version - in the form of v1.2.3'
         required: true
         type: string
 
