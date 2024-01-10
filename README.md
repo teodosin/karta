@@ -6,7 +6,7 @@ Karta is an experimental creative application built on top of a node-based file 
 
 Early development has been quite chaotic and flow state driven, and this is reflected in the code and commits. Steps are being taken to steer the development process to be more systematic and understandable, but that will take time and some learning on my part. 
 
-Also note that this project has not yet been tested on MacOS and Windows. 
+Also note that this project has not yet been tested Windows. Tested and working on Mac. 
 
 ## Introduction
 
