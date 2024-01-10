@@ -38,7 +38,7 @@ jobs:
 
       - name: Get the release version from the tag
         shell: bash
-        run: echo "VERSION=$\{GITHUB_REF#refs/tags/\}" >> $GITHUB_ENV
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
 
       - name: Install Rust
         # Or @nightly if you want
@@ -81,4 +81,4 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            $\{\{ env.ASSET \}\}
+            ${{ env.ASSET }}
