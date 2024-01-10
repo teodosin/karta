@@ -2,7 +2,7 @@
 
 #### Disclaimer
 
-Karta is an experimental creative application built on top of a node-based file browser. It is very bare and unstable, with only some of the foundations set in place.  It is a work in progress and not ready for even remotely serious use, but feel free to look around and try it. Root paths are hardcoded so the app will not work on your machine without modification.
+Karta is an experimental creative application built on top of a node-based file browser. It is very bare and unstable, with only some of the foundations set in place.  It is a work in progress and not ready for even remotely serious use, but feel free to look around and try it.
 
 Early development has been quite chaotic and flow state driven, and this is reflected in the code and commits. Steps are being taken to steer the development process to be more systematic and understandable, but that will take time and some learning on my part. 
 
