@@ -1,11 +1,26 @@
 //
 
-use std::{ffi::{OsString, OsStr}, path::PathBuf};
+use std::{ffi::OsString, path::PathBuf};
 
 use bevy::{prelude::{Entity, With, Vec2}, transform::components::Transform};
 use bevy_mod_picking::selection::PickSelection;
 
-use crate::{graph::{nodes::{GraphDataNode, ContextRoot, GraphNodeEdges, Pins}, context::{PathsToEntitiesIndex, CurrentContext}, node_types::{NodeTypes, type_to_data}}, input::pointer::InputData, ui::nodes::GraphViewNode, events::nodes::NodeSpawnedEvent, vault::{context_asset::{node_path_to_context_path, create_single_node_context}, CurrentVault}};
+use crate::{
+    graph::{
+        nodes::{
+            GraphDataNode, ContextRoot, GraphNodeEdges, Pins
+        }, context::{
+            PathsToEntitiesIndex, CurrentContext
+        }, node_types::{
+            NodeTypes, type_to_data
+        }
+    }, 
+    vault::{
+        context_asset::{
+            node_path_to_context_path, create_single_node_context
+        }, CurrentVault
+    }, bevy_overlay_graph::{ui::nodes::TargetPosition, input::pointer::InputData}
+};
 
 use super::Action;
 
@@ -59,21 +74,18 @@ impl Action for CreateNodeAction {
                 data: type_to_data(self.ntype)
             },
             GraphNodeEdges::default(),
+            Pins::new_pinpos(),
         )).id();
         
         self.entity = Some(node_entity);
 
         let root_position = world.query_filtered::<&Transform, With<ContextRoot>>().single(world);
-        
-        world.send_event(NodeSpawnedEvent {
-            entity: node_entity,
-            path: valid_path.clone(),
-            ntype: self.ntype,
-            data: type_to_data(self.ntype),
-            root_position: root_position.translation.truncate(),
-            rel_target_position: Some(self.position - root_position.translation.truncate()),
-            // rel_target_position: None,
-            pinned_to_position: true,
+        let root_position = root_position.translation.truncate();
+        let rel_target_position = self.position - root_position;
+
+    
+        world.entity_mut(node_entity).insert(TargetPosition {
+            position: root_position + rel_target_position,
         });
         
         // Update the PathsToEntitiesIndex
@@ -218,7 +230,7 @@ impl PinToPositionAction {
         &self, world: &mut bevy::prelude::World
     ) -> Option<Entity> {
         let input_data = world.get_resource::<InputData>().unwrap();
-        let path = input_data.latest_click_entity.clone().unwrap();
+        let path = input_data.latest_click_nodepath.clone().unwrap();
         let index = world.get_resource::<PathsToEntitiesIndex>().unwrap();
         let node = index.0.get(&path);
         Some(*node.unwrap())
@@ -288,7 +300,7 @@ impl UnpinToPositionAction {
         &self, world: &mut bevy::prelude::World
     ) -> Option<Entity> {
         let input_data = world.get_resource::<InputData>().unwrap();
-        let path = input_data.latest_click_entity.clone().unwrap();
+        let path = input_data.latest_click_nodepath.clone().unwrap();
         let index = world.get_resource::<PathsToEntitiesIndex>().unwrap();
         let node = index.0.get(&path);
         Some(*node.unwrap())
