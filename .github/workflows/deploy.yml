@@ -28,9 +28,9 @@ jobs:
             os: macos-latest
             target: x86_64-apple-darwin
 
-          - build: windows
+          - build: windows-gnu
             os: windows-latest
-            target: x86_64-pc-windows-msvc
+            target: x86_64-pc-windows-gnu
 
     steps:
       - name: Checkout
@@ -42,7 +42,7 @@ jobs:
 
       - name: Install Rust
         # Or @nightly if you want
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@nightly
         # Arguments to pass in
         with:
           # Make Rust compile to our target (defined in the matrix)
@@ -59,7 +59,7 @@ jobs:
         shell: bash
         run: |
           # Replace with the name of your binary
-          binary_name="<BINARY_NAME>"
+          binary_name="karta"
 
           dirname="$binary_name-$\{\{ env.VERSION \}\}-$\{\{ matrix.target \}\}"
           mkdir "$dirname"
