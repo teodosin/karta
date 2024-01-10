@@ -2,9 +2,11 @@
 use std::{collections::HashMap, path::PathBuf};
 
 use bevy::prelude::*;
+use bevy_mod_picking::picking_core::PickSet;
 use serde::{Deserialize, Serialize};
 
-use crate::{graph::attribute::Attributes, events::edges::EdgeSpawnedEvent};
+
+use crate::{bevy_overlay_graph::{events::edges::*, input::pointer::*}, graph::attribute::Attributes};
 
 use super::{nodes::GraphNodeEdges, context::PathsToEntitiesIndex};
 
@@ -13,13 +15,16 @@ pub struct EdgesPlugin;
 impl Plugin for EdgesPlugin {
     fn build(&self, app: &mut App) {
         app
-
+            .add_systems(PreUpdate, (
+                handle_edge_click
+            )
+                .before(update_cursor_info)
+                .after(PickSet::Last))
             .add_systems(Last, despawn_edges
                 // TODO: Does this have to run every frame?
                 //.run_if(resource_changed::<CurrentContext>())
             )
-            .add_systems(PostUpdate, add_edge_to_node_indexes
-                .run_if(on_event::<EdgeSpawnedEvent>()))
+            .add_systems(PostUpdate, add_edge_to_node_indexes)
         ;
     }
 }
@@ -28,15 +33,15 @@ impl Plugin for EdgesPlugin {
 // Component definitions
 
 // A component for the most basic data of an EDGE
-#[derive(Component, Reflect)]
-pub struct GraphEdge {
+#[derive(Component, Reflect, Debug)]
+pub struct GraphDataEdge {
     pub source: PathBuf,
     pub target: PathBuf,
 }
 
-impl GraphEdge {
-    pub fn same_pair(&self, other: &GraphEdge) -> bool {
-        if self.source == other.source && self.target == other.target {
+impl GraphDataEdge {
+    pub fn same_pair(&self, other: &GraphDataEdge) -> bool {
+        if (self.source == other.source && self.target == other.target) || (self.source == other.target && self.target == other.source) {
             return true;
         }
         false
@@ -60,19 +65,51 @@ impl Default for EdgeTypes {
     }
 }
 
-// TODO 0.12: Convert to One-Shot System
-// And use EdgeDefaults resource to set the default length
+fn handle_edge_click(
+    mut event: EventReader<EdgeClickEvent>,
+
+    mut input_data: ResMut<InputData>,
+
+    edges: Query<(Entity, &GraphDataEdge)>,
+){
+    if event.is_empty(){
+        return
+    }
+
+    // TODO: Handle multiple events
+    match event.read().next().unwrap().target {
+        None => {
+            //println!("No event");
+            input_data.latest_click_nodepath = None;
+        }
+        Some(target) => {
+            //println!("Event: {:?}", target);
+            
+            match edges.get(target){
+                Ok(edge) => {
+                    let (entity, _data) = edge;
+                    input_data.latest_edge_entity = Some(entity);
+                },
+                Err(_) => {
+                    //println!("No node found");
+                }
+            }
+        },
+    }
+    event.clear();
+}
+
+
 pub fn create_edge(
-    event: &mut EventWriter<EdgeSpawnedEvent>,
     from: &PathBuf, 
     to: &PathBuf, 
     etype: EdgeTypes,
     commands: &mut Commands,
-    edges: &Query<(&GraphEdge, &EdgeType)>,
+    edges: &Query<(&GraphDataEdge, &EdgeType)>,
 ){
     // Check if an edge already exists between the node pair
     for (edge, _edge_type) in edges.iter() {
-        if edge.same_pair(&GraphEdge {
+        if edge.same_pair(&GraphDataEdge {
             source: (*from).to_path_buf(),
             target: (*to).to_path_buf(),
         }) {
@@ -92,39 +129,29 @@ pub fn create_edge(
         "length".to_string(), Some(210.0),
     );
 
-    let edge = commands.spawn((
-        GraphEdge {
+    commands.spawn((
+        GraphDataEdge {
             source: (*from).to_path_buf(),
             target: (*to).to_path_buf(),
         },
         EdgeType {
-            etype,
+            etype: etype.clone(),
         },
         Attributes {
             attributes: initial_attributes,
         }),
-    ).id();
-
-    event.send(EdgeSpawnedEvent {
-        entity: edge,
-        connected_to_focal: true,
-        edge_type: EdgeTypes::Base,
-    });
+    );
 }
 
 /// Function to update the GraphNodeEdges component of nodes when an edge is spawned
 /// The event could possibly be modified to include the source and target paths, 
 /// to simplify the function. 
 pub fn add_edge_to_node_indexes(
-    mut event: EventReader<EdgeSpawnedEvent>,
-    mut edges: Query<&GraphEdge>,
+    new_edges: Query<(Entity, &GraphDataEdge), Added<GraphDataEdge>>,
     pe_index: Res<PathsToEntitiesIndex>,
     mut node_edges: Query<&mut GraphNodeEdges>,
 ) {
-    for ev in event.read(){
-        let edge_entity = ev.entity;
-        let edge_data = edges.get_mut(edge_entity).unwrap();
-
+    for (edge_entity, edge_data) in new_edges.iter() {
 
         let source_entity = match pe_index.0.get(&edge_data.source){
             Some(entity) => entity,
@@ -152,7 +179,7 @@ pub fn add_edge_to_node_indexes(
 
 pub fn despawn_edges(
     mut commands: Commands,
-    mut edges: Query<(Entity, &GraphEdge)>,
+    mut edges: Query<(Entity, &GraphDataEdge)>,
     pe_index: Res<PathsToEntitiesIndex>,
 ) {
     for (edge_entity, edge_data) in edges.iter_mut() {
