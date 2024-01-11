@@ -120,7 +120,7 @@ jobs:
     needs: get-version
     env:
       VERSION: ${{needs.get-version.outputs.version}}
-      VERSION_NO_V: ${{ needs.get-version.outputs.version[1:] }}
+      VERSION_NO_V: ${{ needs.get-version.outputs.version && needs.get-version.outputs.version[0] == 'v' && needs.get-version.outputs.version[1:] || needs.get-version.outputs.version }}
       BUILD_INSTALLER: ${{ false }}
     steps:
       - name: Checkout repository
