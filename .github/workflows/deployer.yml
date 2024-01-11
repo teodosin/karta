@@ -120,6 +120,7 @@ jobs:
     needs: get-version
     env:
       VERSION: ${{needs.get-version.outputs.version}}
+      VERSION_NO_V: ${{ needs.get-version.outputs.version[1:] }}
       BUILD_INSTALLER: ${{ false }}
     steps:
       - name: Checkout repository
@@ -147,7 +148,7 @@ jobs:
           dest: ${{ env.EXECUTABLE_NAME }}_windows.zip
       - name: Create Installer
         if: ${{ env.BUILD_INSTALLER }}
-        run: dotnet build -p:Version=${{ env.VERSION }} -c Release build/windows/installer/Installer.wixproj --output installer
+        run: dotnet build -p:Version=${{ env.VERSION_NO_V }} -c Release build/windows/installer/Installer.wixproj --output installer
       - name: Upload release
         uses: svenstaro/upload-release-action@v2
         with:
