@@ -10,7 +10,7 @@ Also note that this project has not yet been tested Windows. Tested and working 
 
 ## Introduction
 
-Welcome to **Karta**, a budding project currently in development, aimed at rethinking file management and visualization for creative workflows. This early-stage application introduces a novel concept: a node-based file browser, designed to visually represent the intricate network of files and folders within digital projects.
+Welcome to **Karta**, a project aimed at rethinking file management and visualization for creative workflows. This early-stage application introduces a novel concept: a node-based file browser, designed to visually represent the intricate network of files and folders within digital projects.
 
 At this stage, Karta is a prototype, exploring the potential to view and manage files as part of an interconnected graph. Each file and folder is represented as a node, and the relationships between them are visualized as links. This approach is not just about organizing files; it's about understanding the structure and interdependencies of your project at a glance.
 
@@ -25,10 +25,6 @@ For a more detailed explanation of the project's purpose and goals, refer to VIS
 ## Usage
 
 At first startup, you will be asked to choose a folder to create your vault in. Once set up, the contents of that folder will be spawned in as a force-directed graph. Middle-mouse click to pan the view and scroll to zoom. Dragging from the edge of a node to another will create a new connection between those nodes. Right-clicking on a node will bring up a menu where you can pin and unpin nodes (to be ignored by the force simulation) and move to another nodes' context. 
-
-## Known issues
-
-* Sometimes image files will not react to mouse inputs. If this happens, close the program and run it again. https://github.com/teodosin/karta/issues/40
 
 ## Contributing
 
