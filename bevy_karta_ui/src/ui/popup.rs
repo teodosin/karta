@@ -25,23 +25,17 @@ pub struct Popup;
 // -----------------------------------------------------------------------------
 
 pub fn spawn_popup_root( 
-    mut world: &mut World, // Do commands not work when using inside an exclusive system or with SystemParams?
+    world: &mut World, // Do commands not work when using inside an exclusive system or with SystemParams?
     group: PopupGroup,
     position: Vec2,
     size: Vec2,
 ) -> Entity {
 
     // Despawn any menus already spawned from the same group
-    // clear_popup_group(
-    //     &mut commands,
-    //     &group,
-    //     menus,
-    // );
-    let mut system_state: SystemState<(
-        Query<(Entity, &PopupGroup), With<Popup>>,
-    )> = SystemState::new(&mut world);
-
-    let menus = system_state.get_mut(&mut world);
+    clear_popup_group(
+        world,
+        &group,
+    );
     
     let is_modal = match group {
         PopupGroup::ModalStrong => true,
@@ -65,12 +59,12 @@ pub fn spawn_popup_root(
                 
                 ..Default::default()
             },
-            // background_color: BackgroundColor::from(Color::rgb(0.0, 0.0, 0.0)),
+            background_color: BackgroundColor::from(Color::rgb(0.0, 0.0, 0.0)),
             transform: Transform::from_translation(Vec3::from((0.0, 0.0, 10000.0))),
             ..Default::default()
         },
         Popup,
-        group,
+        group, 
     )).id();
 
     println!("Spawning popup root: {:?}", popup_root);
@@ -107,17 +101,24 @@ pub fn spawn_popup_root(
 }
 
 pub fn clear_popup_group(
-    commands: &mut Commands,
+    world: &mut World,
     target_group: &PopupGroup,
-    menus: Query<(Entity, &PopupGroup), With<Popup>>,
 ) {
 
-    for (menu, group) in menus.iter() {
+    let mut menus = world.query_filtered::<(Entity, &PopupGroup), With<Popup>>();
+
+    let mut to_despawn = Vec::new();
+    
+    for (menu, group) in menus.iter(world) {
         println!("Checking group: {:?}", group);
         if *group == *target_group {
             println!("Despawning old menu");
-            commands.entity(menu).despawn_recursive();
+            to_despawn.push(menu);
         }
+    }
+    
+    for menu in to_despawn {
+        world.entity_mut(menu).despawn_recursive();
     }
 }
 

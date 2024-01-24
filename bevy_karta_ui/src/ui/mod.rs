@@ -57,14 +57,15 @@ impl Plugin for KartaUiPlugin {
             .add_systems(PostUpdate, popup::popup_position_system.after(UiSystem::Layout))
                         
             
+            .add_systems(Update, context_menu::despawn_context_menus_on_any_click)
             .add_systems(
                 Update, 
                 (
                     spawn_node_context_menu.run_if(on_event::<NodeClickEvent>()),
                     spawn_edge_context_menu.run_if(on_event::<EdgeClickEvent>())
                 )
+                .after(context_menu::despawn_context_menus_on_any_click)
             )
-            .add_systems(PostUpdate, context_menu::despawn_context_menus_on_any_click)
                         
             .add_systems(PostUpdate, on_image_load)
         ;

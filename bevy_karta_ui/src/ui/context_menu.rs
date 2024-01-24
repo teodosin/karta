@@ -43,6 +43,7 @@ pub fn spawn_node_context_menu(
     mut world: &mut World,
 ){
     let position: Vec2;
+    let mut is_right_click: bool = false;
 
     {    
         let mut system_state: SystemState<(
@@ -67,12 +68,16 @@ pub fn spawn_node_context_menu(
 
         println!("Mouse event: {:?}", ev);
         
-        if ev.button != PointerButton::Secondary {
-            return
+        if ev.button == PointerButton::Secondary {
+            is_right_click = true;
         }
 
         let window = window.single();
         position = window.cursor_position().unwrap();
+    }
+
+    if !is_right_click {
+        return
     }
 
   
