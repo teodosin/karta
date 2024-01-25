@@ -28,7 +28,7 @@ impl Plugin for UiNodePlugin {
             .add_systems(Startup, base_panel)
             .add_systems(PostStartup, uinode_add_drag)
             .add_systems(PostUpdate, uinode_transform_to_style)
-            .add_systems(PostUpdate, update_top_panel_colors)
+            // .add_systems(PostUpdate, update_top_panel_colors)
         ;
 
     }
@@ -56,12 +56,12 @@ fn base_panel(
                 top: Val::Px(position.y),
                 width: Val::Px(size.x),
                 height: Val::Px(size.y),
-                border: UiRect {
-                    left: Val::Px(2.0),
-                    right: Val::Px(2.0),
-                    top: Val::Px(0.0),
-                    bottom: Val::Px(2.0),
-                },
+                // border: UiRect {
+                //     left: Val::Px(2.0),
+                //     right: Val::Px(2.0),
+                //     top: Val::Px(0.0),
+                //     bottom: Val::Px(2.0),
+                // },
                 ..Default::default()
             },
             background_color: BackgroundColor::from(Color::rgb(0.0, 0.0, 0.0)),
@@ -70,7 +70,7 @@ fn base_panel(
             ..default()
         },
         UiNode(position),
-        // Pickable::IGNORE,
+        Pickable::IGNORE,
     )).id();
 
     let top_bar = commands.spawn((
@@ -84,6 +84,7 @@ fn base_panel(
                 justify_content: JustifyContent::Center,
                 ..default()
             },
+            transform: Transform::from_xyz(0.0, 0.0, 1.0),
             background_color: BackgroundColor::from(col),
             ..default()
         },
@@ -102,11 +103,11 @@ fn base_panel(
 
 fn uinode_add_drag(
     mut commands: Commands,
-    mut query: Query<(Entity, &UiNode), Added<UiNode>>,
+    mut query: Query<Entity, Added<UiNode>>,
 ){
-    for (entity, node) in &mut query.iter_mut() {
+    for entity in &mut query.iter_mut() {
         commands.entity(entity).insert(
-            On::<Pointer<Drag>>::target_component_mut::<UiNode>(|drag, tform| {
+            On::<Pointer<Drag>>::listener_component_mut::<UiNode>(|drag, tform| {
                 tform.0 += drag.event.delta;
             }),
         );

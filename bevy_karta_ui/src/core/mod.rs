@@ -3,7 +3,7 @@
 
 use bevy::{app::{Plugin, PreStartup, App}, core::Name, ecs::{component::Component, world::World}};
 
-mod context_commands;
+pub mod context_commands;
 
 pub struct CorePlugin;
 

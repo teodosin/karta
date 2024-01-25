@@ -1,6 +1,6 @@
 // The right click menu
 
-use std::any::TypeId;
+use std::{any::TypeId, cmp};
 
 use bevy::{
     ecs::{system::{EntityCommand, SystemState}, world}, prelude::*, ui::{
@@ -9,9 +9,9 @@ use bevy::{
         Val
     }, utils::HashMap, window::Window
 };
-use bevy_mod_picking::{prelude::PointerButton, selection::NoDeselect};
+use bevy_mod_picking::{events::{Click, Pointer}, prelude::{On, PointerButton}, selection::NoDeselect};
 
-use crate::{ events::{nodes::NodeClickEvent, edges::EdgeClickEvent}, input::pointer::InputData};
+use crate::{ events::{nodes::NodeClickEvent, edges::EdgeClickEvent}, input::pointer::InputData, prelude::context_commands::{ComponentCommands, CustomCommand}};
 
 use super::popup::*;
 
@@ -43,6 +43,7 @@ pub fn spawn_node_context_menu(
     mut world: &mut World,
 ){
     let position: Vec2;
+    let target: Entity;
     let mut is_right_click: bool = false;
 
     {    
@@ -72,6 +73,7 @@ pub fn spawn_node_context_menu(
             is_right_click = true;
         }
 
+        target = ev.target.unwrap();
         let window = window.single();
         position = window.cursor_position().unwrap();
     }
@@ -97,39 +99,33 @@ pub fn spawn_node_context_menu(
     );
 
     println!("Menu root: {:?}", menu_root);
+    let mut buttons: Vec<(Entity, &CustomCommand)> = Vec::new();
 
+
+    {        
+        let commands = world.get_resource::<ComponentCommands>().unwrap();
+        let target_components = world.inspect_entity(target);
+
+        for cmp in target_components.iter() {
+            let id = cmp.type_id().unwrap();
+            let cmds = commands.get_by_id(id);
+            
+            match cmds {
+                Some(cmds) => {
+                    for command in cmds {
+                        buttons.push((menu_root, command));
+                    }
+                },
+                None => continue,
+            }
+        }
+    }
 
     // let pin_button = create_context_menu_button(
     //     &mut commands, "Pin".to_string(),
     //     Box::new(|| Box::new(PinToPositionAction::new()))
     // );
-    // let unpin_button = create_context_menu_button(
-    //     &mut commands, "Unpin".to_string(),
-    //     Box::new(|| Box::new(UnpinToPositionAction::new()))
-    // );
-
-    // let npath = nodepath.clone();
-    // let move_to_context_button = create_context_menu_button(
-    //     &mut commands, "Go to Context".to_string(),
-    //     Box::new(move || Box::new(MoveToContextAction::new(npath.clone())))
-    // );
-    // let npath = nodepath.clone();
-    // let expand_context_button = create_context_menu_button(
-    //     &mut commands, "Expand Context".to_string(),
-    //     Box::new(move || Box::new(ExpandContextAction::new(npath.clone())))
-    // );
-    // let npath = nodepath.clone();
-    // let collapse_context_button = create_context_menu_button(
-    //     &mut commands, "Collapse Context".to_string(),
-    //     Box::new(move || Box::new(CollapseContextAction::new(npath.clone())))
-    // );
-
     // commands.entity(menu_root).push_children(&[pin_button]);
-    // commands.entity(menu_root).push_children(&[unpin_button]);
-    // commands.entity(menu_root).push_children(&[move_to_context_button]);
-    // commands.entity(menu_root).push_children(&[expand_context_button]);
-    // commands.entity(menu_root).push_children(&[collapse_context_button]);
-
 }
 
 pub fn spawn_edge_context_menu(
@@ -185,76 +181,84 @@ pub const NORMAL_BUTTON: Color = Color::rgb(0.15, 0.15, 0.15);
 pub const HOVERED_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
 pub const PRESSED_BUTTON: Color = Color::rgb(0.35, 0.75, 0.35);
 
-// fn create_context_menu_button<'a>(
-//     commands: &mut Commands,
-//     label: String,
-//     factory: ActionFactory,
-// ) -> Entity {
-//     let button = commands.spawn((
-//         ActionComponent {
-//             action: factory,
-//         },
-//         ButtonBundle {
-//             style: Style {
-//                 width: Val::Px(120.0),
-//                 height: Val::Px(30.0),
-//                 // horizontally center child text
-//                 justify_content: JustifyContent::Center,
-//                 // vertically center child text
-//                 align_items: AlignItems::Center,
-//                 ..default()
-//             },
-//             border_color: BorderColor(Color::BLACK),
-//             background_color: NORMAL_BUTTON.into(),
-//             ..default()
-//         },
-//         ContextMenuButton,
-//         NoDeselect,
-//     ))
-//     .with_children(|parent| {
-//         parent.spawn((
-//             TextBundle::from_section(
-//                 label,
-//                 TextStyle {
-//                     font_size: 16.0,
-//                     color: Color::rgb(0.9, 0.9, 0.9),
-//                     ..default()
-//                 },
-//             ),
-//         ));
-//     }).id();
+#[derive(Component)]
+struct ButtonCommand {
+    entity: Entity, 
+    cmd: Box<dyn EntityCommand + Sync + 'static>,
+}
 
-//     button
-// }
+fn create_context_menu_button<'a>(
+    commands: &mut World,
+    label: String,
+    entity: Entity,
+    command: Box<dyn EntityCommand + Sync + 'static>,
+) -> Entity {
+    let button = commands.spawn((
+        ButtonCommand {
+            entity,
+            cmd: command,
+        },
+        ButtonBundle {
+            style: Style {
+                width: Val::Px(120.0),
+                height: Val::Px(30.0),
+                // horizontally center child text
+                justify_content: JustifyContent::Center,
+                // vertically center child text
+                align_items: AlignItems::Center,
+                ..default()
+            },
+            border_color: BorderColor(Color::BLACK),
+            background_color: NORMAL_BUTTON.into(),
+            ..default()
+        },
+        ContextMenuButton,
+        NoDeselect,
+    ))
+    .with_children(|parent| {
+        parent.spawn((
+            TextBundle::from_section(
+                label,
+                TextStyle {
+                    font_size: 16.0,
+                    color: Color::rgb(0.9, 0.9, 0.9),
+                    ..default()
+                },
+            ),
+        ));
+    }).id();
 
-// pub fn context_menu_button_system(
-//     mut interaction_query: Query<
-//         (      
-//             &Interaction,
-//             &mut BackgroundColor,
-//             &ContextMenuButton,
-//             &ActionComponent,
-//         ),
-//         (Changed<Interaction>, With<Button>),
-//     >,
-//     mut manager: ResMut<ActionManager>, 
-// ) {
-//     for (interaction, mut color, _mode, factory) in &mut interaction_query {
-//         // let mode = mode_query.get(children[0]).unwrap();
+    button
+}
 
-//         match *interaction {
-//             Interaction::Pressed => {
-//                 *color = PRESSED_BUTTON.into();
-//                 let action = (factory.action)();
-//                 manager.queue_action(action);
+/// Todo: turn into normal system, get rid of mutable world access.
+/// Defeats the purpose of using Commands. 
+pub fn context_menu_button_system(
+    mut commands: Commands,
+    mut interaction_query: Query<
+        (      
+            &Interaction,
+            &mut BackgroundColor,
+            &ContextMenuButton,
+            &ButtonCommand,
+        ),
+        (Changed<Interaction>, With<Button>),
+    >,
+) {
+    for (interaction, mut color, _mode, command) in &mut interaction_query {
+        // let mode = mode_query.get(children[0]).unwrap();
 
-//             }
-//             Interaction::Hovered => {
-//                 *color = HOVERED_BUTTON.into();
-//             }
-//             Interaction::None => {
-//                 *color = NORMAL_BUTTON.into();
-//             }
-//         }
-//     }
-// }
+        match *interaction {
+            Interaction::Pressed => {
+                *color = PRESSED_BUTTON.into();
+                commands.entity(command.entity).add(command.cmd);
+            }
+            Interaction::Hovered => {
+                *color = HOVERED_BUTTON.into();
+            }
+            Interaction::None => {
+                *color = NORMAL_BUTTON.into();
+            }
+        }
+    }
+}
