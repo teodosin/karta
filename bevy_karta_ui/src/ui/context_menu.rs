@@ -100,8 +100,6 @@ pub fn spawn_node_context_menu(
 
     println!("Menu root: {:?}", menu_root);
     let mut buttons: Vec<(Entity, &CustomCommand)> = Vec::new();
-
-
     {        
         let commands = world.get_resource::<ComponentCommands>().unwrap();
         let target_components = world.inspect_entity(target);
@@ -181,10 +179,19 @@ pub const NORMAL_BUTTON: Color = Color::rgb(0.15, 0.15, 0.15);
 pub const HOVERED_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
 pub const PRESSED_BUTTON: Color = Color::rgb(0.35, 0.75, 0.35);
 
+pub trait CustomEntityCommand: EntityCommand + Sync + 'static {
+    fn execute(&self, commands: &mut Commands);
+}
 #[derive(Component)]
 struct ButtonCommand {
     entity: Entity, 
     cmd: Box<dyn EntityCommand + Sync + 'static>,
+}
+
+impl ButtonCommand {
+    fn execute(&self, commands: &mut Commands) {
+        self.cmd.write(commands);
+    }
 }
 
 fn create_context_menu_button<'a>(
@@ -231,8 +238,7 @@ fn create_context_menu_button<'a>(
     button
 }
 
-/// Todo: turn into normal system, get rid of mutable world access.
-/// Defeats the purpose of using Commands. 
+
 pub fn context_menu_button_system(
     mut commands: Commands,
     mut interaction_query: Query<
