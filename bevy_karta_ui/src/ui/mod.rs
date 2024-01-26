@@ -12,7 +12,7 @@ use self::{
     grid::InfiniteGrid2DPlugin, graph_cam::GraphCamera, asset_manager::{ImageLoadTracker, on_image_load},
 };
 
-use super::events::{nodes::NodeClickEvent, edges::EdgeClickEvent};
+use super::events::{node_events::NodeClickEvent, edges::EdgeClickEvent};
 
 // Building blocks of specific components
 pub mod popup;

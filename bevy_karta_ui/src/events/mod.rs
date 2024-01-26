@@ -1,11 +1,11 @@
 use bevy::prelude::{Plugin, App};
 
 use self::background::*;
-use self::nodes::*;
+use self::node_events::*;
 use self::edges::*;
 
 pub mod background;
-pub mod nodes;
+pub mod node_events;
 pub mod edges;
 
 pub struct EventPlugin;

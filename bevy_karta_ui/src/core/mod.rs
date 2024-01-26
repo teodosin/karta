@@ -3,6 +3,8 @@
 
 use bevy::{app::{Plugin, PreStartup, App}, core::Name, ecs::{component::Component, world::World}};
 
+use self::context_commands::ContextCommandsPlugin;
+
 pub mod context_commands;
 
 pub struct CorePlugin;
@@ -10,8 +12,7 @@ pub struct CorePlugin;
 impl Plugin for CorePlugin {
     fn build(&self, app: &mut App) {
         app
-            // Disabled for now, because there are a ridiculous amount of components already. 
-            // .add_systems(PreStartup, spawn_components)  
+            .add_plugins(ContextCommandsPlugin)
         ;
     }
 }

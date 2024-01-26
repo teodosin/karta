@@ -18,7 +18,6 @@ use bevy::{
     render::{color::Color, view::{self, RenderLayers}}, hierarchy::BuildChildren
 };
 use bevy_mod_picking::prelude::*;
-use crate::ui::graph_cam::GraphCamera;
 
 pub struct UiNodePlugin;
 
@@ -28,7 +27,7 @@ impl Plugin for UiNodePlugin {
             .add_systems(Startup, base_panel)
             .add_systems(PostStartup, uinode_add_drag)
             .add_systems(PostUpdate, uinode_transform_to_style)
-            // .add_systems(PostUpdate, update_top_panel_colors)
+            .add_systems(PostUpdate, update_top_panel_colors)
         ;
 
     }
@@ -43,7 +42,7 @@ struct UiTopBar;
 fn base_panel(
     mut commands: Commands,
 ){
-    let position = Vec2::new(20.0, 20.0);
+    let position = Vec2::new(20.0, 700.0);
     let size = Vec2::new(100.0, 100.0);
     let col = Color::rgb(0.2, 0.2, 0.2);
 
@@ -116,7 +115,7 @@ fn uinode_add_drag(
 
 
 fn uinode_transform_to_style(
-    mut nodes: Query<(&UiNode, &mut Style), Changed<UiNode>>,
+    mut nodes: Query<(&mut UiNode, &mut Style), Changed<UiNode>>,
     window: Query<&Window>,
 ){
     if nodes.iter_mut().count() == 0 {
@@ -128,13 +127,15 @@ fn uinode_transform_to_style(
     let viewport = &viewport.resolution;
     let viewport = Vec2::new(viewport.physical_width() as f32, viewport.physical_height() as f32);
 
-    for (transform, mut style) in &mut nodes.iter_mut() {
+    for (mut transform, mut style) in &mut nodes.iter_mut() {
         let mut new_pos = Vec2::new(transform.0.x, transform.0.y);
         if new_pos.x < 0. {
             new_pos.x = 0.;
+            // transform.0.x = 0.;
         }
         if new_pos.y < 0. {
             new_pos.y = 0.;
+            // transform.0.y = 0.;
         }
 
         let width = style.width.resolve(1.0, Vec2::new(viewport.x as f32, viewport.y as f32));
@@ -145,9 +146,11 @@ fn uinode_transform_to_style(
 
         if new_pos.x > viewport.x as f32 - width {
             new_pos.x = viewport.x as f32 - width;
+            // transform.0.x = viewport.x as f32 - width;
         }
         if new_pos.y > viewport.y as f32 - height {
             new_pos.y = viewport.y as f32 - height;
+            // transform.0.y = viewport.y as f32 - height;
         }
         
         style.left = Val::Px(new_pos.x);

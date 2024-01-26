@@ -6,7 +6,7 @@ use bevy_prototype_lyon::{shapes, prelude::{GeometryBuilder, ShapeBundle, Stroke
 use bevy_tweening::{Tween, EaseFunction, lens::TransformPositionLens, Animator, TweenCompleted, TweeningPlugin};
 
 use crate::{
-    events::nodes::*, settings::theme::*, prelude::{GraphEntity, Pins, pointer::InputData}, 
+    events::node_events::*, settings::theme::*, prelude::{GraphEntity, Pins, pointer::InputData}, 
 };
 
 use self::node_ui_types::add_base_node_ui;
@@ -76,6 +76,12 @@ impl GraphStartingPositions {
 #[derive(Component)]
 pub struct GraphViewNode {
     target: Entity,
+}
+
+impl GraphViewNode {
+    pub fn get_target(&self) -> Entity {
+        self.target
+    }
 }
 
 #[derive(Component)]

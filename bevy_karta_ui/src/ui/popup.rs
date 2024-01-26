@@ -25,7 +25,8 @@ pub struct Popup;
 // -----------------------------------------------------------------------------
 
 pub fn spawn_popup_root( 
-    world: &mut World, // Do commands not work when using inside an exclusive system or with SystemParams?
+    commands: &mut Commands, // Do commands not work when using inside an exclusive system or with SystemParams?
+    menus: &Query<(Entity, &PopupGroup), With<Popup>>,
     group: PopupGroup,
     position: Vec2,
     size: Vec2,
@@ -33,7 +34,8 @@ pub fn spawn_popup_root(
 
     // Despawn any menus already spawned from the same group
     clear_popup_group(
-        world,
+        commands,
+        menus,
         &group,
     );
     
@@ -47,7 +49,7 @@ pub fn spawn_popup_root(
     println!("Size: {:?}", size);
 
     // Handle the popup type
-    let popup_root =  world.spawn((
+    let popup_root =  commands.spawn((
         NodeBundle {
             style: Style {
                 position_type: PositionType::Absolute,
@@ -101,15 +103,14 @@ pub fn spawn_popup_root(
 }
 
 pub fn clear_popup_group(
-    world: &mut World,
+    commands: &mut Commands,
+    menus: &Query<(Entity, &PopupGroup), With<Popup>>,
     target_group: &PopupGroup,
 ) {
 
-    let mut menus = world.query_filtered::<(Entity, &PopupGroup), With<Popup>>();
-
     let mut to_despawn = Vec::new();
     
-    for (menu, group) in menus.iter(world) {
+    for (menu, group) in menus.iter() {
         println!("Checking group: {:?}", group);
         if *group == *target_group {
             println!("Despawning old menu");
@@ -118,7 +119,7 @@ pub fn clear_popup_group(
     }
     
     for menu in to_despawn {
-        world.entity_mut(menu).despawn_recursive();
+        commands.entity(menu).despawn_recursive();
     }
 }
 
