@@ -9,15 +9,16 @@ rust_version = "1.74.1"
 [features]
 dev = [
     "bevy/embedded_watcher",
+    "bevy/dynamic_linking",
 ]
 
 [dependencies]
-bevy = { version = "0.12.1", features = ["bevy_asset","jpeg", "bmp", "tga","webp", "file_watcher", "exr", "dynamic_linking"] }
+bevy = { version = "0.12.1", features = ["bevy_asset","jpeg", "bmp", "tga","webp", "exr"] }
 
 bevy_mod_picking = { version = "0.17.0", features = ["backend_bevy_ui"]}
 bevy_prototype_lyon = "0.10.0"
 bevy_svg = "0.12.0"
-bevy_cosmic_edit = "0.15.1"
+# bevy_cosmic_edit = "0.15.1"
 bevy_tweening = "0.9.0"
 
 bevy_mod_debugdump = "0.9.0"
@@ -27,17 +28,17 @@ bevy-inspector-egui = "0.21.0"
 
 lyon = "1.0.1"
 rand = "0.8.5"
-ron = "0.8.1"
+# ron = "0.8.1"
 thiserror = "1.0"
-serde = { version = "1.0.188", features = ["derive"]}
+# serde = { version = "1.0.188", features = ["derive"]}
 enum-iterator = "1.4.1"
-directories = "5.0.1"
-rfd = { version = "0.12.1", default-features = false, features = ["xdg-portal"] }
-native-dialog = "0.7.0"
+# directories = "5.0.1"
+# rfd = { version = "0.12.1", default-features = false, features = ["xdg-portal"] }
+# native-dialog = "0.7.0"
 # bevy_embedded_assets = "0.9.1"
 
 blake3 = { version = "1.5", features=["pure"] }
-cross = "0.2.5"
+# cross = "0.2.5"
 
 [profile.dev]
 opt-level = 1
@@ -47,3 +48,6 @@ opt-level = 3
 
 [toolchain]
 channel = "nightly"
+
+[target.wasm32-unknown-unknown]
+runner = "wasm-server-runner"

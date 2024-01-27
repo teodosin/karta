@@ -361,7 +361,7 @@ pub fn tween_to_target_position_complete(
 pub fn move_node_selection(
     mut ev_mouse_drag: EventReader<MoveNodesEvent>,
     mouse: Res<Input<MouseButton>>,
-    cursor: Res<InputData>,
+    input_data: Res<InputData>,
     mut query: Query<(Entity, &GraphViewNode, &mut Transform, &PickSelection), /*With<Selected>*/>,
 ) {
 
@@ -376,8 +376,8 @@ pub fn move_node_selection(
         if mouse.pressed(MouseButton::Left){
             for (_entity, _node, mut transform, selection) in query.iter_mut() {
                 if !selection.is_selected {continue};
-                transform.translation.x += cursor.curr_position.x - cursor.prev_position.x;
-                transform.translation.y += cursor.curr_position.y - cursor.prev_position.y;     
+                transform.translation.x += input_data.cursor_world_current_position().x - input_data.cursor_world_previous_position().x;
+                transform.translation.y += input_data.cursor_world_current_position().y - input_data.cursor_world_previous_position().y;     
             }
         }
         break

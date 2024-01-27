@@ -158,7 +158,7 @@ pub fn graph_zoom(
 
                             // Zoom-in is centered on mouse position
                             let amount = zoom_mult - 1.0;
-                            let adjusted_position = (input_data.curr_position - transform.translation.truncate()) * amount;
+                            let adjusted_position = (input_data.cursor_world_current_position() - transform.translation.truncate()) * amount;
                             transform.translation.x += adjusted_position.x;
                             transform.translation.y += adjusted_position.y;
                         },
@@ -186,7 +186,7 @@ pub fn graph_zoom(
 
                     // Zoom-in is centered on mouse position
                     let amount = zoom_mult - 1.0;
-                    let adjusted_position = (input_data.curr_position - transform.translation.truncate()) * amount;
+                    let adjusted_position = (input_data.cursor_world_previous_position() - transform.translation.truncate()) * amount;
                     transform.translation.x += adjusted_position.x;
                     transform.translation.y += adjusted_position.y;
                 },
