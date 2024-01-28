@@ -18,20 +18,16 @@ bevy = { version = "0.12.1", features = ["bevy_asset","jpeg", "bmp", "tga","webp
 bevy_mod_picking = { version = "0.17.0", features = ["backend_bevy_ui"]}
 bevy_prototype_lyon = "0.10.0"
 bevy_svg = "0.12.0"
-# bevy_cosmic_edit = "0.15.1"
 bevy_tweening = "0.9.0"
 
 bevy_mod_debugdump = "0.9.0"
 bevy-inspector-egui = "0.21.0"
-# bevy_cosmic_edit = "0.13.0"
 
 
 lyon = "1.0.1"
 rand = "0.8.5"
 thiserror = "1.0"
 enum-iterator = "1.4.1"
-
-# blake3 = { version = "1.5", features=["pure"] }
 
 [profile.dev]
 opt-level = 1
