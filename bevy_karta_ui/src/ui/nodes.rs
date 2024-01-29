@@ -287,7 +287,7 @@ pub fn add_node_base_outline(
         ShapeBundle {
             path: outline_path,
             spatial: SpatialBundle {
-                transform: Transform::from_translation(Vec3::new(0.0, 0.0, 100.0 + top_z)),
+                transform: Transform::from_translation(Vec3::new(0.0, 0.0, top_z + 0.001)),
                 ..default()
             },
             ..default()

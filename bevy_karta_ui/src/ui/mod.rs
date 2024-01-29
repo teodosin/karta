@@ -7,7 +7,7 @@ use bevy_mod_picking::backends::raycast::RaycastBackendSettings;
 use bevy_prototype_lyon::prelude::*;
 
 use self::{
-    context_menu::{spawn_node_context_menu, spawn_edge_context_menu}, 
+    context_menu::{add_component_systems_to_context_menu, context_menu_button_system, spawn_edge_context_menu, spawn_node_context_menu, ContextMenuSpawnEvent}, 
     nodes::NodesUiPlugin, // edges::EdgeUiPlugin, 
     grid::InfiniteGrid2DPlugin, graph_cam::GraphCamera, asset_manager::{ImageLoadTracker, on_image_load},
 };
@@ -41,6 +41,8 @@ impl Plugin for KartaUiPlugin {
 
             .insert_resource(ImageLoadTracker::new())
 
+            .add_event::<ContextMenuSpawnEvent>()
+
             // Resources
             .add_systems(PreStartup, require_markers_for_raycasting)
             // .add_systems(PreStartup, default_font_setup)
@@ -65,8 +67,13 @@ impl Plugin for KartaUiPlugin {
                     spawn_edge_context_menu.run_if(on_event::<EdgeClickEvent>())
                 )
                 .after(context_menu::despawn_context_menus_on_any_click)
+                // .before(add_component_systems_to_context_menu)
             )
-                        
+
+            .add_systems(PostUpdate, add_component_systems_to_context_menu
+                .run_if(on_event::<ContextMenuSpawnEvent>())
+            ) 
+            .add_systems(PostUpdate, context_menu_button_system)
             .add_systems(PostUpdate, on_image_load)
         ;
     }

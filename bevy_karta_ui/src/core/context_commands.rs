@@ -1,14 +1,11 @@
 use std::any::TypeId;
 
 use bevy::{
-    app::{App, Plugin, PreStartup},
-    ecs::{
+    app::{App, Plugin, PreStartup}, core::Name, ecs::{
         component::Component,
         system::{Commands, Res, ResMut, Resource, SystemId, SystemState},
         world::World,
-    },
-    hierarchy::DespawnRecursiveExt,
-    utils::HashMap,
+    }, hierarchy::DespawnRecursiveExt, transform::components::Transform, utils::HashMap
 };
 
 use crate::prelude::pointer::InputData;
@@ -65,7 +62,7 @@ impl ContextEntitySystems {
 
 /// A resource storing the component-specific SystemId's in an application.
 /// These may be used in the construction of the context menu.
-#[derive(Resource)]
+#[derive(Resource, Clone)]
 pub struct ContextComponentSystems {
     map: HashMap<TypeId, Vec<ContextSystem>>,
 }
@@ -107,6 +104,7 @@ impl ContextComponentSystems {
 /// A generic system for deleting an entity.
 fn delete_entity(mut commands: Commands, input_data: Res<InputData>) {
     let target = input_data.latest_click_entity().unwrap();
+    println!("Deleting entity: {:?}", target);
     commands.entity(target).despawn_recursive();
 }
 
@@ -116,9 +114,10 @@ fn register_default_systems(mut world: &mut World) {
         ResMut<ContextComponentSystems>,
     )> = SystemState::new(&mut world);
 
-    
     let del = world.register_system(delete_entity);
-    let (mut entity_systems, component_systems) = system_state.get_mut(&mut world);
+    let (mut entity_systems, mut component_systems) = system_state.get_mut(&mut world);
 
     entity_systems.insert("Delete".to_string(), del);
+    component_systems.insert::<Transform>("DOLOROMS".to_string(), del);
+    component_systems.insert::<Name>("tROFL".to_string(), del);
 }

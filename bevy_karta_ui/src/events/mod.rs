@@ -26,6 +26,7 @@ impl Plugin for EventPlugin {
 
             // Edge Events
             .add_event::<EdgeClickEvent>()
+
         ;
     }
 }

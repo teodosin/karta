@@ -44,18 +44,14 @@ pub fn despawn_context_menus_on_any_click(
 
 /// System for spawning the context menu on right click of a node.
 pub fn spawn_node_context_menu(
-    mut world: &mut World
+    mut mouse_event: EventReader<NodeClickEvent>, 
+    view_nodes: Query<&GraphViewNode>,
+    mut commands: Commands,
+    window: Query<&Window>,
+    mut menus: Query<(Entity, &PopupGroup), With<Popup>>,
+    e_sys: Res<ContextEntitySystems>,
+    mut menu_event: EventWriter<ContextMenuSpawnEvent>,
 ) {
-
-    // Get event information to determine target and button
-    // Get the list of components on the target entity
-
-    let mut system_state: SystemState<(
-        EventReader<NodeClickEvent>, 
-        Query<&GraphViewNode>,
-    )> = SystemState::new(&mut world);
-
-    let (mut mouse_event, view_nodes) = system_state.get_mut(&mut world);
     
     if mouse_event.is_empty() {
         return;
@@ -73,28 +69,10 @@ pub fn spawn_node_context_menu(
     }
     
     let viewtarget = ev.target.unwrap();
-    let target = view_nodes.get(viewtarget).unwrap().get_target();
-
-    let target_components = {
-        let mut target_components = Vec::new();
-        let component_infos = world.inspect_entity(target);
-        for cmp in component_infos.iter() {
-            let id = cmp.type_id().unwrap();
-            target_components.push(id);
-        }
-        target_components
+    let target = match view_nodes.get(viewtarget){
+        Ok(node) => node.get_target(),
+        Err(_) => return,
     };
-    // --------------------------------
-
-    let mut system_state: SystemState<(
-        Commands,
-        Query<&Window>,
-        Query<(Entity, &PopupGroup), With<Popup>>,
-        Res<ContextEntitySystems>,
-        Res<ContextComponentSystems>,
-    )> = SystemState::new(&mut world);
-
-    let (mut commands, window, mut menus, e_sys, c_sys) = system_state.get_mut(&mut world);
 
     let window = window.single();
     let position = window.cursor_position().unwrap();
@@ -109,30 +87,117 @@ pub fn spawn_node_context_menu(
     // Get a popup root
     let menu_root = spawn_popup_root(&mut commands, &mut menus, PopupGroup::Context, position, size);
     
+    for sys in e_sys.get() {
+        let button = create_context_menu_button(
+            &mut commands, sys.name().clone(), sys.command()
+        );
+        commands.entity(menu_root).push_children(&[button]);
+    }
+
+    menu_event.send(ContextMenuSpawnEvent {
+        target,
+        menu_root,
+    });
+
+
+}
+
+#[derive(Event)]
+pub struct ContextMenuSpawnEvent {
+    pub target: Entity,
+    pub menu_root: Entity,
+}
+
+pub fn add_component_systems_to_context_menu(
+    mut world: &mut World,
+){
+    let mut system_state: SystemState<
+        EventReader<ContextMenuSpawnEvent>,
+    > = SystemState::new(&mut world);
+
+    let mut menu_event = system_state.get_mut(&mut world);
+
+    if menu_event.is_empty() {
+        return;
+    }
     
+    println!("running systemsssss {}", menu_event.len());
+    
+    let (target, menu_root) = match menu_event.read().next() {
+        Some(ev) => (ev.target, ev.menu_root),
+        None => return,
+    };
+    menu_event.clear();
+
+    // Make sure both still exist before proceeding
+    if world.get_entity(target).is_none() || world.get_entity(menu_root).is_none() {
+        return;
+    }
+
+    let target_components = {
+        let mut target_components = Vec::new();
+        let component_infos = world.inspect_entity(target);
+        for cmp in component_infos.iter() {
+            let id = cmp.type_id().unwrap();
+            target_components.push(id);
+        }
+        target_components
+    };
+    let mut system_state: SystemState<
+        Res<ContextComponentSystems>,
+    > = SystemState::new(&mut world);
+
+    let c_sys = system_state.get_mut(&mut world);
+    let c_sys = c_sys.clone();
+
+    println!("Length of target components: {}", target_components.len());
 
     for id in target_components.iter() {
         let cmds = c_sys.get_by_id(*id);
 
         match cmds {
             Some(cmds) => {
+                println!("Length of commands: {}", cmds.len());
                 for systems in cmds {
-                    let button = create_context_menu_button(
-                        &mut commands, systems.name().clone(), systems.command()
-                    );
-                    commands.entity(menu_root).push_children(&[button]);
+                    let system_id = systems.command();
+                    let label = systems.name();
+                    let button = world.spawn((
+                        ButtonSystem {
+                            system: system_id,
+                        },
+                        ButtonBundle {
+                            style: Style {
+                                width: Val::Px(120.0),
+                                height: Val::Px(30.0),
+                                // horizontally center child text
+                                justify_content: JustifyContent::Center,
+                                // vertically center child text
+                                align_items: AlignItems::Center,
+                                ..default()
+                            },
+                            border_color: BorderColor(Color::BLACK),
+                            background_color: NORMAL_BUTTON.into(),
+                            ..default()
+                        },
+                        ContextMenuButton,
+                        NoDeselect,
+                    ))
+                    .with_children(|parent| {
+                        parent.spawn((TextBundle::from_section(
+                            label,
+                            TextStyle {
+                                font_size: 16.0,
+                                color: Color::rgb(0.9, 0.9, 0.9),
+                                ..default()
+                            },
+                        ),));
+                    }).id();
+                    world.entity_mut(menu_root).push_children(&[button]);
                 }
             }
             None => continue,
         }
     }
-    
-
-    // let pin_button = create_context_menu_button(
-    //     &mut commands, "Pin".to_string(),
-    //     Box::new(|| Box::new(PinToPositionAction::new()))
-    // );
-    // commands.entity(menu_root).push_children(&[pin_button]);
 }
 
 pub fn spawn_edge_context_menu(mut world: &mut World) {
@@ -183,7 +248,7 @@ pub trait CustomEntityCommand: EntityCommand + Sync + 'static {
     fn execute(&self, commands: &mut Commands);
 }
 #[derive(Component)]
-struct ButtonSystem {
+pub struct ButtonSystem {
     system: SystemId,
 }
 
