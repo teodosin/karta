@@ -12,12 +12,15 @@ impl Plugin for SceneCamPlugin {
 }
 
 fn cam_setup(mut commands: Commands) {
-    commands.spawn(Camera3dBundle {
+    commands.spawn((
+        Camera3dBundle {
         camera: Camera {
             order: 0,
             ..default()
         },
         transform: Transform::from_xyz(0.0, 6., 12.0).looking_at(Vec3::new(0., 1., 0.), Vec3::Y),
         ..default()
-    });
+        },
+        bevy_mod_picking::backends::raycast::RaycastPickable,
+    ));
 }

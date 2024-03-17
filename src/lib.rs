@@ -1,15 +1,14 @@
 //lib
 
 use bevy::{prelude::*, log::LogPlugin, window::WindowResolution};
-// use bevy_inspector_egui::quick::WorldInspectorPlugin;
+use bevy_embedded_assets::EmbeddedAssetPlugin;
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_mod_picking::prelude::*;
 
+mod tests;
 
 mod vault;
-mod settings;
 
-mod modes;
-mod input;
 mod actions;
 
 mod events;
@@ -17,7 +16,7 @@ mod events;
 mod graph;
 mod scene;
 
-mod ui;
+mod bevy_overlay_graph;
 
 
 
@@ -39,29 +38,32 @@ pub fn karta_app() {
             .build()
             .disable::<LogPlugin>()
         )
+        .add_plugins(EmbeddedAssetPlugin{
+            mode: bevy_embedded_assets::PluginMode::AutoLoad,
+        })
         .add_plugins(DefaultPickingPlugins
             .build()
+            .disable::<BevyUiBackend>()
             .disable::<DebugPickingPlugin>()
         )        
 
+        .add_plugins(bevy_overlay_graph::OverlayGraphPlugin)
+
         // EGUI INSPECTOR BLOCK
-        //.add_plugins(WorldInspectorPlugin::new())
+        // .add_plugins(WorldInspectorPlugin::new())
 
         // ENVIRONMENT BLOCK
         // The data that needs to remain in memory for the entire duration of the app
         .add_plugins(vault::VaultPlugin)// PreStartup
-        .add_plugins(settings::SettingsPlugin)
         
         // INPUT BLOCK
         // Plugins that handle input and interaction. 
         // Stage: PreUpdate
-        .add_plugins(modes::ModePlugin)
-        .add_plugins(input::InputPlugin)
 
         // Actions that handle communication between input and the rest of the app.
         // Mostly PreUpdate. 
         .add_plugins(actions::ActionPlugin)
-        .add_plugins(events::EventPlugin)
+        .add_plugins(events::KartaEventPlugin)
 
         // GRAPH BLOCK
         // Handle update to the graph. Evaluate operator graph. 
@@ -75,25 +77,24 @@ pub fn karta_app() {
         // Handle update to the UI.
         // UI input is handled in PreUpdate
         // Drawing is done PostUpdate
-        .add_plugins(ui::KartaUiPlugin)
 
-        //.run()
-
-        // It's been brought to my attention that my way of structuring my plugins might suck a bit.
-        // My plugins are strongly coupled to each other. I can't test plugins in isolation.
-        // I can create test cases still, and import everything I need to test a plugin, but it's 
-        // not ideal. So, TODO!
-        // Events and actions are prime candidates to be dissolved into other plugins.
-        // I am not confident that the others can be dissolved.
+        // .run()
     ;
 
+    // let dot = bevy_mod_debugdump::schedule_graph_dot(&mut app, Startup, &bevy_mod_debugdump::schedule_graph::Settings::default());
+    // std::fs::write("src/schedule_graphs/startup.dot", dot).expect("Unable to write file");
+
+    // let dot = bevy_mod_debugdump::schedule_graph_dot(&mut app, PreUpdate, &bevy_mod_debugdump::schedule_graph::Settings::default());
+    // std::fs::write("src/schedule_graphs/preupdate.dot", dot).expect("Unable to write file");
+
     // let dot = bevy_mod_debugdump::schedule_graph_dot(&mut app, Update, &bevy_mod_debugdump::schedule_graph::Settings::default());
-    // // Save dot output as a file
-    // std::fs::write("strings_notworking_update.dot", dot).expect("Unable to write file");
+    // std::fs::write("src/schedule_graphs/update.dot", dot).expect("Unable to write file");
 
     // let dot = bevy_mod_debugdump::schedule_graph_dot(&mut app, PostUpdate, &bevy_mod_debugdump::schedule_graph::Settings::default());
-    // // Save dot output as a file
-    // std::fs::write("strings_notworking_postupdate.dot", dot).expect("Unable to write file");
+    // std::fs::write("src/schedule_graphs/postupdate.dot", dot).expect("Unable to write file");
+
+    // let dot = bevy_mod_debugdump::schedule_graph_dot(&mut app, Last, &bevy_mod_debugdump::schedule_graph::Settings::default());
+    // std::fs::write("src/schedule_graphs/last.dot", dot).expect("Unable to write file");
 
     app.run();
 }
