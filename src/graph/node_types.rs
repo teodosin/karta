@@ -8,6 +8,7 @@ use bevy::ecs::world::World;
 use bevy::render::texture::Image;
 use bevy_svg::prelude::Svg;
 use enum_iterator::Sequence;
+use serde::{Serialize, Deserialize};
 
 mod file_types;
 mod filters;
@@ -15,6 +16,7 @@ mod forces;
 mod operators;
 mod panels;
 mod query;
+mod riv;
 
 pub struct NodeTypesPlugin;
 
@@ -28,7 +30,7 @@ impl Plugin for NodeTypesPlugin {
 
 // For now, all node types will be stored in a single enum
 // This will be changed to a more flexible system later
-#[derive(Clone, Copy, Debug, PartialEq, Sequence)]
+#[derive(Clone, Copy, Debug, PartialEq, Sequence, Serialize, Deserialize)]
 pub enum NodeTypes {
     Base,
     Folder, 
@@ -52,6 +54,12 @@ impl fmt::Display for NodeTypes {
         }
     }
 
+}
+
+impl Default for NodeTypes {
+    fn default() -> Self {
+        NodeTypes::Base
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Sequence)]
@@ -98,8 +106,8 @@ impl fmt::Display for DataTypes {
     }
 }
 
-// A helper function to get the type based on a node path
-pub fn get_type_from_path(
+/// A helper function to get the type of a physical node based on its path
+pub fn get_type_from_file_path(
     path: &PathBuf, 
 ) -> Option<NodeTypes> {
     match fs::metadata(&path) {
@@ -129,6 +137,12 @@ pub fn get_type_from_path(
             None
         }
     }
+}
+
+pub fn get_type_from_context_path(
+    path: &PathBuf, 
+) -> Option<NodeTypes> {
+    Some(NodeTypes::Base) 
 }
 
 pub trait NodeData: Send + Sync + 'static {

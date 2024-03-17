@@ -5,8 +5,27 @@
 use std::collections::HashMap;
 
 use bevy::{prelude::Component, reflect::Reflect};
+use serde::{Deserialize, Serialize};
 
-#[derive(Component, Reflect)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct Attribute {
+    pub name: String,
+    pub value: Option<f32>,
+}
+
+#[derive(Component, Reflect, Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 pub struct Attributes {
     pub attributes: HashMap<String, Option<f32>>,
+}
+
+impl Attributes {
+    pub fn new() -> Self {
+        Self {
+            attributes: HashMap::new(),
+        }
+    }
+
+    pub fn add_attribute(&mut self, name: String, value: Option<f32>) {
+        self.attributes.insert(name, value);
+    }
 }
