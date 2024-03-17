@@ -1,16 +1,24 @@
 services:
-  rust-devenv:
+  karta-rust-devenv:
     build:
       context: .
+    container_name: karta-rust-devenv
+    environment:
+      - DISPLAY=${DISPLAY}
+    devices: 
+# Next line is for sound, but it does not work in Windows/WSL
+#      - "/dev/snd:/dev/snd"
+      - "/dev/dri:/dev/dri"
     tty: true
-    privileged: true
+#    privileged: true
     volumes:
        - .:/project
        - /tmp/.X11-unix:/tmp/.X11-unix
-    environment:
-      - DISPLAY=${DISPLAY}
-      - WINIT_UNIX_BACKEND=x11
-    devices: 
-      - /dev/dxg
-    network_mode: "host"
-    user: "${UID}:${GID}"
+    command: bash
+    deploy: 
+      resources: 
+        reservations: 
+          devices: 
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
