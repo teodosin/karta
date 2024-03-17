@@ -51,8 +51,20 @@ If you install rust- or any other plugin to VSCode, it will be valid only when r
 The project directory is to be found in `/project` directory. Use the terminal from VSCode to run 
 any command within the context of docker container. 
 
-There are multiple ways to run karta, or any other graphical (X11) application from docker container, 
-here is the [article](https://www.baeldung.com/linux/docker-container-gui-applications) which suggests
-at least three ways. 
+Resources:
+- https://github.com/bevyengine/bevy/issues/11768 
+- https://github.com/bevyengine/bevy/discussions/4953#discussioncomment-8571666
+
+#### Running from docker container
+
+First you have to [install NVIDIA container toolkit on host](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html), 
+The script is for example: 
+
+    curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg \
+    && curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+    sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+    sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+    sudo apt-get install -y nvidia-container-toolkit
+    sudo nvidia-ctk runtime configure --runtime=docker
 
 
