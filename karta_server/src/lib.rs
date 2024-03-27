@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use agdb::{DbId, QueryBuilder, UserValue};
+use agdb::{DbError, DbId, DbValue, QueryBuilder, UserValue};
 use path_ser::buf_to_str;
 
 mod path_ser;
@@ -67,7 +67,16 @@ impl Graph {
 
         let mut db = db.expect("Failed to create db");
 
-        let _ = db.exec_mut(&QueryBuilder::insert().nodes().aliases("root").query());
+        // Create the root node
+        let root: Vec<Node> = vec![
+            Node {
+                db_id: None,
+                name: "root".to_string(),
+                ntype: NodeType::Directory,
+            },
+        ];
+
+        let _ = db.exec_mut(&QueryBuilder::insert().nodes().aliases("root").values(&root).query());
 
         Graph {
             name: name.to_string(),
@@ -123,11 +132,40 @@ impl Graph {
     }
 }
 
-#[derive(UserValue)]
+#[derive(Debug, UserValue)]
 struct Node {
     db_id: Option<DbId>,
     name: String,
+    ntype: NodeType,
     //attributes: Vec<Attribute>,
+}
+
+#[derive(Debug, Clone)]
+enum NodeType {
+    Directory,
+    File,
+}
+
+// TODO: Could a macro be created for this?
+impl TryFrom<DbValue> for NodeType {
+    type Error = DbError;
+
+    fn try_from(value: DbValue) -> Result<Self, Self::Error> {
+        match value.to_string().as_str() {
+            "Directory" => Ok(NodeType::Directory),
+            "File" => Ok(NodeType::File),
+            _ => Err(DbError::from("Invalid NodeType")),
+        }
+    }
+}
+
+impl From<NodeType> for DbValue {
+    fn from(ntype: NodeType) -> Self {
+        match ntype {
+            NodeType::Directory => "Directory".into(),
+            NodeType::File => "File".into(),
+        }
+    }
 }
 
 struct Edge {
@@ -137,8 +175,18 @@ struct Edge {
 #[derive(Clone)]
 struct Attribute {
     name: String,
-    value: String,
+    value: f32,
 }
+
+/// A list of reserved node attribute names that cannot be used by the user.
+const RESERVED_NODE_ATTRS: [&str; 2] = [
+    "name", // The full path of the node
+    "ntype", // The type of the node
+];
+/// A list of reserved edge attribute names that cannot be used by the user.
+const RESERVED_EDGE_ATTRS: [&str; 1] = [
+    "contains", // For directories
+];
 
 // Tests
 // -----------------------------------------------------------------------------
@@ -223,12 +271,15 @@ mod tests {
         let func_name = "existing_db_in_directory";
         let mut first = setup(func_name);
 
-        let _ = first.db.exec_mut(&QueryBuilder::insert().nodes().aliases("testalias").query());
-
+        let _ = first
+            .db
+            .exec_mut(&QueryBuilder::insert().nodes().aliases("testalias").query());
 
         let second = setup(func_name);
 
-        let root_node_result = second.db.exec(&QueryBuilder::select().ids("testalias").query());
+        let root_node_result = second
+            .db
+            .exec(&QueryBuilder::select().ids("testalias").query());
 
         match root_node_result {
             Ok(root_node) => {
