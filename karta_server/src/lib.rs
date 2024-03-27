@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use agdb::{DbError, DbId, DbValue, QueryBuilder, UserValue};
-use path_ser::buf_to_str;
+use path_ser::{buf_to_str, str_to_buf};
 
 mod path_ser;
 
@@ -71,7 +71,7 @@ impl Graph {
         let root: Vec<Node> = vec![
             Node {
                 db_id: None,
-                name: "root".to_string(),
+                path: NodePath("root".into()),
                 ntype: NodeType::Directory,
             },
         ];
@@ -89,17 +89,31 @@ impl Graph {
 
     /// Alternate constructor. Use this if you want to set a custom storage path for the db. Panics if the db cannot be created
     fn new_custom_storage(root_path: PathBuf, name: &str, storage_path: PathBuf) -> Self {
+        // Create the path if it doesn't exist
+        if !storage_path.exists() {
+            std::fs::create_dir_all(&storage_path).expect("Failed to create storage path");
+        }
+
         let db = agdb::Db::new(storage_path.join(name).to_str().unwrap());
 
         let mut db = db.expect("Failed to create db");
 
-        let _ = db.exec_mut(&QueryBuilder::insert().nodes().aliases("root").query());
+        // Create the root node
+        let root: Vec<Node> = vec![
+            Node {
+                db_id: None,
+                path: NodePath("root".into()),
+                ntype: NodeType::Directory,
+            },
+        ];
+
+        let _ = db.exec_mut(&QueryBuilder::insert().nodes().aliases("root").values(&root).query());
 
         Graph {
             name: name.to_string(),
             db,
             root_path: root_path.into(),
-            storage_path: StoragePath::Custom(storage_path),
+            storage_path: StoragePath::Default,
             maintain_readable_files: false,
         }
     }
@@ -132,12 +146,35 @@ impl Graph {
     }
 }
 
+/// The universal node type. 
 #[derive(Debug, UserValue)]
 struct Node {
+    /// The id of the node in the database.
     db_id: Option<DbId>,
-    name: String,
+    /// The path of the node relative to the root of the graph.
+    /// The path is stored as a string in the database, but is converted to a PathBuf when
+    /// the node is loaded.
+    path: NodePath,
     ntype: NodeType,
     //attributes: Vec<Attribute>,
+}
+
+/// Newtype wrapper for the node path. 
+#[derive(Debug, Clone)]
+pub struct NodePath(PathBuf);
+
+impl TryFrom<DbValue> for NodePath {
+    type Error = DbError;
+
+    fn try_from(value: DbValue) -> Result<Self, Self::Error> {
+        Ok(NodePath(str_to_buf(&value.to_string())))
+    }
+}
+
+impl From<NodePath> for DbValue {
+    fn from(path: NodePath) -> Self {
+        buf_to_str(path.0).into()
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -293,5 +330,27 @@ mod tests {
         assert_eq!(true, true);
 
         cleanup(func_name);
+    }
+
+    #[test]
+    fn new_custom_storage_directory(){
+        let func_name = "new_custom_storage_directory";
+        let name = format!("fs_graph_test_{}", func_name);
+        let root = ProjectDirs::from("com", "fs_graph", &name)
+            .unwrap()
+            .config_dir()
+            .to_path_buf();
+        let storage = root.join("storage");
+
+        let graph = Graph::new_custom_storage(root.clone().into(), &name, storage.clone());
+
+        assert_eq!(
+            storage.exists(),
+            true,
+            "Storage directory has not been created"
+        );
+
+        // Clean up the custom storage directory
+        std::fs::remove_dir_all(storage).expect("Failed to remove storage directory");
     }
 }
