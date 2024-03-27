@@ -6,3 +6,4 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+fs_graph = { git = "https://github.com/teodosin/fs_graph.git", branch = "main" }
