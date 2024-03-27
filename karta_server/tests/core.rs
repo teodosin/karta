@@ -3,8 +3,8 @@ use agdb::QueryBuilder;
 use directories::ProjectDirs;
 use fs_graph::Graph;
 
-/// Setup function for tests. Always stores the db in the data_dir.
-fn setup(test_name: &str) -> Graph {
+/// Graph setup function for tests. Always stores the db in the data_dir.
+fn setup_graph(test_name: &str) -> Graph {
     let name = format!("fs_graph_test_{}", test_name);
     let root = ProjectDirs::from("com", "fs_graph", &name)
         .unwrap()
@@ -23,8 +23,8 @@ fn setup(test_name: &str) -> Graph {
     graph
 }
 
-/// Cleanup function for tests. Removes the root directory from the data_dir.
-fn cleanup(test_name: &str) {
+/// Graph cleanup function for tests. Removes the root directory from the data_dir.
+fn cleanup_graph(test_name: &str) {
     // Uncomment this return only if you need to temporarily look at the contents
     // return;
 
@@ -67,21 +67,21 @@ fn test_new_graph() {
         }
     }
 
-    cleanup(func_name);
+    cleanup_graph(func_name);
 }
 
+/// Add a node to the db, then create a new graph with the same name.
+/// The new graph should be able to access the node.
 #[test]
 fn existing_db_in_directory() {
-    // We add a node to the db, then create a new graph with the same name.
-    // The new graph should be able to access the node.
     let func_name = "existing_db_in_directory";
-    let mut first = setup(func_name);
+    let mut first = setup_graph(func_name);
 
     let _ = first
         .db
         .exec_mut(&QueryBuilder::insert().nodes().aliases("testalias").query());
 
-    let second = setup(func_name);
+    let second = setup_graph(func_name);
 
     let root_node_result = second
         .db
@@ -98,7 +98,7 @@ fn existing_db_in_directory() {
 
     assert_eq!(true, true);
 
-    cleanup(func_name);
+    cleanup_graph(func_name);
 }
 
 #[test]
@@ -133,3 +133,20 @@ fn new_custom_storage_directory() {
     // Clean up the custom storage directory
     std::fs::remove_dir_all(storage).expect("Failed to remove storage directory");
 }
+
+// Loading an old db with a new root directory!
+// Should this be allowed or prevented? For usability it would be nice if you could just 
+// change the root directory to beyond or within the previous one.
+//
+// This has to be handled carefully though. If each node stores its path relative to the root,
+// then the path of the node will be incorrect if the root directory is changed. Every node in the 
+// entire db would have to be updated. On the other hand, if the path is stored as an absolute path,
+// then moving the root folder would break those. And if each node only stores its own name, then finding 
+// the path of a node would be a slower operation. Also it seems like agdb doesn't support having the 
+// same aliases for multiple nodes, so only storing the names wouldn't be feasible anyway. 
+//
+// One has to consider also that a large portion of the db could be rearranged without changing the root
+// directory, meaning that there would still be a lot of updates needed. 
+
+// Test for what happens when a db is moved to a different directory, but the root directory is the same.
+

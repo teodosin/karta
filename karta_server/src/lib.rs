@@ -118,10 +118,16 @@ impl Graph {
         self.maintain_readable_files = maintain;
     }
 
+    /// Retrieves a particular node's data from the database.
+    /// The path is relative to the root of the graph.
+    pub fn open_node(&self, path: PathBuf){
+
+    }
+
     /// Opens the connections of a particular node.
     /// Takes in the path to the node relative to the root of the graph.
-    ///
-    pub fn open_node(&self, path: PathBuf) -> Vec<Node> {
+    /// TODO: Add filter argument
+    pub fn open_node_connections(&self, path: PathBuf) -> Vec<Node> {
         // Step 1: Check if the node is a physical node in the file system.
         // Step 2: Check if the node exists in the db.
         // Step 3: Check if all the physical dirs and files in the node are in the db.
