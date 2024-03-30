@@ -1,6 +1,6 @@
 // Important feature to allow for subgraph export and bundling with applications.
 
-// GraphScope will be a pattern (unsure if struct or trait or something else) that
+// GraphScope would be a pattern (unsure if struct or trait or something else) that
 // will be needed to validate the scope of the graph for applications that use a subset
 // of the graph. For example, the data in a game could be indexed within a larger Karta graph 
 // during development, to keep track of how all of its elements relate to not only each other 
@@ -14,6 +14,10 @@
 // have a Scope defined which restricts its access to only nodes that match a certain pattern. That 
 // way it can't end up relying on data that exists in the large graph but not in the extracted
 // subgraph. 
+
+// Another way to validate subgraph completeness would be to simply expect the user application to 
+// have tests that validate the data. I'm not sure if this would be enough to prevent the
+// aforementioned reliance on data that exists in the large graph but not in the subgraph.
 
 // For this feature it would also be important to allow exporting a subgraph and package it into
 // WASM as well. Imagine packaging up a collection of knowledge for and publishing it as a webapp. 
