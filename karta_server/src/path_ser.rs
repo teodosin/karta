@@ -12,6 +12,6 @@ pub fn str_to_buf(str: &str) -> PathBuf {
     PathBuf::from(str)
 }
 
-pub fn buf_to_str(buf: PathBuf) -> String {
+pub fn buf_to_str(buf: &PathBuf) -> String {
     buf.to_str().unwrap().into()
 }
