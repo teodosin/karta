@@ -4,8 +4,8 @@ use agdb::{CountComparison, DbError, DbUserValue, QueryBuilder, QueryError};
 use elements::*;
 use path_ser::buf_to_str;
 
-mod elements;
-mod path_ser;
+pub mod elements;
+pub mod path_ser;
 
 /// The main graph structure to be interacted with.
 pub struct Graph {

@@ -133,12 +133,28 @@ pub struct Attribute {
     value: f32,
 }
 
-/// A list of reserved node attribute names that cannot be used by the user.
+/// A list of reserved node attribute names that cannot be set by the user directly.
 const RESERVED_NODE_ATTRS: [&str; 2] = [
     "name", // The full path of the node
     "ntype", // The type of the node
 ];
-/// A list of reserved edge attribute names that cannot be used by the user.
-const RESERVED_EDGE_ATTRS: [&str; 1] = [
-    "contains", // For directories
+/// A list of reserved edge attribute names that cannot be set by the user directly.
+const RESERVED_EDGE_ATTRS: [&str; 13] = [
+    "contains", // Parent-child relationship
+    "preview", // Connects a file to a preview image
+    "transition", // Path to an animation file for when the edge is traversed
+
+    "from-output", // Index of an output socket in source node. Must be validated.
+    "to-input", // Index of an input socket in target node. Must be validated. 
+
+    "from-position-x", // Relative position of this node to the other node
+    "from-position-y",
+    "to-position-x", // Relative position of the other node to this node
+    "to-position-y",
+    "from-size-x", // Relative size of this node to the other node
+    "from-size-y",
+    "to-size-x", // Relative size of the other node to this node
+    "to-size-y",
+
+
 ];
