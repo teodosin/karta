@@ -134,27 +134,40 @@ pub struct Attribute {
 }
 
 /// A list of reserved node attribute names that cannot be set by the user directly.
-const RESERVED_NODE_ATTRS: [&str; 2] = [
-    "name", // The full path of the node
+pub const RESERVED_NODE_ATTRS: [&str; 6] = [
+    "path", // The full path of the node, name included.
+    "name", // The name of the node, without the path. Maybe allows for different characters?
     "ntype", // The type of the node
+    "scale", // The absolute scaling of the node, in case it is needed. Vec of 2 f32s
+    "rotation", // The absolute rotation of the node, in case it is needed. 
+    "color", // The color of the node. Vec of 4 f32s
 ];
+
 /// A list of reserved edge attribute names that cannot be set by the user directly.
-const RESERVED_EDGE_ATTRS: [&str; 13] = [
+pub const RESERVED_EDGE_ATTRS: [&str; 16] = [
     "contains", // Parent-child relationship
-    "preview", // Connects a file to a preview image
-    "transition", // Path to an animation file for when the edge is traversed
+    "preview", // Connects a file to a preview image (or gif? Multiple?)
+
+    "from-transition", // Path to an animation file for when the edge is traversed in play mode. 
+    "to-transition", // Path to an animation file for when the edge is traversed in play mode.
+    "from-preload", // Preload settings for source node when in the target's context & play mode
+    "to-preload", // Preload settings for the target node when in source node's context & play mode
 
     "from-output", // Index of an output socket in source node. Must be validated.
     "to-input", // Index of an input socket in target node. Must be validated. 
 
-    "from-position-x", // Relative position of this node to the other node
-    "from-position-y",
-    "to-position-x", // Relative position of the other node to this node
-    "to-position-y",
-    "from-size-x", // Relative size of this node to the other node
-    "from-size-y",
-    "to-size-x", // Relative size of the other node to this node
-    "to-size-y",
+    // The following attributes are all Vecs of 2 f32s. 
+    "from-position", // Relative position of source node to the target node
+    "to-position", // Relative position of the target node to source node
+    "from-scale", // Relative scale of source node to the target node
+    "to-scale", // Relative scale of the target node to source node
 
+    // The following attributes are all Vecs of 4 f32s.
+    "from-color", // Color of the source node when in the target's context
+    "to-color", // Color of the target node when in the source node's context
 
+    // Bezier control points for the edge. 2 f32s for each point, arbitrary number of points.
+    // If empty, the edge is a straight line.
+    "from-bezier-control", // Control points for the bezier curve between the two nodes. 
+    "to-bezier-control", // Control points for the bezier curve between the two nodes.
 ];
