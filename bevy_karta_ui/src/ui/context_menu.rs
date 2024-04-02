@@ -25,7 +25,7 @@ pub struct ContextMenuButton;
 // TODO: Revisit the logic for when a popup should be despawned, exactly
 pub fn despawn_context_menus_on_any_click(
     mut commands: Commands,
-    mouse: Res<Input<MouseButton>>,
+    mouse: Res<ButtonInput<MouseButton>>,
     menus: Query<(Entity, &PopupGroup), With<Popup>>,
 ) {
     let input = [MouseButton::Left, MouseButton::Right, MouseButton::Middle];

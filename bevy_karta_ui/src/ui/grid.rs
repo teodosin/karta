@@ -1,8 +1,6 @@
 
 use bevy::{
-    prelude::*, 
-    render::{render_resource::{ShaderRef, AsBindGroup}, view::RenderLayers}, 
-    sprite::{MaterialMesh2dBundle, Material2d, Material2dPlugin},
+    math, prelude::*, render::{render_resource::{AsBindGroup, ShaderRef}, view::RenderLayers}, sprite::{Material2d, Material2dPlugin, MaterialMesh2dBundle}
 };
 use bevy_mod_picking::{prelude::*, backends::raycast::RaycastPickable};
 
@@ -36,8 +34,8 @@ fn setup_grid(
         RenderLayers::layer(31),
         GraphBackground,
         MaterialMesh2dBundle {
-            mesh: meshes.add(shape::Quad::new(Vec2::new(1000000.0, 1000000.0)).into()).into(),
-            material: grid_materials.add(GridMaterial::default().into()),
+            mesh: meshes.add(math::primitives::Rectangle::new(1000000.0, 1000000.0)).into(),
+            material: grid_materials.add(GridMaterial::default()),
             transform: Transform {
                 translation: Vec3::new(0.0, 0.0, -1000.0),
                 ..default()
@@ -46,8 +44,8 @@ fn setup_grid(
         },
         RaycastPickable,
         Pickable {
+            is_hoverable: true,
             should_block_lower: true,
-            should_emit_events: false,
         },
 
         On::<Pointer<DragEnd>>::send_event::<RectangleSelectionEndEvent>(),

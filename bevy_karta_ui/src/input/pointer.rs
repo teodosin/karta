@@ -1,6 +1,6 @@
 use bevy::{
-    ecs::{entity::Entity, event::EventReader, query::Without}, hierarchy::Parent, prelude::{
-        Camera, Camera2d, GlobalTransform, Input, MouseButton, Query, Res, ResMut, Resource, Vec2,
+    ecs::{entity::Entity, event::EventReader, query::Without}, hierarchy::Parent, input::ButtonInput, prelude::{
+        Camera, Camera2d, GlobalTransform, MouseButton, Query, Res, ResMut, Resource, Vec2,
         With,
     }, render::view, time::{self, Time}, window::Window
 };
@@ -188,7 +188,7 @@ pub fn left_click_just_released(input: Res<InputData>) -> bool {
 pub fn update_cursor_info(
     time: Res<Time>,
     mut cursor_history: ResMut<InputData>,
-    mouse: Res<Input<MouseButton>>,
+    mouse: Res<ButtonInput<MouseButton>>,
     window: Query<&Window>,
     camera_q: Query<(&Camera, &GlobalTransform), (With<Camera2d>, With<GraphCamera>)>,
 ) {

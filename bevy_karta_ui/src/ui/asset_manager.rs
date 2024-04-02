@@ -58,6 +58,9 @@ pub fn on_image_load(
                 image_tracker.remove_image(bevy::prelude::Handle::Weak(id.clone()));
                 image_tracker.add_image(bevy::prelude::Handle::Weak(id.clone()));
             }
+            AssetEvent::Unused { id } => {
+                image_tracker.remove_image(bevy::prelude::Handle::Weak(id.clone()));
+            }
             AssetEvent::LoadedWithDependencies { id } => {
                 image_tracker.remove_image(bevy::prelude::Handle::Weak(id.clone()));
                 

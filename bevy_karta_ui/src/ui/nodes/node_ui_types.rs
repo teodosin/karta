@@ -1,10 +1,5 @@
 use bevy::{
-    ecs::{system::Commands, entity::Entity}, 
-    asset::{Assets, AssetServer, Handle}, 
-    render::{mesh::{Mesh, shape}, color::Color, texture::Image}, 
-    sprite::{ColorMaterial, MaterialMesh2dBundle, SpriteBundle, Sprite}, 
-    transform::components::Transform, math::{Vec3, Vec2}, 
-    prelude::default, core::Name,
+    asset::{AssetServer, Assets, Handle}, core::Name, ecs::{entity::Entity, system::Commands}, math::{self, Vec2, Vec3}, prelude::default, render::{color::Color, mesh::{shape, Mesh}, texture::Image}, sprite::{ColorMaterial, MaterialMesh2dBundle, Sprite, SpriteBundle}, transform::components::Transform
 };
 use rand::Rng;
 
@@ -56,7 +51,7 @@ pub fn add_base_node_ui(
 ){
     // Positions are slightly randomized to avoid nodes being spawned on top of each other
     let mut rng = rand::thread_rng();
-    let label_pos = Vec2::new(35.0, 0.0);
+    let label_pos = Vec2::new(40.0, 0.0);
     let radius = 35.0;
 
     let node_pos: Vec2 = match tpos {
@@ -75,7 +70,7 @@ pub fn add_base_node_ui(
 
     commands.entity(entity).insert((
         MaterialMesh2dBundle {
-            mesh: meshes.add(shape::Circle::new(radius).into()).into(),
+            mesh: meshes.add(math::primitives::Circle::new(radius)).into(),
             material: materials.add(ColorMaterial::from(Color::rgb(0.3, 0.0, 0.0))),
             transform: Transform::from_translation(Vec3::new(
                 node_pos.x,

@@ -1,6 +1,8 @@
 // FORCE SIMULATION
 
-use bevy::{prelude::{Query, Transform, Without, Vec2, Plugin, App, Entity, Res, Gizmos, PostUpdate, Resource}, time::Time, input::{Input, keyboard::KeyCode}, utils::HashMap, ecs::query::With, app::Update};
+use bevy::{prelude::{
+    Query, Transform, Without, Vec2, Plugin, App, Entity, Res, Gizmos, PostUpdate, Resource
+}, time::Time, input::{ButtonInput, keyboard::KeyCode}, utils::HashMap, ecs::query::With, app::Update};
 use bevy_mod_picking::selection::PickSelection;
 
 use crate::prelude::Pins;
@@ -174,7 +176,7 @@ fn apply_forces(
         Without<TargetPosition>
     >,
     _gizmos: Gizmos,
-    keys: Res<Input<KeyCode>>,
+    keys: Res<ButtonInput<KeyCode>>,
 ) {
     // if !keys.pressed(KeyCode::Space) {
     //     return

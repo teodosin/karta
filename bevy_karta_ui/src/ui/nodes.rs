@@ -29,6 +29,7 @@ impl Plugin for NodesUiPlugin {
             .add_systems(PreUpdate, node_picking.in_set(picking_core::PickSet::Backend))
 
             .add_systems(Update, move_node_selection)
+            .add_systems(Update, toggle_outline_on_node_select)
 
             .add_systems(PostUpdate, add_node_ui)
             .add_systems(Last, tween_to_target_position)
@@ -178,8 +179,8 @@ pub fn add_node_ui(
 
             PickableBundle {
                 pickable: Pickable {
+                    is_hoverable: true,
                     should_block_lower: true,
-                    should_emit_events: true,
                 },
                 ..default()
             },
@@ -298,6 +299,7 @@ pub fn add_node_base_outline(
         ),
         NodeOutline,
         PickSelection::default(),
+        NoDeselect,
         RaycastPickable,
 
         On::<Pointer<Over>>::target_component_mut::<Stroke>(move |_over, stroke| {
@@ -360,7 +362,7 @@ pub fn tween_to_target_position_complete(
 // --------------------------------------------------------------------------------------------------------------------------------------------
 pub fn move_node_selection(
     mut ev_mouse_drag: EventReader<MoveNodesEvent>,
-    mouse: Res<Input<MouseButton>>,
+    mouse: Res<ButtonInput<MouseButton>>,
     input_data: Res<InputData>,
     mut query: Query<(Entity, &GraphViewNode, &mut Transform, &PickSelection), /*With<Selected>*/>,
 ) {
@@ -381,6 +383,27 @@ pub fn move_node_selection(
             }
         }
         break
+    }
+}
+
+pub fn toggle_outline_on_node_select(
+    nodes: Query<(&PickSelection, &Children), Changed<PickSelection>>,
+    mut outlines: Query<&mut Visibility, With<NodeOutline>>,
+){
+    for (selection, children) in nodes.iter(){
+        for child in children.iter(){
+            let outline = outlines.get_mut(*child);
+            match outline {
+                Ok(mut outline) => {
+                    if selection.is_selected {
+                        *outline = Visibility::Visible;
+                    } else {
+                        *outline = Visibility::Hidden;
+                    }
+                },
+                Err(_) => continue
+            }
+        }
     }
 }
 
@@ -472,7 +495,7 @@ fn node_picking(
             .collect();
 
         let order = camera.order as f32;
-        output.send(PointerHits::new(*pointer, picks, order))
+        output.send(PointerHits::new(*pointer, picks, order));
     }
 }
 

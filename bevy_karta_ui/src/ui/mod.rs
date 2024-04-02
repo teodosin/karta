@@ -1,7 +1,7 @@
 // All that is fixed in place in the foreground
 // Excludes the graph and floating windows(?)
 
-use bevy::{prelude::*, ui::{FocusPolicy, UiSystem}, render::view::VisibleEntities};
+use bevy::{ecs::identifier, prelude::*, render::view::VisibleEntities, ui::{FocusPolicy, UiSystem}};
 
 use bevy_mod_picking::backends::raycast::RaycastBackendSettings;
 use bevy_prototype_lyon::prelude::*;
@@ -46,8 +46,8 @@ impl Plugin for KartaUiPlugin {
             // Resources
             .add_systems(PreStartup, require_markers_for_raycasting)
             // .add_systems(PreStartup, default_font_setup)
-            .add_systems(PreStartup, 
-                default_font_set.run_if(resource_exists::<FontHandle>()))
+            // .add_systems(PreStartup, 
+            //     default_font_set.run_if(resource_exists::<FontHandle>()))
 
             .add_systems(Startup, gizmo_settings)
 
@@ -73,6 +73,7 @@ impl Plugin for KartaUiPlugin {
             .add_systems(PostUpdate, add_component_systems_to_context_menu
                 .run_if(on_event::<ContextMenuSpawnEvent>())
             ) 
+            
             .add_systems(PostUpdate, context_menu_button_system)
             .add_systems(PostUpdate, on_image_load)
         ;
@@ -113,8 +114,9 @@ fn require_markers_for_raycasting(
 struct FontHandle(Handle<Font>);
 
 fn gizmo_settings(
-    mut gizmo: ResMut<GizmoConfig>,
+    mut gizmo: ResMut<GizmoConfigStore>,
 ){
-    gizmo.depth_bias = 1.0;
-    gizmo.render_layers = bevy::render::view::RenderLayers::layer(31);
+    // let mut gizmo = gizmo.get_config_mut_dyn(<DefaultGizmoConfigGroup>::identifier);
+    // gizmo.depth_bias = 1.0;::
+    // gizmo.render_layers = bevy::render::view::RenderLayers::layer(31);
 }

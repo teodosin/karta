@@ -73,13 +73,11 @@ pub struct GraphCamera;
 fn cam_setup(
     mut commands: Commands,
 ){
-    use bevy::core_pipeline::clear_color::ClearColorConfig;
     println!("Setting up graph camera");
     commands.spawn((
         GraphCamera,
         Camera2dBundle {
             camera_2d: Camera2d {
-                clear_color: ClearColorConfig::None,
                 ..default()
             },
             projection: OrthographicProjection {
@@ -88,6 +86,7 @@ fn cam_setup(
                 ..Default::default()
             },
             camera: Camera {
+                clear_color: ClearColorConfig::None,
                 order: 1,
                 ..default()
             },
@@ -108,9 +107,9 @@ fn cam_setup(
 fn graph_pan(
     mut query: Query<&mut Transform, With<Camera2d>>,
 
-    mouse: Res<Input<MouseButton>>,
+    mouse: Res<ButtonInput<MouseButton>>,
     // Alternative trigger for panning for trackpad users, since bevy doesn't have panning support for trackpads yet
-    key: Res<Input<KeyCode>>,
+    key: Res<ButtonInput<KeyCode>>,
 
     view_settings: Res<ViewSettings>,
     _cursor: Res<InputData>,

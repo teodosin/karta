@@ -1,8 +1,8 @@
 #import bevy_sprite::mesh2d_vertex_output::VertexOutput;
 
-@group(0) @binding(0) var<uniform> zoom: f32;
-@group(1) @binding(1) var<uniform> color: vec4<f32>;
-@group(1) @binding(2) var<uniform> grid_cell_size: vec2<f32>;
+@group(2) @binding(0) var<uniform> zoom: f32;
+@group(2) @binding(1) var<uniform> color: vec4<f32>;
+@group(2) @binding(2) var<uniform> grid_cell_size: vec2<f32>;
 
 fn circle_pattern(uv: vec2<f32>, cell_size: vec2<f32>, circle_radius: f32) -> f32 {
     let zoom_index = floor(log2(zoom));
@@ -72,7 +72,7 @@ fn circle_pattern(uv: vec2<f32>, cell_size: vec2<f32>, circle_radius: f32) -> f3
 // }
 
 @fragment
-fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
+fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {    
     let uv = mesh.uv;
     let circle_radius = 0.075; // Radius of the circles in the grid pattern
     let circle_value = circle_pattern(uv, grid_cell_size, circle_radius);

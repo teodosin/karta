@@ -47,4 +47,5 @@ impl Plugin for OverlayGraphPlugin {
         // embedded_asset!(app, "../assets/grid_material.wgsl");
 
     }
+    
 }
