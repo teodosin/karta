@@ -211,7 +211,7 @@ impl Graph {
     /// Changes the parent directory of a node. If the node is physical, it will be moved in the file system.
     /// If the node is virtual, the parent will be changed in the db.
     /// Note that due to the implementation, all children of the node will have to be reindexed. 
-    pub fn change_node_parent(&self, node_path: PathBuf, new_parent_path: PathBuf) -> Result<(), agdb::DbError> {
+    pub fn reparent_node(&self, node_path: PathBuf, new_parent_path: PathBuf) -> Result<(), agdb::DbError> {
         // Check if node is in database at all
         let alias = buf_to_str(&node_path);
         let existing = self.db.exec(&QueryBuilder::select().ids(alias).query());
@@ -221,6 +221,12 @@ impl Graph {
             }
             QueryResult => {},
         }
+        Ok(())
+    }
+
+    /// Moves an edge and all its attributes to a new source and target. Parent edges can't be reconnected this way,
+    /// use the reparent_node function instead.
+    pub fn reconnect_edge(&self, edge: Edge, from: PathBuf, to: PathBuf) -> Result<(), agdb::DbError> {
         Ok(())
     }
 
@@ -238,23 +244,28 @@ impl Graph {
         Ok(())
     }
 
-    /// Insert attributes to a node. Ignore reserved attribute names. 
+    /// Insert attributes to a node. Ignore reserved attribute names. Update attributes that already exist.
     pub fn insert_node_attr(&self, path: PathBuf, attr: Vec<Attribute>) -> Result<(), agdb::DbError> {
         Ok(())
     }
 
-    /// Delete attributes from a node. Ignore reserved attribute names.
+    /// Delete attributes from a node. Ignore reserved attribute names. 
     pub fn delete_node_attr(&self, path: PathBuf, attr: Vec<Attribute>) -> Result<(), agdb::DbError> {
         Ok(())
     }
 
-    /// Insert attributes to an edge. Ignore reserved attribute names.
+    /// Insert attributes to an edge. Ignore reserved attribute names. Update attributes that already exist.
     pub fn insert_edge_attr(&self, edge: Edge, attr: Vec<Attribute>) -> Result<(), agdb::DbError> {
         Ok(())
     }
 
-    /// Delete attributes from an edge. Ignore reserved attribute names.
+    /// Delete attributes from an edge. Ignore reserved attribute names. 
     pub fn delete_edge_attr(&self, edge: Edge, attr: Vec<Attribute>) -> Result<(), agdb::DbError> {
+        Ok(())
+    }
+
+    /// Merges a vector of nodes into one node. 
+    pub fn merge_nodes(&self, node_a: PathBuf, node_b: PathBuf) -> Result<(), agdb::DbError> {
         Ok(())
     }
 

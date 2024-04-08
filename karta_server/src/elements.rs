@@ -134,17 +134,20 @@ pub struct Attribute {
 }
 
 /// A list of reserved node attribute names that cannot be set by the user directly.
-pub const RESERVED_NODE_ATTRS: [&str; 6] = [
+pub const RESERVED_NODE_ATTRS: [&str; 7] = [
     "path", // The full path of the node, name included.
     "name", // The name of the node, without the path. Maybe allows for different characters?
     "ntype", // The type of the node
+
     "scale", // The absolute scaling of the node, in case it is needed. Vec of 2 f32s
     "rotation", // The absolute rotation of the node, in case it is needed. 
-    "color", // The color of the node. Vec of 4 f32s
+    "color", // The absolute color of the node. Vec of 4 f32s
+    "pins", // The state pins of the node. 000 / 001 / 010 / 011 / 100 / 101 / 110 / 111
 ];
 
 /// A list of reserved edge attribute names that cannot be set by the user directly.
-pub const RESERVED_EDGE_ATTRS: [&str; 16] = [
+/// Note that they are optional, so default behavior is when they are not set.
+pub const RESERVED_EDGE_ATTRS: [&str; 18] = [
     "contains", // Parent-child relationship
     "preview", // Connects a file to a preview image (or gif? Multiple?)
 
@@ -165,6 +168,10 @@ pub const RESERVED_EDGE_ATTRS: [&str; 16] = [
     // The following attributes are all Vecs of 4 f32s.
     "from-color", // Color of the source node when in the target's context
     "to-color", // Color of the target node when in the source node's context
+
+    // The state pins of the node. 000 / 001 / 010 / 011 / 100 / 101 / 110 / 111
+    "from-pins", // The state pins of the source node when in the target's context
+    "to-pins", // The state pins of the target node when in the source node's context
 
     // Bezier control points for the edge. 2 f32s for each point, arbitrary number of points.
     // If empty, the edge is a straight line.
