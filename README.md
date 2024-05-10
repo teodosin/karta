@@ -2,19 +2,29 @@
 
 #### Disclaimer
 
-Karta is an experimental creative application built on top of a node-based file browser. It is very bare and unstable, with only some of the foundations set in place.  It is a work in progress and not ready for even remotely serious use, but feel free to look around and try it.
+This project is in its very early stages and is therefore highly experimental, barely usable and not really useful yet. Most of the mentioned features are planned but not yet implemented. Developed on Linux, not tested on Windows, tested but not certified on MacOS. 
 
-Early development has been quite chaotic and flow state driven, and this is reflected in the code and commits. Steps are being taken to steer the development process to be more systematic and understandable, but that will take time and some learning on my part. 
 
-Also note that this project has not yet been tested Windows. Tested and working on Mac. 
 
 ## Introduction
 
-Welcome to **Karta**, a project aimed at rethinking file management and visualization for creative workflows. This early-stage application introduces a novel concept: a node-based file browser, designed to visually represent the intricate network of files and folders within digital projects.
+**Karta** is a node-based file explorer and compositor. It creates a network out of a selected section of the file system and allows for files and folders to be arranged spatially and for arbitrary connections to be made between them. Attributes may be added to any node or connection. This network could then be queried for various purposes, though chiefly intended for structuring creative projects and making media art. 
 
-At this stage, Karta is a prototype, exploring the potential to view and manage files as part of an interconnected graph. Each file and folder is represented as a node, and the relationships between them are visualized as links. This approach is not just about organizing files; it's about understanding the structure and interdependencies of your project at a glance.
+The project is free and open-sourced under a GPL license. 
 
-For a more detailed explanation of the project's purpose and goals, refer to VISION.md. For technical details refer to ARCHITECTURE.md. 
+For a more detailed explanation of the project's purpose and goals, refer to docs/vision.md. For technical details refer to docs/architecture.md. 
+
+Key features:
+* Local first - the files and network database exist locally on your machine. No lock-in. The goal is to keep the storage format well documented and allow for syncing and exporting to plain text files. 
+* Contextual - nodes don't have absolute spatial positions, but rather contextual ones. Since the network is always viewed from the point of view or "context" of some individual node, the positions of its connections are always relative to it. Two nodes can be positioned differently relative to each other depending on which context you look from. 
+* Virtual nodes - not all nodes have to physically exist in the file system. You can create "virtual" nodes of different types that get stored directly in the database. 
+
+Plans / wishlist
+* Operator nodes - a system for creating functional nodes with inputs and outputs that can manipulate data, like in other node-based programming tools. Useful for quick edits and  experimentation right in the file explorer. 
+* Rich previews - a system for adding custom preview generation support for any file type. 
+* Composition - the ability to package a selection or sequence of nodes into a file, such as a series of images into a pdf or gif. 
+* Presentation - support for displaying the previews of active nodes in the graph background or a separate window. 
+* More dreamy ideas over in docs/vision.md
 
 ## Getting Started
 
@@ -30,7 +40,7 @@ At first startup, you will be asked to choose a folder to create your vault in. 
 
 It's much too early for me to ask or hope for contributions. The most valuable thing you might contribute at this stage is sharing your thoughts about the project and discussing it with me, to help clarify the path forward. I am active in the Bevy discord, so you may find me there under the same username. 
 
-Use the develop branch for the most up-to-date version. 
+Use the develop branch for the most up-to-date version. Main is for stable-ish releases. 
 
 ## Development
 
