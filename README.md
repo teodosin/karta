@@ -1,5 +1,7 @@
 # Karta
 
+![demo gif](/docs/karta.gif)
+
 #### Disclaimer
 
 Karta is an experimental creative application built on top of a node-based file browser. It is very bare and unstable, with only some of the foundations set in place.  It is a work in progress and not ready for even remotely serious use, but feel free to look around and try it. Root paths are hardcoded so the app will not work on your machine without modification.
