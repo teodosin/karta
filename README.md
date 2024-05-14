@@ -1,4 +1,5 @@
 # Karta
+![Demo gif](/docs/karta.gif)
 
 #### Disclaimer
 
