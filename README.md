@@ -5,8 +5,6 @@
 
 This project is in its very early stages and is therefore highly experimental, barely usable and not really useful yet. Most of the mentioned features are planned but not yet implemented. Developed on Linux, not tested on Windows, tested but not certified on MacOS. 
 
-
-
 ## Introduction
 
 **Karta** is a node-based file explorer and compositor. It creates a network out of a selected section of the file system and allows for files and folders to be arranged spatially and for arbitrary connections to be made between them. Attributes may be added to any node or connection. This network could then be queried for various purposes, though chiefly intended for structuring creative projects and making media art. 
@@ -16,8 +14,9 @@ The project is free and open-sourced under a GPL license.
 For a more detailed explanation of the project's purpose and goals, refer to docs/vision.md. For technical details refer to docs/architecture.md. 
 
 Key features:
-* Local first - the files and network database exist locally on your machine. No lock-in. The goal is to keep the storage format well documented and allow for syncing and exporting to plain text files. 
-* Contextual - nodes don't have absolute spatial positions, but rather contextual ones. Since the network is always viewed from the point of view or "context" of some individual node, the positions of its connections are always relative to it. Two nodes can be positioned differently relative to each other depending on which context you look from. 
+* Local first - the files and network database exist locally on your machine. No lock-in. The goal is to keep the storage format well documented and allow for syncing and exporting to plain text files.
+* Contextual - nodes don't have absolute spatial positions, but rather contextual ones. Since the network is always viewed from the point of view or "context" of some individual node, the positions of its connections are always relative to it. Two nodes can be positioned differently relative to each other depending on which context you look from.
+* Simulated - node arrangement may be force simulated. Currently not much more than a novelty, but the idea is to provide a varied selection of arrangement tools to free the user up to focus more on the content, especially when creating many nodes at once. 
 * Virtual nodes - not all nodes have to physically exist in the file system. You can create "virtual" nodes of different types that get stored directly in the database. 
 
 Plans / wishlist
