@@ -15,6 +15,11 @@ dev = [
 [dependencies]
 bevy = { version = "0.12.1", features = ["bevy_asset","jpeg", "bmp", "tga","webp", "file_watcher", "exr"] }
 
+# Karta subcrates
+fs_graph = { git = "https://github.com/teodosin/fs_graph?tab=readme-ov-file" }
+bevy_fs_graph = { git = "https://github.com/teodosin/bevy_fs_graph" }
+bevy_overlay_graph = { git = "https://github.com/teodosin/bevy_overlay_graph" }
+
 bevy_mod_picking = { version = "0.17.0", features = ["backend_bevy_ui"]}
 bevy_prototype_lyon = "0.10.0"
 bevy_svg = "0.12.0"
