@@ -134,23 +134,31 @@ pub struct Attribute {
 }
 
 /// A list of reserved node attribute names that cannot be set by the user directly.
-pub const RESERVED_NODE_ATTRS: [&str; 7] = [
+pub const RESERVED_NODE_ATTRS: [&str; 9] = [
     "path", // The full path of the node, name included.
     "name", // The name of the node, without the path. Maybe allows for different characters?
     "ntype", // The type of the node
 
+    "preview", // Connects a file to a preview file, or stores it in this attribute in base64 for example. 
+
     "scale", // The absolute scaling of the node, in case it is needed. Vec of 2 f32s
     "rotation", // The absolute rotation of the node, in case it is needed. 
     "color", // The absolute color of the node. Vec of 4 f32s
-    "pins", // The state pins of the node. 000 / 001 / 010 / 011 / 100 / 101 / 110 / 111
+    "pins", // The absolute state pins of the node. 
+
+    // Reserved names with an underscore at the end are prefixes. 
+    // All attributes with a name that starts with one of these prefixes are reserved.
+    "param_", // Reserved prefix for any attribute that is a parameter, for operators for example. 
 ];
 
 /// A list of reserved edge attribute names that cannot be set by the user directly.
 /// Note that they are optional, so default behavior is when they are not set.
-pub const RESERVED_EDGE_ATTRS: [&str; 18] = [
+pub const RESERVED_EDGE_ATTRS: [&str; 17] = [
     "contains", // Parent-child relationship
-    "preview", // Connects a file to a preview image (or gif? Multiple?)
 
+    // Alternatively, transition animations could be stored in their own nodes. Might make it more 
+    // explicit and ergonomic to edit them, and more easily support multiple animations. 
+    // Or just have a vector of paths in the attributes below. 
     "from-transition", // Path to an animation file for when the edge is traversed in play mode. 
     "to-transition", // Path to an animation file for when the edge is traversed in play mode.
     "from-preload", // Preload settings for source node when in the target's context & play mode
@@ -169,7 +177,7 @@ pub const RESERVED_EDGE_ATTRS: [&str; 18] = [
     "from-color", // Color of the source node when in the target's context
     "to-color", // Color of the target node when in the source node's context
 
-    // The state pins of the node. 000 / 001 / 010 / 011 / 100 / 101 / 110 / 111
+    // The state pins of the node. 
     "from-pins", // The state pins of the source node when in the target's context
     "to-pins", // The state pins of the target node when in the source node's context
 
