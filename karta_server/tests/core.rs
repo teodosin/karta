@@ -1,10 +1,18 @@
 
+use std::any::Any;
+
 use agdb::QueryBuilder;
 use directories::ProjectDirs;
 use fs_graph::Graph;
 
 /// Graph setup function for tests. Always stores the db in the data_dir.
 fn setup_graph(test_name: &str) -> Graph {
+    println!("");
+    println!("----------------------------------------------");
+    println!("Creating graph for test: {}", test_name);
+
+    cleanup_graph(test_name);
+
     let name = format!("fs_graph_test_{}", test_name);
     let root = ProjectDirs::from("com", "fs_graph", &name)
         .unwrap()
@@ -20,6 +28,7 @@ fn setup_graph(test_name: &str) -> Graph {
         "Test directory has not been created"
     );
 
+
     graph
 }
 
@@ -34,7 +43,17 @@ fn cleanup_graph(test_name: &str) {
         .data_dir()
         .to_path_buf();
 
-    std::fs::remove_dir_all(root).expect("Failed to remove root directory");
+    let removal = std::fs::remove_dir_all(root);
+
+    match removal {
+        Ok(_) => {
+            println!("Removed test directory");
+            println!("----------------------------------------------");
+        },
+        Err(_err) => {
+            //println!("Failed to remove test directory: {}", err);
+        }
+    }
 }
 
 #[test]
@@ -142,7 +161,7 @@ fn long_alias_path() {
     let func_name = "long_alias_path";
     let mut graph = setup_graph(func_name);
 
-    let long_path = "this/is/a/long/path/with/many/segments/verylongindeed/evenlonger/wow/are/we/still/here";
+    let long_path = "this/is/a/long/path/with/many/segments/verylongindeed/evenlonger/wow/are/we/still/here/there/must/be/something/we/can/do/about/all/this/tech/debt";
 
     let _ = graph
         .db
@@ -170,6 +189,67 @@ fn long_alias_path() {
 
     cleanup_graph(func_name);
 } 
+
+#[test]
+/// Test whether the db creates an attributes node when the db is first created.
+fn create_attributes_category(){
+    let func_name = "create_attributes_category";
+    let graph = setup_graph(func_name);
+
+    let root_node_result = graph.db.exec(&QueryBuilder::select().ids("root").query());
+
+    assert_eq!(true, root_node_result.is_ok());
+
+    let qry = graph.db.exec(&QueryBuilder::select().ids("root/attributes").query());
+    
+    assert_eq!(true, qry.is_ok());
+
+    // The attribute we're looking for. Should be reserved. 
+    // In this case, the "contains" attribute. 
+    let atr = "contains";
+
+    if root_node_result.is_ok() && qry.is_ok() {
+        let root_node = root_node_result.unwrap().ids();
+        assert_eq!(root_node.len(), 1);
+        let root_id = root_node.first().unwrap();
+
+        let attributes_node = qry.unwrap().ids();
+        assert_eq!(attributes_node.len(), 1);
+        let attributes_id = attributes_node.first().unwrap();
+
+        let query = &QueryBuilder::search().from(*root_id).to(*attributes_id).query();
+        let edge = graph.db.exec(query);
+
+        assert_eq!(edge.is_ok(), true);
+        
+        let edge = edge.unwrap().elements.iter().cloned().filter(|e| e.id.0 < 0).collect::<Vec<_>>();
+        println!("Found edge {:?}", edge);
+
+        assert_eq!(edge.len(), 1);
+
+        let eid = edge.first().unwrap().id.0;
+        let edge = graph.db.exec(&QueryBuilder::select()
+            .keys()
+            .ids(eid)
+            .query());
+        let edge = edge.unwrap().elements;
+        assert_eq!(edge.len(), 1);
+
+        let vals = &edge.first().unwrap().values;
+        let mut found = false;
+
+        for val in vals.iter() {
+            if val.key == atr.into() {
+                found = true;
+            }
+        }
+
+        assert_eq!(found, true);
+
+    }
+
+    cleanup_graph(&func_name); 
+}
 
 // Loading an old db with a new root directory!
 // Should this be allowed or prevented? For usability it would be nice if you could just 

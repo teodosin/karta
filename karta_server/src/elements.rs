@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use agdb::{DbError, DbId, DbValue, UserValue};
+use agdb::{DbError, DbId, DbKeyValue, DbValue, UserValue};
 
 use crate::path_ser::{buf_to_str, str_to_buf};
 
@@ -96,8 +96,12 @@ impl From<NodePhysicality> for DbValue {
 
 #[derive(Debug, Clone)]
 pub enum NodeType {
+    // Physical types
     Directory,
     File,
+
+    // Virtual types
+    Category, 
 }
 
 
@@ -109,6 +113,9 @@ impl TryFrom<DbValue> for NodeType {
         match value.to_string().as_str() {
             "Directory" => Ok(NodeType::Directory),
             "File" => Ok(NodeType::File),
+
+            "Category" => Ok(NodeType::Category),
+
             _ => Err(DbError::from("Invalid NodeType")),
         }
     }
@@ -119,6 +126,8 @@ impl From<NodeType> for DbValue {
         match ntype {
             NodeType::Directory => "Directory".into(),
             NodeType::File => "File".into(),
+
+            NodeType::Category => "Category".into(),
         }
     }
 }
@@ -129,8 +138,22 @@ pub struct Edge {
 
 #[derive(Clone, Debug)]
 pub struct Attribute {
-    name: String,
-    value: f32,
+    pub name: String,
+    pub value: f32,
+}
+
+impl Into<Vec<DbKeyValue>> for Attribute {
+    fn into(self) -> Vec<DbKeyValue> {
+        vec![
+            DbKeyValue::from((self.name, self.value)),
+        ]
+    }
+}
+
+impl Into<DbKeyValue> for Attribute {
+    fn into(self) -> DbKeyValue {
+        DbKeyValue::from((self.name, self.value))
+    }
 }
 
 /// A list of reserved node attribute names that cannot be set by the user directly.
@@ -161,6 +184,7 @@ pub const RESERVED_EDGE_ATTRS: [&str; 17] = [
     // Or just have a vector of paths in the attributes below. 
     "from-transition", // Path to an animation file for when the edge is traversed in play mode. 
     "to-transition", // Path to an animation file for when the edge is traversed in play mode.
+
     "from-preload", // Preload settings for source node when in the target's context & play mode
     "to-preload", // Preload settings for the target node when in source node's context & play mode
 
@@ -185,4 +209,8 @@ pub const RESERVED_EDGE_ATTRS: [&str; 17] = [
     // If empty, the edge is a straight line.
     "from-bezier-control", // Control points for the bezier curve between the two nodes. 
     "to-bezier-control", // Control points for the bezier curve between the two nodes.
+
+    // Karta needs a way to track whether a string of edges belongs to the same "sequence", indicating
+    // that there is a preferred order to them. Use cases are for compiling 
+    // "sequence"
 ];

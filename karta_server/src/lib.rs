@@ -75,7 +75,37 @@ impl Graph {
             Node::new(NodePath("root".into()), NodeType::Directory),
         ];
 
-        let _ = db.exec_mut(&QueryBuilder::insert().nodes().aliases("root").values(&root).query());
+        let rt_node = db.exec_mut(&QueryBuilder::insert().nodes().aliases("root").values(&root).query());
+        match rt_node {
+            Ok(_) => {
+                println!("Created root node");
+            },
+            Err(ref err) => {
+                println!("Failed to create root node: {}", err);
+            }
+        }
+
+        // Create attributes node
+        // All user-defined attributes will be children of this node
+        let atr: Vec<Node> = vec![
+            Node::new(NodePath("root/attributes".into()), NodeType::Category),
+        ];
+
+        let atr_node = db.exec_mut(&QueryBuilder::insert().nodes().aliases("root/attributes").values(&atr).query());
+        match atr_node {
+            Ok(_) => {
+                println!("Created attributes node");
+            },
+            Err(ref err) => {
+                println!("Failed to create attributes node: {}", err);
+            }
+        }
+
+        // Create an edge between the root and attributes nodes
+        // Ugly function call, I know.
+        if rt_node.is_ok() && atr_node.is_ok() {
+            parent_node_to_node(&mut db, rt_node.unwrap().ids().first().unwrap(), atr_node.unwrap().ids().first().unwrap());
+        }
 
         Graph {
             name: name.to_string(),
@@ -102,7 +132,37 @@ impl Graph {
             Node:: new(NodePath("root".into()), NodeType::Directory),
         ];
 
-        let _ = db.exec_mut(&QueryBuilder::insert().nodes().aliases("root").values(&root).query());
+        let rt_node = db.exec_mut(&QueryBuilder::insert().nodes().aliases("root").values(&root).query());
+        match rt_node {
+            Ok(_) => {
+                println!("Created root node");
+            },
+            Err(ref err) => {
+                println!("Failed to create root node: {}", err);
+            }
+        }
+
+        // Create attributes node
+        // All user-defined attributes will be children of this node
+        let atr: Vec<Node> = vec![
+            Node::new(NodePath("root/attributes".into()), NodeType::Category),
+        ];
+
+        let atr_node = db.exec_mut(&QueryBuilder::insert().nodes().aliases("root/attributes").values(&atr).query());
+        match atr_node {
+            Ok(_) => {
+                println!("Created attributes node");
+            },
+            Err(ref err) => {
+                println!("Failed to create attributes node: {}", err);
+            }
+        }
+
+        // Create an edge between the root and attributes nodes
+        // Ugly function call, I know.
+        if rt_node.is_ok() && atr_node.is_ok() {
+            parent_node_to_node(&mut db, rt_node.unwrap().ids().first().unwrap(), atr_node.unwrap().ids().first().unwrap());
+        }
 
         Graph {
             name: name.to_string(),
@@ -272,3 +332,57 @@ impl Graph {
 
 }
 
+/// Internal function. Creates a node with the given alias. 
+fn create_node(){
+
+}
+
+/// Internal function. Not for crate users to use directly. 
+/// Uses agdb types directly to create an exclusive parent-child connection. 
+/// The attribute is "contains" and is reserved in elements.rs. 
+fn parent_node_to_node(db: &mut agdb::Db, parent: &agdb::DbId, child: &agdb::DbId){
+    // Check if the child has an existing parent
+
+    // If it does, delete the existing parent-child relationship
+    let cont_attr = Attribute {
+        name: "contains".into(),
+        value: 0.0,
+    };
+
+    // If it doesn't, create a new parent-child relationship
+    let edge = db.exec_mut(
+        &QueryBuilder::insert().edges()
+        .from(*parent)
+        .to(*child)
+        .values_uniform(vec![cont_attr.clone().into()])
+        .query()
+    ); // For whatever reason this does not insert the attribute into the edge.
+
+    let eid = edge.unwrap().ids();
+    let eid = eid.first().unwrap();
+    println!("Id of the edge: {:?}", eid);
+
+    let edge = db.exec(
+        &QueryBuilder::select()
+            .keys()
+            .ids(*eid)
+            .query()
+    );
+
+    match edge {
+        Ok(edge) => {
+            // Insert the attribute to the edge
+            println!("Edge inserted: {:?}", edge.elements);
+        },
+        Err(e) => {
+            println!("Failed to insert edge: {}", e);
+        }
+    }
+
+}
+
+/// Internal function. Determines the full path of the node and adds it as its alias. 
+/// Corrects the alias if it is wrong. 
+fn insert_path_as_alias(db: &mut agdb::Db, node: agdb::DbId) {
+    
+}
