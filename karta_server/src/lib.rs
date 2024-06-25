@@ -1,6 +1,6 @@
 use std::{error::Error, path::PathBuf};
 
-use agdb::{CountComparison, DbElement, DbError, DbUserValue, QueryBuilder, QueryError};
+use agdb::{CountComparison, DbElement, DbError, DbId, DbUserValue, QueryBuilder, QueryError};
 use elements::*;
 use path_ser::buf_to_alias;
 
@@ -71,15 +71,19 @@ impl Graph {
         let mut db = db.expect("Failed to create db");
 
         // Create the root node
-        let root: Vec<Node> = vec![
-            Node::new(NodePath("root".into()), NodeType::Directory),
-        ];
+        let root: Vec<Node> = vec![Node::new(NodePath("root".into()), NodeType::Directory)];
 
-        let rt_node = db.exec_mut(&QueryBuilder::insert().nodes().aliases("root").values(&root).query());
+        let rt_node = db.exec_mut(
+            &QueryBuilder::insert()
+                .nodes()
+                .aliases("root")
+                .values(&root)
+                .query(),
+        );
         match rt_node {
             Ok(_) => {
                 println!("Created root node");
-            },
+            }
             Err(ref err) => {
                 println!("Failed to create root node: {}", err);
             }
@@ -89,39 +93,47 @@ impl Graph {
 
         // Create attributes node
         // All user-defined attributes will be children of this node
-        let atr: Vec<Node> = vec![
-            Node::new(NodePath("root/attributes".into()), NodeType::Category),
-        ];
+        let atr: Vec<Node> = vec![Node::new(
+            NodePath("root/attributes".into()),
+            NodeType::Category,
+        )];
 
-        
-        let atr_node = db.exec_mut(&QueryBuilder::insert().nodes().aliases("root/attributes").values(&atr).query());
+        let atr_node = db.exec_mut(
+            &QueryBuilder::insert()
+                .nodes()
+                .aliases("root/attributes")
+                .values(&atr)
+                .query(),
+        );
         match atr_node {
             Ok(_) => {
                 println!("Created attributes node");
-            },
+            }
             Err(ref err) => {
                 println!("Failed to create attributes node: {}", err);
             }
         }
-        
+
         // Create an edge between the root and attributes nodes
         parent_node_to_node(&mut db, rt_id, atr_node.unwrap().ids().first().unwrap());
-        
 
         // Create the settings node for global application settings
-        let set: Vec<Node> = vec![
-            Node::new(NodePath("root/settings".into()), NodeType::Category),
-        ];
+        let set: Vec<Node> = vec![Node::new(
+            NodePath("root/settings".into()),
+            NodeType::Category,
+        )];
 
         let set_node = db.exec_mut(
-            &QueryBuilder::insert().nodes().aliases("root/settings")
-            .values(&set)
-            .query()
+            &QueryBuilder::insert()
+                .nodes()
+                .aliases("root/settings")
+                .values(&set)
+                .query(),
         );
         match set_node {
             Ok(_) => {
                 println!("Created settings node");
-            },
+            }
             Err(ref err) => {
                 println!("Failed to create settings node: {}", err);
             }
@@ -129,7 +141,6 @@ impl Graph {
 
         // Create an edge between the root and settings nodes
         parent_node_to_node(&mut db, rt_id, set_node.unwrap().ids().first().unwrap());
-        
 
         Graph {
             name: name.to_string(),
@@ -152,15 +163,19 @@ impl Graph {
         let mut db = db.expect("Failed to create db");
 
         // Create the root node
-        let root: Vec<Node> = vec![
-            Node:: new(NodePath("root".into()), NodeType::Directory),
-        ];
+        let root: Vec<Node> = vec![Node::new(NodePath("root".into()), NodeType::Directory)];
 
-        let rt_node = db.exec_mut(&QueryBuilder::insert().nodes().aliases("root").values(&root).query());
+        let rt_node = db.exec_mut(
+            &QueryBuilder::insert()
+                .nodes()
+                .aliases("root")
+                .values(&root)
+                .query(),
+        );
         match rt_node {
             Ok(_) => {
                 println!("Created root node");
-            },
+            }
             Err(ref err) => {
                 println!("Failed to create root node: {}", err);
             }
@@ -168,15 +183,22 @@ impl Graph {
 
         // Create attributes node
         // All user-defined attributes will be children of this node
-        let atr: Vec<Node> = vec![
-            Node::new(NodePath("root/attributes".into()), NodeType::Category),
-        ];
+        let atr: Vec<Node> = vec![Node::new(
+            NodePath("root/attributes".into()),
+            NodeType::Category,
+        )];
 
-        let atr_node = db.exec_mut(&QueryBuilder::insert().nodes().aliases("root/attributes").values(&atr).query());
+        let atr_node = db.exec_mut(
+            &QueryBuilder::insert()
+                .nodes()
+                .aliases("root/attributes")
+                .values(&atr)
+                .query(),
+        );
         match atr_node {
             Ok(_) => {
                 println!("Created attributes node");
-            },
+            }
             Err(ref err) => {
                 println!("Failed to create attributes node: {}", err);
             }
@@ -185,7 +207,11 @@ impl Graph {
         // Create an edge between the root and attributes nodes
         // Ugly function call, I know.
         if rt_node.is_ok() && atr_node.is_ok() {
-            parent_node_to_node(&mut db, rt_node.unwrap().ids().first().unwrap(), atr_node.unwrap().ids().first().unwrap());
+            parent_node_to_node(
+                &mut db,
+                rt_node.unwrap().ids().first().unwrap(),
+                atr_node.unwrap().ids().first().unwrap(),
+            );
         }
 
         Graph {
@@ -204,12 +230,16 @@ impl Graph {
 
     /// Gets the name of the root directory without the full path
     pub fn root_name(&self) -> String {
-        self.root_path.file_name().unwrap().to_str().unwrap().to_string()
+        self.root_path
+            .file_name()
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .to_string()
     }
-        
 
     /// For physical nodes. Syncs the node's relationships in the db with the file system.
-    pub fn index_node_connections(&self, path: PathBuf){
+    pub fn index_node_connections(&self, path: PathBuf) {
         let full_path = self.root_path.join(&path);
 
         if !full_path.exists() {
@@ -218,7 +248,7 @@ impl Graph {
 
         let alias = buf_to_alias(&path);
 
-        // 
+        //
 
         todo!()
     }
@@ -237,10 +267,9 @@ impl Graph {
         // Step 2: Check if the node exists in the db.
         // Step 3: Check if all the physical dirs and files in the node are in the db.
         // Step 4: The ones that are not, add to the db.
-        // Step 5?: Delete the physical nodes in the db that are not in the file system. 
-        // THOUGH Automatically deleting the nodes 
-        // honestly seems like a bad idea. Maybe a warning should be issued instead. 
-
+        // Step 5?: Delete the physical nodes in the db that are not in the file system.
+        // THOUGH Automatically deleting the nodes
+        // honestly seems like a bad idea. Maybe a warning should be issued instead.
 
         // Resolve the full path to the node
         let full_path = self.root_path.join(path);
@@ -252,22 +281,21 @@ impl Graph {
         let mut nodes: Vec<Node> = Vec::new();
 
         // Query the db for the node
-        let result = 
-            self.db.exec(
-                &QueryBuilder::select()
-                    .values(Node::db_keys())
-                    .ids(
-                        QueryBuilder::search()
-                            .depth_first()
-                            .from("as_str")
-                            .where_()
-                            .node()
-                            .and()
-                            .distance(CountComparison::GreaterThan(1))
-                            .query(),
-                    )
-                    .query(),
-            );
+        let result = self.db.exec(
+            &QueryBuilder::select()
+                .values(Node::db_keys())
+                .ids(
+                    QueryBuilder::search()
+                        .depth_first()
+                        .from("as_str")
+                        .where_()
+                        .node()
+                        .and()
+                        .distance(CountComparison::GreaterThan(1))
+                        .query(),
+                )
+                .query(),
+        );
 
         match result {
             Ok(node) => {
@@ -283,28 +311,29 @@ impl Graph {
         }
 
         nodes
-
     }
 
-    /// Creates a node from the given path. Inserts it into the graph. 
-    /// Insert the relative path from the root, not including the root dir. 
-    pub fn insert_node_by_path(&mut self, path: PathBuf, ntype: Option<NodeType>) -> Result<DbElement, agdb::DbError> {
+    /// Creates a node from the given path. Inserts it into the graph.
+    /// Insert the relative path from the root, not including the root dir.
+    pub fn insert_node_by_path(
+        &mut self,
+        path: PathBuf,
+        ntype: Option<NodeType>,
+    ) -> Result<DbElement, agdb::DbError> {
         let full_path = self.root_path.join(&path);
         let alias = buf_to_alias(&path);
 
-        // Check if the node already exists in the db. 
-        // If it does, don't insert it, and return an error. 
-        // Possibly redundant, unless used for updating an existing node. 
-        let existing = self.db.exec(
-            &QueryBuilder::select()
-                .ids(alias.clone())
-                .query()
-        );
+        // Check if the node already exists in the db.
+        // If it does, don't insert it, and return an error.
+        // Possibly redundant, unless used for updating an existing node.
+        let existing = self
+            .db
+            .exec(&QueryBuilder::select().ids(alias.clone()).query());
 
         match existing {
             Ok(_) => {
                 return Err("Node already exists in the db".into());
-            },
+            }
             Err(_e) => {
                 // Node doesn't exist, proceed to insertion
             }
@@ -315,7 +344,7 @@ impl Graph {
             Some(ntype) => ntype,
             None => NodeType::Other,
         };
-    
+
         // Check if the node is physical in the file system.
         // If it is, check if it exists in the db.
         let is_file = full_path.exists() && !full_path.is_dir();
@@ -334,13 +363,42 @@ impl Graph {
                 .nodes()
                 .aliases(alias)
                 .values(&node)
-                .query()
-        ); 
+                .query(),
+        );
 
         match nodeqr {
             Ok(nodeqr) => {
-                return Ok(<DbElement as Clone>::clone(&nodeqr.elements[0]).try_into().unwrap());
-            },
+                let node_elem = &nodeqr.elements[0];
+                let nid = node_elem.id;
+                // If parent is not root, check if the parent node already exists in the db.
+                // If not, call this function recursively.
+                let parent_path = path.parent();
+                match parent_path {
+                    Some(parent_path) => {
+
+                        if parent_path.to_str().unwrap() != "" {
+
+                            println!("About to insert parent node: {:?}", parent_path);
+                            let n = self.insert_node_by_path(
+                                parent_path.to_path_buf(),
+                                Some(NodeType::Other),
+                            );
+                            
+                            let parent_id = n.unwrap().id;
+                            
+                            parent_node_to_node(&mut self.db, &parent_id, &nid)
+                        }
+                    }
+                    None => {
+                        // If the parent is root, parent them and move along. 
+                        parent_node_to_node(&mut self.db, &DbId(1), &nid)
+                    }
+                }
+
+                return Ok(<DbElement as Clone>::clone(node_elem)
+                    .try_into()
+                    .unwrap());
+            }
             Err(e) => {
                 println!("Failed to insert node: {}", e);
                 return Err(DbError::from(e.to_string()));
@@ -350,10 +408,15 @@ impl Graph {
 
     /// Creates a node under a given parent with the given name.
     /// The path is relative to the root of the graph.
-    /// Do not include the root dir name. 
-    pub fn insert_node_by_name(&mut self, parent_path: Option<PathBuf>, name: &str, ntype: Option<NodeType>) -> Result<(), agdb::DbError> {
+    /// Do not include the root dir name.
+    pub fn insert_node_by_name(
+        &mut self,
+        parent_path: Option<PathBuf>,
+        name: &str,
+        ntype: Option<NodeType>,
+    ) -> Result<(), agdb::DbError> {
         let parent_path = parent_path.unwrap_or_else(|| PathBuf::from(""));
-    
+
         let rel_path = if parent_path.as_os_str().is_empty() {
             PathBuf::from(name)
         } else {
@@ -363,7 +426,7 @@ impl Graph {
         match self.insert_node_by_path(rel_path, ntype) {
             Ok(_) => {
                 return Ok(());
-            },
+            }
             Err(e) => {
                 println!("Failed to insert node: {}", e);
                 return Err(e);
@@ -373,8 +436,12 @@ impl Graph {
 
     /// Changes the parent directory of a node. If the node is physical, it will be moved in the file system.
     /// If the node is virtual, the parent will be changed in the db.
-    /// Note that due to the implementation, all children of the node will have to be reindexed. 
-    pub fn reparent_node(&self, node_path: PathBuf, new_parent_path: PathBuf) -> Result<(), agdb::DbError> {
+    /// Note that due to the implementation, all children of the node will have to be reindexed.
+    pub fn reparent_node(
+        &self,
+        node_path: PathBuf,
+        new_parent_path: PathBuf,
+    ) -> Result<(), agdb::DbError> {
         // Check if node is in database at all
         let alias = buf_to_alias(&node_path);
         let existing = self.db.exec(&QueryBuilder::select().ids(alias).query());
@@ -382,14 +449,19 @@ impl Graph {
             QueryError => {
                 return Err(DbError::from("Node does not exist in the database"));
             }
-            QueryResult => {},
+            QueryResult => {}
         }
         Ok(())
     }
 
     /// Moves an edge and all its attributes to a new source and target. Parent edges can't be reconnected this way,
     /// use the reparent_node function instead.
-    pub fn reconnect_edge(&self, edge: Edge, from: PathBuf, to: PathBuf) -> Result<(), agdb::DbError> {
+    pub fn reconnect_edge(
+        &self,
+        edge: Edge,
+        from: PathBuf,
+        to: PathBuf,
+    ) -> Result<(), agdb::DbError> {
         Ok(())
     }
 
@@ -402,18 +474,26 @@ impl Graph {
     }
 
     /// Delete an edge from the graph. Edges with the attribute "contains" refer to the parent-child relationship
-    /// between nodes and will be ignored. All other attributes will be cleared from them instead. 
+    /// between nodes and will be ignored. All other attributes will be cleared from them instead.
     pub fn delete_edge(&self, edge: Edge) -> Result<(), agdb::DbError> {
         Ok(())
     }
 
     /// Insert attributes to a node. Ignore reserved attribute names. Update attributes that already exist.
-    pub fn insert_node_attr(&self, path: PathBuf, attr: Vec<Attribute>) -> Result<(), agdb::DbError> {
+    pub fn insert_node_attr(
+        &self,
+        path: PathBuf,
+        attr: Vec<Attribute>,
+    ) -> Result<(), agdb::DbError> {
         Ok(())
     }
 
-    /// Delete attributes from a node. Ignore reserved attribute names. 
-    pub fn delete_node_attr(&self, path: PathBuf, attr: Vec<Attribute>) -> Result<(), agdb::DbError> {
+    /// Delete attributes from a node. Ignore reserved attribute names.
+    pub fn delete_node_attr(
+        &self,
+        path: PathBuf,
+        attr: Vec<Attribute>,
+    ) -> Result<(), agdb::DbError> {
         Ok(())
     }
 
@@ -422,72 +502,60 @@ impl Graph {
         Ok(())
     }
 
-    /// Delete attributes from an edge. Ignore reserved attribute names. 
+    /// Delete attributes from an edge. Ignore reserved attribute names.
     pub fn delete_edge_attr(&self, edge: Edge, attr: Vec<Attribute>) -> Result<(), agdb::DbError> {
         Ok(())
     }
 
-    /// Merges a vector of nodes into one node, the first. 
+    /// Merges a vector of nodes into one node, the first.
     pub fn merge_nodes(&self, nodes: Vec<PathBuf>) -> Result<(), agdb::DbError> {
         Ok(())
     }
-
-
 }
 
-/// Internal function. Creates a node with the given alias. 
-fn create_node(){
+/// Internal function. Creates a node with the given alias.
+fn create_node() {}
 
-}
-
-/// Internal function. Not for crate users to use directly. 
-/// Uses agdb types directly to create an exclusive parent-child connection. 
-/// The attribute is "contains" and is reserved in elements.rs. 
-fn parent_node_to_node(db: &mut agdb::Db, parent: &agdb::DbId, child: &agdb::DbId){
+/// Internal function. Not for crate users to use directly.
+/// Uses agdb types directly to create an exclusive parent-child connection.
+/// The attribute is "contains" and is reserved in elements.rs.
+fn parent_node_to_node(db: &mut agdb::Db, parent: &agdb::DbId, child: &agdb::DbId) {
     // Check if the child has an existing parent
 
     // If it does, delete the existing parent-child relationship
-
 
     // If it doesn't, create a new parent-child relationship
     let cont_attr = Attribute {
         name: "contains".into(),
         value: 0.0,
     };
-        
+
     let edge = db.exec_mut(
-        &QueryBuilder::insert().edges()
-        .from(*parent)
-        .to(*child)
-        .values_uniform(vec![cont_attr.clone().into()])
-        .query()
+        &QueryBuilder::insert()
+            .edges()
+            .from(*parent)
+            .to(*child)
+            .values_uniform(vec![cont_attr.clone().into()])
+            .query(),
     ); // For whatever reason this does not insert the attribute into the edge.
 
     let eid = edge.unwrap().ids();
     let eid = eid.first().unwrap();
     println!("Id of the edge: {:#?}", eid);
 
-    let edge = db.exec(
-        &QueryBuilder::select()
-            .keys()
-            .ids(*eid)
-            .query()
-    );
+    let edge = db.exec(&QueryBuilder::select().keys().ids(*eid).query());
 
     match edge {
         Ok(edge) => {
             // Insert the attribute to the edge
             println!("Edge inserted: {:#?}", edge.elements);
-        },
+        }
         Err(e) => {
             println!("Failed to insert edge: {}", e);
         }
     }
-
 }
 
-/// Internal function. Determines the full path of the node and adds it as its alias. 
-/// Corrects the alias if it is wrong. 
-fn insert_path_as_alias(db: &mut agdb::Db, node: agdb::DbId) {
-    
-}
+/// Internal function. Determines the full path of the node and adds it as its alias.
+/// Corrects the alias if it is wrong.
+fn insert_path_as_alias(db: &mut agdb::Db, node: agdb::DbId) {}

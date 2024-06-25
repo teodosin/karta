@@ -1,5 +1,5 @@
 use agdb::QueryBuilder;
-use fs_graph::Graph;
+use fs_graph::{path_ser::buf_to_alias, Graph};
 
 mod utils;
 use utils::*;
@@ -49,10 +49,62 @@ fn creating_deep_path_creates_intermediate_nodes() {
     let mut graph = setup_graph(func_name);
 
     let path = PathBuf::from("one/two/three");
+    let mut first = path.clone();
+    first.pop();
+    let mut second = path.clone();
+    second.pop();
 
-    let mut node = graph.insert_node_by_path(path, None);
+    let node = graph.insert_node_by_path(path.clone(), None);
 
     assert_eq!(node.is_ok(), true);
+
+    let node = graph.db.exec(
+        &QueryBuilder::select().ids(buf_to_alias(&path)).query()
+    );
+
+    let fir = graph.db.exec(
+        &QueryBuilder::select().ids(buf_to_alias(&path)).query()
+    );
+
+    let sec = graph.db.exec(
+        &QueryBuilder::select().ids(buf_to_alias(&path)).query()
+    );
+
+    assert_eq!(node.is_ok(), true);
+    assert_eq!(fir.is_ok(), true);
+    assert_eq!(sec.is_ok(), true);
+
+    let elems = graph.db.exec(
+        &QueryBuilder::select().node_count().query()
+    );
+    let aliases = graph.db.exec(
+        &QueryBuilder::select().aliases().query()
+    );
+    
+
+    assert_eq!(elems.is_ok(), true);
+    assert_eq!(aliases.is_ok(), true);
+
+    let nodes = aliases.unwrap().elements;
+    let edges = elems.unwrap();
+    let edges = edges.elements;
+    // let edges = edges.elements.iter().filter(|x| x.id.0 < 0).collect::<Vec<_>>();
+    // Length is 6:
+    // root, attributes, settings, one, two, three
+    assert_eq!(nodes.len(), 6);
+
+    // Length is 5:
+    // root
+    // - one
+    //   - two
+    //     - three
+    // - attributes
+    // - settings
+    // - = edge
+
+    // todo! Fix this test. Can't find a way to just get all edges...
+    // println!("Edges: {:#?}", edges);
+    // assert_eq!(edges.len(), 5);
 
     cleanup_graph(&func_name);
 }
