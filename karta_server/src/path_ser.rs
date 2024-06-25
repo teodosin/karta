@@ -8,10 +8,22 @@
 use std::path::PathBuf;
 
 // TODO: Actually handle non-utf8 paths.
-pub fn str_to_buf(str: &str) -> PathBuf {
-    PathBuf::from(str)
+pub fn alias_to_buf(str: &str) -> PathBuf {
+    let buf = PathBuf::from(str);
+
+    // Remove root/ prefix from path
+    let newbuf =  match buf.strip_prefix("root/") {
+        Ok(buf) => PathBuf::from(buf),
+        Err(_) => buf,
+    };
+
+    newbuf
 }
 
-pub fn buf_to_str(buf: &PathBuf) -> String {
-    buf.to_str().unwrap().into()
+pub fn buf_to_alias(buf: &PathBuf) -> String {
+    let str: String = buf.to_str().unwrap().into();
+
+    let alias = format!("root/{}", str);
+
+    alias
 }

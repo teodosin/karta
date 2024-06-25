@@ -1,6 +1,6 @@
 use fs_graph::Graph;
-mod core;
-use core::*;
+mod utils;
+use utils::*;
 
 // Test creating an Edge with attributes
 // Test converting Attribute to DbKeyValue

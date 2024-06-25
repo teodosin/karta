@@ -5,63 +5,8 @@ use agdb::QueryBuilder;
 use directories::ProjectDirs;
 use fs_graph::Graph;
 
-/// Graph setup function for tests. Always stores the db in the data_dir.
-pub fn setup_graph(test_name: &str) -> Graph {
-    println!("");
-    println!("----------------------------------------------");
-    println!("Creating graph for test: {}", test_name);
-
-    cleanup_graph(test_name);
-
-    let name = get_graph_dir_name(test_name);
-    let root = ProjectDirs::from("com", "fs_graph", &name)
-        .unwrap()
-        .data_dir()
-        .to_path_buf();
-    let full_path = root.join(&name);
-
-    let graph = Graph::new(root.clone().into(), &name);
-
-    assert_eq!(
-        full_path.exists(),
-        true,
-        "Test directory has not been created"
-    );
-
-
-    graph
-}
-
-/// Graph cleanup function for tests. Removes the root directory from the data_dir.
-pub fn cleanup_graph(test_name: &str) {
-    // Uncomment this return only if you need to temporarily look at the contents
-    // return;
-
-    let name = get_graph_dir_name(test_name);
-    let root = ProjectDirs::from("com", "fs_graph", &name)
-        .unwrap()
-        .data_dir()
-        .to_path_buf();
-
-    let removal = std::fs::remove_dir_all(root);
-
-    match removal {
-        Ok(_) => {
-            println!("Removed test directory");
-            println!("----------------------------------------------");
-        },
-        Err(_err) => {
-            //println!("Failed to remove test directory: {}", err);
-        }
-    }
-}
-
-/// Compute the name for the test directory
-pub fn get_graph_dir_name(test_name: &str) -> String {
-    let name = format!("fs_graph_test_{}", test_name);
-
-    name
-}
+mod utils;
+use utils::*;
 
 #[test]
 fn test_new_graph() {
@@ -73,11 +18,11 @@ fn test_new_graph() {
         .data_dir()
         .to_path_buf();
 
-    println!("Expected full path: {:?}", root);
+    println!("Expected full path: {:#?}", root);
 
     let graph = Graph::new(root.clone().into(), &name);
 
-    println!("Size of graph: {:?} bytes", graph.db.size());
+    println!("Size of graph: {:#?} bytes", graph.db.size());
 
     assert_eq!(root.exists(), true, "Root directory does not exist");
 
@@ -163,20 +108,20 @@ fn new_custom_storage_directory() {
 #[test]
 /// Test whether you can add a long path as an alias to a node and retrieve it. 
 fn long_alias_path() {
-    use fs_graph::path_ser::{buf_to_str, str_to_buf};
+    use fs_graph::path_ser::{buf_to_alias, alias_to_buf};
 
     let func_name = "long_alias_path";
     let mut graph = setup_graph(func_name);
 
-    let long_path = "this/is/a/long/path/with/many/segments/verylongindeed/evenlonger/wow/are/we/still/here/there/must/be/something/we/can/do/about/all/this/tech/debt";
+    let long_path = "root/this/is/a/long/path/with/many/segments/verylongindeed/evenlonger/wow/are/we/still/here/there/must/be/something/we/can/do/about/all/this/tech/debt";
 
     let _ = graph
         .db
         .exec_mut(&QueryBuilder::insert().nodes().aliases(long_path).query());
 
     // Putting this conversion here for extra testing. 
-    let buf = str_to_buf(long_path);
-    let long_path = buf_to_str(&buf);
+    let buf = alias_to_buf(long_path);
+    let long_path = buf_to_alias(&buf);
 
     let root_node_result = graph
         .db
@@ -207,6 +152,8 @@ fn correct_root_name() {
     let root_name: String = graph.root_name();
 
     assert_eq!(root_name, dirname);
+
+    cleanup_graph(func_name);
 }
 
 #[test]
@@ -223,8 +170,6 @@ fn create_attributes_category(){
     let qry = graph.db.exec(&QueryBuilder::select().ids("root/attributes").query());
     
     assert_eq!(true, qry.is_ok());
-
-
 
     if root_node_result.is_ok() && qry.is_ok() {
 
@@ -244,7 +189,7 @@ fn create_attributes_category(){
         assert_eq!(edge.is_ok(), true);
         
         let edge = edge.unwrap().elements.iter().cloned().filter(|e| e.id.0 < 0).collect::<Vec<_>>();
-        println!("Found edge {:?}", edge);
+        println!("Found edge {:#?}", edge);
 
         assert_eq!(edge.len(), 1);
 
