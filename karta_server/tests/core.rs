@@ -6,14 +6,14 @@ use directories::ProjectDirs;
 use fs_graph::Graph;
 
 /// Graph setup function for tests. Always stores the db in the data_dir.
-fn setup_graph(test_name: &str) -> Graph {
+pub fn setup_graph(test_name: &str) -> Graph {
     println!("");
     println!("----------------------------------------------");
     println!("Creating graph for test: {}", test_name);
 
     cleanup_graph(test_name);
 
-    let name = format!("fs_graph_test_{}", test_name);
+    let name = get_graph_dir_name(test_name);
     let root = ProjectDirs::from("com", "fs_graph", &name)
         .unwrap()
         .data_dir()
@@ -33,11 +33,11 @@ fn setup_graph(test_name: &str) -> Graph {
 }
 
 /// Graph cleanup function for tests. Removes the root directory from the data_dir.
-fn cleanup_graph(test_name: &str) {
+pub fn cleanup_graph(test_name: &str) {
     // Uncomment this return only if you need to temporarily look at the contents
     // return;
 
-    let name = format!("fs_graph_test_{}", test_name);
+    let name = get_graph_dir_name(test_name);
     let root = ProjectDirs::from("com", "fs_graph", &name)
         .unwrap()
         .data_dir()
@@ -54,6 +54,13 @@ fn cleanup_graph(test_name: &str) {
             //println!("Failed to remove test directory: {}", err);
         }
     }
+}
+
+/// Compute the name for the test directory
+pub fn get_graph_dir_name(test_name: &str) -> String {
+    let name = format!("fs_graph_test_{}", test_name);
+
+    name
 }
 
 #[test]
@@ -189,6 +196,18 @@ fn long_alias_path() {
 
     cleanup_graph(func_name);
 } 
+
+#[test]
+fn correct_root_name() {
+    let func_name = "correct_root_name";
+    let graph = setup_graph(func_name);
+
+    let dirname: String = get_graph_dir_name(func_name);
+
+    let root_name: String = graph.root_name();
+
+    assert_eq!(root_name, dirname);
+}
 
 #[test]
 /// Test whether the db creates an attributes node when the db is first created.

@@ -178,8 +178,14 @@ impl Graph {
         self.maintain_readable_files = maintain;
     }
 
+    /// Gets the name of the root directory without the full path
+    pub fn root_name(&self) -> String {
+        self.root_path.file_name().unwrap().to_str().unwrap().to_string()
+    }
+        
+
     /// For physical nodes. Syncs the node's relationships in the db with the file system.
-    fn index_node_connections(&self, path: PathBuf){
+    pub fn index_node_connections(&self, path: PathBuf){
         let full_path = self.root_path.join(&path);
 
         if !full_path.exists() {
@@ -257,15 +263,71 @@ impl Graph {
     }
 
     /// Creates a node from the given path. Inserts it into the graph. 
-    /// Insert the relative path from the root. 
-    pub fn insert_node(&self, path: PathBuf) -> Result<(), agdb::DbError> {
+    /// Insert the relative path from the root, not including the root dir. 
+    pub fn insert_node_by_path(&mut self, path: PathBuf, ntype: Option<NodeType>) -> Result<(), agdb::DbError> {
         let full_path = self.root_path.join(&path);
-
-
         let alias = buf_to_str(&path);
 
+        // Check if the node already exists in the db. 
+        // If it does, don't insert it, and return an error. 
+        let existing = self.db.exec(
+            &QueryBuilder::select()
+                .ids(alias.clone())
+                .query()
+        );
 
+        match existing {
+            Ok(_) => {
+                return Err("Node already exists in the db".into());
+            },
+            Err(_e) => {
+                // Node doesn't exist, proceed to insertion
+            }
+        }
+
+        // Determine type of node. If not specified, it's an Other node.
+        let mut ntype = match ntype {
+            Some(ntype) => ntype,
+            None => NodeType::Other,
+        };
+    
+        // Check if the node is physical in the file system.
+        // If it is, check if it exists in the db.
+        let is_file = full_path.exists() && !full_path.is_dir();
+        let is_dir = full_path.is_dir();
+
+        if is_file {
+            ntype = NodeType::File;
+        } else if is_dir {
+            ntype = NodeType::Directory;
+        }
+
+        let node = Node::new(NodePath(PathBuf::from(&path)), ntype);
+
+        let nodeqr = self.db.exec_mut(
+            &QueryBuilder::insert()
+                .nodes()
+                .aliases(alias)
+                .values(&node)
+                .query()
+        ); 
+        
         Ok(())
+    }
+
+    /// Creates a node under a given parent with the given name.
+    /// The path is relative to the root of the graph.
+    /// Do not include the root dir name. 
+    pub fn insert_node_by_name(&self, parent_path: Option<PathBuf>, name: &str, ntype: Option<NodeType>) -> Result<(), agdb::DbError> {
+        let parent_path = parent_path.unwrap_or_else(|| PathBuf::from(""));
+    
+        let rel_path = if parent_path.as_os_str().is_empty() {
+            PathBuf::from(name)
+        } else {
+            parent_path.join(name)
+        };
+
+        self.insert_node_by_path(rel_path, ntype)
     }
 
     /// Changes the parent directory of a node. If the node is physical, it will be moved in the file system.

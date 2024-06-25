@@ -96,6 +96,8 @@ impl From<NodePhysicality> for DbValue {
 
 #[derive(Debug, Clone)]
 pub enum NodeType {
+    Other,
+
     // Physical types
     Directory,
     File,
@@ -111,6 +113,8 @@ impl TryFrom<DbValue> for NodeType {
 
     fn try_from(value: DbValue) -> Result<Self, Self::Error> {
         match value.to_string().as_str() {
+            "Other" => Ok(NodeType::Other),
+
             "Directory" => Ok(NodeType::Directory),
             "File" => Ok(NodeType::File),
 
@@ -124,6 +128,8 @@ impl TryFrom<DbValue> for NodeType {
 impl From<NodeType> for DbValue {
     fn from(ntype: NodeType) -> Self {
         match ntype {
+            NodeType::Other => "Other".into(),
+            
             NodeType::Directory => "Directory".into(),
             NodeType::File => "File".into(),
 
@@ -157,10 +163,14 @@ impl Into<DbKeyValue> for Attribute {
 }
 
 /// A list of reserved node attribute names that cannot be set by the user directly.
-pub const RESERVED_NODE_ATTRS: [&str; 9] = [
+pub const RESERVED_NODE_ATTRS: [&str; 12] = [
     "path", // The full path of the node, name included.
     "name", // The name of the node, without the path. Maybe allows for different characters?
     "ntype", // The type of the node
+    "nphys", // The physicality of the node
+
+    "created-time", // The time when the node was created.
+    "modified-time", // The time when the node was last modified.
 
     "preview", // Connects a file to a preview file, or stores it in this attribute in base64 for example. 
 
@@ -176,8 +186,13 @@ pub const RESERVED_NODE_ATTRS: [&str; 9] = [
 
 /// A list of reserved edge attribute names that cannot be set by the user directly.
 /// Note that they are optional, so default behavior is when they are not set.
-pub const RESERVED_EDGE_ATTRS: [&str; 17] = [
+pub const RESERVED_EDGE_ATTRS: [&str; 20] = [
     "contains", // Parent-child relationship
+
+    "text", // Text that is displayed on the edge, additional description
+
+    "created-time", // The time the edge was created.
+    "modified-time", // The time the edge was last modified.
 
     // Alternatively, transition animations could be stored in their own nodes. Might make it more 
     // explicit and ergonomic to edit them, and more easily support multiple animations. 
