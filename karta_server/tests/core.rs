@@ -192,6 +192,7 @@ fn long_alias_path() {
 
 #[test]
 /// Test whether the db creates an attributes node when the db is first created.
+/// Could possibly be moved to attr.rs
 fn create_attributes_category(){
     let func_name = "create_attributes_category";
     let graph = setup_graph(func_name);
@@ -204,22 +205,23 @@ fn create_attributes_category(){
     
     assert_eq!(true, qry.is_ok());
 
-    // The attribute we're looking for. Should be reserved. 
-    // In this case, the "contains" attribute. 
-    let atr = "contains";
+
 
     if root_node_result.is_ok() && qry.is_ok() {
+
+        // Validate root node
         let root_node = root_node_result.unwrap().ids();
         assert_eq!(root_node.len(), 1);
         let root_id = root_node.first().unwrap();
 
+        // Validate attributes node
         let attributes_node = qry.unwrap().ids();
         assert_eq!(attributes_node.len(), 1);
         let attributes_id = attributes_node.first().unwrap();
 
+        // Find edge, validate
         let query = &QueryBuilder::search().from(*root_id).to(*attributes_id).query();
         let edge = graph.db.exec(query);
-
         assert_eq!(edge.is_ok(), true);
         
         let edge = edge.unwrap().elements.iter().cloned().filter(|e| e.id.0 < 0).collect::<Vec<_>>();
@@ -227,6 +229,8 @@ fn create_attributes_category(){
 
         assert_eq!(edge.len(), 1);
 
+        // Select edge, because values don't appear in above query. 
+        // These two queries could probably be merged.
         let eid = edge.first().unwrap().id.0;
         let edge = graph.db.exec(&QueryBuilder::select()
             .keys()
@@ -238,6 +242,9 @@ fn create_attributes_category(){
         let vals = &edge.first().unwrap().values;
         let mut found = false;
 
+        // The attribute we're looking for. Should be reserved. 
+        // In this case, the "contains" attribute. 
+        let atr = "contains";
         for val in vals.iter() {
             if val.key == atr.into() {
                 found = true;
