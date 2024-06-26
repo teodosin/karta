@@ -269,7 +269,7 @@ impl Graph {
 
         match node {
             Ok(node) => {
-                let node = node.elements.first().unwrap();
+                let node = node.elements.first().unwrap().clone();
                 let node = Node::try_from(node);
 
                 node
@@ -502,10 +502,11 @@ impl Graph {
 
     /// Insert attributes to a node. Ignore reserved attribute names. Update attributes that already exist.
     pub fn insert_node_attr(
-        &self,
+        &mut self,
         path: PathBuf,
         attr: Attribute,
     ) -> Result<(), agdb::DbError> {
+
         use elements::RESERVED_NODE_ATTRS;
         let slice = attr.name.as_str();
         let is_reserved = RESERVED_NODE_ATTRS.contains(&slice);
@@ -517,12 +518,30 @@ impl Graph {
             )));
         }
 
-        Ok(())
+        let alias = buf_to_alias(&path);
+        let added = self.db.exec_mut(
+            &QueryBuilder::insert()
+               .values(vec![attr.into()])
+               .ids(alias)
+               .query(),
+        );
+
+        println!("Added: {:?}", added);
+
+        match added {
+            QueryResult => {
+                println!("Yes it's ok");
+                return Ok(());
+            }
+            QueryError => {
+                return Err(DbError::from("Failed to insert attribute"));
+            }
+        }
     }
 
     /// Delete attributes from a node. Ignore reserved attribute names.
     pub fn delete_node_attr(
-        &self,
+        &mut self,
         path: PathBuf,
         attr_name: &str,
     ) -> Result<(), agdb::DbError> {
@@ -531,12 +550,28 @@ impl Graph {
 
         if is_reserved {
             return Err(DbError::from(format!(
-                "Cannot insert reserved attribute name: {}",
+                "Cannot delete reserved attribute name: {}",
                 attr_name
             )));
         }
 
-        Ok(())
+        let alias = buf_to_alias(&path);
+
+        let node = self.db.exec_mut(
+            &QueryBuilder::remove()
+                .values(vec![attr_name.into()])
+                .ids(alias)
+                .query(),
+        );
+
+        match node {
+            QueryResult => {
+                return Ok(());
+            }
+            QueryError => {
+                return Err(DbError::from("Failed to delete attribute"));
+            }
+        }
     }
 
     /// Insert attributes to an edge. Ignore reserved attribute names. Update attributes that already exist.
@@ -547,7 +582,7 @@ impl Graph {
 
         if is_reserved {
             return Err(DbError::from(format!(
-                "Cannot insert reserved attribute name: {}",
+                "Cannot delete reserved attribute name: {}",
                 slice
             )));
         }

@@ -1,5 +1,5 @@
 use agdb::QueryBuilder;
-use fs_graph::{elements::Attribute, path_ser::buf_to_alias, Graph};
+use fs_graph::{elements::{Attribute, Node}, path_ser::buf_to_alias, Graph};
 
 mod utils;
 use utils::*;
@@ -33,7 +33,6 @@ fn open_node_that_does_not_exist() {
 
     cleanup_graph(&func_name);
 }
-
 
 #[test]
 fn create_new_node(){
@@ -158,6 +157,51 @@ fn creating_deep_path_creates_intermediate_nodes() {
 }
 
 #[test]
+fn insert_and_delete_node_attribute(){
+    let func_name = "insert_and_delete_node_attribute";
+    let mut graph = setup_graph(func_name);
+
+    let path = PathBuf::from("test");
+
+    let node = graph.insert_node_by_path(path.clone(), None);
+    assert_eq!(node.is_ok(), true);
+
+    let attr = Attribute {
+        name: "test".to_string(),
+        value: 10.0
+    };
+
+    let added = graph.insert_node_attr(path.clone(), attr);
+    assert_eq!(added.is_ok(), true);
+
+    let noder = graph.open_node(path.clone());
+    let noder = noder.unwrap();
+
+    assert_eq!(noder.attributes().len(), 1);
+
+    assert_eq!(noder.attributes()[0].name, "test");
+
+    // Test deleting the attribute
+    let deleted = graph.delete_node_attr(path.clone(), "test");
+    assert_eq!(deleted.is_ok(), true);
+
+    let nodest = graph.open_node(path.clone());
+    let nodest = nodest.unwrap();
+    assert_eq!(nodest.attributes().len(), 0);
+
+    cleanup_graph(&func_name);
+}
+
+#[test]
+fn insert_and_delete_multiple_attributes(){
+    let func_name = "insert_and_delete_multiple_attributes";
+    let mut graph = setup_graph(func_name);
+
+    cleanup_graph(&func_name);
+}
+
+
+#[test]
 fn protect_reserved_node_attributes() {
     let func_name = "protect_reserved_attributes";
     let mut graph = setup_graph(func_name);
@@ -186,15 +230,12 @@ fn protect_reserved_node_attributes() {
 
 /// Test creating a Node with different NodeTypes
 /// Test inserting an existing node (should fail or update)
-/// Test opening a node that exists
-/// Test opening a node that doesn't exist
 /// Test deleting a node
 /// Test reparenting a physical node
 /// Test reparenting a virtual node
 /// Test inserting node attributes (normal and reserved)
 /// Test deleting node attributes (normal and reserved)
 /// Test merging two nodes
-/// Test creating a node with a long path name
 /// Test inserting path as alias for a node
 /// Test node operations with very deep directory structures
 /// Test node operations with many sibling directories/files

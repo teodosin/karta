@@ -1,11 +1,11 @@
 use std::{path::PathBuf, time::SystemTime};
 
-use agdb::{DbElement, DbError, DbId, DbKeyValue, DbValue, UserValue};
+use agdb::{DbElement, DbError, DbId, DbKeyValue, DbUserValue, DbValue, QueryId, UserValue};
 
 use crate::path_ser::{buf_to_alias, alias_to_buf};
 
 /// The universal node type. 
-#[derive(Debug, UserValue)]
+#[derive(Debug)]
 pub struct Node {
     /// The id of the node in the database.
     db_id: Option<DbId>,
@@ -18,6 +18,54 @@ pub struct Node {
 
     created_time: SysTime,
     modified_time: SysTime,
+
+    attributes: Vec<Attribute>,
+}
+
+impl DbUserValue for Node {
+    fn db_id(&self) -> Option<QueryId> {
+        match self.db_id {
+            Some(id) => Some(id.into()),
+            None => None,
+        }
+    }
+    
+    fn db_keys() -> Vec<DbValue> {
+        let mut keys = Vec::new();
+        keys.push(DbValue::from("path"));
+        keys.push(DbValue::from("ntype"));
+        keys.push(DbValue::from("nphys"));
+        keys.push(DbValue::from("created_time"));
+        keys.push(DbValue::from("modified_time"));
+
+        // Why on earth does this function not have a self parameter?
+        // for attribute in &self.attributes {
+        //     keys.push(DbValue::from(attribute.name.clone()));
+        // }
+
+        keys
+    }
+
+    fn from_db_element(element: &DbElement) -> Result<Self, DbError> {
+        let elem = element.clone();
+        let node = Node::try_from(elem);
+        node
+    }
+
+    fn to_db_values(&self) -> Vec<DbKeyValue> {
+        let mut values = Vec::new();
+        values.push(DbKeyValue::from(("path", self.path.clone())));
+        values.push(DbKeyValue::from(("ntype", self.ntype.clone())));
+        values.push(DbKeyValue::from(("nphys", self.nphys.clone())));
+        values.push(DbKeyValue::from(("created_time", self.created_time.clone())));
+        values.push(DbKeyValue::from(("modified_time", self.modified_time.clone())));
+
+        for attr in &self.attributes {
+            values.push(attr.clone().into());
+        }
+
+        values
+    }
 }
 
 impl Node {
@@ -38,6 +86,8 @@ impl Node {
             nphys,
             created_time: now.clone(),
             modified_time: now,
+
+            attributes: Vec::new(),
         }
     }
 
@@ -62,18 +112,44 @@ impl Node {
     pub fn ntype(&self) -> NodeType {
         self.ntype.clone()
     }
+
+    pub fn nphys(&self) -> NodePhysicality {
+        self.nphys.clone()
+    }
+
+    pub fn created_time(&self) -> &SysTime {
+        &self.created_time
+    }
+
+    pub fn modified_time(&self) -> &SysTime {
+        &self.modified_time
+    }
+
+    pub fn attributes(&self) -> &Vec<Attribute> {
+        &self.attributes
+    }
 }
 
 impl TryFrom<DbElement> for Node {
     type Error = DbError;
 
     fn try_from(value: DbElement) -> Result<Self, Self::Error> {
+        let fixed: [&str; 5] = ["path", "ntype", "nphys", "created_time", "modified_time"];
+        let rest = value.values.iter().filter(|v|!fixed.contains(&v.key.string().unwrap().as_str())).collect::<Vec<_>>();
+
         let db_id = value.id;
         let path = value.values.iter().find(|v| v.key == "path".into());
         let ntype = value.values.iter().find(|v| v.key == "ntype".into());
         let nphys = value.values.iter().find(|v| v.key == "nphys".into());
         let created_time = value.values.iter().find(|v| v.key == "created_time".into());
         let modified_time = value.values.iter().find(|v| v.key == "modified_time".into());
+
+        let attrs: Vec<Attribute> = rest.iter().map(|v| {
+            Attribute {
+                name: v.key.to_string(),
+                value: v.value.to_f64().unwrap().to_f64() as f32,
+            }
+        }).collect();
 
         let node = Node {
             db_id: Some(db_id),
@@ -82,6 +158,7 @@ impl TryFrom<DbElement> for Node {
             nphys: NodePhysicality::try_from(nphys.unwrap().value.clone())?,
             created_time: SysTime::try_from(created_time.unwrap().value.clone())?,
             modified_time: SysTime::try_from(modified_time.unwrap().value.clone())?,
+            attributes: attrs,
         };
 
         Ok(node)
@@ -184,7 +261,7 @@ impl From<NodeType> for DbValue {
 }
 
 #[derive(Debug, Clone)]
-struct SysTime(SystemTime);
+pub struct SysTime(SystemTime);
 
 impl From<SysTime> for DbValue {
     fn from(time: SysTime) -> Self {
