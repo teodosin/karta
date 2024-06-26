@@ -24,25 +24,39 @@ fn create_new_node(){
         &QueryBuilder::select().ids("root/test").query()
     );
 
+    
     println!("Node: {:#?}", node);
     assert_eq!(node.is_ok(), true);
-
+    
     let node = node.unwrap();
     assert_eq!(node.elements.len(), 1);
-
+    
     let node = node.elements.first().unwrap();
     assert_eq!(node.id, nid);
-
+    
     // Checking for ntype, nphys, created-time, modified-time
     assert_eq!(node.values.iter().any(|x| x.key == "ntype".into() && x.value == "Other".into()), true);
     assert_eq!(node.values.iter().any(|x| x.key == "nphys".into()), true);
     assert_eq!(node.values.iter().any(|x| x.key == "created_time".into()), true);
     assert_eq!(node.values.iter().any(|x| x.key == "modified_time".into()), true);
+    
+    let aliases = graph.db.exec(
+        &QueryBuilder::select().aliases().query()
+    );
+
+    assert_eq!(aliases.is_ok(), true);
+    let alias_exists = aliases.unwrap().elements.iter().any(|x| {
+        x.values.iter().any(|y| y.value.to_string() == "root/test".to_string())
+    });
+    assert_eq!(alias_exists, true);
 
     cleanup_graph(&func_name);
 }
 
-///
+/// When a node is created, it should have a path to the root. If a node is created with a deep
+/// path, then intermediate nodes should be created.
+/// 
+/// 
 #[test]
 fn creating_deep_path_creates_intermediate_nodes() {
     let func_name = "creating_deep_path_creates_intermediate_nodes";
