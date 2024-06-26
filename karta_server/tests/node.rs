@@ -1,5 +1,5 @@
 use agdb::QueryBuilder;
-use fs_graph::{path_ser::buf_to_alias, Graph};
+use fs_graph::{elements::Attribute, path_ser::buf_to_alias, Graph};
 
 mod utils;
 use utils::*;
@@ -56,7 +56,12 @@ fn create_new_node(){
 /// When a node is created, it should have a path to the root. If a node is created with a deep
 /// path, then intermediate nodes should be created.
 /// 
-/// 
+/// It is unclear whether this should be optional. 
+/// Technically this could prevent orphans from being created. 
+/// Are they useful? 
+/// Or should nodes with only a parent connection be considered relatively disconnected?
+/// Presumably it would be useful to be able to just dump new nodes in and sort them later. 
+/// But that could still be implemented without fragmenting the database. 
 #[test]
 fn creating_deep_path_creates_intermediate_nodes() {
     let func_name = "creating_deep_path_creates_intermediate_nodes";
@@ -131,9 +136,18 @@ fn protect_reserved_node_attributes() {
     use fs_graph::elements::RESERVED_NODE_ATTRS;
 
     let path = PathBuf::from("test");
-    let node = graph.insert_node_by_path(path, None);
 
+    let node = graph.insert_node_by_path(path.clone(), None);
     assert_eq!(node.is_ok(), true);
+
+    let attr = Attribute {
+        name: RESERVED_NODE_ATTRS[0].to_string(),
+        value: 10.0
+    };
+
+    let added = graph.insert_node_attr(path, attr);
+
+    assert_eq!(added.is_ok(), false);
 
     cleanup_graph(&func_name);
 

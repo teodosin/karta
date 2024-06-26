@@ -483,8 +483,19 @@ impl Graph {
     pub fn insert_node_attr(
         &self,
         path: PathBuf,
-        attr: Vec<Attribute>,
+        attr: Attribute,
     ) -> Result<(), agdb::DbError> {
+        use elements::RESERVED_NODE_ATTRS;
+        let slice = attr.name.as_str();
+        let is_reserved = RESERVED_NODE_ATTRS.contains(&slice);
+
+        if is_reserved {
+            return Err(DbError::from(format!(
+                "Cannot insert reserved attribute name: {}",
+                slice
+            )));
+        }
+
         Ok(())
     }
 
@@ -492,18 +503,51 @@ impl Graph {
     pub fn delete_node_attr(
         &self,
         path: PathBuf,
-        attr: Vec<Attribute>,
+        attr: Attribute,
     ) -> Result<(), agdb::DbError> {
+        use elements::RESERVED_NODE_ATTRS;
+        let slice = attr.name.as_str();
+        let is_reserved = RESERVED_NODE_ATTRS.contains(&slice);
+
+        if is_reserved {
+            return Err(DbError::from(format!(
+                "Cannot insert reserved attribute name: {}",
+                slice
+            )));
+        }
+
         Ok(())
     }
 
     /// Insert attributes to an edge. Ignore reserved attribute names. Update attributes that already exist.
-    pub fn insert_edge_attr(&self, edge: Edge, attr: Vec<Attribute>) -> Result<(), agdb::DbError> {
+    pub fn insert_edge_attr(&self, edge: Edge, attr: Attribute) -> Result<(), agdb::DbError> {
+        use elements::RESERVED_EDGE_ATTRS;
+        let slice = attr.name.as_str();
+        let is_reserved = RESERVED_EDGE_ATTRS.contains(&slice);
+
+        if is_reserved {
+            return Err(DbError::from(format!(
+                "Cannot insert reserved attribute name: {}",
+                slice
+            )));
+        }
+
         Ok(())
     }
 
     /// Delete attributes from an edge. Ignore reserved attribute names.
-    pub fn delete_edge_attr(&self, edge: Edge, attr: Vec<Attribute>) -> Result<(), agdb::DbError> {
+    pub fn delete_edge_attr(&self, edge: Edge, attr: Attribute) -> Result<(), agdb::DbError> {
+        use elements::RESERVED_EDGE_ATTRS;
+        let slice = attr.name.as_str();
+        let is_reserved = RESERVED_EDGE_ATTRS.contains(&slice);
+
+        if is_reserved {
+            return Err(DbError::from(format!(
+                "Cannot insert reserved attribute name: {}",
+                slice
+            )));
+        }
+        
         Ok(())
     }
 
@@ -512,9 +556,6 @@ impl Graph {
         Ok(())
     }
 }
-
-/// Internal function. Creates a node with the given alias.
-fn create_node() {}
 
 /// Internal function. Not for crate users to use directly.
 /// Uses agdb types directly to create an exclusive parent-child connection.
@@ -555,7 +596,3 @@ fn parent_node_to_node(db: &mut agdb::Db, parent: &agdb::DbId, child: &agdb::DbI
         }
     }
 }
-
-/// Internal function. Determines the full path of the node and adds it as its alias.
-/// Corrects the alias if it is wrong.
-fn insert_path_as_alias(db: &mut agdb::Db, node: agdb::DbId) {}
