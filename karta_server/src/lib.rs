@@ -47,6 +47,7 @@ enum GraphDb {
     File(agdb::DbFile),
 }
 
+/// Implementation block for the Graph struct itself.
 impl Graph {
     /// Constructor. Panics if the db cannot be created.
     ///
@@ -237,7 +238,9 @@ impl Graph {
             .unwrap()
             .to_string()
     }
+}
 
+impl Graph {
     /// For physical nodes. Syncs the node's relationships in the db with the file system.
     pub fn index_node_connections(&self, path: PathBuf) {
         let full_path = self.root_path.join(&path);
@@ -255,8 +258,26 @@ impl Graph {
 
     /// Retrieves a particular node's data from the database.
     /// The path is relative to the root of the graph.
-    pub fn open_node(&self, path: PathBuf) -> Node {
-        todo!()
+    pub fn open_node(&self, path: PathBuf) -> Result<Node, DbError> {
+        let alias = buf_to_alias(&path);
+
+        let node = self.db.exec(
+            &QueryBuilder::select()
+            .ids(alias)
+            .query(),
+        );
+
+        match node {
+            Ok(node) => {
+                let node = node.elements.first().unwrap();
+                let node = Node::try_from(node);
+
+                node
+            },
+            Err(_err) => {
+                return Err("Could not open node".into());
+            }
+        }
     }
 
     /// Opens the connections of a particular node.
@@ -503,16 +524,15 @@ impl Graph {
     pub fn delete_node_attr(
         &self,
         path: PathBuf,
-        attr: Attribute,
+        attr_name: &str,
     ) -> Result<(), agdb::DbError> {
         use elements::RESERVED_NODE_ATTRS;
-        let slice = attr.name.as_str();
-        let is_reserved = RESERVED_NODE_ATTRS.contains(&slice);
+        let is_reserved = RESERVED_NODE_ATTRS.contains(&attr_name);
 
         if is_reserved {
             return Err(DbError::from(format!(
                 "Cannot insert reserved attribute name: {}",
-                slice
+                attr_name
             )));
         }
 

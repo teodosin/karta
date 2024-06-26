@@ -5,7 +5,36 @@ mod utils;
 use utils::*;
 use std::path::PathBuf;
 
-/// Test inserting a new node
+#[test]
+fn open_node_that_exists() {
+    let func_name = "open_node_that_exists";
+    let mut graph = setup_graph(func_name);
+
+    let path = PathBuf::from("test");
+
+    let node = graph.insert_node_by_path(path.clone(), None);
+    assert_eq!(node.is_ok(), true);
+
+    let open = graph.open_node(path);
+
+    assert_eq!(open.is_ok(), true);
+
+    cleanup_graph(&func_name);
+}
+
+#[test]
+fn open_node_that_does_not_exist() {
+    let func_name = "open_node_that_does_not_exist";
+    let graph = setup_graph(func_name);
+
+    let open = graph.open_node(PathBuf::from("test"));
+
+    assert_eq!(open.is_ok(), false);
+
+    cleanup_graph(&func_name);
+}
+
+
 #[test]
 fn create_new_node(){
     let func_name = "create_new_node";
@@ -145,13 +174,16 @@ fn protect_reserved_node_attributes() {
         value: 10.0
     };
 
-    let added = graph.insert_node_attr(path, attr);
+    let added = graph.insert_node_attr(path.clone(), attr);
 
     assert_eq!(added.is_ok(), false);
 
-    cleanup_graph(&func_name);
+    let removed = graph.delete_node_attr(path, "ntype");
+    assert_eq!(removed.is_ok(), false);
 
+    cleanup_graph(&func_name);
 }
+
 /// Test creating a Node with different NodeTypes
 /// Test inserting an existing node (should fail or update)
 /// Test opening a node that exists
