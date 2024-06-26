@@ -5,6 +5,14 @@ use agdb::{DbElement, DbError, DbId, DbKeyValue, DbUserValue, DbValue, QueryId, 
 use crate::path_ser::{buf_to_alias, alias_to_buf};
 
 /// The universal node type. 
+/// Nodes loaded for users of this crate should be in this type. 
+/// 
+/// Bevy_fs_graph destructures this type into components on an entity
+/// to be then later used by bevy_overlay_graph. 
+/// 
+/// How exactly the other direction, the saving of data, should work, is, 
+/// as of writing this, undetermined. Likely in most cases Graph's methods will
+/// be used directly to make modifictions rather than creating a Node instance.
 #[derive(Debug)]
 pub struct Node {
     /// The id of the node in the database.
@@ -68,6 +76,7 @@ impl DbUserValue for Node {
     }
 }
 
+/// Implementation block for node. 
 impl Node {
     pub fn new(path: NodePath, ntype: NodeType) -> Self {
         let nphys: NodePhysicality;
@@ -91,16 +100,19 @@ impl Node {
         }
     }
 
+    /// Perhaps it would be better to update this through Graph? Opportunity for bulk 
+    /// insertion?
     pub fn update_modified_time(&mut self) {
         self.modified_time = SysTime(SystemTime::now());
     }
 
-    pub fn insert_attributes(&mut self, attributes: Vec<Attribute>) {
-        for attribute in attributes {
-            //
-        }
+    /// Insert a vector of attibutes into the node. Not for library use. 
+    /// Though perhaps not even this crate needs this function.
+    pub(crate) fn insert_attributes(&mut self, attributes: Vec<Attribute>) {
+        unimplemented!();
     }
-
+    // Getters
+    
     pub fn id(&self) -> Option<DbId> {
         self.db_id
     }

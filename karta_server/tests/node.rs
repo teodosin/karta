@@ -12,7 +12,7 @@ fn open_node_that_exists() {
 
     let path = PathBuf::from("test");
 
-    let node = graph.insert_node_by_path(path.clone(), None);
+    let node = graph.create_node_by_path(path.clone(), None);
     assert_eq!(node.is_ok(), true);
 
     let open = graph.open_node(path);
@@ -42,7 +42,7 @@ fn create_new_node(){
     let path = PathBuf::from("test");
     let alias = PathBuf::from("root/test");
 
-    let node = graph.insert_node_by_path(path, None);
+    let node = graph.create_node_by_path(path, None);
 
     assert_eq!(node.is_ok(), true);
 
@@ -101,7 +101,7 @@ fn creating_deep_path_creates_intermediate_nodes() {
     let mut second = path.clone();
     second.pop();
 
-    let node = graph.insert_node_by_path(path.clone(), None);
+    let node = graph.create_node_by_path(path.clone(), None);
 
     assert_eq!(node.is_ok(), true);
 
@@ -163,7 +163,7 @@ fn insert_and_delete_node_attribute(){
 
     let path = PathBuf::from("test");
 
-    let node = graph.insert_node_by_path(path.clone(), None);
+    let node = graph.create_node_by_path(path.clone(), None);
     assert_eq!(node.is_ok(), true);
 
     let attr = Attribute {
@@ -210,7 +210,7 @@ fn protect_reserved_node_attributes() {
 
     let path = PathBuf::from("test");
 
-    let node = graph.insert_node_by_path(path.clone(), None);
+    let node = graph.create_node_by_path(path.clone(), None);
     assert_eq!(node.is_ok(), true);
 
     let attr = Attribute {
