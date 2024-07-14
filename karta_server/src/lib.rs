@@ -3,4 +3,5 @@
 pub mod elements;
 pub mod path_ser;
 pub mod graph;
+pub mod nodetype;
 

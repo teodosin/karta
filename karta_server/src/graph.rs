@@ -2,15 +2,13 @@ use std::{error::Error, path::PathBuf};
 
 use agdb::{CountComparison, DbElement, DbError, DbId, DbUserValue, QueryBuilder, QueryError};
 
-use crate::{elements, path_ser};
+use crate::{elements, nodetype::NodeType, path_ser};
 use elements::*;
 use path_ser::buf_to_alias;
 
-
-
 /// The main graph structure to be interacted with.
-/// 
-/// Bevy_fs_graph will instantiate this as a Resource through a newtype. 
+///
+/// Bevy_fs_graph will instantiate this as a Resource through a newtype.
 pub struct Graph {
     /// The name of the application using this library.
     name: String,
@@ -54,7 +52,7 @@ enum GraphDb {
 // In the event that the backend database is to be changed,
 // the following implementations could be turned into traits.
 // This would allow for the db to be changed without changing the library.
-// Storing the database in text files could be reimplemented this way. 
+// Storing the database in text files could be reimplemented this way.
 // ------------------------------------------------------------------
 
 /// Implementation block for the Graph struct itself.
@@ -81,11 +79,56 @@ impl Graph {
         let db = agdb::Db::new(storage_path.join(name).to_str().unwrap());
 
         let mut db = db.expect("Failed to create db");
+        
+        let mut giraphe = Graph {
+            name: name.to_string(),
+            db,
+            root_path: root_path.into(),
+            storage_path: StoragePath::Default,
+            maintain_readable_files: false,
+        };
 
+        giraphe.init_archetype_nodes();
+
+        return giraphe;
+    }
+
+    /// Alternate constructor. Use this if you want to set a custom storage path for the db.
+    /// Panics if the db cannot be created
+    pub fn new_custom_storage(root_path: PathBuf, name: &str, storage_path: PathBuf) -> Self {
+        // Create the path if it doesn't exist
+        if !storage_path.exists() {
+            std::fs::create_dir_all(&storage_path).expect("Failed to create storage path");
+        }
+
+        let db = agdb::Db::new(storage_path.join(name).to_str().unwrap());
+
+        let mut db = db.expect("Failed to create db");
+
+        let mut giraphe = Graph {
+            name: name.to_string(),
+            db,
+            root_path: root_path.into(),
+            storage_path: StoragePath::Custom(storage_path),
+            maintain_readable_files: false,
+        };
+
+        giraphe.init_archetype_nodes();
+
+        return giraphe;
+    }
+
+    /// Create the initial archetype nodes for the graph. Includes 
+    /// the root, 
+    /// attributes,
+    /// settings,
+    /// nodecategories
+    pub fn init_archetype_nodes(&mut self) {
+        
         // Create the root node
-        let root: Vec<Node> = vec![Node::new(NodePath("root".into()), NodeType::Directory)];
+        let root: Vec<Node> = vec![Node::new(NodePath("root".into()), NodeType::root_type())];
 
-        let rt_node = db.exec_mut(
+        let rt_node = self.db.exec_mut(
             &QueryBuilder::insert()
                 .nodes()
                 .aliases("root")
@@ -103,14 +146,16 @@ impl Graph {
         let rt_id = rt_node.unwrap().ids();
         let rt_id = rt_id.first().unwrap();
 
+
+
         // Create attributes node
         // All user-defined attributes will be children of this node
         let atr: Vec<Node> = vec![Node::new(
             NodePath("root/attributes".into()),
-            NodeType::Category,
+            NodeType::archetype_type(),
         )];
 
-        let atr_node = db.exec_mut(
+        let atr_node = self.db.exec_mut(
             &QueryBuilder::insert()
                 .nodes()
                 .aliases("root/attributes")
@@ -125,17 +170,18 @@ impl Graph {
                 println!("Failed to create attributes node: {}", err);
             }
         }
-
         // Create an edge between the root and attributes nodes
-        Graph::parent_nodes_by_dbids(&mut db, rt_id, atr_node.unwrap().ids().first().unwrap());
+        Graph::parent_nodes_by_dbids(&mut self.db, rt_id, atr_node.unwrap().ids().first().unwrap());
 
+
+        // Archetype ------------------------------------------------
         // Create the settings node for global application settings
         let set: Vec<Node> = vec![Node::new(
             NodePath("root/settings".into()),
-            NodeType::Category,
+            NodeType::archetype_type(),
         )];
 
-        let set_node = db.exec_mut(
+        let set_node = self.db.exec_mut(
             &QueryBuilder::insert()
                 .nodes()
                 .aliases("root/settings")
@@ -150,90 +196,35 @@ impl Graph {
                 println!("Failed to create settings node: {}", err);
             }
         }
-
         // Create an edge between the root and settings nodes
-        Graph::parent_nodes_by_dbids(&mut db, rt_id, set_node.unwrap().ids().first().unwrap());
+        Graph::parent_nodes_by_dbids(&mut self.db, rt_id, set_node.unwrap().ids().first().unwrap());
 
-        Graph {
-            name: name.to_string(),
-            db,
-            root_path: root_path.into(),
-            storage_path: StoragePath::Default,
-            maintain_readable_files: false,
-        }
-    }
 
-    /// Alternate constructor. Use this if you want to set a custom storage path for the db. 
-    /// Panics if the db cannot be created
-    pub fn new_custom_storage(root_path: PathBuf, name: &str, storage_path: PathBuf) -> Self {
-        // Create the path if it doesn't exist
-        if !storage_path.exists() {
-            std::fs::create_dir_all(&storage_path).expect("Failed to create storage path");
-        }
-
-        let db = agdb::Db::new(storage_path.join(name).to_str().unwrap());
-
-        let mut db = db.expect("Failed to create db");
-
-        // Create the root node
-        let root: Vec<Node> = vec![Node::new(NodePath("root".into()), NodeType::Directory)];
-
-        let rt_node = db.exec_mut(
-            &QueryBuilder::insert()
-                .nodes()
-                .aliases("root")
-                .values(&root)
-                .query(),
-        );
-        match rt_node {
-            Ok(_) => {
-                println!("Created root node");
-            }
-            Err(ref err) => {
-                println!("Failed to create root node: {}", err);
-            }
-        }
-
-        // Create attributes node
-        // All user-defined attributes will be children of this node
-        let atr: Vec<Node> = vec![Node::new(
-            NodePath("root/attributes".into()),
-            NodeType::Category,
+        // Archetype ------------------------------------------------
+        // Create the nodecategories node for global node categories.
+        // Node types are then children of nodecategories or operators. 
+        let nca: Vec<Node> = vec![Node::new(
+            NodePath("root/nodecategories".into()),
+            NodeType::archetype_type(),
         )];
 
-        let atr_node = db.exec_mut(
+        let nca_node = self.db.exec_mut(
             &QueryBuilder::insert()
                 .nodes()
-                .aliases("root/attributes")
-                .values(&atr)
+                .aliases("root/nodecategories")
+                .values(&nca)
                 .query(),
         );
-        match atr_node {
+        match nca_node {
             Ok(_) => {
-                println!("Created attributes node");
+                println!("Created nodecategories node");
             }
             Err(ref err) => {
-                println!("Failed to create attributes node: {}", err);
+                println!("Failed to create nodecategories node: {}", err);
             }
         }
-
-        // Create an edge between the root and attributes nodes
-        // Ugly function call, I know.
-        if rt_node.is_ok() && atr_node.is_ok() {
-            Graph::parent_nodes_by_dbids(
-                &mut db,
-                rt_node.unwrap().ids().first().unwrap(),
-                atr_node.unwrap().ids().first().unwrap(),
-            );
-        }
-
-        Graph {
-            name: name.to_string(),
-            db,
-            root_path: root_path.into(),
-            storage_path: StoragePath::Custom(storage_path),
-            maintain_readable_files: false,
-        }
+        // Create an edge between the root and nodecategories nodes
+        Graph::parent_nodes_by_dbids(&mut self.db, rt_id, nca_node.unwrap().ids().first().unwrap());
     }
 
     /// For physical nodes. Syncs the node's relationships in the db with the file system.
@@ -267,6 +258,19 @@ impl Graph {
     }
 }
 
+/// Implementation block for handling node types.
+impl Graph {
+    pub fn get_node_types(&self) -> Result<Vec<NodeType>, DbError> {
+        todo!()
+    }
+
+    pub fn create_nodetype(&mut self, nodetype: NodeType) -> Result<NodeType, DbError> {
+        todo!()
+    }
+
+    pub fn instance_nodetype(&self) {}
+}
+
 /// Implementation block for handling nodes.
 impl Graph {
     /// Retrieves a particular node's data from the database.
@@ -291,23 +295,23 @@ impl Graph {
 
     /// Opens the connections of a particular node.
     /// Takes in the path to the node relative to the root of the graph.
-    /// 
+    ///
     /// TODO: Add filter argument when Filter is implemented.
-    /// Note that possibly Filter could have a condition that nodes 
+    /// Note that possibly Filter could have a condition that nodes
     /// would have to be connected to some node, which would just turn
     /// this into a generic "open_nodes" function, or "search_nodes".
     /// Then filters could just be wrappers around agdb's QueryConditions...
-    /// 
+    ///
     /// This opens a can of worms about whether the nodes loaded up in Karta
-    /// even need to be from a specific context. What if everything was just 
+    /// even need to be from a specific context. What if everything was just
     /// in a "soup"? But what would navigation even mean then, when you're not
     /// traveling through contexts? When are relative positions enforced?
     /// How do you determine which node has priority? Is it the one that's open?
-    /// If multiple are open, how do the relative positions work? 
-    /// Parent takes priority over other connection? 
+    /// If multiple are open, how do the relative positions work?
+    /// Parent takes priority over other connection?
     /// What if neither is the parent? Are the priorities configurable?
-    /// 
-    /// 
+    ///
+    ///
     pub fn open_node_connections(&self, path: PathBuf) -> Vec<Node> {
         // Step 1: Check if the node is a physical node in the file system.
         // Step 2: Check if the node exists in the db.
@@ -361,8 +365,8 @@ impl Graph {
 
     /// Creates a node from the given path. Inserts it into the graph.
     /// Insert the relative path from the root, not including the root dir.
-    /// 
-    /// TODO: Determine whether users of the crate are meant to use this. 
+    ///
+    /// TODO: Determine whether users of the crate are meant to use this.
     /// Perhaps not. Perhaps the parent of the node should be specified.
     /// The insert_node_by_name function calls this one anyway.
     pub fn create_node_by_path(
@@ -392,7 +396,7 @@ impl Graph {
         // Determine type of node. If not specified, it's an Other node.
         let mut ntype = match ntype {
             Some(ntype) => ntype,
-            None => NodeType::Other,
+            None => NodeType::other(),
         };
 
         // Check if the node is physical in the file system.
@@ -401,9 +405,9 @@ impl Graph {
         let is_dir = full_path.is_dir();
 
         if is_file {
-            ntype = NodeType::File;
+            ntype = NodeType::new("File".to_string());
         } else if is_dir {
-            ntype = NodeType::Directory;
+            ntype = NodeType::new("Directory".to_string());
         }
 
         let node = Node::new(NodePath(PathBuf::from(&path)), ntype);
@@ -429,7 +433,7 @@ impl Graph {
                             println!("About to insert parent node: {:?}", parent_path);
                             let n = self.create_node_by_path(
                                 parent_path.to_path_buf(),
-                                Some(NodeType::Other),
+                                Some(NodeType::other()),
                             );
 
                             let parent_id = n.unwrap().id;
@@ -481,20 +485,17 @@ impl Graph {
     }
 
     /// Inserts a Node.
-    pub fn insert_node(
-        &mut self,
-        node: Node,
-    ) -> Result<(), agdb::DbError>{
+    pub fn insert_node(&mut self, node: Node) -> Result<(), agdb::DbError> {
         todo!()
     }
 
-    /// Deletes a node. 
-    /// 
+    /// Deletes a node.
+    ///
     /// Setting "files" and/or "dirs" to true could also delete from the file system,
     /// and recursively. Very dangerous. Though not implementing this would mean that
     /// those files would constantly be at a risk of getting reindexed, so this
     /// should probably still be implemented, unless we want to just mark nodes as deleted
-    /// but never actually delete them, which seems like a smelly solution to me. 
+    /// but never actually delete them, which seems like a smelly solution to me.
     pub fn delete_node(&self, path: PathBuf, files: bool, dirs: bool) -> Result<(), agdb::DbError> {
         Ok(())
     }
@@ -597,7 +598,7 @@ impl Graph {
         Err(DbError::from("Not implemented"))
     }
 
-        /// Mostly used internally. 
+    /// Mostly used internally.
     /// Uses agdb types directly to create an exclusive parent-child connection.
     /// The attribute is "contains" and is reserved in elements.rs.
     pub fn parent_nodes_by_dbids(db: &mut agdb::Db, parent: &agdb::DbId, child: &agdb::DbId) {
@@ -657,8 +658,6 @@ impl Graph {
         Ok(())
     }
 
-
-
     /// Moves an edge and all its attributes to a new source and target. Parent edges can't be reconnected this way,
     /// use the reparent_node function instead.
     pub fn reconnect_edge(
@@ -711,5 +710,4 @@ impl Graph {
 
         Ok(())
     }
-
 }

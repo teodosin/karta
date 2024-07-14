@@ -2,7 +2,7 @@ use std::{path::PathBuf, time::SystemTime};
 
 use agdb::{DbElement, DbError, DbId, DbKeyValue, DbUserValue, DbValue, QueryId, UserValue};
 
-use crate::path_ser::{buf_to_alias, alias_to_buf};
+use crate::{nodetype::NodeType, path_ser::{alias_to_buf, buf_to_alias}};
 
 /// The universal node type. 
 /// Nodes loaded for users of this crate should be in this type. 
@@ -80,9 +80,10 @@ impl DbUserValue for Node {
 impl Node {
     pub fn new(path: NodePath, ntype: NodeType) -> Self {
         let nphys: NodePhysicality;
-        match ntype {
-            NodeType::Directory => nphys = NodePhysicality::Physical,
-            NodeType::File => nphys = NodePhysicality::Physical,
+
+        match path.0.exists() {
+            true => nphys = NodePhysicality::Physical,
+            false => nphys = NodePhysicality::Virtual,
             _ => nphys = NodePhysicality::Virtual,
         }
 
@@ -121,8 +122,8 @@ impl Node {
         &self.path.0
     }
 
-    pub fn ntype(&self) -> NodeType {
-        self.ntype.clone()
+    pub fn ntype(&self) -> String {
+        todo!();
     }
 
     pub fn nphys(&self) -> NodePhysicality {
@@ -231,50 +232,6 @@ impl From<NodePhysicality> for DbValue {
 }
 
 #[derive(Debug, Clone)]
-pub enum NodeType {
-    Other,
-
-    // Physical types
-    Directory,
-    File,
-
-    // Virtual types
-    Category, 
-}
-
-
-// TODO: Could a macro be created for this?
-impl TryFrom<DbValue> for NodeType {
-    type Error = DbError;
-
-    fn try_from(value: DbValue) -> Result<Self, Self::Error> {
-        match value.to_string().as_str() {
-            "Other" => Ok(NodeType::Other),
-
-            "Directory" => Ok(NodeType::Directory),
-            "File" => Ok(NodeType::File),
-
-            "Category" => Ok(NodeType::Category),
-
-            _ => Err(DbError::from("Invalid NodeType")),
-        }
-    }
-}
-
-impl From<NodeType> for DbValue {
-    fn from(ntype: NodeType) -> Self {
-        match ntype {
-            NodeType::Other => "Other".into(),
-
-            NodeType::Directory => "Directory".into(),
-            NodeType::File => "File".into(),
-
-            NodeType::Category => "Category".into(),
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
 pub struct SysTime(SystemTime);
 
 impl From<SysTime> for DbValue {
@@ -323,6 +280,7 @@ impl Into<DbKeyValue> for Attribute {
 pub const RESERVED_NODE_ATTRS: [&str; 12] = [
     "path", // The full path of the node, name included. Implemented as an alias, but still reserved.
     "name", // The name of the node, without the path. Maybe allows for different characters?
+
     "ntype", // The type of the node
     "nphys", // The physicality of the node
 
@@ -344,7 +302,7 @@ pub const RESERVED_NODE_ATTRS: [&str; 12] = [
 /// A list of reserved edge attribute names that cannot be set by the user directly.
 /// Note that they are optional, so default behavior is when they are not set.
 pub const RESERVED_EDGE_ATTRS: [&str; 20] = [
-    "contains", // Parent_child relationship
+    "contains", // Physical parent_child relationship
 
     "text", // Text that is displayed on the edge, additional description
 
