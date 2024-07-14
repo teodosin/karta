@@ -1,9 +1,10 @@
+#![allow(warnings)]
 
 use std::any::Any;
 
 use agdb::QueryBuilder;
 use directories::ProjectDirs;
-use fs_graph::Graph;
+use fs_graph::graph::{self, Graph};
 
 mod utils;
 use utils::*;

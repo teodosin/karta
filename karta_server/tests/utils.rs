@@ -1,5 +1,8 @@
+#![allow(warnings)]
+
+
 use directories::ProjectDirs;
-use fs_graph::Graph;
+use fs_graph::graph::Graph;
 
 /// Graph setup function for tests. Always stores the db in the data_dir.
 pub fn setup_graph(test_name: &str) -> Graph {

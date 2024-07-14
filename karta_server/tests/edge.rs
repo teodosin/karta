@@ -1,6 +1,36 @@
-use fs_graph::Graph;
+#![allow(warnings)]
+
+
+use fs_graph::graph::Graph;
+use std::path::PathBuf;
+
 mod utils;
 use utils::*;
+
+#[test]
+fn create_new_edge() {
+    let func_name = "create_new_edge";
+    let mut graph = setup_graph(func_name);
+
+    // Create two nodes
+    let path1 = PathBuf::from("node1");
+    let path2 = PathBuf::from("node2");
+    
+    let node1 = graph.create_node_by_path(path1.clone(), None).unwrap();
+    let node2 = graph.create_node_by_path(path2.clone(), None).unwrap();
+
+    // Create an edge between the nodes
+    let edge = graph.create_edge(&path1, &path2);
+
+    assert!(edge.is_ok(), "Failed to create edge");
+
+    // Verify the edge exists
+    // let edge_exists = graph.edge_exists(node1.id, node2.id);
+    // assert!(edge_exists, "Edge does not exist after creation");
+
+    cleanup_graph(func_name);
+}
+
 
 // Test creating an Edge with attributes
 // Test converting Attribute to DbKeyValue

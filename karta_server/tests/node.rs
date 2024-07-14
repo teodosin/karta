@@ -1,5 +1,7 @@
+#![allow(warnings)]
+
 use agdb::QueryBuilder;
-use fs_graph::{elements::{Attribute, Node}, path_ser::buf_to_alias, Graph};
+use fs_graph::{elements::{Attribute, Node}, path_ser::buf_to_alias, graph::Graph};
 
 mod utils;
 use utils::*;

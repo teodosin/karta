@@ -178,7 +178,7 @@ impl TryFrom<DbElement> for Node {
 }
 
 /// Newtype wrapper for the node path. 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 pub struct NodePath(pub PathBuf);
 
 impl TryFrom<DbValue> for NodePath {
@@ -290,8 +290,12 @@ impl TryFrom<DbValue> for SysTime {
 }
 
 pub struct Edge {
+    pub db_id: Option<DbId>,
+    pub source: NodePath,
+    pub target: NodePath,
     attributes: Vec<Attribute>,
 }
+
 
 #[derive(Clone, Debug)]
 pub struct Attribute {
