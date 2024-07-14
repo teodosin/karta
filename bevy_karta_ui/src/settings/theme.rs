@@ -21,8 +21,8 @@ impl Plugin for ThemePlugin {
 
 // Outlines
 // ------------------------------------------------------------------
-pub const OUTLINE_BASE_COLOR: Color = Color::rgba(0.2, 0.2, 0.4, 1.0);
-pub const OUTLINE_HOVER_COLOR: Color = Color::rgb(0.3, 0.3, 0.5);
+pub const OUTLINE_BASE_COLOR: Color = Color::srgba(0.2, 0.2, 0.4, 1.0);
+pub const OUTLINE_HOVER_COLOR: Color = Color::srgb(0.3, 0.3, 0.5);
 // pub const OUTLINE_SELECTED_COLOR: Color = Color::rgb(0.4, 0.4, 0.6);
 // pub const OUTLINE_FOCAL_COLOR: Color = Color::ORANGE;
 // pub const OUTLINE_FOCAL_HOVER_COLOR: Color = Color::rgb(0.9, 0.9, 0.9);
@@ -38,9 +38,9 @@ pub struct OutlinesTheme {
 impl Default for OutlinesTheme {
     fn default() -> Self {
         OutlinesTheme {
-            base_color: Color::rgb(0.2, 0.2, 0.4),
-            hover_color: Color::rgb(0.9, 0.9, 0.9),
-            focal_color: Color::ORANGE,
+            base_color: Color::srgb(0.2, 0.2, 0.4),
+            hover_color: Color::srgb(0.9, 0.9, 0.9),
+            focal_color: Color::srgb(0.6, 0.6, 0.2),
         }
     }
 }

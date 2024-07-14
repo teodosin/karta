@@ -214,10 +214,10 @@
 //     }
 //     let printable = map.iter().next().unwrap().1;
 //     for (_ , hover) in printable.iter() {
-//         println!("Hover: {:?}", hover.depth);
+//         println!("Hover: {:#?}", hover.depth);
 //     }
 //     for p in pointer.iter() {
-//         println!("Pointer: {:?}", p);
+//         println!("Pointer: {:#?}", p);
 //     }
 // }
 
@@ -301,7 +301,7 @@
 //         picks_presort.sort_by(|(_, adist, _), (_, bdist, _)| adist.partial_cmp(&bdist).unwrap());
 
 //         let picks_sort: Vec<(Entity, HitData)> = picks_presort.iter().map(|(entity, _dist, z)| {
-//             // println!("Edge z: {:?}", z);
+//             // println!("Edge z: {:#?}", z);
 //             (*entity, HitData::new(cam_entity, -near_clipping_plane - *z, None, None))
 //         })
 //         .collect();

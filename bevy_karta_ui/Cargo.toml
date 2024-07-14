@@ -13,14 +13,14 @@ dev = [
 ]
 
 [dependencies]
-bevy = { version = "0.13.1", features = ["bevy_asset","jpeg", "bmp", "tga","webp", "exr"] }
+bevy = { version = "0.14.0", features = ["bevy_asset","jpeg", "bmp", "tga","webp", "exr"] }
 
-bevy_mod_picking = { version = "0.18.0", features = ["backend_bevy_ui"]}
-bevy_prototype_lyon = "0.11.0"
-bevy_tweening = "0.10.0"
+bevy_mod_picking = { version = "0.20.1", features = ["backend_bevy_ui"]}
+bevy_prototype_lyon = "0.12.0"
+bevy_tweening = "0.11.0"
 
-bevy_mod_debugdump = "0.10.0"
-bevy-inspector-egui = "0.23.0"
+bevy_mod_debugdump = "0.11.0"
+bevy-inspector-egui = "0.25.1"
 
 
 lyon = "1.0.1"

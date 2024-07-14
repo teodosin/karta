@@ -45,8 +45,8 @@ pub fn spawn_popup_root(
     };
 
     println!("Something is happening here");
-    println!("Position: {:?}", position);
-    println!("Size: {:?}", size);
+    println!("Position: {:#?}", position);
+    println!("Size: {:#?}", size);
 
     // Handle the popup type
     let popup_root =  commands.spawn((
@@ -69,11 +69,11 @@ pub fn spawn_popup_root(
         group, 
     )).id();
 
-    println!("Spawning popup root: {:?}", popup_root);
+    println!("Spawning popup root: {:#?}", popup_root);
 
     // Add a background to the popup if it is a modal
     // if is_modal {
-    //     println!("Adding modal background for group {:?}", group);
+    //     println!("Adding modal background for group {:#?}", group);
     //     let popup_bg = world.spawn((
     //         NodeBundle {
     //             style: Style {
@@ -111,7 +111,7 @@ pub fn clear_popup_group(
     let mut to_despawn = Vec::new();
     
     for (menu, group) in menus.iter() {
-        println!("Checking group: {:?}", group);
+        println!("Checking group: {:#?}", group);
         if *group == *target_group {
             println!("Despawning old menu");
             to_despawn.push(menu);

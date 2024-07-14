@@ -104,7 +104,7 @@ impl ContextComponentSystems {
 /// A generic system for deleting an entity.
 fn delete_entity(mut commands: Commands, input_data: Res<InputData>) {
     let target = input_data.latest_click_entity().unwrap();
-    println!("Deleting entity: {:?}", target);
+    println!("Deleting entity: {:#?}", target);
     commands.entity(target).despawn_recursive();
 }
 

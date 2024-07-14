@@ -15,7 +15,7 @@ use bevy::{
         node_bundles::{NodeBundle, ButtonBundle}, widget::Button
     }, 
     prelude::default, math::Vec2, 
-    render::{color::Color, view::{self, RenderLayers}}, hierarchy::BuildChildren
+    color::Color, hierarchy::BuildChildren
 };
 use bevy_mod_picking::prelude::*;
 
@@ -44,7 +44,7 @@ fn base_panel(
 ){
     let position = Vec2::new(20.0, 700.0);
     let size = Vec2::new(100.0, 100.0);
-    let col = Color::rgb(0.2, 0.2, 0.2);
+    let col = Color::srgb(0.2, 0.2, 0.2);
 
     let base_panel = commands.spawn((
         NodeBundle {
@@ -63,7 +63,7 @@ fn base_panel(
                 // },
                 ..Default::default()
             },
-            background_color: BackgroundColor::from(Color::rgb(0.0, 0.0, 0.0)),
+            background_color: BackgroundColor::from(Color::srgb(0.0, 0.0, 0.0)),
             border_color: BorderColor::from(col),
             transform: Transform::from_xyz(position.x, position.y, 1000.0),
             ..default()

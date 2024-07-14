@@ -79,7 +79,7 @@ pub struct GridMaterial {
     #[uniform(0)]
     pub zoom: f32,
     #[uniform(1)]
-    pub color: Color,
+    pub color: LinearRgba,
     #[uniform(2)]
     pub grid_cell_size: Vec2,
 }
@@ -88,7 +88,7 @@ impl Default for GridMaterial {
     fn default() -> Self {
         GridMaterial {
             zoom: 1.0,
-            color: Color::rgba(1.0, 1.0, 1.0, 0.2),
+            color: LinearRgba::new(1.0, 1.0, 1.0, 0.2),
             grid_cell_size: Vec2::new(0.00004, 0.00004),
         }
     }

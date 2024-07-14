@@ -63,7 +63,7 @@ impl GraphStartingPositions {
     }
 
     pub fn set_pos(&mut self, pos: Vec2) {
-        println!("Setting spawn position to {:?}", pos);
+        println!("Setting spawn position to {:#?}", pos);
         self.position = pos;
     }
 }
@@ -159,7 +159,7 @@ pub fn add_node_ui(
 ){
     for (entity, data, name, tpos) in new_nodes.iter(){
 
-        // println!("Node type: {:?}", data.ntype);
+        // println!("Node type: {:#?}", data.ntype);
 
         let node = commands.spawn((
             SpatialBundle {
@@ -339,7 +339,7 @@ pub fn tween_to_target_position(
         )
         .with_completed_event(1);
 
-        println!("Should be tweening from {:?} to {:?}", transform.translation, target.position);
+        println!("Should be tweening from {:#?} to {:#?}", transform.translation, target.position);
 
         commands.entity(entity).insert(Animator::new(tween));
 
@@ -574,7 +574,7 @@ fn visualise_selected (
 //                 text_anchor: Anchor::TopLeft,
 //                 text: Text {
 //                     sections: vec![TextSection::new(
-//                         format!("entity: {:?}", entity),
+//                         format!("entity: {:#?}", entity),
 //                         TextStyle {
 //                             font_size: 32.0,
 //                             color: Color::WHITE,
@@ -602,7 +602,7 @@ fn visualise_selected (
 //                 text_anchor: Anchor::TopLeft,
 //                 text: Text {
 //                     sections: vec![TextSection::new(
-//                         format!("transform: {:?}", tr.translation),
+//                         format!("transform: {:#?}", tr.translation),
 //                         TextStyle {
 //                             font_size: 32.0,
 //                             color: Color::WHITE,
@@ -654,7 +654,7 @@ fn visualise_selected (
 //         // Edge list
 //         let mut edge_list_string = String::new();
 //         for edge in edges.edges.iter(){
-//             edge_list_string.push_str(&format!("n:{:?} e:{:?}\n", edge.0, edge.1));
+//             edge_list_string.push_str(&format!("n:{:#?} e:{:#?}\n", edge.0, edge.1));
 //         }
 //         let edge_list_label = commands.spawn((
 //             RenderLayers::layer(31),

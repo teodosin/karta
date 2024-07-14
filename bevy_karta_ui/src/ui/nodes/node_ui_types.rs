@@ -1,12 +1,22 @@
 use bevy::{
-    asset::{AssetServer, Assets, Handle}, core::Name, ecs::{entity::Entity, system::Commands}, math::{self, Vec2, Vec3}, prelude::default, render::{color::Color, mesh::{shape, Mesh}, texture::Image}, sprite::{ColorMaterial, MaterialMesh2dBundle, Sprite, SpriteBundle}, transform::components::Transform
+    asset::{AssetServer, Assets, Handle},
+    color::Color,
+    core::Name,
+    ecs::{entity::Entity, system::Commands},
+    math::{self, Vec2, Vec3},
+    prelude::default,
+    render::{mesh::Mesh, texture::Image},
+    sprite::{ColorMaterial, MaterialMesh2dBundle, Sprite, SpriteBundle},
+    transform::components::Transform,
 };
 use rand::Rng;
 
-use crate::{ui::{graph_cam::ViewData, nodes::ViewNodeShape}, prelude::GraphEntity};
+use crate::{
+    prelude::GraphEntity,
+    ui::{graph_cam::ViewData, nodes::ViewNodeShape},
+};
 
-use super::{add_node_label, add_node_base_outline, TargetPosition};
-
+use super::{add_node_base_outline, add_node_label, TargetPosition};
 
 // TODO: Convert back to using one-shot systems in 0.13
 // #[derive(Resource)]
@@ -28,13 +38,12 @@ use super::{add_node_label, add_node_base_outline, TargetPosition};
 //     let mut index = world.get_resource_mut::<UiNodeSystemsIndex>().unwrap();
 
 //     index.systems.insert(NodeTypes::Base, world.register_system(add_base_node_ui));
-    
-// }
 
+// }
 
 // BASE NODE
 // ----------------------------------------------------------------
-// For the node types that don't have a specific ui 
+// For the node types that don't have a specific ui
 
 pub fn add_base_node_ui(
     entity: Entity,
@@ -42,13 +51,13 @@ pub fn add_base_node_ui(
     name: Option<&Name>,
     spawn_pos: Vec2,
     tpos: Option<&TargetPosition>,
-    
+
     mut commands: &mut Commands,
 
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<ColorMaterial>,
     view_data: &mut ViewData,
-){
+) {
     // Positions are slightly randomized to avoid nodes being spawned on top of each other
     let mut rng = rand::thread_rng();
     let label_pos = Vec2::new(40.0, 0.0);
@@ -56,30 +65,22 @@ pub fn add_base_node_ui(
 
     let node_pos: Vec2 = match tpos {
         Some(pos) => pos.position,
-        None => {
-            Vec2::new(
-                spawn_pos.x + rng.gen_range(-10.0..10.0),
-                spawn_pos.y + rng.gen_range(-10.0..10.0),
-            )
-        },
+        None => Vec2::new(
+            spawn_pos.x + rng.gen_range(-10.0..10.0),
+            spawn_pos.y + rng.gen_range(-10.0..10.0),
+        ),
     };
 
     let node_z = view_data.get_z_for_node();
 
     println!("z depth for base node ui: {}", node_z);
 
-    commands.entity(entity).insert((
-        MaterialMesh2dBundle {
-            mesh: meshes.add(math::primitives::Circle::new(radius)).into(),
-            material: materials.add(ColorMaterial::from(Color::rgb(0.3, 0.0, 0.0))),
-            transform: Transform::from_translation(Vec3::new(
-                node_pos.x,
-                node_pos.y,
-                node_z,
-            )),
-            ..default()
-        },
-    ));
+    commands.entity(entity).insert((MaterialMesh2dBundle {
+        mesh: meshes.add(math::primitives::Circle::new(radius)).into(),
+        material: materials.add(ColorMaterial::from(Color::rgb(0.3, 0.0, 0.0))),
+        transform: Transform::from_translation(Vec3::new(node_pos.x, node_pos.y, node_z)),
+        ..default()
+    },));
 
     if name.is_some() {
         add_node_label(&mut commands, &entity, &name.unwrap(), label_pos, &node_z);
@@ -110,7 +111,7 @@ pub fn add_base_node_ui(
 //     let mut rng = rand::thread_rng();
 
 //     let full_path = &data.path;
-//     println!("Adding image node ui: {:?}", full_path);
+//     println!("Adding image node ui: {:#?}", full_path);
 
 //     let accepted_image_formats = vec!["png", "jpg", "jpeg", "gif", "bmp", "tga", "tif", "tiff", "webp", "ico",];
 //     match full_path.extension() {
@@ -124,7 +125,7 @@ pub fn add_base_node_ui(
 //     }
 
 //     // let metadata = full_path.metadata().unwrap();
-//     // println!("Metadata: {:?}", metadata);
+//     // println!("Metadata: {:#?}", metadata);
 
 //     let image: Handle<Image> = server.load(full_path.clone());
 
@@ -171,21 +172,13 @@ pub fn add_base_node_ui(
 //     add_node_base_outline(&mut commands, &entity, size.x, &node_z);
 
 // }
-                        
+
 // TEXT NODE
 // ----------------------------------------------------------------
 
 // SVG NODE
 // ----------------------------------------------------------------
 
-pub fn add_svg_node_ui(
+pub fn add_svg_node_ui() {}
 
-){
-
-}
-
-pub fn debug_sprite_picking(
-    
-){
-    
-}
+pub fn debug_sprite_picking() {}

@@ -1,6 +1,6 @@
 // Camera and cursor information for the graph
 
-use bevy::{prelude::*, input::{mouse::{MouseWheel, MouseScrollUnit, MouseMotion}, touchpad::TouchpadMagnify}, render::{camera::Viewport, view::RenderLayers}};
+use bevy::{prelude::*, input::mouse::{MouseWheel, MouseScrollUnit, MouseMotion}, render::view::RenderLayers};
 
 use crate::input::pointer::InputData;
 
@@ -133,6 +133,8 @@ fn graph_pan(
 /// 
 /// Supports mouse scroll and trackpad zooming. Function itself could be improved, there's 
 /// repeated code for example. 
+/// 
+/// TODO: Reimplement touchpad zooming.
 pub fn graph_zoom(
     mut query: Query<(&mut OrthographicProjection, &mut Transform), With<Camera2d>>,
     input_data: Res<InputData>,
@@ -140,7 +142,6 @@ pub fn graph_zoom(
     _time: Res<Time>,
 
     mut events: EventReader<MouseWheel>,
-    mut touch_zoom: EventReader<TouchpadMagnify>,
 ) {
     let zoom_mult: f32 = 1.07;
 
@@ -175,29 +176,29 @@ pub fn graph_zoom(
         }
     }
 
-    // Process touchpad zoom   
-    for ev in touch_zoom.read(){
-        for (mut projection, mut transform) in query.iter_mut() {
-            match ev.0 {
-                y if y > 1.0 => { // ZOOMING IN
-                    projection.scale = projection.scale / zoom_mult;
-                    view_settings.zoom = projection.scale;
+    // // Process touchpad zoom   
+    // for ev in touch_zoom.read(){
+    //     for (mut projection, mut transform) in query.iter_mut() {
+    //         match ev.0 {
+    //             y if y > 1.0 => { // ZOOMING IN
+    //                 projection.scale = projection.scale / zoom_mult;
+    //                 view_settings.zoom = projection.scale;
 
-                    // Zoom-in is centered on mouse position
-                    let amount = zoom_mult - 1.0;
-                    let adjusted_position = (input_data.cursor_world_previous_position() - transform.translation.truncate()) * amount;
-                    transform.translation.x += adjusted_position.x;
-                    transform.translation.y += adjusted_position.y;
-                },
-                y if y < 1.0 => { // ZOOMING OUT
-                    projection.scale = projection.scale * zoom_mult;
-                    view_settings.zoom = projection.scale;
-                },
-                _ => (),
-            }
-            println!("Current zoom scale: {}", projection.scale);
-        }
-    }
+    //                 // Zoom-in is centered on mouse position
+    //                 let amount = zoom_mult - 1.0;
+    //                 let adjusted_position = (input_data.cursor_world_previous_position() - transform.translation.truncate()) * amount;
+    //                 transform.translation.x += adjusted_position.x;
+    //                 transform.translation.y += adjusted_position.y;
+    //             },
+    //             y if y < 1.0 => { // ZOOMING OUT
+    //                 projection.scale = projection.scale * zoom_mult;
+    //                 view_settings.zoom = projection.scale;
+    //             },
+    //             _ => (),
+    //         }
+    //         println!("Current zoom scale: {}", projection.scale);
+    //     }
+    // }
 
     // Enforce zoom limit
     for (mut projection, mut _transform) in query.iter_mut() {
