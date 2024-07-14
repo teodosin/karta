@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use bevy::{app::{App, Plugin}, prelude::{Deref, Resource}};
 use directories::ProjectDirs;
+use fs_graph::graph::Graph;
 
 
 
@@ -26,7 +27,7 @@ pub struct VaultOfVaults {
 impl VaultOfVaults {
     fn new() -> Self {
         VaultOfVaults {
-            project_dir: ProjectDirs::from("com", "Teodosin Labs", "Karta").unwrap(),
+            project_dir: ProjectDirs::from("com", "Teodosin", "Karta").unwrap(),
             vaults: vec![],
         }
     }
@@ -41,9 +42,10 @@ impl VaultOfVaults {
 }
 
 /// Resource that stores the current vault. 
-#[derive(Resource, Deref)]
+#[derive(Resource)]
 pub struct CurrentVault {
     vault: Option<KartaVault>,
+    graph: Option<Graph>,
 }
 
 pub struct KartaVault;
