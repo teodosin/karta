@@ -178,7 +178,7 @@ impl TryFrom<DbElement> for Node {
 }
 
 /// Newtype wrapper for the node path. 
-#[derive(Debug, Clone, Hash)]
+#[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub struct NodePath(pub PathBuf);
 
 impl TryFrom<DbValue> for NodePath {
