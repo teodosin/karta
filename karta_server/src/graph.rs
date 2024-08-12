@@ -126,7 +126,7 @@ impl Graph {
     pub fn init_archetype_nodes(&mut self) {
         
         // Create the root node
-        let root: Vec<Node> = vec![Node::new(NodePath("root".into()), NodeType::root_type())];
+        let root: Vec<Node> = vec![Node::new(NodePath::new("root".into()), NodeType::root_type())];
 
         let rt_node = self.db.exec_mut(
             &QueryBuilder::insert()
@@ -151,7 +151,7 @@ impl Graph {
         // Create attributes node
         // All user-defined attributes will be children of this node
         let atr: Vec<Node> = vec![Node::new(
-            NodePath("root/attributes".into()),
+            NodePath::new("root/attributes".into()),
             NodeType::archetype_type(),
         )];
 
@@ -177,7 +177,7 @@ impl Graph {
         // Archetype ------------------------------------------------
         // Create the settings node for global application settings
         let set: Vec<Node> = vec![Node::new(
-            NodePath("root/settings".into()),
+            NodePath::new("root/settings".into()),
             NodeType::archetype_type(),
         )];
 
@@ -204,7 +204,7 @@ impl Graph {
         // Create the nodecategories node for global node categories.
         // Node types are then children of nodecategories or operators. 
         let nca: Vec<Node> = vec![Node::new(
-            NodePath("root/nodecategories".into()),
+            NodePath::new("root/nodecategories".into()),
             NodeType::archetype_type(),
         )];
 
@@ -228,20 +228,20 @@ impl Graph {
     }
 
     /// Syncs a node in the db with the file system
-    pub fn index_single_node(&mut self, path: PathBuf) {
-        let full_path = self.root_path.join(&path);
-        let node_alias = buf_to_alias(&path);
+    pub fn index_single_node(&mut self, path: NodePath) {
+        let full_path = path.full(&self.root_path);
+        let node_alias = path.alias();
 
         let is_phys = full_path.exists();
         let is_dir = full_path.is_dir();
 
-        
+
     }
 
     /// Syncs the node's relationships in the db with the file system.
-    pub fn index_node_connections(&mut self, path: PathBuf) {
-        let full_path = self.root_path.join(&path);
-        let node_alias = buf_to_alias(&path);
+    pub fn index_node_connections(&mut self, path: NodePath) {
+        let full_path = path.full(&self.root_path);
+        let node_alias = path.alias();
 
         let is_phys = full_path.exists();
         let is_dir = full_path.is_dir();
@@ -261,7 +261,7 @@ impl Graph {
                     }
                     if nnode.elements.len() == 0 {
                         // If the node doesn't exist, create it.
-                        let node = Node::new(NodePath(full_path), ntype);
+                        let node = Node::new(path, ntype);
                         let node_id = self.db.exec_mut(
                             &QueryBuilder::insert()
                                 .nodes()
@@ -334,8 +334,8 @@ impl Graph {
 impl Graph {
     /// Retrieves a particular node's data from the database.
     /// The path is relative to the root of the graph.
-    pub fn open_node(&self, path: PathBuf) -> Result<Node, DbError> {
-        let alias = buf_to_alias(&path);
+    pub fn open_node(&self, path: NodePath) -> Result<Node, DbError> {
+        let alias = path.alias();
 
         let node = self.db.exec(&QueryBuilder::select().ids(alias).query());
 
@@ -371,7 +371,7 @@ impl Graph {
     /// What if neither is the parent? Are the priorities configurable?
     ///
     ///
-    pub fn open_node_connections(&self, path: PathBuf) -> Vec<Node> {
+    pub fn open_node_connections(&self, path: NodePath) -> Vec<Node> {
         // Step 1: Check if the node is a physical node in the file system.
         // Step 2: Check if the node exists in the db.
         // Step 3: Check if all the physical dirs and files in the node are in the db.
@@ -381,7 +381,7 @@ impl Graph {
         // honestly seems like a bad idea. Maybe a warning should be issued instead.
 
         // Resolve the full path to the node
-        let full_path = self.root_path.join(path);
+        let full_path = path.full(&self.root_path);
 
         let is_physical = full_path.exists();
 
@@ -430,11 +430,11 @@ impl Graph {
     /// The insert_node_by_name function calls this one anyway.
     pub fn create_node_by_path(
         &mut self,
-        path: PathBuf,
+        path: NodePath,
         ntype: Option<NodeType>,
     ) -> Result<DbElement, agdb::DbError> {
-        let full_path = self.root_path.join(&path);
-        let alias = buf_to_alias(&path);
+        let full_path = path.full(&self.root_path);
+        let alias = path.alias();
 
         // Check if the node already exists in the db.
         // If it does, don't insert it, and return an error.
@@ -469,7 +469,7 @@ impl Graph {
             ntype = NodeType::new("Directory".to_string());
         }
 
-        let node = Node::new(NodePath(PathBuf::from(&path)), ntype);
+        let node = Node::new(path.clone(), ntype);
 
         let nodeqr = self.db.exec_mut(
             &QueryBuilder::insert()
@@ -488,10 +488,10 @@ impl Graph {
                 let parent_path = path.parent();
                 match parent_path {
                     Some(parent_path) => {
-                        if parent_path.to_str().unwrap() != "" {
+                        if parent_path.buf().to_str().unwrap() != "" {
                             println!("About to insert parent node: {:?}", parent_path);
                             let n = self.create_node_by_path(
-                                parent_path.to_path_buf(),
+                                parent_path,
                                 Some(NodeType::other()),
                             );
 
@@ -520,16 +520,16 @@ impl Graph {
     /// Do not include the root dir name.
     pub fn create_node_by_name(
         &mut self,
-        parent_path: Option<PathBuf>,
+        parent_path: Option<NodePath>,
         name: &str,
         ntype: Option<NodeType>,
     ) -> Result<(), agdb::DbError> {
-        let parent_path = parent_path.unwrap_or_else(|| PathBuf::from(""));
+        let parent_path = parent_path.unwrap_or_else(|| NodePath::new("".into()));
 
-        let rel_path = if parent_path.as_os_str().is_empty() {
-            PathBuf::from(name)
+        let rel_path = if parent_path.buf().as_os_str().is_empty() {
+            NodePath::new(PathBuf::from(name))
         } else {
-            parent_path.join(name)
+            NodePath::new(parent_path.buf().join(name))
         };
 
         match self.create_node_by_path(rel_path, ntype) {
@@ -562,7 +562,7 @@ impl Graph {
     /// Insert attributes to a node. Ignore reserved attribute names. Update attributes that already exist.
     pub fn insert_node_attr(
         &mut self,
-        path: PathBuf,
+        path: NodePath,
         attr: Attribute,
     ) -> Result<(), agdb::DbError> {
         use elements::RESERVED_NODE_ATTRS;
@@ -576,7 +576,7 @@ impl Graph {
             )));
         }
 
-        let alias = buf_to_alias(&path);
+        let alias = path.alias();
         let added = self.db.exec_mut(
             &QueryBuilder::insert()
                 .values(vec![attr.into()])
@@ -600,7 +600,7 @@ impl Graph {
     /// Delete attributes from a node. Ignore reserved attribute names.
     pub fn delete_node_attr(
         &mut self,
-        path: PathBuf,
+        path: NodePath,
         attr_name: &str,
     ) -> Result<(), agdb::DbError> {
         use elements::RESERVED_NODE_ATTRS;
@@ -613,7 +613,7 @@ impl Graph {
             )));
         }
 
-        let alias = buf_to_alias(&path);
+        let alias = path.alias();
 
         let node = self.db.exec_mut(
             &QueryBuilder::remove()
@@ -633,7 +633,7 @@ impl Graph {
     }
 
     /// Merges a vector of nodes into the last one.
-    pub fn merge_nodes(&self, nodes: Vec<PathBuf>) -> Result<(), agdb::DbError> {
+    pub fn merge_nodes(&self, nodes: Vec<NodePath>) -> Result<(), agdb::DbError> {
         Ok(())
     }
 
@@ -648,11 +648,11 @@ impl Graph {
 impl Graph {
     pub fn create_edge(
         &mut self,
-        parent_path: &PathBuf,
-        child_path: &PathBuf,
+        source_path: &NodePath,
+        target_path: &NodePath,
     ) -> Result<(), agdb::DbError> {
-        let alias = buf_to_alias(parent_path);
-        let child_alias = buf_to_alias(child_path);
+        let alias = source_path.alias();
+        let child_alias = target_path.alias();
 
         Err(DbError::from("Not implemented"))
     }

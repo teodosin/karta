@@ -1,7 +1,7 @@
 #![allow(warnings)]
 
 use agdb::QueryBuilder;
-use fs_graph::{elements::{Attribute, Node}, path_ser::buf_to_alias, graph::Graph};
+use fs_graph::{elements::{Attribute, Node, NodePath}, graph::Graph, path_ser::buf_to_alias};
 
 mod utils;
 use utils::*;
@@ -12,7 +12,7 @@ fn open_node_that_exists() {
     let func_name = "open_node_that_exists";
     let mut graph = setup_graph(func_name);
 
-    let path = PathBuf::from("test");
+    let path = NodePath::from("test");
 
     let node = graph.create_node_by_path(path.clone(), None);
     assert_eq!(node.is_ok(), true);
@@ -29,7 +29,7 @@ fn open_node_that_does_not_exist() {
     let func_name = "open_node_that_does_not_exist";
     let graph = setup_graph(func_name);
 
-    let open = graph.open_node(PathBuf::from("test"));
+    let open = graph.open_node(NodePath::from("test"));
 
     assert_eq!(open.is_ok(), false);
 
@@ -41,8 +41,7 @@ fn create_new_node(){
     let func_name = "create_new_node";
     let mut graph = setup_graph(func_name);
 
-    let path = PathBuf::from("test");
-    let alias = PathBuf::from("root/test");
+    let path = NodePath::from("test");
 
     let node = graph.create_node_by_path(path, None);
 
@@ -103,7 +102,7 @@ fn creating_deep_path_creates_intermediate_nodes() {
     let mut second = path.clone();
     second.pop();
 
-    let node = graph.create_node_by_path(path.clone(), None);
+    let node = graph.create_node_by_path(NodePath::new(path.clone()), None);
 
     assert_eq!(node.is_ok(), true);
 
@@ -169,7 +168,7 @@ fn insert_and_delete_node_attribute(){
     let func_name = "insert_and_delete_node_attribute";
     let mut graph = setup_graph(func_name);
 
-    let path = PathBuf::from("test");
+    let path = NodePath::new("test".into());
 
     let node = graph.create_node_by_path(path.clone(), None);
     assert_eq!(node.is_ok(), true);
@@ -216,7 +215,7 @@ fn protect_reserved_node_attributes() {
 
     use fs_graph::elements::RESERVED_NODE_ATTRS;
 
-    let path = PathBuf::from("test");
+    let path = NodePath::from("test");
 
     let node = graph.create_node_by_path(path.clone(), None);
     assert_eq!(node.is_ok(), true);

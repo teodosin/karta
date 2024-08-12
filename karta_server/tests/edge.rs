@@ -1,7 +1,7 @@
 #![allow(warnings)]
 
 
-use fs_graph::graph::Graph;
+use fs_graph::{elements::NodePath, graph::Graph};
 use std::path::PathBuf;
 
 mod utils;
@@ -13,8 +13,8 @@ fn create_new_edge() {
     let mut graph = setup_graph(func_name);
 
     // Create two nodes
-    let path1 = PathBuf::from("node1");
-    let path2 = PathBuf::from("node2");
+    let path1 = NodePath::from("node1");
+    let path2 = NodePath::from("node2");
     
     let node1 = graph.create_node_by_path(path1.clone(), None).unwrap();
     let node2 = graph.create_node_by_path(path2.clone(), None).unwrap();
