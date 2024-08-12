@@ -227,18 +227,77 @@ impl Graph {
         Graph::parent_nodes_by_dbids(&mut self.db, rt_id, nca_node.unwrap().ids().first().unwrap());
     }
 
-    /// For physical nodes. Syncs the node's relationships in the db with the file system.
-    pub fn index_node_connections(&self, path: PathBuf) {
+    /// Syncs a node in the db with the file system
+    pub fn index_single_node(&mut self, path: PathBuf) {
         let full_path = self.root_path.join(&path);
+        let node_alias = buf_to_alias(&path);
 
-        if !full_path.exists() {
-            return;
+        let is_phys = full_path.exists();
+        let is_dir = full_path.is_dir();
+
+        
+    }
+
+    /// Syncs the node's relationships in the db with the file system.
+    pub fn index_node_connections(&mut self, path: PathBuf) {
+        let full_path = self.root_path.join(&path);
+        let node_alias = buf_to_alias(&path);
+
+        let is_phys = full_path.exists();
+        let is_dir = full_path.is_dir();
+
+        if is_phys {
+            // Check if the path has a node in the db. If not, it will be created. 
+            let nnode = self.db.exec(
+                &QueryBuilder::select()
+                    .ids(node_alias.clone())
+                    .query(),
+            );
+            match nnode {
+                Ok(nnode) => {
+                    let mut ntype = NodeType::new("file".into());
+                    if is_dir {
+                        ntype = NodeType::new("folder".into());
+                    }
+                    if nnode.elements.len() == 0 {
+                        // If the node doesn't exist, create it.
+                        let node = Node::new(NodePath(full_path), ntype);
+                        let node_id = self.db.exec_mut(
+                            &QueryBuilder::insert()
+                                .nodes()
+                                .aliases(node_alias)
+                                .values(&node)
+                                .query(),
+                        );
+                        match node_id {
+                            Ok(node_id) => {
+                                // Create an edge between the root and the node
+                                //Graph::parent_nodes_by_dbids(&mut self.db, rt_id, node_id);
+                            }
+                            Err(ref err) => {
+                                println!("Failed to create node: {}", err);
+                            }
+                        }
+                    }
+                }
+                Err(ref err) => {
+                    println!("Failed to get node: {}", err);
+                }
+            }
         }
 
-        let alias = buf_to_alias(&path);
+        if is_dir {
+            // If full_path exists, its parent does too. 
+        }
+
 
         //
 
+        todo!()
+    }
+
+    /// Delete all dead nodes from the graph. 
+    pub fn cleanup_dead_nodes(&mut self) {
         todo!()
     }
 
