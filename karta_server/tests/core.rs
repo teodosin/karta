@@ -4,7 +4,7 @@ use std::any::Any;
 
 use agdb::QueryBuilder;
 use directories::ProjectDirs;
-use fs_graph::graph::{self, Graph};
+use fs_graph::{elements::NodePath, graph::{self, Graph}};
 
 mod utils;
 use utils::*;
@@ -23,12 +23,12 @@ fn test_new_graph() {
 
     let graph = Graph::new(root.clone().into(), &name);
 
-    println!("Size of graph: {:#?} bytes", graph.db.size());
+    println!("Size of graph: {:#?} bytes", graph.db().size());
 
     assert_eq!(root.exists(), true, "Root directory does not exist");
 
     // Check that there exists a root node
-    let root_node_result = graph.db.exec(&QueryBuilder::select().ids("root").query());
+    let root_node_result = graph.db().exec(&QueryBuilder::select().ids("root").query());
 
     match root_node_result {
         Ok(root_node) => {
@@ -50,13 +50,13 @@ fn existing_db_in_directory() {
     let mut first = setup_graph(func_name);
 
     let _ = first
-        .db
+        .db_mut()
         .exec_mut(&QueryBuilder::insert().nodes().aliases("testalias").query());
 
     let second = setup_graph(func_name);
 
     let root_node_result = second
-        .db
+        .db()
         .exec(&QueryBuilder::select().ids("testalias").query());
 
     match root_node_result {
@@ -91,7 +91,7 @@ fn new_custom_storage_directory() {
         "Storage directory has not been created"
     );
 
-    let root_node_result = graph.db.exec(&QueryBuilder::select().ids("root").query());
+    let root_node_result = graph.db().exec(&QueryBuilder::select().ids("root").query());
 
     match root_node_result {
         Ok(root_node) => {
@@ -117,7 +117,7 @@ fn long_alias_path() {
     let long_path = "root/this/is/a/long/path/with/many/segments/verylongindeed/evenlonger/wow/are/we/still/here/there/must/be/something/we/can/do/about/all/this/tech/debt";
 
     let _ = graph
-        .db
+        .db_mut()
         .exec_mut(&QueryBuilder::insert().nodes().aliases(long_path).query());
 
     // Putting this conversion here for extra testing. 
@@ -125,7 +125,7 @@ fn long_alias_path() {
     let long_path = buf_to_alias(&buf);
 
     let root_node_result = graph
-        .db
+        .db()
         .exec(&QueryBuilder::select().ids(long_path).query());
 
     let success: bool;
@@ -164,11 +164,11 @@ fn create_attributes_category(){
     let func_name = "create_attributes_category";
     let graph = setup_graph(func_name);
 
-    let root_node_result = graph.db.exec(&QueryBuilder::select().ids("root").query());
+    let root_node_result = graph.db().exec(&QueryBuilder::select().ids("root").query());
 
     assert_eq!(true, root_node_result.is_ok());
 
-    let qry = graph.db.exec(&QueryBuilder::select().ids("root/attributes").query());
+    let qry = graph.db().exec(&QueryBuilder::select().ids("root/attributes").query());
     
     assert_eq!(true, qry.is_ok());
 
@@ -186,7 +186,7 @@ fn create_attributes_category(){
 
         // Find edge, validate
         let query = &QueryBuilder::search().from(*root_id).to(*attributes_id).query();
-        let edge = graph.db.exec(query);
+        let edge = graph.db().exec(query);
         assert_eq!(edge.is_ok(), true);
         
         let edge = edge.unwrap().elements.iter().cloned().filter(|e| e.id.0 < 0).collect::<Vec<_>>();
@@ -197,7 +197,7 @@ fn create_attributes_category(){
         // Select edge, because values don't appear in above query. 
         // These two queries could probably be merged.
         let eid = edge.first().unwrap().id.0;
-        let edge = graph.db.exec(&QueryBuilder::select()
+        let edge = graph.db().exec(&QueryBuilder::select()
             .keys()
             .ids(eid)
             .query());
@@ -239,3 +239,52 @@ fn create_attributes_category(){
 
 // Test for what happens when a db is moved to a different directory, but the root directory is the same.
 
+/// Test for whether a file gets properly indexed into the db after it is 
+/// added to the file system. 
+#[test]
+fn index_single_node() {
+    let func_name = "index_single_node";
+    let mut graph = setup_graph(func_name);
+    let root_path = graph.root_path();
+
+    let dummy = NodePath::new("dummy.txt".into());
+
+    // Dummy file does not exist yet. 
+    let dum = graph.db().exec(&QueryBuilder::select().ids(dummy.alias()).query());
+    assert_eq!(dum.is_ok(), false);
+
+    // Create dummy file.
+    let mut dummy_file = std::fs::File::create(dummy.full(&root_path)).unwrap();
+    graph.index_single_node(&dummy);
+
+    // Now exists.
+    let dumtoo = graph.db().exec(&QueryBuilder::select().ids(dummy.alias()).query());
+    assert_eq!(dumtoo.is_ok(), true);
+
+    // Is the correct type.
+    let dumtype = graph.db().exec(&QueryBuilder::select().ids(dummy.alias()).query());
+
+    cleanup_graph(func_name);
+}
+
+#[test]
+fn index_node_connections() {
+    let func_name = "index_node_connections";
+    let mut graph = setup_graph(func_name);
+    let root_path = graph.root_path();
+
+    todo!();
+
+    cleanup_graph(&func_name);
+}
+
+#[test]
+fn index_connections_upon_opening_node() {
+    let func_name = "index_connections_upon_opening_node";
+    let mut graph = setup_graph(func_name);
+    let root_path = graph.root_path();
+
+    todo!();
+
+    cleanup_graph(&func_name);
+}

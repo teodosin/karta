@@ -15,7 +15,7 @@ pub struct Graph {
 
     /// AGDB database.
     /// Set to public, though direct access to the db is discouraged.
-    pub db: agdb::Db,
+    db: agdb::Db,
 
     /// Path to the root directory of the graph.
     /// All paths are relative to this root.
@@ -58,6 +58,28 @@ enum GraphDb {
 /// Implementation block for the Graph struct itself.
 /// Includes constructors and utility functions.
 impl Graph {
+    /// Direct getter for the db. Not recommended to use. If possible, 
+    /// use the other implemented functions. They are the intended way
+    /// of interacting with the db.
+    pub fn db(&self) -> &agdb::Db {
+        &self.db
+    }
+
+    /// Direct mutable getter for the db. Not recommended to use. If possible,
+    /// use the other implemented functions. They are the intended way
+    /// of interacting with the db.
+    pub fn db_mut(&mut self) -> &mut agdb::Db {
+        &mut self.db
+    }
+
+    pub fn root_path(&self) -> PathBuf {
+        self.root_path.clone()
+    }
+
+    pub fn root_nodepath(&self) -> NodePath {
+        NodePath::new(self.root_path.clone())
+    }
+
     /// Constructor. Panics if the db cannot be created.
     ///
     /// Takes the desired root of the graph as a parameter and the name for the db.
@@ -228,7 +250,7 @@ impl Graph {
     }
 
     /// Syncs a node in the db with the file system
-    pub fn index_single_node(&mut self, path: NodePath) {
+    pub fn index_single_node(&mut self, path: &NodePath) {
         let full_path = path.full(&self.root_path);
         let node_alias = path.alias();
 
@@ -559,27 +581,70 @@ impl Graph {
         Ok(())
     }
 
+    /// Is this even needed? Does open node get all attributes?
+    pub fn get_node_attrs(
+        &self,
+        path: NodePath,
+    ) -> Result<Vec<Attribute>, agdb::DbError> {
+        let alias = path.alias();
+        let keys = Vec::new();
+        let attrs = self.db.exec(&QueryBuilder::select().values(keys).ids(alias).query());
+
+        match attrs {
+            Ok(attrs) => {
+                let mut attrs = attrs.elements;
+                assert!(attrs.len() == 1);
+                let vec = attrs
+                    .first()
+                    .unwrap()
+                    .values
+                    .iter()
+                    .map(| attr | {
+                        let attr = attr.to_owned();
+                        Attribute {
+                            name: attr.key.to_string(),
+                            value: attr.value.to_f64().unwrap().to_f64() as f32,
+                        }
+                    })
+                    .collect();
+
+                return Ok(vec);
+            }
+            Err(e) => {
+                println!("Failed to get attributes: {}", e);
+                return Err(DbError::from(e.to_string()));
+            }
+        }
+    }
+
     /// Insert attributes to a node. Ignore reserved attribute names. Update attributes that already exist.
-    pub fn insert_node_attr(
+    pub fn insert_node_attrs(
         &mut self,
         path: NodePath,
-        attr: Attribute,
+        attrs: Vec<Attribute>,
     ) -> Result<(), agdb::DbError> {
         use elements::RESERVED_NODE_ATTRS;
-        let slice = attr.name.as_str();
-        let is_reserved = RESERVED_NODE_ATTRS.contains(&slice);
 
-        if is_reserved {
-            return Err(DbError::from(format!(
-                "Cannot insert reserved attribute name: {}",
-                slice
-            )));
-        }
+        let attrs = attrs.iter()
+            .filter(| attr | {
+                let slice = attr.name.as_str();
+                let is_reserved = RESERVED_NODE_ATTRS.contains(&slice);
+
+                if is_reserved {
+                    return false;
+                }
+                return true;
+            })
+            .map(| attr | {
+                 let attr = (attr.name.clone(), attr.value).into();
+                 return attr;
+             })
+            .collect::<Vec<agdb::DbKeyValue>>();
 
         let alias = path.alias();
         let added = self.db.exec_mut(
             &QueryBuilder::insert()
-                .values(vec![attr.into()])
+                .values(vec!(attrs))
                 .ids(alias)
                 .query(),
         );
@@ -587,11 +652,10 @@ impl Graph {
         println!("Added: {:?}", added);
 
         match added {
-            QueryResult => {
-                println!("Yes it's ok");
+            query_result => {
                 return Ok(());
             }
-            QueryError => {
+            query_error => {
                 return Err(DbError::from("Failed to insert attribute"));
             }
         }

@@ -49,7 +49,7 @@ fn create_new_node(){
 
     let nid = node.unwrap().id;
 
-    let node = graph.db.exec(
+    let node = graph.db().exec(
         &QueryBuilder::select().ids("root/test").query()
     );
 
@@ -69,7 +69,7 @@ fn create_new_node(){
     assert_eq!(node.values.iter().any(|x| x.key == "created_time".into()), true);
     assert_eq!(node.values.iter().any(|x| x.key == "modified_time".into()), true);
     
-    let aliases = graph.db.exec(
+    let aliases = graph.db().exec(
         &QueryBuilder::select().aliases().query()
     );
 
@@ -106,15 +106,15 @@ fn creating_deep_path_creates_intermediate_nodes() {
 
     assert_eq!(node.is_ok(), true);
 
-    let node = graph.db.exec(
+    let node = graph.db().exec(
         &QueryBuilder::select().ids(buf_to_alias(&path)).query()
     );
 
-    let fir = graph.db.exec(
+    let fir = graph.db().exec(
         &QueryBuilder::select().ids(buf_to_alias(&path)).query()
     );
 
-    let sec = graph.db.exec(
+    let sec = graph.db().exec(
         &QueryBuilder::select().ids(buf_to_alias(&path)).query()
     );
 
@@ -122,10 +122,10 @@ fn creating_deep_path_creates_intermediate_nodes() {
     assert_eq!(fir.is_ok(), true);
     assert_eq!(sec.is_ok(), true);
 
-    let elems = graph.db.exec(
+    let elems = graph.db().exec(
         &QueryBuilder::select().node_count().query()
     );
-    let aliases = graph.db.exec(
+    let aliases = graph.db().exec(
         &QueryBuilder::select().aliases().query()
     );
     
@@ -178,7 +178,7 @@ fn insert_and_delete_node_attribute(){
         value: 10.0
     };
 
-    let added = graph.insert_node_attr(path.clone(), attr);
+    let added = graph.insert_node_attrs(path.clone(), vec!(attr));
     assert_eq!(added.is_ok(), true);
 
     let noder = graph.open_node(path.clone());
@@ -187,6 +187,7 @@ fn insert_and_delete_node_attribute(){
     assert_eq!(noder.attributes().len(), 1);
 
     assert_eq!(noder.attributes()[0].name, "test");
+    assert_eq!(noder.attributes()[0].value, 10.0);
 
     // Test deleting the attribute
     let deleted = graph.delete_node_attr(path.clone(), "test");
@@ -199,10 +200,14 @@ fn insert_and_delete_node_attribute(){
     cleanup_graph(&func_name);
 }
 
+
+
 #[test]
 fn insert_and_delete_multiple_attributes(){
     let func_name = "insert_and_delete_multiple_attributes";
     let mut graph = setup_graph(func_name);
+
+    todo!();
 
     cleanup_graph(&func_name);
 }
@@ -215,19 +220,34 @@ fn protect_reserved_node_attributes() {
 
     use fs_graph::elements::RESERVED_NODE_ATTRS;
 
+    let test_attr = "preview";
+    assert!(RESERVED_NODE_ATTRS.contains(&test_attr));
+
     let path = NodePath::from("test");
 
     let node = graph.create_node_by_path(path.clone(), None);
     assert_eq!(node.is_ok(), true);
 
     let attr = Attribute {
-        name: RESERVED_NODE_ATTRS[0].to_string(),
+        name: test_attr.to_string(),
         value: 10.0
     };
 
-    let added = graph.insert_node_attr(path.clone(), attr);
+    let added = graph.insert_node_attrs(path.clone(), vec!(attr));
 
-    assert_eq!(added.is_ok(), false);
+    assert_eq!(added.is_ok(), true);
+    let nod = graph.db().exec(
+        &QueryBuilder::select().values(vec!()).ids(path.alias()).query()
+    );
+    assert!(nod.is_ok());
+    let nods = nod.unwrap();
+    let nods = nods.elements;
+    assert_eq!(nods.len(), 1);
+    let nods = nods.first().unwrap();
+    let mut nods = &nods.values;
+    let nods: Vec<agdb::DbValue> = nods.iter().map(|nod| nod.key.clone()).collect();
+    assert!(!nods.contains(&"preview".into()));
+
 
     let removed = graph.delete_node_attr(path, "ntype");
     assert_eq!(removed.is_ok(), false);

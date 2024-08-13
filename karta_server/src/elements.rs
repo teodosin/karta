@@ -187,10 +187,12 @@ impl NodePath {
         NodePath(path)
     }
 
+    /// Get the path as a pathbuf, excluding the root. 
     pub fn buf(&self) -> &PathBuf {
         &self.0
     }
 
+    /// Get the path as a string, excluding the root path but prefixed with root/.
     pub fn alias(&self) -> String {
         let str: String = self.0.to_str().unwrap().into();
 
@@ -213,6 +215,7 @@ impl NodePath {
         NodePath(newbuf)
     }
 
+    /// Get the full path, including the root. Root path must be provided. 
     pub fn full(&self, root_path: &PathBuf) -> PathBuf {
         let full_path = root_path.clone();
         full_path.join(self.0.clone())
@@ -332,6 +335,16 @@ impl Into<DbKeyValue> for Attribute {
         DbKeyValue::from((self.name, self.value))
     }
 }
+
+impl Into<Attribute> for DbKeyValue {
+    fn into(self) -> Attribute {
+        Attribute {
+            name: self.key.to_string(),
+            value: self.value.to_f64().unwrap().to_f64() as f32,
+        }
+    }
+}
+
 
 /// A list of reserved node attribute names that cannot be set by the user directly.
 pub const RESERVED_NODE_ATTRS: [&str; 12] = [
