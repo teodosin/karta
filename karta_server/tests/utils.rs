@@ -32,11 +32,11 @@ pub fn setup_graph(test_name: &str) -> Graph {
 }
 
 /// Graph cleanup function for tests. Removes the root directory from the data_dir.
-pub fn cleanup_graph(test_name: &str) {
+pub fn cleanup_graph(func_name: &str) {
     // Uncomment this return only if you need to temporarily look at the contents
     // return;
 
-    let name = get_graph_dir_name(test_name);
+    let name = get_graph_dir_name(func_name);
     let root = ProjectDirs::from("com", "fs_graph", &name)
         .unwrap()
         .data_dir()

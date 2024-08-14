@@ -625,6 +625,21 @@ impl Graph {
     ) -> Result<(), agdb::DbError> {
         use elements::RESERVED_NODE_ATTRS;
 
+        // Check if the node exists. If it doesn't, errrrrrrr
+        let alias = path.alias();
+        let node = self.db.exec(&QueryBuilder::select().ids(alias.clone()).query());
+        match node {
+            Ok(node) => {
+                if node.elements.len() == 0 {
+                    return Err(DbError::from(format!("Node not found: {}", alias)));
+                }
+            }
+            Err(e) => {
+                println!("Failed to get node: {}", e);
+                return Err(DbError::from(e.to_string()));
+            }
+        }
+
         let attrs = attrs.iter()
             .filter(| attr | {
                 let slice = attr.name.as_str();
@@ -641,7 +656,6 @@ impl Graph {
              })
             .collect::<Vec<agdb::DbKeyValue>>();
 
-        let alias = path.alias();
         let added = self.db.exec_mut(
             &QueryBuilder::insert()
                 .values(vec!(attrs))

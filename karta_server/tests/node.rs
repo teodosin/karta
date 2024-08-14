@@ -170,13 +170,14 @@ fn insert_and_delete_node_attribute(){
 
     let path = NodePath::new("test".into());
 
-    let node = graph.create_node_by_path(path.clone(), None);
-    assert_eq!(node.is_ok(), true);
-
     let attr = Attribute {
         name: "test".to_string(),
         value: 10.0
     };
+
+    let node = graph.create_node_by_path(path.clone(), None);
+    assert_eq!(node.is_ok(), true);
+
 
     let added = graph.insert_node_attrs(path.clone(), vec!(attr));
     assert_eq!(added.is_ok(), true);
@@ -200,12 +201,37 @@ fn insert_and_delete_node_attribute(){
     cleanup_graph(&func_name);
 }
 
+/// Insertion of attributes on non-existing nodes should fail.
+/// Insertion of attributes on a non-existing node shouldn't
+/// create the node.
+#[test]
+fn insertion_of_attributes_on_nonexisting_node() {
+    let func_name = "insertion_of_attributes_on_nonexisting_node";
+    let mut graph = setup_graph(func_name);
+
+    let path = NodePath::new("test".into());
+
+    let attr = Attribute {
+        name: "test".to_string(),
+        value: 10.0
+    };
+
+    let shouldfail = graph.insert_node_attrs(path.clone(), vec!(attr.clone()));
+    assert_eq!(shouldfail.is_ok(), false, "Insertion of attr didn't fail, even though node doesn't exist");
+
+
+    cleanup_graph(&func_name);
+}
 
 
 #[test]
 fn insert_and_delete_multiple_attributes(){
     let func_name = "insert_and_delete_multiple_attributes";
     let mut graph = setup_graph(func_name);
+
+    let path = NodePath::new("test".into());
+
+    let node =  graph.create_node_by_path(path.clone(), None);
 
     todo!();
 
