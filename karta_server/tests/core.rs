@@ -223,21 +223,39 @@ fn create_attributes_category(){
     cleanup_graph(&func_name); 
 }
 
-// Loading an old db with a new root directory!
-// Should this be allowed or prevented? For usability it would be nice if you could just 
-// change the root directory to beyond or within the previous one.
-//
-// This has to be handled carefully though. If each node stores its path relative to the root,
-// then the path of the node will be incorrect if the root directory is changed. Every node in the 
-// entire db would have to be updated. On the other hand, if the path is stored as an absolute path,
-// then moving the root folder would break those. And if each node only stores its own name, then finding 
-// the path of a node would be a slower operation. Also it seems like agdb doesn't support having the 
-// same aliases for multiple nodes, so only storing the names wouldn't be feasible anyway. 
-//
-// One has to consider also that a large portion of the db could be rearranged without changing the root
-// directory, meaning that there would still be a lot of updates needed. 
+/// The root node should exist and be openable. 
+#[test]
+fn open_root_node() {
+    let func_name = "open_root_node";
+    let mut graph = setup_graph(func_name);
+    let root_path = graph.root_path();
 
-// Test for what happens when a db is moved to a different directory, but the root directory is the same.
+    // Nodepath initialised with empty pathbuf will refer to root node.
+    let root_buf = NodePath::new("".into());
+    let root_node = graph.db().exec(&QueryBuilder::select().aliases().ids(root_buf.alias()).query());
+
+    assert_eq!(root_node.is_ok(), true);
+
+    match root_node {
+        Ok(root_node) => {
+            println!("Root node: {:#?}", root_node);
+            let rid = root_node.ids();
+            assert_eq!(rid.len(), 1);
+            let root_id = rid.first().unwrap();
+
+            // This is chaos, but that's what it should look like based on the println above.
+            let ralias = &root_node.elements
+                .first().unwrap().values.first().unwrap().value.string().unwrap();
+
+            assert_eq!(*ralias, "root");
+        }
+        Err(e) => {
+            println!("Failed to execute query: {}", e);
+        }
+    }
+
+    cleanup_graph(func_name);
+}
 
 /// Test for whether a file gets properly indexed into the db after it is 
 /// added to the file system. 
@@ -267,11 +285,27 @@ fn index_single_node() {
     cleanup_graph(func_name);
 }
 
+
+
 #[test]
-fn index_node_connections() {
+fn index_node_connections_from_root() {
     let func_name = "index_node_connections";
     let mut graph = setup_graph(func_name);
     let root_path = graph.root_path();
+
+    let paths: Vec<NodePath> = vec![
+        NodePath::new("dummy.txt".into()),
+        NodePath::new("dummy2.txt".into()),
+        NodePath::new("dummy3.txt".into()),
+    ];
+
+    paths.iter().for_each(|p| {
+        let mut dum = std::fs::File::create(p.full(&root_path)).unwrap();
+    });
+
+    let nodes = graph.open_node_connections(NodePath::new("".into()));
+
+    assert_eq!(nodes.len(), 3);
 
     todo!();
 
@@ -288,3 +322,19 @@ fn index_connections_upon_opening_node() {
 
     cleanup_graph(&func_name);
 }
+
+// Loading an old db with a new root directory!
+// Should this be allowed or prevented? For usability it would be nice if you could just 
+// change the root directory to beyond or within the previous one.
+//
+// This has to be handled carefully though. If each node stores its path relative to the root,
+// then the path of the node will be incorrect if the root directory is changed. Every node in the 
+// entire db would have to be updated. On the other hand, if the path is stored as an absolute path,
+// then moving the root folder would break those. And if each node only stores its own name, then finding 
+// the path of a node would be a slower operation. Also it seems like agdb doesn't support having the 
+// same aliases for multiple nodes, so only storing the names wouldn't be feasible anyway. 
+//
+// One has to consider also that a large portion of the db could be rearranged without changing the root
+// directory, meaning that there would still be a lot of updates needed. 
+
+// Test for what happens when a db is moved to a different directory, but the root directory is the same.

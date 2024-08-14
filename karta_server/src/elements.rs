@@ -183,6 +183,8 @@ impl TryFrom<DbElement> for Node {
 pub struct NodePath(PathBuf);
 
 impl NodePath {
+    /// Create a new NodePath from a pathbuf. 
+    /// Supplying an empty pathbuf will create a NodePath to the root. 
     pub fn new(path: PathBuf) -> Self {
         NodePath(path)
     }
@@ -196,8 +198,14 @@ impl NodePath {
     pub fn alias(&self) -> String {
         let str: String = self.0.to_str().unwrap().into();
 
-        // Add root/ prefix to path
-        let alias = format!("root/{}", str);
+        let mut alias;
+        
+        // Add root/ prefix to path if not empty. If empty, just root
+        if str.len() > 0 {
+            alias = format!("root/{}", str);
+        } else {
+            alias = String::from("root");
+        }
     
         alias
     }
