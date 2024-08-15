@@ -2,7 +2,7 @@ use std::{path::PathBuf, time::SystemTime};
 
 use agdb::{DbElement, DbError, DbId, DbKeyValue, DbUserValue, DbValue, QueryId, UserValue};
 
-use crate::{nodetype::NodeType, path_ser::{alias_to_buf, buf_to_alias}};
+use crate::{nodetype::{NodePhysicality, TypeName}, path_ser::{alias_to_buf, buf_to_alias}};
 
 /// The universal node type. 
 /// Nodes loaded for users of this crate should be in this type. 
@@ -21,8 +21,10 @@ pub struct Node {
     /// The path is stored as a string in the database, but is converted to a PathBuf when
     /// the node is loaded.
     path: NodePath,
-    ntype: NodeType,
+
+    ntype: TypeName,
     nphys: NodePhysicality,
+    alive: bool, 
 
     created_time: SysTime,
     modified_time: SysTime,
@@ -43,6 +45,7 @@ impl DbUserValue for Node {
         keys.push(DbValue::from("path"));
         keys.push(DbValue::from("ntype"));
         keys.push(DbValue::from("nphys"));
+        keys.push(DbValue::from("alive"));
         keys.push(DbValue::from("created_time"));
         keys.push(DbValue::from("modified_time"));
 
@@ -65,6 +68,7 @@ impl DbUserValue for Node {
         values.push(DbKeyValue::from(("path", self.path.clone())));
         values.push(DbKeyValue::from(("ntype", self.ntype.clone())));
         values.push(DbKeyValue::from(("nphys", self.nphys.clone())));
+        values.push(DbKeyValue::from(("alive", self.alive)));
         values.push(DbKeyValue::from(("created_time", self.created_time.clone())));
         values.push(DbKeyValue::from(("modified_time", self.modified_time.clone())));
 
@@ -78,7 +82,7 @@ impl DbUserValue for Node {
 
 /// Implementation block for node. 
 impl Node {
-    pub fn new(path: NodePath, ntype: NodeType) -> Self {
+    pub fn new(path: NodePath, ntype: TypeName) -> Self {
         let nphys: NodePhysicality;
 
         match path.0.exists() {
@@ -94,6 +98,7 @@ impl Node {
             path,
             ntype,
             nphys,
+            alive: true,
             created_time: now.clone(),
             modified_time: now,
 
@@ -118,11 +123,12 @@ impl Node {
         self.db_id
     }
 
-    pub fn path(&self) -> &PathBuf {
-        &self.path.0
+    /// Get the NodePath of the node. 
+    pub fn path(&self) -> &NodePath {
+        &self.path
     }
 
-    pub fn ntype(&self) -> String {
+    pub fn ntype(&self) -> TypeName {
         todo!();
     }
 
@@ -147,13 +153,14 @@ impl TryFrom<DbElement> for Node {
     type Error = DbError;
 
     fn try_from(value: DbElement) -> Result<Self, Self::Error> {
-        let fixed: [&str; 5] = ["path", "ntype", "nphys", "created_time", "modified_time"];
+        let fixed: [&str; 6] = ["path", "ntype", "nphys", "alive", "created_time", "modified_time"];
         let rest = value.values.iter().filter(|v|!fixed.contains(&v.key.string().unwrap().as_str())).collect::<Vec<_>>();
 
         let db_id = value.id;
         let path = value.values.iter().find(|v| v.key == "path".into());
         let ntype = value.values.iter().find(|v| v.key == "ntype".into());
         let nphys = value.values.iter().find(|v| v.key == "nphys".into());
+        let alive = value.values.iter().find(|v| v.key == "alive".into());
         let created_time = value.values.iter().find(|v| v.key == "created_time".into());
         let modified_time = value.values.iter().find(|v| v.key == "modified_time".into());
 
@@ -167,8 +174,9 @@ impl TryFrom<DbElement> for Node {
         let node = Node {
             db_id: Some(db_id),
             path: NodePath(PathBuf::from(path.unwrap().value.to_string())),
-            ntype: NodeType::try_from(ntype.unwrap().value.clone())?,
+            ntype: TypeName::try_from(ntype.unwrap().value.clone())?,
             nphys: NodePhysicality::try_from(nphys.unwrap().value.clone())?,
+            alive: alive.unwrap().value.to_bool().unwrap(),
             created_time: SysTime::try_from(created_time.unwrap().value.clone())?,
             modified_time: SysTime::try_from(modified_time.unwrap().value.clone())?,
             attributes: attrs,
@@ -263,39 +271,6 @@ impl TryFrom<DbValue> for NodePath {
 impl From<NodePath> for DbValue {
     fn from(path: NodePath) -> Self {
         buf_to_alias(&path.0).into()
-    }
-}
-
-#[derive(Debug, Clone)]
-pub enum NodePhysicality {
-    /// A node that only exists in the db and not in the file system.
-    Virtual,
-    /// A node that exists in the file system and the db.
-    Physical,
-    /// An originally physical node that has been removed from the file system.
-    Dead,
-}
-
-impl TryFrom<DbValue> for NodePhysicality {
-    type Error = DbError;
-
-    fn try_from(value: DbValue) -> Result<Self, Self::Error> {
-        match value.to_string().as_str() {
-            "Virtual" => Ok(NodePhysicality::Virtual),
-            "Physical" => Ok(NodePhysicality::Physical),
-            "Dead" => Ok(NodePhysicality::Dead),
-            _ => Err(DbError::from("Invalid NodePhysicality")),
-        }
-    }
-}
-
-impl From<NodePhysicality> for DbValue {
-    fn from(nphys: NodePhysicality) -> Self {
-        match nphys {
-            NodePhysicality::Virtual => "Virtual".into(),
-            NodePhysicality::Physical => "Physical".into(),
-            NodePhysicality::Dead => "Dead".into(),
-        }
     }
 }
 

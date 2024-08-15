@@ -2,7 +2,7 @@ use std::{error::Error, path::PathBuf};
 
 use agdb::{CountComparison, DbElement, DbError, DbId, DbUserValue, QueryBuilder, QueryError};
 
-use crate::{elements, nodetype::NodeType, path_ser};
+use crate::{elements, nodetype::TypeName, path_ser};
 use elements::*;
 use path_ser::buf_to_alias;
 
@@ -148,7 +148,7 @@ impl Graph {
     pub fn init_archetype_nodes(&mut self) {
         
         // Create the root node
-        let root: Vec<Node> = vec![Node::new(NodePath::new("root".into()), NodeType::root_type())];
+        let root: Vec<Node> = vec![Node::new(NodePath::new("root".into()), TypeName::root_type())];
 
         let rt_node = self.db.exec_mut(
             &QueryBuilder::insert()
@@ -174,7 +174,7 @@ impl Graph {
         // All user-defined attributes will be children of this node
         let atr: Vec<Node> = vec![Node::new(
             NodePath::new("root/attributes".into()),
-            NodeType::archetype_type(),
+            TypeName::archetype_type(),
         )];
 
         let atr_node = self.db.exec_mut(
@@ -200,7 +200,7 @@ impl Graph {
         // Create the settings node for global application settings
         let set: Vec<Node> = vec![Node::new(
             NodePath::new("root/settings".into()),
-            NodeType::archetype_type(),
+            TypeName::archetype_type(),
         )];
 
         let set_node = self.db.exec_mut(
@@ -227,7 +227,7 @@ impl Graph {
         // Node types are then children of nodecategories or operators. 
         let nca: Vec<Node> = vec![Node::new(
             NodePath::new("root/nodecategories".into()),
-            NodeType::archetype_type(),
+            TypeName::archetype_type(),
         )];
 
         let nca_node = self.db.exec_mut(
@@ -277,9 +277,9 @@ impl Graph {
             );
             match nnode {
                 Ok(nnode) => {
-                    let mut ntype = NodeType::new("file".into());
+                    let mut ntype = TypeName::new("file".into());
                     if is_dir {
-                        ntype = NodeType::new("folder".into());
+                        ntype = TypeName::new("folder".into());
                     }
                     if nnode.elements.len() == 0 {
                         // If the node doesn't exist, create it.
@@ -341,11 +341,11 @@ impl Graph {
 
 /// Implementation block for handling node types.
 impl Graph {
-    pub fn get_node_types(&self) -> Result<Vec<NodeType>, DbError> {
+    pub fn get_node_types(&self) -> Result<Vec<TypeName>, DbError> {
         todo!()
     }
 
-    pub fn create_nodetype(&mut self, nodetype: NodeType) -> Result<NodeType, DbError> {
+    pub fn create_nodetype(&mut self, nodetype: TypeName) -> Result<TypeName, DbError> {
         todo!()
     }
 
@@ -412,34 +412,6 @@ impl Graph {
         let mut nodes: Vec<Node> = Vec::new();
 
         // Query the db for the node
-        let result = self.db.exec(
-            &QueryBuilder::select()
-                .values(Node::db_keys())
-                .ids(
-                    QueryBuilder::search()
-                        .depth_first()
-                        .from("as_str")
-                        .where_()
-                        .node()
-                        .and()
-                        .distance(CountComparison::GreaterThan(1))
-                        .query(),
-                )
-                .query(),
-        );
-
-        match result {
-            Ok(node) => {
-                let db_nodes: Vec<Node> = node.try_into().unwrap();
-            }
-            Err(e) => {
-                println!("Failed to execute query: {}", e);
-                // If the node is not a physical node in the file system, nor a virtual node in the db, it doesn't exist.
-                if !is_physical {
-                    return nodes;
-                }
-            }
-        }
 
         nodes
     }
@@ -453,7 +425,7 @@ impl Graph {
     pub fn create_node_by_path(
         &mut self,
         path: NodePath,
-        ntype: Option<NodeType>,
+        ntype: Option<TypeName>,
     ) -> Result<DbElement, agdb::DbError> {
         let full_path = path.full(&self.root_path);
         let alias = path.alias();
@@ -477,7 +449,7 @@ impl Graph {
         // Determine type of node. If not specified, it's an Other node.
         let mut ntype = match ntype {
             Some(ntype) => ntype,
-            None => NodeType::other(),
+            None => TypeName::other(),
         };
 
         // Check if the node is physical in the file system.
@@ -486,9 +458,9 @@ impl Graph {
         let is_dir = full_path.is_dir();
 
         if is_file {
-            ntype = NodeType::new("File".to_string());
+            ntype = TypeName::new("File".to_string());
         } else if is_dir {
-            ntype = NodeType::new("Directory".to_string());
+            ntype = TypeName::new("Directory".to_string());
         }
 
         let node = Node::new(path.clone(), ntype);
@@ -514,7 +486,7 @@ impl Graph {
                             println!("About to insert parent node: {:?}", parent_path);
                             let n = self.create_node_by_path(
                                 parent_path,
-                                Some(NodeType::other()),
+                                Some(TypeName::other()),
                             );
 
                             let parent_id = n.unwrap().id;
@@ -544,7 +516,7 @@ impl Graph {
         &mut self,
         parent_path: Option<NodePath>,
         name: &str,
-        ntype: Option<NodeType>,
+        ntype: Option<TypeName>,
     ) -> Result<(), agdb::DbError> {
         let parent_path = parent_path.unwrap_or_else(|| NodePath::new("".into()));
 

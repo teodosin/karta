@@ -7,6 +7,40 @@ mod utils;
 use utils::*;
 use std::path::PathBuf;
 
+/// The root node should exist and be openable. 
+#[test]
+fn open_root_node() {
+    let func_name = "open_root_node";
+    let mut graph = setup_graph(func_name);
+    let root_path = graph.root_path();
+
+    // Nodepath initialised with empty pathbuf will refer to root node.
+    let root_buf = NodePath::new("".into());
+    let root_node = graph.db().exec(&QueryBuilder::select().aliases().ids(root_buf.alias()).query());
+
+    assert_eq!(root_node.is_ok(), true);
+
+    match root_node {
+        Ok(root_node) => {
+            println!("Root node: {:#?}", root_node);
+            let rid = root_node.ids();
+            assert_eq!(rid.len(), 1);
+            let root_id = rid.first().unwrap();
+
+            // This is chaos, but that's what it should look like based on the println above.
+            let ralias = &root_node.elements
+                .first().unwrap().values.first().unwrap().value.string().unwrap();
+
+            assert_eq!(*ralias, "root");
+        }
+        Err(e) => {
+            println!("Failed to execute query: {}", e);
+        }
+    }
+
+    cleanup_graph(func_name);
+}
+
 #[test]
 fn open_node_that_exists() {
     let func_name = "open_node_that_exists";
@@ -34,6 +68,26 @@ fn open_node_that_does_not_exist() {
     assert_eq!(open.is_ok(), false);
 
     cleanup_graph(&func_name);
+}
+
+#[test]
+fn opening_root_connections() {
+    let func_name = "opening_node_connections";
+    let mut graph = setup_graph(func_name);
+
+    todo!();
+
+    cleanup_graph(func_name);
+}
+
+#[test]
+fn opening_node_connections() {
+    let func_name = "opening_node_connections";
+    let mut graph = setup_graph(func_name);
+
+    todo!();
+
+    cleanup_graph(func_name);
 }
 
 #[test]

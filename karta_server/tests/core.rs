@@ -223,39 +223,7 @@ fn create_attributes_category(){
     cleanup_graph(&func_name); 
 }
 
-/// The root node should exist and be openable. 
-#[test]
-fn open_root_node() {
-    let func_name = "open_root_node";
-    let mut graph = setup_graph(func_name);
-    let root_path = graph.root_path();
 
-    // Nodepath initialised with empty pathbuf will refer to root node.
-    let root_buf = NodePath::new("".into());
-    let root_node = graph.db().exec(&QueryBuilder::select().aliases().ids(root_buf.alias()).query());
-
-    assert_eq!(root_node.is_ok(), true);
-
-    match root_node {
-        Ok(root_node) => {
-            println!("Root node: {:#?}", root_node);
-            let rid = root_node.ids();
-            assert_eq!(rid.len(), 1);
-            let root_id = rid.first().unwrap();
-
-            // This is chaos, but that's what it should look like based on the println above.
-            let ralias = &root_node.elements
-                .first().unwrap().values.first().unwrap().value.string().unwrap();
-
-            assert_eq!(*ralias, "root");
-        }
-        Err(e) => {
-            println!("Failed to execute query: {}", e);
-        }
-    }
-
-    cleanup_graph(func_name);
-}
 
 /// Test for whether a file gets properly indexed into the db after it is 
 /// added to the file system. 
@@ -305,7 +273,12 @@ fn index_node_connections_from_root() {
 
     let nodes = graph.open_node_connections(NodePath::new("".into()));
 
-    assert_eq!(nodes.len(), 3);
+    let aliases = nodes.iter().map(|n| n.path()).collect::<Vec<_>>();
+
+    /// Check if paths includes aliases
+    let all_included = paths.iter().all(|p| aliases.contains(&p));
+
+    assert_eq!(all_included, true, "Not all paths included in aliases");
 
     todo!();
 

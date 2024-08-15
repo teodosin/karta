@@ -1,6 +1,6 @@
 use std::{error::Error, path::PathBuf};
 
-use crate::{elements, nodetype::NodeType, path_ser};
+use crate::{elements, nodetype::TypeName, path_ser};
 use elements::*;
 use path_ser::buf_to_alias;
 
@@ -52,9 +52,9 @@ pub trait Graph {
     // -------------------------------------------------------------------
     // Nodetypes 
 
-    fn get_node_types(&self) -> Result<Vec<NodeType>, Box<dyn Error>>;
+    fn get_node_types(&self) -> Result<Vec<TypeName>, Box<dyn Error>>;
 
-    fn create_nodetype(&mut self, nodetype: NodeType) -> Result<NodeType, Box<dyn Error>>;
+    fn create_nodetype(&mut self, nodetype: TypeName) -> Result<TypeName, Box<dyn Error>>;
 
     fn instance_nodetype(&self);
 
@@ -93,7 +93,7 @@ pub trait Graph {
     fn create_node_by_path(
         &mut self,
         path: NodePath,
-        ntype: Option<NodeType>,
+        ntype: Option<TypeName>,
     );
 
     /// Creates a node under a given parent with the given name.
@@ -103,7 +103,7 @@ pub trait Graph {
         &mut self,
         parent_path: Option<NodePath>,
         name: &str,
-        ntype: Option<NodeType>,
+        ntype: Option<TypeName>,
     ) -> Result<(), Box<dyn Error>>;
 
     /// Inserts a Node.
