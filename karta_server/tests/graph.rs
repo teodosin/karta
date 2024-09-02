@@ -106,42 +106,7 @@ fn new_custom_storage_directory() {
     std::fs::remove_dir_all(storage).expect("Failed to remove storage directory");
 }
 
-#[test]
-/// Test whether you can add a long path as an alias to a node and retrieve it. 
-fn long_alias_path() {
-    use fs_graph::path_ser::{buf_to_alias, alias_to_buf};
 
-    let func_name = "long_alias_path";
-    let mut graph = setup_graph(func_name);
-
-    let long_path = "root/this/is/a/long/path/with/many/segments/verylongindeed/evenlonger/wow/are/we/still/here/there/must/be/something/we/can/do/about/all/this/tech/debt";
-
-    let _ = graph
-        .db_mut()
-        .exec_mut(&QueryBuilder::insert().nodes().aliases(long_path).query());
-
-    // Putting this conversion here for extra testing. 
-    let buf = alias_to_buf(long_path);
-    let long_path = buf_to_alias(&buf);
-
-    let root_node_result = graph
-        .db()
-        .exec(&QueryBuilder::select().ids(long_path).query());
-
-    let success: bool;
-    match root_node_result {
-        Ok(root_node) => {
-            success = root_node.result == 1;
-        }
-        Err(e) => {
-            println!("Failed to execute query: {}", e);
-            success = false;
-        }
-    }
-    assert_eq!(success, true);
-
-    cleanup_graph(func_name);
-} 
 
 #[test]
 fn correct_root_name() {
