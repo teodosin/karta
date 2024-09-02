@@ -1,7 +1,7 @@
 #![allow(warnings)]
 
 use agdb::QueryBuilder;
-use fs_graph::{elements::{Attribute, Node, NodePath}, graph::Graph, path_ser::buf_to_alias};
+use fs_graph::{elements::{Attribute, Node, NodePath}, graph::Graph};
 
 mod utils;
 use utils::*;
@@ -139,8 +139,6 @@ fn create_new_node(){
 #[test]
 /// Test whether you can add a long path as an alias to a node and retrieve it. 
 fn long_alias_path() {
-    use fs_graph::path_ser::{buf_to_alias, alias_to_buf};
-
     let func_name = "long_alias_path";
     let mut graph = setup_graph(func_name);
 
@@ -149,10 +147,6 @@ fn long_alias_path() {
     let _ = graph
         .db_mut()
         .exec_mut(&QueryBuilder::insert().nodes().aliases(long_path).query());
-
-    // Putting this conversion here for extra testing. 
-    let buf = alias_to_buf(long_path);
-    let long_path = buf_to_alias(&buf);
 
     let root_node_result = graph
         .db()
@@ -187,26 +181,24 @@ fn creating_deep_path_creates_intermediate_nodes() {
     let func_name = "creating_deep_path_creates_intermediate_nodes";
     let mut graph = setup_graph(func_name);
 
-    let path = PathBuf::from("one/two/three");
-    let mut first = path.clone();
-    first.pop();
-    let mut second = path.clone();
-    second.pop();
+    let path = NodePath::from("one/two/three");
+    let mut first = path.clone().parent().unwrap();
+    let mut second = first.clone().parent().unwrap();
 
-    let node = graph.create_node_by_path(NodePath::new(path.clone()), None);
+    let node = graph.create_node_by_path(path.clone(), None);
 
     assert_eq!(node.is_ok(), true);
 
     let node = graph.db().exec(
-        &QueryBuilder::select().ids(buf_to_alias(&path)).query()
+        &QueryBuilder::select().ids(path.alias()).query()
     );
 
     let fir = graph.db().exec(
-        &QueryBuilder::select().ids(buf_to_alias(&path)).query()
+        &QueryBuilder::select().ids(first.alias()).query()
     );
 
     let sec = graph.db().exec(
-        &QueryBuilder::select().ids(buf_to_alias(&path)).query()
+        &QueryBuilder::select().ids(second.alias()).query()
     );
 
     assert_eq!(node.is_ok(), true);

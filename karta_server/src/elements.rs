@@ -2,7 +2,7 @@ use std::{path::PathBuf, time::SystemTime};
 
 use agdb::{DbElement, DbError, DbId, DbKeyValue, DbUserValue, DbValue, QueryId, UserValue};
 
-use crate::{nodetype::{NodePhysicality, TypeName}, path_ser::{alias_to_buf, buf_to_alias}};
+use crate::nodetype::{NodePhysicality, TypeName};
 
 /// The universal node type. 
 /// Nodes loaded for users of this crate should be in this type. 
@@ -262,15 +262,13 @@ impl TryFrom<DbValue> for NodePath {
     type Error = DbError;
 
     fn try_from(value: DbValue) -> Result<Self, Self::Error> {
-
-
-        Ok(NodePath(alias_to_buf(&value.to_string())))
+        Ok(NodePath::from_alias(&value.to_string()))
     }
 }
 
 impl From<NodePath> for DbValue {
     fn from(path: NodePath) -> Self {
-        buf_to_alias(&path.0).into()
+        path.alias().into()
     }
 }
 

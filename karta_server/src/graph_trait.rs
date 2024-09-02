@@ -2,7 +2,6 @@ use std::{error::Error, path::PathBuf};
 
 use crate::{elements, nodetype::TypeName, path_ser};
 use elements::*;
-use path_ser::buf_to_alias;
 
 enum StoragePath {
     Default,

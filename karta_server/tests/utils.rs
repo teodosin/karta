@@ -27,7 +27,6 @@ pub fn setup_graph(test_name: &str) -> Graph {
         "Test directory has not been created"
     );
 
-
     graph
 }
 

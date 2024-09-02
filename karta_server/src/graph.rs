@@ -4,7 +4,6 @@ use agdb::{CountComparison, DbElement, DbError, DbId, DbUserValue, QueryBuilder,
 
 use crate::{elements, nodetype::TypeName, path_ser};
 use elements::*;
-use path_ser::buf_to_alias;
 
 /// The main graph structure to be interacted with.
 ///
@@ -407,7 +406,7 @@ impl Graph {
 
         let is_physical = full_path.exists();
 
-        let as_str = buf_to_alias(&full_path);
+        let as_str = path.alias();
 
         let mut nodes: Vec<Node> = Vec::new();
 
@@ -752,11 +751,11 @@ impl Graph {
     /// Note that due to the implementation, all children of the node will have to be reindexed, recursively.
     pub fn reparent_node(
         &self,
-        node_path: PathBuf,
-        new_parent_path: PathBuf,
+        node_path: NodePath,
+        new_parent_path: NodePath,
     ) -> Result<(), agdb::DbError> {
         // Check if node is in database at all
-        let alias = buf_to_alias(&node_path);
+        let alias = node_path.alias();
         let existing = self.db.exec(&QueryBuilder::select().ids(alias).query());
         match existing {
             QueryError => {
