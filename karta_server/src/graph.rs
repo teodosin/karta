@@ -257,7 +257,7 @@ impl Graph {
         let is_phys = full_path.exists();
         let is_dir = full_path.is_dir();
 
-
+        todo!()
     }
 
     /// Syncs the node's relationships in the db with the file system.

@@ -354,7 +354,7 @@ pub const RESERVED_NODE_ATTRS: [&str; 12] = [
 
 /// A list of reserved edge attribute names that cannot be set by the user directly.
 /// Note that they are optional, so default behavior is when they are not set.
-pub const RESERVED_EDGE_ATTRS: [&str; 20] = [
+pub const RESERVED_EDGE_ATTRS: [&str; 22] = [
     "contains", // Physical parent_child relationship
 
     "text", // Text that is displayed on the edge, additional description
@@ -371,16 +371,18 @@ pub const RESERVED_EDGE_ATTRS: [&str; 20] = [
     "from_preload", // Preload settings for source node when in the target's context & play mode
     "to_preload", // Preload settings for the target node when in source node's context & play mode
 
-    "from_output", // Index of an output socket in source node. Must be validated.
-    "to_input", // Index of an input socket in target node. Must be validated. 
+    "from_output", // ID of an output socket in source node. Must be validated.
+    "to_input", // ID of an input socket in target node. Must be validated. 
 
     // The following attributes are all Vecs of 2 f32s. 
     "from_position", // Relative position of source node to the target node
     "to_position", // Relative position of the target node to source node
     "from_scale", // Relative scale of source node to the target node
     "to_scale", // Relative scale of the target node to source node
+    "from_rotation", // Relative rotation of source node to the target node
+    "to_rotation", // Relative rotation of the target node to source node
 
-    // The following attributes are all Vecs of 4 f32s.
+    // The following attributes are all Vecs of 4 f32s. Or single hex values?
     "from_color", // Color of the source node when in the target's context
     "to_color", // Color of the target node when in the source node's context
 
