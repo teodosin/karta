@@ -4,7 +4,7 @@ use agdb::{DbElement, DbId, QueryBuilder};
 
 use crate::{elements, graph_traits::graph_node::GraphNode, nodetype::TypeName};
 
-use super::{Attribute, GraphAgdb, Node, NodePath, StoragePath};
+use super::{attribute::{Attribute, RESERVED_NODE_ATTRS}, node::Node, node_path::NodePath, GraphAgdb, StoragePath};
 
 impl GraphNode for GraphAgdb {
 /// Retrieves a particular node's data from the database.
@@ -225,7 +225,7 @@ impl GraphNode for GraphAgdb {
         path: NodePath,
         attrs: Vec<Attribute>,
     ) -> Result<(), Box<dyn Error>>{
-        use elements::RESERVED_NODE_ATTRS;
+        use RESERVED_NODE_ATTRS;
 
         // Check if the node exists. If it doesn't, errrrrrrr
         let alias = path.alias();
@@ -283,7 +283,7 @@ impl GraphNode for GraphAgdb {
         path: NodePath,
         attr_name: &str,
     ) -> Result<(), Box<dyn Error>> {
-        use elements::RESERVED_NODE_ATTRS;
+        use RESERVED_NODE_ATTRS;
         let is_reserved = RESERVED_NODE_ATTRS.contains(&attr_name);
 
         if is_reserved {

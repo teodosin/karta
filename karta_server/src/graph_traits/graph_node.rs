@@ -2,7 +2,8 @@ use std::{error::Error, path::PathBuf};
 
 use crate::nodetype::TypeName;
 
-use super::{Attribute, Node, NodePath};
+use super::{attribute::Attribute, node::Node, node_path::NodePath};
+
 
 pub(crate) trait GraphNode {
     // -------------------------------------------------------------------
@@ -103,7 +104,6 @@ mod tests {
     #![allow(warnings)]
 
     use crate::{
-        elements::{Attribute, Node, NodePath},
         graph_agdb::GraphAgdb,
     };
     use agdb::QueryBuilder;
@@ -346,7 +346,7 @@ mod tests {
 
     //     // NOTE: The below assertions are commented out because the amount of
     //     // nodes created at startup is not set in stone. The most recent breakage
-    //     // was because of adding a nodecategories node. No point in breaking a test
+    //     // was because of adding a nodetypes node. No point in breaking a test
     //     // every time that happens.
 
     //     // let edges = edges.elements.iter().filter(|x| x.id.0 < 0).collect::<Vec<_>>();

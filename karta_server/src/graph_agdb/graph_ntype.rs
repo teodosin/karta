@@ -4,7 +4,7 @@ use agdb::QueryBuilder;
 
 use crate::{graph_traits::graph_ntype::GraphNtype, nodetype::TypeName};
 
-use super::{GraphAgdb, Node, NodePath, StoragePath};
+use super::{GraphAgdb, StoragePath};
 
 impl GraphNtype for GraphAgdb {
     fn get_node_types(&self) -> Result<Vec<TypeName>, Box<dyn Error>> {

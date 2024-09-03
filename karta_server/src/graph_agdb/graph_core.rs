@@ -7,7 +7,7 @@ use crate::{
     nodetype::TypeName,
 };
 
-use super::{GraphAgdb, Node, NodePath, StoragePath};
+use super::{node::Node, node_path::NodePath, GraphAgdb, StoragePath};
 
 /// Implementation block for the Graph struct itself.
 /// Includes constructors and utility functions.
@@ -98,7 +98,7 @@ impl GraphCore for GraphAgdb {
     /// the root,
     /// attributes,
     /// settings,
-    /// nodecategories
+    /// nodetypes
     fn init_archetype_nodes(&mut self) {
         // Create the root node
         let root_path = NodePath::root();
@@ -167,9 +167,9 @@ impl GraphCore for GraphAgdb {
         self.autoparent_nodes(&root_path, &set_path);
 
         // Archetype ------------------------------------------------
-        // Create the nodecategories node for global node categories.
-        // Node types are then children of nodecategories or operators.
-        let nca_path = NodePath::new("nodecategories".into());
+        // Create the nodetypes node for global node categories.
+        // Node types are then children of nodetypes or operators.
+        let nca_path = NodePath::new("nodetypes".into());
         let nca: Vec<Node> = vec![Node::new(&nca_path, TypeName::archetype_type())];
 
         let nca_node = self.db.exec_mut(
@@ -181,13 +181,13 @@ impl GraphCore for GraphAgdb {
         );
         match nca_node {
             Ok(_) => {
-                println!("Created nodecategories node");
+                println!("Created nodetypes node");
             }
             Err(ref err) => {
-                println!("Failed to create nodecategories node: {}", err);
+                println!("Failed to create nodetypes node: {}", err);
             }
         }
-        // Create an edge between the root and nodecategories nodes
+        // Create an edge between the root and nodetypes nodes
         self.autoparent_nodes(&root_path, &nca_path);
     }
 

@@ -1,10 +1,14 @@
 use std::error::Error;
 
-use super::{Attribute, Edge, NodePath};
+use super::{attribute::Attribute, edge::Edge, node_path::NodePath};
+
 
 pub(crate) trait GraphEdge {
-    // -------------------------------------------------------------------
-    // Edges
+    fn get_edge(
+        &self, 
+        from: &NodePath, 
+        to: &NodePath
+    ) -> Result<Edge, Box<dyn Error>>;
 
     fn create_edge(
         &mut self,

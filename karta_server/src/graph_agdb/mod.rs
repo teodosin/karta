@@ -162,7 +162,7 @@ impl GraphAgdb {
 //     /// the root, 
 //     /// attributes,
 //     /// settings,
-//     /// nodecategories
+//     /// nodetypes
 //     pub fn init_archetype_nodes(&mut self) {
         
 //         // Create the root node
@@ -241,29 +241,29 @@ impl GraphAgdb {
 
 
 //         // Archetype ------------------------------------------------
-//         // Create the nodecategories node for global node categories.
-//         // Node types are then children of nodecategories or operators. 
+//         // Create the nodetypes node for global node categories.
+//         // Node types are then children of nodetypes or operators. 
 //         let nca: Vec<Node> = vec![Node::new(
-//             NodePath::new("root/nodecategories".into()),
+//             NodePath::new("root/nodetypes".into()),
 //             TypeName::archetype_type(),
 //         )];
 
 //         let nca_node = self.db.exec_mut(
 //             &QueryBuilder::insert()
 //                 .nodes()
-//                 .aliases("root/nodecategories")
+//                 .aliases("root/nodetypes")
 //                 .values(&nca)
 //                 .query(),
 //         );
 //         match nca_node {
 //             Ok(_) => {
-//                 println!("Created nodecategories node");
+//                 println!("Created nodetypes node");
 //             }
 //             Err(ref err) => {
-//                 println!("Failed to create nodecategories node: {}", err);
+//                 println!("Failed to create nodetypes node: {}", err);
 //             }
 //         }
-//         // Create an edge between the root and nodecategories nodes
+//         // Create an edge between the root and nodetypes nodes
 //         GraphAgdb::parent_nodes_by_dbids(&mut self.db, rt_id, nca_node.unwrap().ids().first().unwrap());
 //     }
 

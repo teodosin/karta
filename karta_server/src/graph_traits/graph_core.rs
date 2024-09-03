@@ -1,9 +1,9 @@
-use super::{NodePath, StoragePath};
+use super::{node_path::NodePath, StoragePath};
 use std::path::PathBuf;
 
 pub(crate) trait GraphCore {
     fn storage_path(&self) -> StoragePath;
-    
+
     fn root_path(&self) -> PathBuf;
 
     fn root_nodepath(&self) -> NodePath;
@@ -29,7 +29,7 @@ pub(crate) trait GraphCore {
     /// the root,
     /// attributes,
     /// settings,
-    /// nodecategories
+    /// nodetypes
     fn init_archetype_nodes(&mut self);
 
     /// Syncs a node in the db with the file system
@@ -56,7 +56,10 @@ mod tests {
     use directories::ProjectDirs;
 
     use crate::{
-        elements::NodePath, graph_agdb::GraphAgdb, graph_traits::{graph_core::GraphCore, graph_node::GraphNode}, utils::TestGraph
+        elements::node_path::NodePath,
+        graph_agdb::GraphAgdb,
+        graph_traits::{graph_core::GraphCore, graph_edge::GraphEdge, graph_node::GraphNode},
+        utils::TestGraph,
     };
 
     /// Add a node to the db, then create a new graph with the same name.
@@ -80,8 +83,8 @@ mod tests {
     }
 
     #[test]
-    fn new_custom_storage_directory() {
-        let func_name = "new_custom_storage_directory";
+    fn create_graph_db_file_in_custom_storage_directory() {
+        let func_name = "create_graph_db_file_in_custom_storage_directory";
         let name = format!("fs_graph_test_{}", func_name);
         let root = ProjectDirs::from("com", "fs_graph", &name)
             .unwrap()
@@ -99,9 +102,16 @@ mod tests {
 
         let graph_path = storage.join(format!("{}.agdb", &name));
 
-        assert_eq!(graph_path.exists(), true, "Graph was not created in storage directory");
+        assert_eq!(
+            graph_path.exists(),
+            true,
+            "Graph was not created in storage directory"
+        );
 
-        assert_eq!(graph.storage_path(), crate::graph_traits::StoragePath::Custom(storage.clone()));
+        assert_eq!(
+            graph.storage_path(),
+            crate::graph_traits::StoragePath::Custom(storage.clone())
+        );
 
         let root_node_result = graph.open_node(&NodePath::root());
 
@@ -111,93 +121,55 @@ mod tests {
         std::fs::remove_dir_all(storage).expect("Failed to remove storage directory");
     }
 
-    // #[test]
-    // fn correct_root_name() {
-    //     let func_name = "correct_root_name";
-    //     let graph = setup_graph(func_name);
+    #[test]
+    /// Test whether the db creates attributes/settings/etc. nodes when the db is first created.
+    fn creating_new_graph_creates_archetype_nodes() {
+        let func_name = "creating_new_graph_creates_archetype_nodes";
+        let graph = TestGraph::new(func_name).setup();
 
-    //     let dirname: String = get_graph_dir_name(func_name);
+        let root_path = NodePath::root();
+        let root_node = graph.open_node(&root_path);
 
-    //     let root_name: String = graph.root_name();
+        assert_eq!(root_node.is_ok(), true, "Root node not found");
 
-    //     assert_eq!(root_name, dirname);
 
-    //     cleanup_graph(func_name);
-    // }
 
-    // #[test]
-    // /// Test whether the db creates an attributes node when the db is first created.
-    // /// Could possibly be moved to attr.rs
-    // fn create_attributes_category() {
-    //     let func_name = "create_attributes_category";
-    //     let graph = setup_graph(func_name);
+        let atr_path = NodePath::new("attributes".into());
+        let atr_node = graph.open_node(&atr_path);
 
-    //     let root_node_result = graph.db().exec(&QueryBuilder::select().ids("root").query());
+        assert_eq!(atr_node.is_ok(), true, "Attributes node not found");
 
-    //     assert_eq!(true, root_node_result.is_ok());
+        let edge = graph.get_edge(&root_path, &atr_path);
+        assert_eq!(edge.is_ok(), true, "Edge not found");
 
-    //     let qry = graph
-    //         .db()
-    //         .exec(&QueryBuilder::select().ids("root/attributes").query());
 
-    //     assert_eq!(true, qry.is_ok());
 
-    //     if root_node_result.is_ok() && qry.is_ok() {
-    //         // Validate root node
-    //         let root_node = root_node_result.unwrap().ids();
-    //         assert_eq!(root_node.len(), 1);
-    //         let root_id = root_node.first().unwrap();
+        let settings_path = NodePath::new("settings".into());
+        let settings_node = graph.open_node(&settings_path);
 
-    //         // Validate attributes node
-    //         let attributes_node = qry.unwrap().ids();
-    //         assert_eq!(attributes_node.len(), 1);
-    //         let attributes_id = attributes_node.first().unwrap();
+        assert_eq!(
+            settings_node.is_ok(),
+            true,
+            "Settings node not found"
+        );
 
-    //         // Find edge, validate
-    //         let query = &QueryBuilder::search()
-    //             .from(*root_id)
-    //             .to(*attributes_id)
-    //             .query();
-    //         let edge = graph.db().exec(query);
-    //         assert_eq!(edge.is_ok(), true);
+        let edge = graph.get_edge(&root_path, &settings_path);
+        assert_eq!(edge.is_ok(), true, "Edge not found");
 
-    //         let edge = edge
-    //             .unwrap()
-    //             .elements
-    //             .iter()
-    //             .cloned()
-    //             .filter(|e| e.id.0 < 0)
-    //             .collect::<Vec<_>>();
-    //         println!("Found edge {:#?}", edge);
 
-    //         assert_eq!(edge.len(), 1);
 
-    //         // Select edge, because values don't appear in above query.
-    //         // These two queries could probably be merged.
-    //         let eid = edge.first().unwrap().id.0;
-    //         let edge = graph
-    //             .db()
-    //             .exec(&QueryBuilder::select().keys().ids(eid).query());
-    //         let edge = edge.unwrap().elements;
-    //         assert_eq!(edge.len(), 1);
+        let nodetypes_path = NodePath::new("nodetypes".into());
+        let nodetypes_node = graph.open_node(&nodetypes_path);
 
-    //         let vals = &edge.first().unwrap().values;
-    //         let mut found = false;
+        assert_eq!(
+            nodetypes_node.is_ok(),
+            true,
+            "Node types node not found"
+        );
 
-    //         // The attribute we're looking for. Should be reserved.
-    //         // In this case, the "contains" attribute.
-    //         let atr = "contains";
-    //         for val in vals.iter() {
-    //             if val.key == atr.into() {
-    //                 found = true;
-    //             }
-    //         }
-
-    //         assert_eq!(found, true);
-    //     }
-
-    //     cleanup_graph(&func_name);
-    // }
+        let edge = graph.get_edge(&root_path, &nodetypes_path);
+        assert_eq!(edge.is_ok(), true, "Edge not found");
+    }
 
     // /// Test for whether a file gets properly indexed into the db after it is
     // /// added to the file system.

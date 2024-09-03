@@ -1,12 +1,46 @@
 use std::{error::Error, path::PathBuf};
 
-use agdb::QueryBuilder;
+use agdb::{DbElement, QueryBuilder};
 
 use crate::{elements, graph_traits::graph_edge::GraphEdge, nodetype::TypeName};
 
-use super::{Attribute, Edge, GraphAgdb, Node, NodePath, StoragePath};
+use super::{attribute::{Attribute, RESERVED_EDGE_ATTRS}, edge::Edge, node_path::NodePath, GraphAgdb, StoragePath};
 
 impl GraphEdge for GraphAgdb {
+    fn get_edge(
+        &self,
+        from: &NodePath,
+        to: &NodePath,
+    ) -> Result<Edge, Box<dyn Error>> {
+        let from_al = from.alias();
+        let to_al = to.alias();
+
+        let edge_query = self.db.exec(
+            &QueryBuilder::search()
+            .from(from_al)
+            .to(to_al)
+            .query()
+        );
+
+        if edge_query.is_err() {
+            return Err("Failed to get edge".into());
+        }
+        let edge_query = edge_query.unwrap();
+
+        let edge_elems: Vec<&DbElement> = edge_query
+            .elements.iter().filter(|e| {
+                e.id.0 < 0
+            })
+            .collect::<Vec<_>>();
+
+        assert_eq!(edge_elems.len(), 1, "Expected only 1 edge, got {}", edge_elems.len());
+        let edge_elem = edge_elems.first().unwrap();
+
+        println!("Edge element: {:#?}", edge_elem);
+
+        todo!()
+    }
+
     fn create_edge(
         &mut self,
         source_path: &NodePath,
@@ -56,7 +90,7 @@ impl GraphEdge for GraphAgdb {
 
     /// Insert attributes to an edge. Ignore reserved attribute names. Update attributes that already exist.
     fn insert_edge_attr(&self, edge: Edge, attr: Attribute) -> Result<(), Box<dyn Error>> {
-        use elements::RESERVED_EDGE_ATTRS;
+        use RESERVED_EDGE_ATTRS;
         let slice = attr.name.as_str();
         let is_reserved = RESERVED_EDGE_ATTRS.contains(&slice);
 
@@ -72,7 +106,7 @@ impl GraphEdge for GraphAgdb {
 
     /// Delete attributes from an edge. Ignore reserved attribute names.
     fn delete_edge_attr(&self, edge: Edge, attr: Attribute) -> Result<(), Box<dyn Error>> {
-        use elements::RESERVED_EDGE_ATTRS;
+        use RESERVED_EDGE_ATTRS;
         let slice = attr.name.as_str();
         let is_reserved = RESERVED_EDGE_ATTRS.contains(&slice);
 

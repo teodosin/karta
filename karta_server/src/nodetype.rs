@@ -1,7 +1,7 @@
 
 use agdb::{DbError, DbValue};
 
-use crate::elements::Node;
+use crate::elements::node;
 
 // Some of the structs and enums in this file are currently not used. 
 // Determining a sound architecture for node types is difficult and 
