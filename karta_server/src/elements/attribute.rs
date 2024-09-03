@@ -6,6 +6,15 @@ pub struct Attribute {
     pub value: f32,
 }
 
+impl Attribute {
+    pub fn new_contains() -> Self {
+        Self {
+            name: "contains".to_string(),
+            value: 0.0,
+        }
+    }
+}
+
 impl Into<Vec<DbKeyValue>> for Attribute {
     fn into(self) -> Vec<DbKeyValue> {
         vec![
@@ -17,6 +26,12 @@ impl Into<Vec<DbKeyValue>> for Attribute {
 impl Into<DbKeyValue> for Attribute {
     fn into(self) -> DbKeyValue {
         DbKeyValue::from((self.name, self.value))
+    }
+}
+
+impl Into<DbKeyValue> for &Attribute {
+    fn into(self) -> DbKeyValue {
+        DbKeyValue::from((self.name.clone(), self.value))
     }
 }
 

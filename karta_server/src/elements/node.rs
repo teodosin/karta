@@ -75,7 +75,7 @@ impl DbUserValue for Node {
         values.push(DbKeyValue::from(("modified_time", self.modified_time.clone())));
 
         for attr in &self.attributes {
-            values.push(attr.clone().into());
+            values.push(attr.into());
         }
 
         values

@@ -142,7 +142,7 @@ mod tests {
         let edge = graph.get_edge(&root_path, &atr_path);
         assert_eq!(edge.is_ok(), true, "Edge not found");
 
-
+        
 
         let settings_path = NodePath::new("settings".into());
         let settings_node = graph.open_node(&settings_path);

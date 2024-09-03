@@ -2,7 +2,7 @@ use std::{error::Error, path::PathBuf};
 
 use agdb::{DbElement, DbId, QueryBuilder};
 
-use crate::{elements, graph_traits::graph_node::GraphNode, nodetype::TypeName};
+use crate::{elements::{self, edge::Edge}, graph_traits::graph_node::GraphNode, nodetype::TypeName};
 
 use super::{attribute::{Attribute, RESERVED_NODE_ATTRS}, node::Node, node_path::NodePath, GraphAgdb, StoragePath};
 
@@ -319,20 +319,14 @@ impl GraphNode for GraphAgdb {
     fn autoparent_nodes(
         &mut self, parent: &NodePath, child: &NodePath
     ) -> Result<(), Box<dyn Error>> {
-        let parent = parent.alias();
-        let child = child.alias();
-
-        let cont_attr = Attribute {
-            name: "contains".into(),
-            value: 0.0,
-        };
+        let edge = Edge::new_cont(parent, child);
 
         let edge = self.db.exec_mut(
             &QueryBuilder::insert()
                 .edges()
-                .from(parent)
-                .to(child)
-                .values_uniform(vec![cont_attr.clone().into()])
+                .from(parent.alias())
+                .to(child.alias())
+                .values_uniform(&edge)
                 .query(),
         ); // For whatever reason this does not insert the attribute into the edge.
 
