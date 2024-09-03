@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use agdb::QueryBuilder;
 
-use crate::{graph_traits::GraphCore, nodetype::TypeName};
+use crate::{graph_traits::graph_core::GraphCore, nodetype::TypeName};
 
 use super::{GraphAgdb, Node, NodePath, StoragePath};
 
