@@ -82,7 +82,7 @@ impl DbUserValue for Node {
 
 /// Implementation block for node. 
 impl Node {
-    pub fn new(path: NodePath, ntype: TypeName) -> Self {
+    pub fn new(path: &NodePath, ntype: TypeName) -> Self {
         let nphys: NodePhysicality;
 
         match path.0.exists() {
@@ -95,7 +95,7 @@ impl Node {
 
         Node {
             db_id: None,
-            path,
+            path: path.clone(),
             ntype,
             nphys,
             alive: true,
@@ -191,6 +191,9 @@ impl TryFrom<DbElement> for Node {
 pub struct NodePath(PathBuf);
 
 impl NodePath {
+    pub fn root() -> Self {
+        NodePath(PathBuf::from(""))
+    }
     /// Create a new NodePath from a pathbuf. 
     /// Supplying an empty pathbuf will create a NodePath to the root. 
     pub fn new(path: PathBuf) -> Self {

@@ -4,61 +4,70 @@
 
 use directories::ProjectDirs;
 
-use crate::{graph_agdb::GraphAgdb, graph_traits::Graph};
+use crate::{graph_agdb::GraphAgdb, graph_traits::{graph_core::GraphCore, Graph}};
 
-/// Graph setup function for tests. Always stores the db in the data_dir.
-pub fn setup_graph(test_name: &str) -> impl Graph {
-    println!("");
-    println!("----------------------------------------------");
-    println!("Creating graph for test: {}", test_name);
-
-    cleanup_graph(test_name);
-
-    let name = get_graph_dir_name(test_name);
-    let root = ProjectDirs::from("com", "fs_graph", &name)
-        .unwrap()
-        .data_dir()
-        .to_path_buf();
-    let full_path = root.join(&name);
-
-    let graph = GraphAgdb::new(root.clone().into(), &name);
-
-    assert_eq!(
-        full_path.exists(),
-        true,
-        "Test directory has not been created"
-    );
-
-    graph
+pub struct TestGraph {
+    pub test_name: String,
 }
 
-/// Graph cleanup function for tests. Removes the root directory from the data_dir.
-pub fn cleanup_graph(func_name: &str) {
-    // Uncomment this return only if you need to temporarily look at the contents
-    // return;
+impl TestGraph {
+    pub fn new(name: &str) -> Self {
+        let name = format!("fs_graph_test_{}", name);
 
-    let name = get_graph_dir_name(func_name);
-    let root = ProjectDirs::from("com", "fs_graph", &name)
-        .unwrap()
-        .data_dir()
-        .to_path_buf();
+        Self {
+            test_name: name.to_string(),
+        }
+    }
 
-    let removal = std::fs::remove_dir_all(root);
+    /// Graph setup function for tests. Always stores the db in the data_dir.
+    pub fn setup(&self) -> impl Graph {
+        let test_name = self.test_name.clone();
+        let strg_name = "fs_graph";
 
-    match removal {
-        Ok(_) => {
-            println!("Removed test directory");
-            println!("----------------------------------------------");
-        },
-        Err(_err) => {
-            //println!("Failed to remove test directory: {}", err);
+        let root = ProjectDirs::from("com", "fs_graph", strg_name)
+            .unwrap()
+            .data_dir()
+            .to_path_buf();
+
+        let full_path = root.join(&test_name);
+
+        println!("Trying to create test directory: {:#?}", full_path);
+
+        let graph = GraphAgdb::new_custom_storage(full_path.clone(), &test_name, full_path.clone());
+
+        assert_eq!(
+            full_path.exists(),
+            true,
+            "Test directory has not been created"
+        );
+
+        graph
+    }
+}
+
+impl Drop for TestGraph {
+    fn drop(&mut self) {
+        // Uncomment this return only if you need to temporarily look at the contents
+        // return;
+        let name = &self.test_name;
+        
+        let root = ProjectDirs::from("com", "fs_graph", "fs_graph")
+            .unwrap()
+            .data_dir()
+            .to_path_buf();
+
+        let full_path = root.join(name);
+        
+        let removal = std::fs::remove_dir_all(full_path);
+        
+        match removal {
+            Ok(_) => {
+
+            }
+            Err(_err) => {
+                //println!("Failed to remove test directory: {}", err);
+            }
         }
     }
 }
 
-/// Compute the name for the test directory
-pub fn get_graph_dir_name(test_name: &str) -> String {
-    let name = format!("fs_graph_test_{}", test_name);
-
-    name
-}

@@ -9,7 +9,7 @@ use super::{Attribute, GraphAgdb, Node, NodePath, StoragePath};
 impl GraphNode for GraphAgdb {
 /// Retrieves a particular node's data from the database.
     /// The path is relative to the root of the graph.
-    fn open_node(&self, path: NodePath) -> Result<Node, Box<dyn Error>> {
+    fn open_node(&self, path: &NodePath) -> Result<Node, Box<dyn Error>> {
         let alias = path.alias();
 
         let node = self.db.exec(&QueryBuilder::select().ids(alias).query());
@@ -28,26 +28,7 @@ impl GraphNode for GraphAgdb {
         }
     }
 
-    /// Opens the connections of a particular node.
-    /// Takes in the path to the node relative to the root of the graph.
-    ///
-    /// TODO: Add filter argument when Filter is implemented.
-    /// Note that possibly Filter could have a condition that nodes
-    /// would have to be connected to some node, which would just turn
-    /// this into a generic "open_nodes" function, or "search_nodes".
-    /// Then filters could just be wrappers around agdb's QueryConditions...
-    ///
-    /// This opens a can of worms about whether the nodes loaded up in Karta
-    /// even need to be from a specific context. What if everything was just
-    /// in a "soup"? But what would navigation even mean then, when you're not
-    /// traveling through contexts? When are relative positions enforced?
-    /// How do you determine which node has priority? Is it the one that's open?
-    /// If multiple are open, how do the relative positions work?
-    /// Parent takes priority over other connection?
-    /// What if neither is the parent? Are the priorities configurable?
-    ///
-    ///
-    fn open_node_connections(&self, path: NodePath) -> Vec<Node> {
+    fn open_node_connections(&self, path: &NodePath) -> Vec<Node> {
         // Step 1: Check if the node is a physical node in the file system.
         // Step 2: Check if the node exists in the db.
         // Step 3: Check if all the physical dirs and files in the node are in the db.
@@ -70,17 +51,12 @@ impl GraphNode for GraphAgdb {
         nodes
     }
 
-    /// Creates a node from the given path. Inserts it into the graph.
-    /// Insert the relative path from the root, not including the root dir.
-    ///
-    /// TODO: Determine whether users of the crate are meant to use this.
-    /// Perhaps not. Perhaps the parent of the node should be specified.
-    /// The insert_node_by_name function calls this one anyway.
     fn create_node_by_path(
         &mut self,
-        path: NodePath,
+        path: &NodePath,
         ntype: Option<TypeName>,
-    ) {
+    ) -> Result<Node, Box<dyn Error>> {
+
         let full_path = path.full(&self.root_path);
         let alias = path.alias();
 
@@ -117,7 +93,7 @@ impl GraphNode for GraphAgdb {
             ntype = TypeName::new("Directory".to_string());
         }
 
-        let node = Node::new(path.clone(), ntype);
+        let node = Node::new(&path.clone(), ntype);
 
         let nodeqr = self.db.exec_mut(
             &QueryBuilder::insert()
@@ -136,27 +112,37 @@ impl GraphNode for GraphAgdb {
                 let parent_path = path.parent();
                 match parent_path {
                     Some(parent_path) => {
-                        if parent_path.buf().to_str().unwrap() != "" {
+                        if parent_path.parent().is_some() {
                             println!("About to insert parent node: {:?}", parent_path);
+
                             let n = self.create_node_by_path(
-                                parent_path,
+                                &parent_path,
                                 Some(TypeName::other()),
                             );
 
-                            let parent_id = n.unwrap().id;
-
-                            GraphAgdb::parent_nodes_by_dbids(&mut self.db, &parent_id, &nid)
+                            match n {
+                                Ok(n) => {
+                                    let parent_path = n.path();
+                                    self.autoparent_nodes(&parent_path, &path);
+                                }
+                                Err(e) => {
+                                    println!("Failed to insert parent node: {}", e);
+                                }
+                            }
                         }
+                        Ok(node)
                     }
                     None => {
                         // If the parent is root, parent them and move along.
-                        GraphAgdb::parent_nodes_by_dbids(&mut self.db, &DbId(1), &nid)
+                        self.autoparent_nodes(&NodePath::new(PathBuf::from("")), &path);
+                        Ok(node)
                     }
                 }
 
             }
             Err(e) => {
                 println!("Failed to insert node: {}", e);
+                Err(e.into())
             }
         }
     }
@@ -169,7 +155,7 @@ impl GraphNode for GraphAgdb {
         parent_path: Option<NodePath>,
         name: &str,
         ntype: Option<TypeName>,
-    ) {
+    ) -> Result<Node, Box<dyn Error>> {
         let parent_path = parent_path.unwrap_or_else(|| NodePath::new("".into()));
 
         let rel_path = if parent_path.buf().as_os_str().is_empty() {
@@ -178,13 +164,7 @@ impl GraphNode for GraphAgdb {
             NodePath::new(parent_path.buf().join(name))
         };
 
-        match self.create_node_by_path(rel_path, ntype) {
-            Ok(_) => {
-            }
-            Err(e) => {
-                println!("Failed to insert node: {}", e);
-            }
-        }
+        self.create_node_by_path(&rel_path, ntype)
     }
 
     /// Inserts a Node.
@@ -326,7 +306,7 @@ impl GraphNode for GraphAgdb {
     }
 
     /// Merges a vector of nodes into the last one.
-    fn merge_nodes(&self, nodes: Vec<NodePath>) -> Result<(), agdb::DbError> {
+    fn merge_nodes(&mut self, nodes: Vec<NodePath>) -> Result<(), agdb::DbError> {
         Ok(())
     }
 
@@ -335,5 +315,43 @@ impl GraphNode for GraphAgdb {
     // fn set_node_pins
 
     // fn set_pin_on nodes
+
+    fn autoparent_nodes(
+        &mut self, parent: &NodePath, child: &NodePath
+    ) -> Result<(), Box<dyn Error>> {
+        let parent = parent.alias();
+        let child = child.alias();
+
+        let cont_attr = Attribute {
+            name: "contains".into(),
+            value: 0.0,
+        };
+
+        let edge = self.db.exec_mut(
+            &QueryBuilder::insert()
+                .edges()
+                .from(parent)
+                .to(child)
+                .values_uniform(vec![cont_attr.clone().into()])
+                .query(),
+        ); // For whatever reason this does not insert the attribute into the edge.
+
+        let eid = edge.unwrap().ids();
+        let eid = eid.first().unwrap();
+        println!("Id of the edge: {:#?}", eid);
+
+        let edge = self.db.exec(&QueryBuilder::select().keys().ids(*eid).query());
+
+        match edge {
+            Ok(edge) => {
+                // Insert the attribute to the edge
+                // println!("Edge inserted: {:#?}", edge.elements);
+                Ok(())
+            }
+            Err(e) => {
+                Err(e.into())
+            }
+        }
+    }
 
 }

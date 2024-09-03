@@ -18,46 +18,6 @@ impl GraphEdge for GraphAgdb {
         todo!()
     }
 
-    /// Mostly used internally.
-    /// Uses agdb types directly to create an exclusive parent-child connection.
-    /// The attribute is "contains" and is reserved in elements.rs.
-    fn parent_nodes_by_dbids(db: &mut agdb::Db, parent: &agdb::DbId, child: &agdb::DbId) {
-        // Check if the child has an existing parent
-
-        // If it does, delete the existing parent-child relationship
-
-        // If it doesn't, create a new parent-child relationship
-        let cont_attr = Attribute {
-            name: "contains".into(),
-            value: 0.0,
-        };
-
-        let edge = db.exec_mut(
-            &QueryBuilder::insert()
-                .edges()
-                .from(*parent)
-                .to(*child)
-                .values_uniform(vec![cont_attr.clone().into()])
-                .query(),
-        ); // For whatever reason this does not insert the attribute into the edge.
-
-        let eid = edge.unwrap().ids();
-        let eid = eid.first().unwrap();
-        println!("Id of the edge: {:#?}", eid);
-
-        let edge = db.exec(&QueryBuilder::select().keys().ids(*eid).query());
-
-        match edge {
-            Ok(edge) => {
-                // Insert the attribute to the edge
-                println!("Edge inserted: {:#?}", edge.elements);
-            }
-            Err(e) => {
-                println!("Failed to insert edge: {}", e);
-            }
-        }
-    }
-
     /// Changes the parent directory of a node. If the node is physical, it will be moved in the file system.
     /// If the node is virtual, the parent will be changed in the db.
     /// Note that due to the implementation, all children of the node will have to be reindexed, recursively.

@@ -18,15 +18,10 @@ mod tests {
 
     use std::path::PathBuf;
 
-    use crate::utils::{cleanup_graph, setup_graph};
-
     #[test]
     fn new_node_has_type() {
         let func_name = "new_node_has_type";
-        let mut graph = setup_graph(func_name);
 
         todo!();
-
-        cleanup_graph(func_name);
     }
 }
