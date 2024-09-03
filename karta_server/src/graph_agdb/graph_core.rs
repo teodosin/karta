@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use agdb::QueryBuilder;
 
 use crate::{
-    graph_traits::{graph_core::GraphCore, graph_node::GraphNode},
+    graph_traits::{self, graph_core::GraphCore, graph_node::GraphNode},
     nodetype::TypeName,
 };
 
@@ -12,6 +12,10 @@ use super::{GraphAgdb, Node, NodePath, StoragePath};
 /// Implementation block for the Graph struct itself.
 /// Includes constructors and utility functions.
 impl GraphCore for GraphAgdb {
+    fn storage_path(&self) -> graph_traits::StoragePath {
+        self.storage_path.clone()
+    }
+    
     fn root_path(&self) -> PathBuf {
         self.root_path.clone()
     }
@@ -41,6 +45,8 @@ impl GraphCore for GraphAgdb {
         let db_path = storage_path.join(format!("{}.agdb", name));
 
         // Check if the database already exists
+        let open_existing = db_path.exists();
+
         let db = agdb::Db::new(db_path.to_str().unwrap()).expect("Failed to create new db");
 
         let mut giraphe = GraphAgdb {
@@ -51,7 +57,9 @@ impl GraphCore for GraphAgdb {
             maintain_readable_files: false,
         };
 
-        giraphe.init_archetype_nodes();
+        if !open_existing {
+            giraphe.init_archetype_nodes();
+        }
 
         return giraphe;
     }
@@ -64,9 +72,12 @@ impl GraphCore for GraphAgdb {
             std::fs::create_dir_all(&storage_path).expect("Failed to create storage path");
         }
 
-        let db = agdb::Db::new(storage_path.join(name).to_str().unwrap());
+        let db_path = storage_path.join(format!("{}.agdb", name));
 
-        let mut db = db.expect("Failed to create db");
+        // Check if the database already exists
+        let open_existing = db_path.exists();
+
+        let db = agdb::Db::new(db_path.to_str().unwrap()).expect("Failed to create new db");
 
         let mut giraphe = GraphAgdb {
             name: name.to_string(),
@@ -76,7 +87,9 @@ impl GraphCore for GraphAgdb {
             maintain_readable_files: false,
         };
 
-        giraphe.init_archetype_nodes();
+        if !open_existing {
+            giraphe.init_archetype_nodes();
+        }
 
         return giraphe;
     }

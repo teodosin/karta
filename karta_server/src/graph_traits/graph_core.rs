@@ -1,7 +1,9 @@
-use super::NodePath;
+use super::{NodePath, StoragePath};
 use std::path::PathBuf;
 
 pub(crate) trait GraphCore {
+    fn storage_path(&self) -> StoragePath;
+    
     fn root_path(&self) -> PathBuf;
 
     fn root_nodepath(&self) -> NodePath;
@@ -54,9 +56,7 @@ mod tests {
     use directories::ProjectDirs;
 
     use crate::{
-        elements::NodePath,
-        graph_traits::{graph_core::GraphCore, graph_node::GraphNode},
-        utils::TestGraph,
+        elements::NodePath, graph_agdb::GraphAgdb, graph_traits::{graph_core::GraphCore, graph_node::GraphNode}, utils::TestGraph
     };
 
     /// Add a node to the db, then create a new graph with the same name.
@@ -77,41 +77,39 @@ mod tests {
         println!("Root node result: {:#?}", root_node_result);
 
         assert_eq!(root_node_result.is_ok(), true);
-
     }
 
-    // #[test]
-    // fn new_custom_storage_directory() {
-    //     let func_name = "new_custom_storage_directory";
-    //     let name = format!("fs_graph_test_{}", func_name);
-    //     let root = ProjectDirs::from("com", "fs_graph", &name)
-    //         .unwrap()
-    //         .config_dir()
-    //         .to_path_buf();
-    //     let storage = root.join("storage");
+    #[test]
+    fn new_custom_storage_directory() {
+        let func_name = "new_custom_storage_directory";
+        let name = format!("fs_graph_test_{}", func_name);
+        let root = ProjectDirs::from("com", "fs_graph", &name)
+            .unwrap()
+            .data_dir()
+            .to_path_buf();
+        let storage = root.join("storage");
 
-    //     let graph = GraphAgdb::new_custom_storage(root.clone().into(), &name, storage.clone());
+        let graph = GraphAgdb::new_custom_storage(root.clone().into(), &name, storage.clone());
 
-    //     assert_eq!(
-    //         storage.exists(),
-    //         true,
-    //         "Storage directory has not been created"
-    //     );
+        assert_eq!(
+            storage.exists(),
+            true,
+            "Storage directory has not been created"
+        );
 
-    //     let root_node_result = graph.db().exec(&QueryBuilder::select().ids("root").query());
+        let graph_path = storage.join(format!("{}.agdb", &name));
 
-    //     match root_node_result {
-    //         Ok(root_node) => {
-    //             assert_eq!(root_node.result /* expected value */, 1);
-    //         }
-    //         Err(e) => {
-    //             println!("Failed to execute query: {}", e);
-    //         }
-    //     }
+        assert_eq!(graph_path.exists(), true, "Graph was not created in storage directory");
 
-    //     // Clean up the custom storage directory
-    //     std::fs::remove_dir_all(storage).expect("Failed to remove storage directory");
-    // }
+        assert_eq!(graph.storage_path(), crate::graph_traits::StoragePath::Custom(storage.clone()));
+
+        let root_node_result = graph.open_node(&NodePath::root());
+
+        assert_eq!(root_node_result.is_ok(), true);
+
+        // Clean up the custom storage directory
+        std::fs::remove_dir_all(storage).expect("Failed to remove storage directory");
+    }
 
     // #[test]
     // fn correct_root_name() {

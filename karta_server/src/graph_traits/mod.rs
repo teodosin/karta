@@ -13,7 +13,8 @@ pub(crate) mod graph_ntype;
 pub(crate) mod graph_node;
 pub(crate) mod graph_edge;
 
-enum StoragePath {
+#[derive(Clone, PartialEq, Debug)]
+pub(crate) enum StoragePath {
     Default,
     Custom(PathBuf),
 }

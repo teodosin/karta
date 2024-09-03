@@ -1,7 +1,7 @@
 use std::{error::Error, path::PathBuf};
 
 use agdb::{CountComparison, DbElement, DbError, DbId, DbUserValue, QueryBuilder, QueryError};
-use crate::graph_traits::Graph;
+use crate::graph_traits::{Graph, StoragePath};
 
 use crate::{elements, nodetype::TypeName};
 use elements::*;
@@ -40,10 +40,6 @@ pub struct GraphAgdb {
     maintain_readable_files: bool,
 }
 
-enum StoragePath {
-    Default,
-    Custom(PathBuf),
-}
 
 /// Agdb has multiple implementations. If the size of the database is small enough, it can be stored in memory.
 /// If the database is too large, it can be stored in a file.
