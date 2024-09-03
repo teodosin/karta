@@ -21,4 +21,3 @@ enum StoragePath {
 /// The main graph trait.
 pub(crate) trait Graph: GraphCore + GraphNtype + GraphNode + GraphEdge {}
 
-
