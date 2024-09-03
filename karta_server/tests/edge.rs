@@ -1,7 +1,7 @@
 #![allow(warnings)]
 
 
-use fs_graph::{elements::NodePath, graph::Graph};
+use fs_graph::{elements::NodePath, graph_agdb::GraphAgdb};
 use std::path::PathBuf;
 
 mod utils;

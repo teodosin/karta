@@ -4,7 +4,7 @@ use std::any::Any;
 
 use agdb::QueryBuilder;
 use directories::ProjectDirs;
-use fs_graph::{elements::NodePath, graph::{self, Graph}};
+use fs_graph::{elements::NodePath, graph_agdb::{self, GraphAgdb}};
 
 mod utils;
 use utils::*;
@@ -21,7 +21,7 @@ fn test_new_graph() {
 
     println!("Expected full path: {:#?}", root);
 
-    let graph = Graph::new(root.clone().into(), &name);
+    let graph = GraphAgdb::new(root.clone().into(), &name);
 
     println!("Size of graph: {:#?} bytes", graph.db().size());
 
@@ -83,7 +83,7 @@ fn new_custom_storage_directory() {
         .to_path_buf();
     let storage = root.join("storage");
 
-    let graph = Graph::new_custom_storage(root.clone().into(), &name, storage.clone());
+    let graph = GraphAgdb::new_custom_storage(root.clone().into(), &name, storage.clone());
 
     assert_eq!(
         storage.exists(),

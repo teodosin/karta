@@ -1,6 +1,6 @@
 use std::{error::Error, path::PathBuf};
 
-use crate::{elements, nodetype::TypeName, path_ser};
+use crate::{elements, nodetype::TypeName};
 use elements::*;
 
 enum StoragePath {
@@ -11,19 +11,29 @@ enum StoragePath {
 /// The main graph structure to be interacted with.
 ///
 /// Bevy_fs_graph will instantiate this as a Resource through a newtype.
-pub trait Graph {
+pub(crate) trait Graph: GraphCore + GraphNtype + GraphNode + GraphEdge {}
+
+pub(crate) trait GraphCore {
+    fn root_path(&self) -> PathBuf;
+
+    fn root_nodepath(&self) -> NodePath;
+    
     /// Constructor. Panics if the db cannot be created.
     ///
     /// Takes the desired root of the graph as a parameter and the name for the db.
     ///
     /// Creates the db at the storage_path, or initialises the db if it already exists there.
     ///
+    /// Note that it uses PathBuf instead of NodePath, because of course
+    /// it's not dealing with nodes yet. 
+    /// 
     /// TODO: Add error handling.
-    fn new(&self, root_path: PathBuf, name: &str) -> Self;
+    
+    fn new(root_path: PathBuf, name: &str) -> Self;
 
     /// Alternate constructor. Use this if you want to set a custom storage path for the db.
     /// Panics if the db cannot be created
-    fn new_custom_storage(&self, root_path: PathBuf, name: &str, storage_path: PathBuf) -> Self;
+    fn new_custom_storage(root_path: PathBuf, name: &str, storage_path: PathBuf) -> Self;
 
     /// Create the initial archetype nodes for the graph. Includes 
     /// the root, 
@@ -33,10 +43,10 @@ pub trait Graph {
     fn init_archetype_nodes(&mut self);
 
     /// Syncs a node in the db with the file system
-    fn index_single_node(&mut self, path: NodePath);
+    fn index_single_node(&mut self, path: &NodePath);
 
     /// Syncs the node's relationships in the db with the file system.
-    fn index_node_connections(&mut self, path: NodePath);
+    fn index_node_connections(&mut self, path: &NodePath);
 
     /// Delete all dead nodes from the graph. 
     fn cleanup_dead_nodes(&mut self);
@@ -47,7 +57,9 @@ pub trait Graph {
     /// Gets the name of the root directory without the full path
     fn root_name(&self) -> String;
 
+}
 
+pub(crate) trait GraphNtype {
     // -------------------------------------------------------------------
     // Nodetypes 
 
@@ -57,6 +69,9 @@ pub trait Graph {
 
     fn instance_nodetype(&self);
 
+}
+
+pub(crate) trait GraphNode {
     // -------------------------------------------------------------------
     // Nodes
 
@@ -103,10 +118,10 @@ pub trait Graph {
         parent_path: Option<NodePath>,
         name: &str,
         ntype: Option<TypeName>,
-    ) -> Result<(), Box<dyn Error>>;
+    );
 
     /// Inserts a Node.
-    fn insert_node(&mut self, node: Node) -> Result<(), agdb::DbError>;
+    fn insert_node(&mut self, node: Node) -> Result<(), Box<dyn Error>>;
 
     /// Deletes a node.
     ///
@@ -118,18 +133,24 @@ pub trait Graph {
     fn delete_node(&self, path: PathBuf, files: bool, dirs: bool) -> Result<(), agdb::DbError>;
 
     /// Insert attributes to a node. Ignore reserved attribute names. Update attributes that already exist.
-    fn insert_node_attr(
+    fn insert_node_attrs(
         &mut self,
         path: NodePath,
-        attr: Attribute,
+        attrs: Vec<Attribute>,
     ) -> Result<(), Box<dyn Error>>;
+
+    /// Get node attributes
+    fn get_node_attrs(
+        &self,
+        path: NodePath,
+    ) -> Result<Vec<Attribute>, Box<dyn Error>>;
 
     /// Delete attributes from a node. Ignore reserved attribute names.
     fn delete_node_attr(
         &mut self,
         path: NodePath,
         attr_name: &str,
-    );
+    ) -> Result<(), Box<dyn Error>>;
 
     /// Merges a vector of nodes into the last one.
     fn merge_nodes(&self, nodes: Vec<NodePath>) -> Result<(), agdb::DbError>;
@@ -140,7 +161,9 @@ pub trait Graph {
 
     // pub fn set_pin_on nodes
 
+}
 
+pub(crate) trait GraphEdge {
     // -------------------------------------------------------------------
     // Edges
 
@@ -171,7 +194,7 @@ pub trait Graph {
         edge: Edge,
         from: &NodePath,
         to: &NodePath,
-    );
+    ) ->  Result<(), Box<dyn Error>>;
 
     fn insert_edge(&self, edge: Edge) -> Result<(), Box<dyn Error>>;
 

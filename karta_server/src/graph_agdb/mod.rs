@@ -1,14 +1,20 @@
 use std::{error::Error, path::PathBuf};
 
 use agdb::{CountComparison, DbElement, DbError, DbId, DbUserValue, QueryBuilder, QueryError};
+use crate::graph_traits::Graph;
 
-use crate::{elements, nodetype::TypeName, path_ser};
+use crate::{elements, nodetype::TypeName};
 use elements::*;
+
+pub (crate) mod graph_core;
+pub (crate) mod graph_ntype;
+pub (crate) mod graph_node;
+pub (crate) mod graph_edge;
 
 /// The main graph structure to be interacted with.
 ///
 /// Bevy_fs_graph will instantiate this as a Resource through a newtype.
-pub struct Graph {
+pub struct GraphAgdb {
     /// The name of the application using this library.
     name: String,
 
@@ -47,16 +53,9 @@ enum GraphDb {
     File(agdb::DbFile),
 }
 
-// ------------------------------------------------------------------
-// In the event that the backend database is to be changed,
-// the following implementations could be turned into traits.
-// This would allow for the db to be changed without changing the library.
-// Storing the database in text files could be reimplemented this way.
-// ------------------------------------------------------------------
+impl Graph for GraphAgdb {}
 
-/// Implementation block for the Graph struct itself.
-/// Includes constructors and utility functions.
-impl Graph {
+impl GraphAgdb {
     /// Direct getter for the db. Not recommended to use. If possible, 
     /// use the other implemented functions. They are the intended way
     /// of interacting with the db.
@@ -70,6 +69,30 @@ impl Graph {
     pub fn db_mut(&mut self) -> &mut agdb::Db {
         &mut self.db
     }
+}
+
+// ------------------------------------------------------------------
+// In the event that the backend database is to be changed,
+// the following implementations could be turned into traits.
+// This would allow for the db to be changed without changing the library.
+// Storing the database in text files could be reimplemented this way.
+// ------------------------------------------------------------------
+
+// Update: the conversion has happened, and the trait impls are now in submodules. 
+// The rest of the basic impl will be commented out until it's safe to remove. 
+
+
+
+
+
+// ------------------------------------------------------------------
+// ------------------------------------------------------------------
+// ------------------------------------------------------------------
+// The following is the original implementation of the GraphAgdb struct.
+
+/// Implementation block for the Graph struct itself.
+/// Includes constructors and utility functions.
+impl GraphAgdb {
 
     pub fn root_path(&self) -> PathBuf {
         self.root_path.clone()
@@ -101,7 +124,7 @@ impl Graph {
 
         let mut db = db.expect("Failed to create db");
         
-        let mut giraphe = Graph {
+        let mut giraphe = GraphAgdb {
             name: name.to_string(),
             db,
             root_path: root_path.into(),
@@ -126,7 +149,7 @@ impl Graph {
 
         let mut db = db.expect("Failed to create db");
 
-        let mut giraphe = Graph {
+        let mut giraphe = GraphAgdb {
             name: name.to_string(),
             db,
             root_path: root_path.into(),
@@ -192,7 +215,7 @@ impl Graph {
             }
         }
         // Create an edge between the root and attributes nodes
-        Graph::parent_nodes_by_dbids(&mut self.db, rt_id, atr_node.unwrap().ids().first().unwrap());
+        GraphAgdb::parent_nodes_by_dbids(&mut self.db, rt_id, atr_node.unwrap().ids().first().unwrap());
 
 
         // Archetype ------------------------------------------------
@@ -218,7 +241,7 @@ impl Graph {
             }
         }
         // Create an edge between the root and settings nodes
-        Graph::parent_nodes_by_dbids(&mut self.db, rt_id, set_node.unwrap().ids().first().unwrap());
+        GraphAgdb::parent_nodes_by_dbids(&mut self.db, rt_id, set_node.unwrap().ids().first().unwrap());
 
 
         // Archetype ------------------------------------------------
@@ -245,7 +268,7 @@ impl Graph {
             }
         }
         // Create an edge between the root and nodecategories nodes
-        Graph::parent_nodes_by_dbids(&mut self.db, rt_id, nca_node.unwrap().ids().first().unwrap());
+        GraphAgdb::parent_nodes_by_dbids(&mut self.db, rt_id, nca_node.unwrap().ids().first().unwrap());
     }
 
     /// Syncs a node in the db with the file system
@@ -339,7 +362,7 @@ impl Graph {
 }
 
 /// Implementation block for handling node types.
-impl Graph {
+impl GraphAgdb {
     pub fn get_node_types(&self) -> Result<Vec<TypeName>, DbError> {
         todo!()
     }
@@ -352,7 +375,7 @@ impl Graph {
 }
 
 /// Implementation block for handling nodes.
-impl Graph {
+impl GraphAgdb {
     /// Retrieves a particular node's data from the database.
     /// The path is relative to the root of the graph.
     pub fn open_node(&self, path: NodePath) -> Result<Node, DbError> {
@@ -490,12 +513,12 @@ impl Graph {
 
                             let parent_id = n.unwrap().id;
 
-                            Graph::parent_nodes_by_dbids(&mut self.db, &parent_id, &nid)
+                            GraphAgdb::parent_nodes_by_dbids(&mut self.db, &parent_id, &nid)
                         }
                     }
                     None => {
                         // If the parent is root, parent them and move along.
-                        Graph::parent_nodes_by_dbids(&mut self.db, &DbId(1), &nid)
+                        GraphAgdb::parent_nodes_by_dbids(&mut self.db, &DbId(1), &nid)
                     }
                 }
 
@@ -694,7 +717,7 @@ impl Graph {
 }
 
 /// Implementation block for handling edges.
-impl Graph {
+impl GraphAgdb {
     pub fn create_edge(
         &mut self,
         source_path: &NodePath,

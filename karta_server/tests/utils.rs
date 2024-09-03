@@ -2,10 +2,10 @@
 
 
 use directories::ProjectDirs;
-use fs_graph::graph::Graph;
+use fs_graph::graph_agdb::GraphAgdb;
 
 /// Graph setup function for tests. Always stores the db in the data_dir.
-pub fn setup_graph(test_name: &str) -> Graph {
+pub fn setup_graph(test_name: &str) -> GraphAgdb {
     println!("");
     println!("----------------------------------------------");
     println!("Creating graph for test: {}", test_name);
@@ -19,7 +19,7 @@ pub fn setup_graph(test_name: &str) -> Graph {
         .to_path_buf();
     let full_path = root.join(&name);
 
-    let graph = Graph::new(root.clone().into(), &name);
+    let graph = GraphAgdb::new(root.clone().into(), &name);
 
     assert_eq!(
         full_path.exists(),
