@@ -3,7 +3,7 @@ use std::error::Error;
 use super::{attribute::Attribute, edge::Edge, node_path::NodePath};
 
 
-pub(crate) trait GraphEdge {
+pub trait GraphEdge {
     fn get_edge_strict(
         &self, 
         from: &NodePath, 

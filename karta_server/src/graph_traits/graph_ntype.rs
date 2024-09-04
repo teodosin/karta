@@ -2,7 +2,7 @@ use std::error::Error;
 
 use crate::elements::nodetype::NodeType;
 
-pub(crate) trait GraphNtype {
+pub trait GraphNtype {
     // -------------------------------------------------------------------
     // Nodetypes
 

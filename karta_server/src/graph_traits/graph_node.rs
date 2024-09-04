@@ -4,7 +4,7 @@ use crate::elements::nodetype::NodeType;
 
 use super::{attribute::Attribute, node::Node, node_path::NodePath};
 
-pub(crate) trait GraphNode {
+pub trait GraphNode {
     // -------------------------------------------------------------------
     // Nodes
 

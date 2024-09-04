@@ -1,7 +1,7 @@
 use super::{node_path::NodePath, StoragePath};
 use std::path::PathBuf;
 
-pub(crate) trait GraphCore {
+pub trait GraphCore {
     fn storage_path(&self) -> StoragePath;
 
     fn user_root_dirpath(&self) -> PathBuf;
