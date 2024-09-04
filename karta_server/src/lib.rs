@@ -1,8 +1,8 @@
 #![allow(warnings)]
 
-pub(crate) mod elements;
-pub(crate) mod graph_agdb;
-pub(crate) mod graph_traits;
+pub mod elements;
+pub mod graph_agdb;
+pub mod graph_traits;
 
 mod utils;
 
