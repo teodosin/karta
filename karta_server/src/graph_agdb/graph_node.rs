@@ -236,7 +236,12 @@ impl GraphNode for GraphAgdb {
             }
         }
 
-        let attrs = attrs.iter()
+        // Error if attributes is empty
+        if attrs.is_empty() {
+            return Err("Attributes cannot be empty".into());
+        }
+
+        let filtered_attrs = attrs.iter()
             .filter(| attr | {
                 let slice = attr.name.as_str();
                 let is_reserved = RESERVED_NODE_ATTRS.contains(&slice);
@@ -252,9 +257,14 @@ impl GraphNode for GraphAgdb {
              })
             .collect::<Vec<agdb::DbKeyValue>>();
 
+        // Error if filtered attrs is empty
+        if filtered_attrs.is_empty() {
+            return Err("All insertion requests were for protected attributes".into());
+        }
+
         let added = self.db.exec_mut(
             &QueryBuilder::insert()
-                .values(vec!(attrs))
+                .values(vec!(filtered_attrs))
                 .ids(alias)
                 .query(),
         );

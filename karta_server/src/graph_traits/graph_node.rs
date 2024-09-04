@@ -107,7 +107,7 @@ mod tests {
     #![allow(warnings)]
 
     use crate::{
-        elements::{attribute::Attribute, node, node_path::NodePath},
+        elements::{attribute::{Attribute, RESERVED_NODE_ATTRS}, node, node_path::NodePath},
         graph_agdb::GraphAgdb,
         graph_traits::graph_edge::GraphEdge,
         utils::TestGraph,
@@ -360,88 +360,47 @@ mod tests {
         );
     }
 
-    // /// Insertion of attributes on non-existing nodes should fail.
-    // /// Insertion of attributes on a non-existing node shouldn't
-    // /// create the node.
-    // #[test]
-    // fn insertion_of_attributes_on_nonexisting_node() {
-    //     let func_name = "insertion_of_attributes_on_nonexisting_node";
-    //     let mut graph = setup_graph(func_name);
+    #[test]
+    fn reserved_node_attributes_cannot_be_inserted() {
+        let func_name = "reserved_node_attributes_cannot_be_inserted";
+        let file = TestGraph::new(func_name);
+        let mut graph = file.setup();
 
-    //     let path = NodePath::new("test".into());
+        let path = NodePath::from("test");
+        let node = graph.create_node_by_path(&path, None);
+        assert_eq!(node.is_ok(), true, "Node should be created");
 
-    //     let attr = Attribute {
-    //         name: "test".to_string(),
-    //         value: 10.0,
-    //     };
+        let protected = RESERVED_NODE_ATTRS;
 
-    //     let shouldfail = graph.insert_node_attrs(path.clone(), vec![attr.clone()]);
-    //     assert_eq!(
-    //         shouldfail.is_ok(),
-    //         false,
-    //         "Insertion of attr didn't fail, even though node doesn't exist"
-    //     );
+        protected.iter().for_each(|attr| {
+            let attr = Attribute {
+                name: attr.to_string(),
+                value: 10.0,
+            };
 
-    //     cleanup_graph(&func_name);
-    // }
+            let added = graph.insert_node_attrs(&path, vec![attr]);
+            assert_eq!(added.is_ok(), false, "Attribute should not be added");
+        });
 
-    // #[test]
-    // fn insert_and_delete_multiple_attributes() {
-    //     let func_name = "insert_and_delete_multiple_attributes";
-    //     let mut graph = setup_graph(func_name);
+    }
 
-    //     let path = NodePath::new("test".into());
+    #[test]
+    fn reserved_node_attributes_cannot_be_deleted() {
+        let func_name = "reserved_node_attributes_cannot_be_deleted";
+        let file = TestGraph::new(func_name);
+        let mut graph = file.setup();
 
-    //     let node = graph.create_node_by_path(path.clone(), None);
+        let path = NodePath::from("test");
+        let node = graph.create_node_by_path(&path, None);
+        assert_eq!(node.is_ok(), true, "Node should be created");
 
-    //     todo!();
+        let attr_names = RESERVED_NODE_ATTRS;
 
-    //     cleanup_graph(&func_name);
-    // }
-
-    // #[test]
-    // fn protect_reserved_node_attributes() {
-    //     let func_name = "protect_reserved_attributes";
-    //     let mut graph = setup_graph(func_name);
-
-    //     use fs_graph::elements::RESERVED_NODE_ATTRS;
-
-    //     let test_attr = "preview";
-    //     assert!(RESERVED_NODE_ATTRS.contains(&test_attr));
-
-    //     let path = NodePath::from("test");
-
-    //     let node = graph.create_node_by_path(path.clone(), None);
-    //     assert_eq!(node.is_ok(), true);
-
-    //     let attr = Attribute {
-    //         name: test_attr.to_string(),
-    //         value: 10.0,
-    //     };
-
-    //     let added = graph.insert_node_attrs(path.clone(), vec![attr]);
-
-    //     assert_eq!(added.is_ok(), true);
-    //     let nod = graph.db().exec(
-    //         &QueryBuilder::select()
-    //             .values(vec![])
-    //             .ids(path.alias())
-    //             .query(),
-    //     );
-    //     assert!(nod.is_ok());
-    //     let nods = nod.unwrap();
-    //     let nods = nods.elements;
-    //     assert_eq!(nods.len(), 1);
-    //     let nods = nods.first().unwrap();
-    //     let mut nods = &nods.values;
-    //     let nods: Vec<agdb::DbValue> = nods.iter().map(|nod| nod.key.clone()).collect();
-    //     assert!(!nods.contains(&"preview".into()));
-
-    //     let removed = graph.delete_node_attr(path, "ntype");
-    //     assert_eq!(removed.is_ok(), false);
-
-    //     cleanup_graph(&func_name);
-    // }
+        attr_names.iter().for_each(|name| {
+            let deleted = graph.delete_node_attrs(&path, vec![*name]);
+            assert_eq!(deleted.is_ok(), false, "Reserved attribute {} should not be deleted", name);
+        });
+    }
 
     // #[test]
     // fn opening_root_connections() {
