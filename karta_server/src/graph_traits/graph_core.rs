@@ -59,7 +59,7 @@ mod tests {
         elements::node_path::NodePath,
         graph_agdb::GraphAgdb,
         graph_traits::{graph_core::GraphCore, graph_edge::GraphEdge, graph_node::GraphNode},
-        utils::TestGraph,
+        utils::TestContext,
     };
 
     /// Add a node to the db, then create a new graph with the same name.
@@ -68,17 +68,15 @@ mod tests {
     fn graph_with_same_name_exists__use_the_existing_and_dont_create_new() {
         let func_name = "graph_with_same_name_exists__use_the_existing_and_dont_create_new";
 
-        let mut fdb = TestGraph::new(func_name);
-        let mut first = fdb.setup();
+        let mut first = TestContext::new(func_name);
 
         let node_path = NodePath::new(PathBuf::from("test"));
 
-        first.create_node_by_path(&node_path, None);
+        first.graph.create_node_by_path(&node_path, None);
 
-        let sdb = TestGraph::new(func_name);
-        let second = sdb.setup();
+        let second = TestContext::new(func_name);
 
-        let root_node_result = second.open_node(&node_path);
+        let root_node_result = second.graph.open_node(&node_path);
 
         println!("Root node result: {:#?}", root_node_result);
 
@@ -88,6 +86,8 @@ mod tests {
     #[test]
     fn create_graph_db_file_in_custom_storage_directory() {
         let func_name = "create_graph_db_file_in_custom_storage_directory";
+        let ctx = TestContext::custom_storage(func_name);
+
         let name = format!("fs_graph_test_{}", func_name);
         let root = ProjectDirs::from("com", "fs_graph", &name)
             .unwrap()
@@ -128,28 +128,27 @@ mod tests {
     /// Test whether the db creates attributes/settings/etc. nodes when the db is first created.
     fn creating_new_graph_creates_archetype_nodes() {
         let func_name = "creating_new_graph_creates_archetype_nodes";
-        let file = TestGraph::new(func_name);
-        let graph = file.setup();
+        let ctx = TestContext::new(func_name);
 
         let root_path = NodePath::root();
-        let root_node = graph.open_node(&root_path);
+        let root_node = ctx.graph.open_node(&root_path);
 
         assert_eq!(root_node.is_ok(), true, "Root node not found");
 
 
 
         let atr_path = NodePath::new("attributes".into());
-        let atr_node = graph.open_node(&atr_path);
+        let atr_node = ctx.graph.open_node(&atr_path);
 
         assert_eq!(atr_node.is_ok(), true, "Attributes node not found");
 
-        let edge = graph.get_edge(&root_path, &atr_path);
+        let edge = ctx.graph.get_edge(&root_path, &atr_path);
         assert_eq!(edge.is_ok(), true, "Edge not found");
 
         
 
         let settings_path = NodePath::new("settings".into());
-        let settings_node = graph.open_node(&settings_path);
+        let settings_node = ctx.graph.open_node(&settings_path);
 
         assert_eq!(
             settings_node.is_ok(),
@@ -157,13 +156,13 @@ mod tests {
             "Settings node not found"
         );
 
-        let edge = graph.get_edge(&root_path, &settings_path);
+        let edge = ctx.graph.get_edge(&root_path, &settings_path);
         assert_eq!(edge.is_ok(), true, "Edge not found");
 
 
 
         let nodetypes_path = NodePath::new("nodetypes".into());
-        let nodetypes_node = graph.open_node(&nodetypes_path);
+        let nodetypes_node = ctx.graph.open_node(&nodetypes_path);
 
         assert_eq!(
             nodetypes_node.is_ok(),
@@ -171,7 +170,7 @@ mod tests {
             "Node types node not found"
         );
 
-        let edge = graph.get_edge(&root_path, &nodetypes_path);
+        let edge = ctx.graph.get_edge(&root_path, &nodetypes_path);
         assert_eq!(edge.is_ok(), true, "Edge not found");
     }
 

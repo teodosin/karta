@@ -110,7 +110,7 @@ mod tests {
         elements::{attribute::{Attribute, RESERVED_NODE_ATTRS}, node, node_path::NodePath},
         graph_agdb::GraphAgdb,
         graph_traits::graph_edge::GraphEdge,
-        utils::TestGraph,
+        utils::TestContext,
     };
     use agdb::QueryBuilder;
 
@@ -121,11 +121,10 @@ mod tests {
     #[test]
     fn fresh_graph_root_node_should_exist_and_be_openable() {
         let func_name = "fresh_graph_root_node_should_exist_and_be_openable";
-        let file = TestGraph::new(func_name);
-        let graph = file.setup();
+        let ctx = TestContext::new(func_name);
 
         let root_path = NodePath::root();
-        let root_node = graph.open_node(&root_path);
+        let root_node = ctx.graph.open_node(&root_path);
 
         assert_eq!(
             root_node.is_ok(),
@@ -137,16 +136,15 @@ mod tests {
     #[test]
     fn create_node_and_open_it() {
         let func_name = "create_node_and_open_it";
-        let file = TestGraph::new(func_name);
-        let mut graph = file.setup();
+        let mut ctx = TestContext::new(func_name);
 
         let path = NodePath::new("test".into());
-        let node = graph.create_node_by_path(&path, None);
+        let node = ctx.graph.create_node_by_path(&path, None);
 
         assert_eq!(node.is_ok(), true, "Node should be created");
         let created_node = node.unwrap();
 
-        let opened_node = graph.open_node(&path);
+        let opened_node = ctx.graph.open_node(&path);
 
         assert_eq!(opened_node.is_ok(), true, "Node should be opened");
         let opened_node = opened_node.unwrap();
@@ -174,12 +172,11 @@ mod tests {
     #[test]
     fn opening_node_that_does_not_exist_fails() {
         let func_name = "opening_node_that_does_not_exist_fails";
-        let file = TestGraph::new(func_name);
-        let graph = file.setup();
+        let ctx = TestContext::new(func_name);
 
         let path = NodePath::from("test");
 
-        let node = graph.open_node(&path);
+        let node = ctx.graph.open_node(&path);
 
         assert_eq!(node.is_ok(), false, "Node should not be found nor opened");
     }
@@ -187,12 +184,11 @@ mod tests {
     #[test]
     fn can_create_nodes_with_long_paths() {
         let func_name = "can_create_nodes_with_long_paths";
-        let file = TestGraph::new(func_name);
-        let mut graph = file.setup();
+        let mut ctx = TestContext::new(func_name);
 
         let long_path = NodePath::from("this/is/a/long/path/with/many/segments/verylongindeed/evenlonger/wow/are/we/still/here/there/must/be/something/we/can/do/about/all/this/tech/debt");
 
-        let node = graph.create_node_by_path(&long_path, None);
+        let node = ctx.graph.create_node_by_path(&long_path, None);
 
         assert_eq!(
             node.is_ok(),
@@ -213,22 +209,21 @@ mod tests {
     #[test]
     fn creating_node_with_deep_path_creates_intermediate_nodes() {
         let func_name = "creating_node_with_deep_path_creates_intermediate_nodes";
-        let file = TestGraph::new(func_name);
-        let mut graph = file.setup();
+        let mut ctx = TestContext::new(func_name);
 
         let path = NodePath::from("one/two/three");
         let mut parent = path.clone().parent().unwrap();
         let mut grandparent = parent.clone().parent().unwrap();
 
         // only create the child
-        let node = graph.create_node_by_path(&path, None);
+        let node = ctx.graph.create_node_by_path(&path, None);
         assert_eq!(node.is_ok(), true, "Node should be created");
 
         // parent and grandparent should also exist now
-        let parent_node = graph.open_node(&parent);
+        let parent_node = ctx.graph.open_node(&parent);
         assert_eq!(parent_node.is_ok(), true, "Parent node should exist");
 
-        let grandparent_node = graph.open_node(&grandparent);
+        let grandparent_node = ctx.graph.open_node(&grandparent);
         assert_eq!(
             grandparent_node.is_ok(),
             true,
@@ -236,7 +231,7 @@ mod tests {
         );
 
         // make sure they are connected by edges
-        let parent_to_child_edge = graph.get_edge(&parent, &path);
+        let parent_to_child_edge = ctx.graph.get_edge(&parent, &path);
         assert_eq!(
             parent_to_child_edge.is_ok(),
             true,
@@ -247,7 +242,7 @@ mod tests {
         assert_eq!(*pce.source(), parent, "Parent should be source");
         assert_eq!(*pce.target(), path, "Child should be target");
 
-        let grandparent_to_parent_edge = graph.get_edge(&grandparent, &parent);
+        let grandparent_to_parent_edge = ctx.graph.get_edge(&grandparent, &parent);
         assert_eq!(
             grandparent_to_parent_edge.is_ok(),
             true,
@@ -274,11 +269,10 @@ mod tests {
     #[test]
     fn able_to_insert_and_delete_node_attributes() {
         let func_name = "able_to_insert_and_delete_node_attributes";
-        let file = TestGraph::new(func_name);
-        let mut graph = file.setup();
-
+        let mut ctx = TestContext::new(func_name);
+        
         let path = NodePath::from("test");
-        let node = graph.create_node_by_path(&path, None);
+        let node = ctx.graph.create_node_by_path(&path, None);
 
         assert_eq!(node.is_ok(), true, "Node should be created");
         let node = node.unwrap();
@@ -294,10 +288,10 @@ mod tests {
             },
         ];
 
-        let added = graph.insert_node_attrs(&path, attrs.clone());
+        let added = ctx.graph.insert_node_attrs(&path, attrs.clone());
         assert_eq!(added.is_ok(), true, "Attributes should be added");
 
-        let opened_node = graph.open_node(&path);
+        let opened_node = ctx.graph.open_node(&path);
         assert_eq!(opened_node.is_ok(), true, "Node should be opened");
         let opened_node = opened_node.unwrap();
 
@@ -318,10 +312,10 @@ mod tests {
             .map(|attr| &attr.name as &str)
             .collect::<Vec<&str>>();
 
-        let deleted = graph.delete_node_attrs(&path, attr_names.clone());
+        let deleted = ctx.graph.delete_node_attrs(&path, attr_names.clone());
         assert_eq!(deleted.is_ok(), true, "Attributes should be deleted");
 
-        let opened_node_no_attrs = graph.open_node(&path);
+        let opened_node_no_attrs = ctx.graph.open_node(&path);
         assert_eq!(opened_node_no_attrs.is_ok(), true, "Node should be opened");
 
         let opened_node_no_attrs = opened_node_no_attrs.unwrap();
@@ -341,8 +335,7 @@ mod tests {
     #[test]
     fn insertion_of_attributes_on_nonexisting_node_should_fail() {
         let func_name = "insertion_of_attributes_on_nonexisting_node_should_fail";
-        let file = TestGraph::new(func_name);
-        let mut graph = file.setup();
+        let mut ctx = TestContext::new(func_name);
 
         let fakepath = NodePath::from("fakepath");
 
@@ -351,7 +344,7 @@ mod tests {
             value: 10.0,
         }];
 
-        let shouldfail = graph.insert_node_attrs(&fakepath, attr);
+        let shouldfail = ctx.graph.insert_node_attrs(&fakepath, attr);
 
         assert_eq!(
             shouldfail.is_ok(),
@@ -363,11 +356,10 @@ mod tests {
     #[test]
     fn reserved_node_attributes_cannot_be_inserted() {
         let func_name = "reserved_node_attributes_cannot_be_inserted";
-        let file = TestGraph::new(func_name);
-        let mut graph = file.setup();
+        let mut ctx = TestContext::new(func_name);
 
         let path = NodePath::from("test");
-        let node = graph.create_node_by_path(&path, None);
+        let node = ctx.graph.create_node_by_path(&path, None);
         assert_eq!(node.is_ok(), true, "Node should be created");
 
         let protected = RESERVED_NODE_ATTRS;
@@ -378,7 +370,7 @@ mod tests {
                 value: 10.0,
             };
 
-            let added = graph.insert_node_attrs(&path, vec![attr]);
+            let added = ctx.graph.insert_node_attrs(&path, vec![attr]);
             assert_eq!(added.is_ok(), false, "Attribute should not be added");
         });
 
@@ -387,17 +379,16 @@ mod tests {
     #[test]
     fn reserved_node_attributes_cannot_be_deleted() {
         let func_name = "reserved_node_attributes_cannot_be_deleted";
-        let file = TestGraph::new(func_name);
-        let mut graph = file.setup();
+        let mut ctx = TestContext::new(func_name);
 
         let path = NodePath::from("test");
-        let node = graph.create_node_by_path(&path, None);
+        let node = ctx.graph.create_node_by_path(&path, None);
         assert_eq!(node.is_ok(), true, "Node should be created");
 
         let attr_names = RESERVED_NODE_ATTRS;
 
         attr_names.iter().for_each(|name| {
-            let deleted = graph.delete_node_attrs(&path, vec![*name]);
+            let deleted = ctx.graph.delete_node_attrs(&path, vec![*name]);
             assert_eq!(deleted.is_ok(), false, "Reserved attribute {} should not be deleted", name);
         });
     }
