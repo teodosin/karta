@@ -1,8 +1,8 @@
 //lib
 
 use bevy::{prelude::*, log::LogPlugin, window::WindowResolution};
-use bevy_fs_graph::core_plugin::KartaCorePlugin;
-use bevy_overlay_graph::OverlayGraphPlugin;
+use bevy_fs_graph::prelude::*;
+use bevy_overlay_graph::prelude::*;
 
 
 

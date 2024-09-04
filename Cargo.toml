@@ -13,11 +13,8 @@ dev = [
 ]
 
 [dependencies]
-bevy = { version = "0.14.0", features = ["bevy_asset","jpeg", "bmp", "tga","webp", "file_watcher", "exr"] }
+bevy = { version = "0.14.1", features = ["bevy_asset","jpeg", "bmp", "tga","webp", "file_watcher", "exr"] }
 
-# Karta subcrates
-bevy_fs_graph = { git = "https://github.com/teodosin/bevy_fs_graph", branch="main"}
-bevy_overlay_graph = { git = "https://github.com/teodosin/bevy_overlay_graph", branch="main" }
 
 ron = "0.8.1"
 thiserror = "1.0"
@@ -28,6 +25,14 @@ bevy_embedded_assets = "0.11"
 blake3 = { version = "1.5", features=["pure"] }
 cross = "0.2.5"
 
+# Karta subcrates
+bevy_fs_graph = { git = "https://github.com/teodosin/bevy_fs_graph", branch="main"}
+bevy_overlay_graph = { git = "https://github.com/teodosin/bevy_overlay_graph", branch="main" }
+
+[patch."https://github.com/teodosin/bevy_fs_graph.git"]
+bevy_fs_graph = { path = "../bevy_fs_graph" }
+[patch."https://github.com/teodosin/bevy_overlay_graph.git"]
+bevy_overlay_graph = { path = "../bevy_overlay_graph" }
 
 
 [profile.dev]
