@@ -171,7 +171,13 @@ mod tests {
         let func_name = "can_create_nodes_with_long_paths";
         let mut ctx = TestContext::new(func_name);
 
-        let long_path = NodePath::from("this/is/a/long/path/with/many/segments/verylongindeed/evenlonger/wow/are/we/still/here/there/must/be/something/we/can/do/about/all/this/tech/debt");
+        // let long_path = NodePath::from("this/is/a/long/path/with/many/segments/verylongindeed/evenlonger/wow/are/we/still/here/there/must/be/something/we/can/do/about/all/this/tech/debt");
+        let mut long_buf = PathBuf::from("");
+        let depth = 30;
+        for i in 0..depth {
+            long_buf = long_buf.join(i.to_string());
+        }
+        let long_path = NodePath::new(long_buf);
 
         let node = ctx.graph.create_node_by_path(&long_path, None);
 
