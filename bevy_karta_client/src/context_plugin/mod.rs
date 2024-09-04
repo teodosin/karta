@@ -34,9 +34,9 @@ impl CurrentContext {
     pub fn empty() -> Self {
         CurrentContext {
             context: None,
-            undo_stack: todo!(),
-            redo_stack: todo!(),
-            setting_from_undo_redo: todo!(),
+            undo_stack: Vec::new(),
+            redo_stack: Vec::new(),
+            setting_from_undo_redo: false,
         }
     }
 }
