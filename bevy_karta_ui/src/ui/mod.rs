@@ -53,7 +53,7 @@ impl Plugin for KartaUiPlugin {
 
             .add_plugins(NodesUiPlugin)
             // .add_plugins(EdgeUiPlugin)
-            .add_plugins(InfiniteGrid2DPlugin)
+            // .add_plugins(InfiniteGrid2DPlugin)
             
             // Element Systems
             .add_systems(PostUpdate, popup::popup_position_system.after(UiSystem::Layout))
