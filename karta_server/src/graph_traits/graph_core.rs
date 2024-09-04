@@ -128,6 +128,11 @@ mod tests {
 
         assert_eq!(userroot_path.parent().unwrap(), root_path);
 
+        let userroot_node = ctx.graph.open_node(&userroot_path);
+        assert_eq!(userroot_node.is_ok(), true);
+
+        let edge = ctx.graph.get_edge_strict(&root_path, &userroot_path);
+        assert_eq!(edge.is_ok(), true);
     }
 
     #[test]
@@ -148,7 +153,7 @@ mod tests {
 
         assert_eq!(atr_node.is_ok(), true, "Attributes node not found");
 
-        let edge = ctx.graph.get_edge(&root_path, &atr_path);
+        let edge = ctx.graph.get_edge_strict(&root_path, &atr_path);
         assert_eq!(edge.is_ok(), true, "Edge not found");
 
         
@@ -162,7 +167,7 @@ mod tests {
             "Settings node not found"
         );
 
-        let edge = ctx.graph.get_edge(&root_path, &settings_path);
+        let edge = ctx.graph.get_edge_strict(&root_path, &settings_path);
         assert_eq!(edge.is_ok(), true, "Edge not found");
 
 
@@ -176,7 +181,7 @@ mod tests {
             "Node types node not found"
         );
 
-        let edge = ctx.graph.get_edge(&root_path, &nodetypes_path);
+        let edge = ctx.graph.get_edge_strict(&root_path, &nodetypes_path);
         assert_eq!(edge.is_ok(), true, "Edge not found");
     }
 

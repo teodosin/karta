@@ -2,7 +2,7 @@ use std::{error::Error, path::PathBuf};
 
 use agdb::{DbElement, DbId, QueryBuilder};
 
-use crate::{elements::{nodetype::TypeName, self, edge::Edge}, graph_traits::graph_node::GraphNode};
+use crate::{elements::{nodetype::NodeType, self, edge::Edge}, graph_traits::graph_node::GraphNode};
 
 use super::{attribute::{Attribute, RESERVED_NODE_ATTRS}, node::Node, node_path::NodePath, GraphAgdb, StoragePath};
 
@@ -54,7 +54,7 @@ impl GraphNode for GraphAgdb {
     fn create_node_by_path(
         &mut self,
         path: &NodePath,
-        ntype: Option<TypeName>,
+        ntype: Option<NodeType>,
     ) -> Result<Node, Box<dyn Error>> {
 
         let full_path = path.full(&self.root_path);
@@ -79,7 +79,7 @@ impl GraphNode for GraphAgdb {
         // Determine type of node. If not specified, it's an Other node.
         let mut ntype = match ntype {
             Some(ntype) => ntype,
-            None => TypeName::other(),
+            None => NodeType::other(),
         };
 
         // Check if the node is physical in the file system.
@@ -88,9 +88,9 @@ impl GraphNode for GraphAgdb {
         let is_dir = full_path.is_dir();
 
         if is_file {
-            ntype = TypeName::new("File".to_string());
+            ntype = NodeType::new("File".to_string());
         } else if is_dir {
-            ntype = TypeName::new("Directory".to_string());
+            ntype = NodeType::new("Directory".to_string());
         }
 
         let node = Node::new(&path.clone(), ntype);
@@ -117,7 +117,7 @@ impl GraphNode for GraphAgdb {
 
                             let n = self.create_node_by_path(
                                 &parent_path,
-                                Some(TypeName::other()),
+                                Some(NodeType::other()),
                             );
 
                             match n {
@@ -154,7 +154,7 @@ impl GraphNode for GraphAgdb {
         &mut self,
         parent_path: Option<NodePath>,
         name: &str,
-        ntype: Option<TypeName>,
+        ntype: Option<NodeType>,
     ) -> Result<Node, Box<dyn Error>> {
         let parent_path = parent_path.unwrap_or_else(|| NodePath::new("".into()));
 

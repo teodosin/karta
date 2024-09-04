@@ -1,6 +1,6 @@
 use std::{error::Error, path::PathBuf};
 
-use crate::elements::nodetype::TypeName;
+use crate::elements::nodetype::NodeType;
 
 use super::{attribute::Attribute, node::Node, node_path::NodePath};
 
@@ -40,7 +40,7 @@ pub(crate) trait GraphNode {
     fn create_node_by_path(
         &mut self,
         path: &NodePath,
-        ntype: Option<TypeName>,
+        ntype: Option<NodeType>,
     ) -> Result<Node, Box<dyn Error>>;
 
     /// Creates a node under a given parent with the given name.
@@ -50,7 +50,7 @@ pub(crate) trait GraphNode {
         &mut self,
         parent_path: Option<NodePath>,
         name: &str,
-        ntype: Option<TypeName>,
+        ntype: Option<NodeType>,
     ) -> Result<Node, Box<dyn Error>>;
 
     /// Inserts a Node.
@@ -222,7 +222,7 @@ mod tests {
         );
 
         // make sure they are connected by edges
-        let parent_to_child_edge = ctx.graph.get_edge(&parent, &path);
+        let parent_to_child_edge = ctx.graph.get_edge_strict(&parent, &path);
         assert_eq!(
             parent_to_child_edge.is_ok(),
             true,
@@ -233,7 +233,7 @@ mod tests {
         assert_eq!(*pce.source(), parent, "Parent should be source");
         assert_eq!(*pce.target(), path, "Child should be target");
 
-        let grandparent_to_parent_edge = ctx.graph.get_edge(&grandparent, &parent);
+        let grandparent_to_parent_edge = ctx.graph.get_edge_strict(&grandparent, &parent);
         assert_eq!(
             grandparent_to_parent_edge.is_ok(),
             true,

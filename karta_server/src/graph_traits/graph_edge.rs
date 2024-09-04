@@ -4,7 +4,7 @@ use super::{attribute::Attribute, edge::Edge, node_path::NodePath};
 
 
 pub(crate) trait GraphEdge {
-    fn get_edge(
+    fn get_edge_strict(
         &self, 
         from: &NodePath, 
         to: &NodePath

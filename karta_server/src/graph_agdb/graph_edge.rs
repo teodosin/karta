@@ -7,7 +7,7 @@ use crate::{elements, graph_traits::graph_edge::GraphEdge};
 use super::{attribute::{Attribute, RESERVED_EDGE_ATTRS}, edge::Edge, node_path::NodePath, GraphAgdb, StoragePath};
 
 impl GraphEdge for GraphAgdb {
-    fn get_edge(
+    fn get_edge_strict(
         &self,
         from: &NodePath,
         to: &NodePath,

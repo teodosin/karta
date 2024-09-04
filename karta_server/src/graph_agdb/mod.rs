@@ -3,7 +3,7 @@ use std::{error::Error, path::PathBuf};
 use agdb::{CountComparison, DbElement, DbError, DbId, DbUserValue, QueryBuilder, QueryError};
 use crate::graph_traits::{Graph, StoragePath};
 
-use crate::{elements, elements::nodetype::TypeName};
+use crate::{elements, elements::nodetype::NodeType};
 use elements::*;
 
 pub (crate) mod graph_core;

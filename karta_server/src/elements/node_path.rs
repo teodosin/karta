@@ -34,9 +34,9 @@ impl NodePath {
         
         // Add root/ prefix to path if not empty. If empty, just root
         if str.len() > 0 {
-            alias = format!("root/{}", str);
+            alias = format!("/{}", str);
         } else {
-            alias = String::from("root");
+            alias = String::from("/");
         }
     
         alias
@@ -47,7 +47,7 @@ impl NodePath {
         let buf = PathBuf::from(alias);
 
         // Remove root/ prefix from path
-        let newbuf =  match buf.strip_prefix("root/") {
+        let newbuf =  match buf.strip_prefix("/") {
             Ok(buf) => PathBuf::from(buf),
             Err(_) => buf,
         };
