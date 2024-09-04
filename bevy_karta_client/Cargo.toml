@@ -8,4 +8,9 @@ edition = "2021"
 [dependencies]
 bevy = "0.14.1"
 directories = "5.0.1"
+
+
 fs_graph = { git = "https://github.com/teodosin/fs_graph.git", branch = "main" }
+
+[patch."https://github.com/teodosin/fs_graph.git"]
+fs_graph = { path = "../fs_graph" }

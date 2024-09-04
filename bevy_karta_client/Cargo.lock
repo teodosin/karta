@@ -1821,7 +1821,6 @@ checksum = "aa9a19cbb55df58761df49b23516a86d432839add4af60fc256da840f66ed35b"
 [[package]]
 name = "fs_graph"
 version = "0.1.0"
-source = "git+https://github.com/teodosin/fs_graph.git?branch=main#b08f78b53625d6961cee1d9848cb123a1e97d721"
 dependencies = [
  "agdb",
  "directories",
