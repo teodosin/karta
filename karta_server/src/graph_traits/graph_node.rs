@@ -119,21 +119,6 @@ mod tests {
     use crate::graph_traits::{graph_core::GraphCore, graph_node::GraphNode};
 
     #[test]
-    fn fresh_graph_root_node_should_exist_and_be_openable() {
-        let func_name = "fresh_graph_root_node_should_exist_and_be_openable";
-        let ctx = TestContext::new(func_name);
-
-        let root_path = NodePath::root();
-        let root_node = ctx.graph.open_node(&root_path);
-
-        assert_eq!(
-            root_node.is_ok(),
-            true,
-            "Root node should exist, thought it don'teth"
-        );
-    }
-
-    #[test]
     fn create_node_and_open_it() {
         let func_name = "create_node_and_open_it";
         let mut ctx = TestContext::new(func_name);

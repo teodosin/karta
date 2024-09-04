@@ -1,11 +1,13 @@
-
 use agdb::{DbError, DbValue};
 
 use crate::elements::node;
 
-// Some of the structs and enums in this file are currently not used. 
-// Determining a sound architecture for node types is difficult and 
-// not urgent quite yet. 
+// Some of the structs and enums in this file are currently not used.
+// Determining a sound architecture for node types is difficult and
+// not urgent quite yet.
+
+
+const ARCHETYPES: [&str; 4] = ["root", "attribute", "nodetype", "settings"];
 
 pub struct NodeData;
 
@@ -43,7 +45,7 @@ impl From<NodePhysicality> for DbValue {
     }
 }
 
-/// Categories of physical nodes. 
+/// Categories of physical nodes.
 pub enum PhysCategory {
     Root,
     Directory,
@@ -53,12 +55,12 @@ pub enum PhysCategory {
 
 /// Categories of virtual nodes.
 pub enum VirtualCategory {
-    Archetype, 
+    Archetype,
     Data,
     Operator,
 }
 
-/// Data types that a node can contain or its socket can output. 
+/// Data types that a node can contain or its socket can output.
 pub enum DataType {
     String,
     Int,
@@ -82,7 +84,6 @@ pub enum DataType {
     Other,
 }
 
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypeName {
     type_name: String,
@@ -90,9 +91,7 @@ pub struct TypeName {
 
 impl TypeName {
     pub fn new(type_name: String) -> Self {
-        Self {
-            type_name,
-        }
+        Self { type_name }
     }
 
     /// Returns a node type that represents the root of the graph.
@@ -103,7 +102,7 @@ impl TypeName {
     }
 
     /// Type for root-level virtual nodes. Ie. attributes, nodetypes, settings,
-    /// other such archetypes. 
+    /// other such archetypes.
     pub fn archetype_type() -> Self {
         Self {
             type_name: "Archetype".to_string(),
