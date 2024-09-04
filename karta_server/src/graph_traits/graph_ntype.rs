@@ -18,10 +18,10 @@ mod tests {
 
     use std::path::PathBuf;
 
-    #[test]
-    fn new_node_has_type() {
-        let func_name = "new_node_has_type";
+    // #[test]
+    // fn new_node_has_type() {
+    //     let func_name = "new_node_has_type";
 
-        todo!();
-    }
+    //     todo!();
+    // }
 }

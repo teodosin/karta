@@ -67,13 +67,16 @@ mod tests {
     #[test]
     fn graph_with_same_name_exists__use_the_existing_and_dont_create_new() {
         let func_name = "graph_with_same_name_exists__use_the_existing_and_dont_create_new";
-        let mut first = TestGraph::new(func_name).setup();
+
+        let mut fdb = TestGraph::new(func_name);
+        let mut first = fdb.setup();
 
         let node_path = NodePath::new(PathBuf::from("test"));
 
         first.create_node_by_path(&node_path, None);
 
-        let second = TestGraph::new(func_name).setup();
+        let sdb = TestGraph::new(func_name);
+        let second = sdb.setup();
 
         let root_node_result = second.open_node(&node_path);
 
@@ -125,7 +128,8 @@ mod tests {
     /// Test whether the db creates attributes/settings/etc. nodes when the db is first created.
     fn creating_new_graph_creates_archetype_nodes() {
         let func_name = "creating_new_graph_creates_archetype_nodes";
-        let graph = TestGraph::new(func_name).setup();
+        let file = TestGraph::new(func_name);
+        let graph = file.setup();
 
         let root_path = NodePath::root();
         let root_node = graph.open_node(&root_path);

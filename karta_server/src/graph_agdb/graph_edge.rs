@@ -17,7 +17,6 @@ impl GraphEdge for GraphAgdb {
 
         let edge_query = self.db.exec(
             &QueryBuilder::search()
-            
             .from(from_al)
             .to(to_al)
             .query()
@@ -35,11 +34,23 @@ impl GraphEdge for GraphAgdb {
             .collect::<Vec<_>>();
 
         assert_eq!(edge_elems.len(), 1, "Expected only 1 edge, got {}", edge_elems.len());
-        let edge_elem = *edge_elems.first().unwrap();
+        let edge_id = edge_elems.first().unwrap().id;
 
-        println!("Edge element: {:#?}", edge_elem);
+        // The search doesn't return the values, so we have to do a separate select
+        // on the edge id. 
+        let keys = Vec::new();
+        let data_query = self.db.exec(
+            &QueryBuilder::select().values(keys).ids(edge_id).query()
+        );
 
-        let edge = Edge::try_from(edge_elem.clone());
+        if data_query.is_err() {
+            return Err("Failed to get edge data".into());
+        }
+        let data_query = data_query.unwrap();
+        let data_elem = data_query.elements.first().unwrap();
+        println!("Edge element: {:#?}", data_elem);
+
+        let edge = Edge::try_from(data_elem.clone());
 
         println!("Edge: {:#?}", edge);
 
