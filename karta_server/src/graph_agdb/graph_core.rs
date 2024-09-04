@@ -4,10 +4,10 @@ use agdb::QueryBuilder;
 
 use crate::{
     graph_traits::{self, graph_core::GraphCore, graph_node::GraphNode},
-    elements::nodetype::TypeName,
+    elements::nodetype::NodeType,
 };
 
-use super::{node::Node, node_path::NodePath, GraphAgdb, StoragePath};
+use super::{node::Node, node_path::NodePath, nodetype::ARCHETYPES, GraphAgdb, StoragePath};
 
 /// Implementation block for the Graph struct itself.
 /// Includes constructors and utility functions.
@@ -16,18 +16,20 @@ impl GraphCore for GraphAgdb {
         self.storage_path.clone()
     }
     
-    fn root_path(&self) -> PathBuf {
+    fn user_root_dirpath(&self) -> PathBuf {
         self.root_path.clone()
     }
 
     fn root_nodepath(&self) -> NodePath {
-        NodePath::new(self.root_path.clone())
+        NodePath::root()
     }
 
     /// Constructor. Panics if the db cannot be created.
     ///
-    /// Takes the desired root of the graph as a parameter and the name for the db.
-    ///
+    /// Takes the desired root directory of the graph as a parameter and the name for the db.
+    /// The name of the root directory will become the user_root of the graph,
+    /// as first child of the root node. 
+    /// 
     /// Creates the db at the storage_path, or initialises the db if it already exists there.
     ///
     /// TODO: Add error handling.
@@ -66,7 +68,10 @@ impl GraphCore for GraphAgdb {
             maintain_readable_files: false,
         };
 
+        println!("WE ARE ABOUT TO CREATE ARCHHHHH");
+
         if !open_existing {
+            println!("WE HAVE ENTERED THE IF");
             giraphe.init_archetype_nodes();
         }
 
@@ -79,95 +84,52 @@ impl GraphCore for GraphAgdb {
     /// settings,
     /// nodetypes
     fn init_archetype_nodes(&mut self) {
-        // Create the root node
-        let root_path = NodePath::root();
-        let root: Vec<Node> = vec![Node::new(&NodePath::new("".into()), TypeName::root_type())];
 
-        let rt_node = self.db.exec_mut(
-            &QueryBuilder::insert()
-                .nodes()
-                .aliases(root_path.alias())
-                .values(&root)
-                .query(),
-        );
-        match rt_node {
-            Ok(_) => {
-                println!("Created root node");
-            }
-            Err(ref err) => {
-                println!("Failed to create root node: {}", err);
-            }
-        }
+        let archetypes = ARCHETYPES;
 
-        // Create attributes node
-        // All user-defined attributes will be children of this node
-        let atr_path = NodePath::new("attributes".into());
-        let atr: Vec<Node> = vec![Node::new(&atr_path, TypeName::archetype_type())];
+        println!("Length of archetypes {}", archetypes.len());
 
-        let atr_node = self.db.exec_mut(
-            &QueryBuilder::insert()
-                .nodes()
-                .aliases(atr_path.alias())
-                .values(&atr)
-                .query(),
-        );
-        match atr_node {
-            Ok(_) => {
-                println!("Created attributes node");
-            }
-            Err(ref err) => {
-                println!("Failed to create attributes node: {}", err);
-            }
-        }
-        // Create an edge between the root and attributes nodes
-        self.autoparent_nodes(&root_path, &atr_path);
+        archetypes.iter().for_each(|at| {
+            println!("{}", at);
+        });
 
-        // Archetype ------------------------------------------------
-        // Create the settings node for global application settings
-        let set_path = NodePath::new("settings".into());
-        let set: Vec<Node> = vec![Node::new(&set_path, TypeName::archetype_type())];
 
-        let set_node = self.db.exec_mut(
-            &QueryBuilder::insert()
-                .nodes()
-                .aliases(set_path.alias())
-                .values(&set)
-                .query(),
-        );
-        match set_node {
-            Ok(_) => {
-                println!("Created settings node");
-            }
-            Err(ref err) => {
-                println!("Failed to create settings node: {}", err);
-            }
-        }
-        // Create an edge between the root and settings nodes
-        self.autoparent_nodes(&root_path, &set_path);
+        archetypes.iter().for_each(|atype| {
+            let atype_path = NodePath::from(*atype);
 
-        // Archetype ------------------------------------------------
-        // Create the nodetypes node for global node categories.
-        // Node types are then children of nodetypes or operators.
-        let nca_path = NodePath::new("nodetypes".into());
-        let nca: Vec<Node> = vec![Node::new(&nca_path, TypeName::archetype_type())];
+            println!("Creating archetype node: {}", atype_path.alias());
 
-        let nca_node = self.db.exec_mut(
-            &QueryBuilder::insert()
-                .nodes()
-                .aliases(nca_path.alias())
-                .values(&nca)
-                .query(),
-        );
-        match nca_node {
-            Ok(_) => {
-                println!("Created nodetypes node");
+            let ntype = if atype_path == NodePath::root() {
+                NodeType::root_type()
+            } else {
+                NodeType::archetype_type()
+            };
+
+            let node: Node = Node::new(&atype_path, ntype);
+
+            let query = self.db.exec_mut(
+                &QueryBuilder::insert()
+                    .nodes()
+                    .aliases(atype_path.alias())
+                    .values(&node)
+                    .query(),
+            );
+            
+            match query {
+                Ok(_) => {
+                    println!("Created archetype node: {}", atype_path.alias());
+                }
+                Err(ref err) => {
+                    panic!("Failed to create archetype node: {}", err);
+                    println!("Failed to create archetype node: {}", err);
+                }
             }
-            Err(ref err) => {
-                println!("Failed to create nodetypes node: {}", err);
+
+            if atype_path != NodePath::root() {
+                println!("trying to autoparent {:?} to {:?}", &NodePath::root(), &atype_path);
+                self.autoparent_nodes(&NodePath::root(), &atype_path);
             }
-        }
-        // Create an edge between the root and nodetypes nodes
-        self.autoparent_nodes(&root_path, &nca_path);
+        });
     }
 
     /// Syncs a node in the db with the file system
@@ -196,9 +158,9 @@ impl GraphCore for GraphAgdb {
                 .exec(&QueryBuilder::select().ids(node_alias.clone()).query());
             match nnode {
                 Ok(nnode) => {
-                    let mut ntype = TypeName::new("file".into());
+                    let mut ntype = NodeType::new("file".into());
                     if is_dir {
-                        ntype = TypeName::new("folder".into());
+                        ntype = NodeType::new("folder".into());
                     }
                     if nnode.elements.len() == 0 {
                         // If the node doesn't exist, create it.

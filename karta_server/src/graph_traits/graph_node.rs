@@ -1,6 +1,6 @@
 use std::{error::Error, path::PathBuf};
 
-use crate::elements::nodetype::TypeName;
+use crate::elements::nodetype::NodeType;
 
 use super::{attribute::Attribute, node::Node, node_path::NodePath};
 
@@ -40,7 +40,7 @@ pub(crate) trait GraphNode {
     fn create_node_by_path(
         &mut self,
         path: &NodePath,
-        ntype: Option<TypeName>,
+        ntype: Option<NodeType>,
     ) -> Result<Node, Box<dyn Error>>;
 
     /// Creates a node under a given parent with the given name.
@@ -50,7 +50,7 @@ pub(crate) trait GraphNode {
         &mut self,
         parent_path: Option<NodePath>,
         name: &str,
-        ntype: Option<TypeName>,
+        ntype: Option<NodeType>,
     ) -> Result<Node, Box<dyn Error>>;
 
     /// Inserts a Node.
@@ -123,12 +123,18 @@ mod tests {
         let func_name = "create_node_and_open_it";
         let mut ctx = TestContext::new(func_name);
 
+        // Creating node
         let path = NodePath::new("test".into());
         let node = ctx.graph.create_node_by_path(&path, None);
 
         assert_eq!(node.is_ok(), true, "Node should be created");
         let created_node = node.unwrap();
 
+        // Check connection with user_root
+        let user_root = NodePath::user_root();
+        assert_eq!(path.parent().unwrap(), user_root, "Node path should be child of user_root");
+
+        // Opening node
         let opened_node = ctx.graph.open_node(&path);
 
         assert_eq!(opened_node.is_ok(), true, "Node should be opened");
@@ -136,6 +142,8 @@ mod tests {
 
         println!("Created node: {:#?}", created_node);
         println!("Opened node: {:#?}", opened_node);
+
+
 
         assert_eq!(
             created_node.path(),
@@ -222,7 +230,7 @@ mod tests {
         );
 
         // make sure they are connected by edges
-        let parent_to_child_edge = ctx.graph.get_edge(&parent, &path);
+        let parent_to_child_edge = ctx.graph.get_edge_strict(&parent, &path);
         assert_eq!(
             parent_to_child_edge.is_ok(),
             true,
@@ -233,7 +241,7 @@ mod tests {
         assert_eq!(*pce.source(), parent, "Parent should be source");
         assert_eq!(*pce.target(), path, "Child should be target");
 
-        let grandparent_to_parent_edge = ctx.graph.get_edge(&grandparent, &parent);
+        let grandparent_to_parent_edge = ctx.graph.get_edge_strict(&grandparent, &parent);
         assert_eq!(
             grandparent_to_parent_edge.is_ok(),
             true,

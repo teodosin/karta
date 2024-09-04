@@ -7,11 +7,11 @@ use crate::elements::node;
 // not urgent quite yet.
 
 
-const ARCHETYPES: [&str; 4] = ["root", "attribute", "nodetype", "settings"];
+pub const ARCHETYPES: [&str; 5] = ["", "user_root", "attributes", "nodetypes", "settings"];
 
 pub struct NodeData;
 
-pub enum NodeType {
+pub enum NodeTyppe {
     Phys(PhysCategory),
     Virtual(VirtualCategory),
 }
@@ -85,11 +85,11 @@ pub enum DataType {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct TypeName {
+pub struct NodeType {
     type_name: String,
 }
 
-impl TypeName {
+impl NodeType {
     pub fn new(type_name: String) -> Self {
         Self { type_name }
     }
@@ -120,19 +120,19 @@ impl TypeName {
     }
 }
 
-impl TryFrom<agdb::DbValue> for TypeName {
+impl TryFrom<agdb::DbValue> for NodeType {
     type Error = agdb::DbError;
 
     fn try_from(value: agdb::DbValue) -> Result<Self, Self::Error> {
         match value.string() {
-            Ok(s) => Ok(TypeName::new(s.to_string())),
+            Ok(s) => Ok(NodeType::new(s.to_string())),
             Err(e) => Err(agdb::DbError::from("Invalid NodeType")),
         }
     }
 }
 
-impl From<TypeName> for agdb::DbValue {
-    fn from(ntype: TypeName) -> Self {
+impl From<NodeType> for agdb::DbValue {
+    fn from(ntype: NodeType) -> Self {
         ntype.name().into()
     }
 }

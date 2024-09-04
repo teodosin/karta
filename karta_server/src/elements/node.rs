@@ -2,7 +2,7 @@ use std::time::SystemTime;
 
 use agdb::{DbElement, DbError, DbId, DbKeyValue, DbUserValue, DbValue, QueryId};
 
-use crate::elements::nodetype::{NodePhysicality, TypeName};
+use crate::elements::nodetype::{NodePhysicality, NodeType};
 
 use super::{attribute::Attribute, node_path::NodePath, SysTime};
 
@@ -24,7 +24,7 @@ pub struct Node {
     /// the node is loaded.
     path: NodePath,
 
-    ntype: TypeName,
+    ntype: NodeType,
     nphys: NodePhysicality,
     alive: bool, 
 
@@ -84,7 +84,7 @@ impl DbUserValue for Node {
 
 /// Implementation block for node. 
 impl Node {
-    pub fn new(path: &NodePath, ntype: TypeName) -> Self {
+    pub fn new(path: &NodePath, ntype: NodeType) -> Self {
         let nphys: NodePhysicality = NodePhysicality::Virtual;
 
         let now = SysTime(SystemTime::now());
@@ -128,7 +128,7 @@ impl Node {
         &self.path
     }
 
-    pub fn ntype_name(&self) -> TypeName {
+    pub fn ntype_name(&self) -> NodeType {
         self.ntype.clone()
     }
 
@@ -174,7 +174,7 @@ impl TryFrom<DbElement> for Node {
         let node = Node {
             db_id: Some(db_id),
             path: NodePath::try_from(path.unwrap().value.clone())?,
-            ntype: TypeName::try_from(ntype.unwrap().value.clone())?,
+            ntype: NodeType::try_from(ntype.unwrap().value.clone())?,
             nphys: NodePhysicality::try_from(nphys.unwrap().value.clone())?,
             alive: alive.unwrap().value.to_bool().unwrap(),
             created_time: SysTime::try_from(created_time.unwrap().value.clone())?,
