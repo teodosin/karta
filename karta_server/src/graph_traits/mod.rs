@@ -19,6 +19,19 @@ pub(crate) enum StoragePath {
     Custom(PathBuf),
 }
 
+impl StoragePath {
+    pub fn new(path: PathBuf) -> Self {
+        Self::Custom(path)
+    }
+
+    pub fn strg_path(&self) -> Option<PathBuf> {
+        match self {
+            Self::Default => None,
+            Self::Custom(path) => Some(path.clone()),
+        }
+    }
+}
+
 /// The main graph trait.
 pub(crate) trait Graph: GraphCore + GraphNtype + GraphNode + GraphEdge {}
 

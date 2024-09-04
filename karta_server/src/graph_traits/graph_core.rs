@@ -58,7 +58,7 @@ mod tests {
     use crate::{
         elements::node_path::NodePath,
         graph_agdb::GraphAgdb,
-        graph_traits::{graph_core::GraphCore, graph_edge::GraphEdge, graph_node::GraphNode},
+        graph_traits::{graph_core::GraphCore, graph_edge::GraphEdge, graph_node::GraphNode, StoragePath},
         utils::TestContext,
     };
 
@@ -88,14 +88,11 @@ mod tests {
         let func_name = "create_graph_db_file_in_custom_storage_directory";
         let ctx = TestContext::custom_storage(func_name);
 
-        let name = format!("fs_graph_test_{}", func_name);
-        let root = ProjectDirs::from("com", "fs_graph", &name)
-            .unwrap()
-            .data_dir()
-            .to_path_buf();
-        let storage = root.join("storage");
+        let storage = ctx.graph.storage_path().strg_path();
 
-        let graph = GraphAgdb::new_custom_storage(root.clone().into(), &name, storage.clone());
+        assert_eq!(storage.is_some(), true, "Storage path must be set");
+        let storage = storage.unwrap();
+        assert_eq!(storage.exists(), true);
 
         assert_eq!(
             storage.exists(),
@@ -103,20 +100,18 @@ mod tests {
             "Storage directory has not been created"
         );
 
-        let graph_path = storage.join(format!("{}.agdb", &name));
-
         assert_eq!(
-            graph_path.exists(),
+            ctx.graph.root_path().exists(),
             true,
             "Graph was not created in storage directory"
         );
 
         assert_eq!(
-            graph.storage_path(),
+            ctx.graph.storage_path(),
             crate::graph_traits::StoragePath::Custom(storage.clone())
         );
 
-        let root_node_result = graph.open_node(&NodePath::root());
+        let root_node_result = ctx.graph.open_node(&NodePath::root());
 
         assert_eq!(root_node_result.is_ok(), true);
 
