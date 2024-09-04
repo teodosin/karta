@@ -4,9 +4,10 @@ use super::{node_path::NodePath, attribute::Attribute};
 
 #[derive(Clone, Debug)]
 pub struct Edge {
-    pub db_id: Option<DbId>,
-    pub source: NodePath,
-    pub target: NodePath,
+    db_id: Option<DbId>,
+    source: NodePath,
+    target: NodePath,
+    contains: bool,
     attributes: Vec<Attribute>,
 }
 
@@ -16,6 +17,7 @@ impl Edge {
             db_id: None,
             source: source.clone(),
             target: target.clone(),
+            contains: false,
             attributes: Vec::new(),
         }
     }
@@ -28,8 +30,29 @@ impl Edge {
             db_id: None,
             source: source.clone(),
             target: target.clone(),
+            contains: true,
             attributes: attrs,
         }
+    }
+
+    pub fn db_id(&self) -> Option<DbId> {
+        self.db_id
+    }
+
+    pub fn source(&self) -> &NodePath {
+        &self.source
+    }
+
+    pub fn target(&self) -> &NodePath {
+        &self.target
+    }
+
+    pub fn contains(&self) -> bool {
+        self.contains
+    }
+
+    pub fn attributes(&self) -> &Vec<Attribute> {
+        &self.attributes
     }
 } 
 
@@ -78,6 +101,7 @@ impl TryFrom<DbElement> for Edge {
         let db_id = value.id;
         let source = value.values.iter().find(|v| v.key == "source".into());
         let target = value.values.iter().find(|v| v.key == "target".into());
+        let contains = value.values.iter().find(|v| v.key == "contains".into());
 
         println!("source: {:?}", source);
         println!("target: {:?}", target);
@@ -95,8 +119,9 @@ impl TryFrom<DbElement> for Edge {
 
         let edge = Edge {
             db_id: Some(db_id),
-            source: NodePath::from(source.unwrap().value.to_string()),
-            target: NodePath::from(target.unwrap().value.to_string()),
+            source: NodePath::try_from(source.unwrap().value.clone())?,
+            target: NodePath::try_from(target.unwrap().value.clone())?,
+            contains: contains.is_some(),
             attributes: attrs,
         };
 

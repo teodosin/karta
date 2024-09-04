@@ -104,7 +104,7 @@ mod tests {
     #![allow(warnings)]
 
     use crate::{
-        elements::node_path::NodePath, graph_agdb::GraphAgdb, utils::TestGraph
+        elements::node_path::NodePath, graph_agdb::GraphAgdb, graph_traits::graph_edge::GraphEdge, utils::TestGraph
     };
     use agdb::QueryBuilder;
 
@@ -123,7 +123,7 @@ mod tests {
 
         assert_eq!(root_node.is_ok(), true, "Root node should exist, thought it don'teth");
     }
-qq
+
     #[test]
     fn create_node_and_open_it() {
         let func_name = "create_node_and_open_it";
@@ -149,33 +149,31 @@ qq
         assert_eq!(created_node.ntype_name(), opened_node.ntype_name(), "Node type names should be equal");
     }
 
-    // #[test]
-    // fn open_node_that_exists() {
-    //     let func_name = "open_node_that_exists";
-    //     let mut graph = setup_graph(func_name);
+    #[test]
+    fn opening_node_that_does_not_exist_fails() {
+        let func_name = "opening_node_that_does_not_exist_fails";
+        let file = TestGraph::new(func_name);
+        let graph = file.setup();
 
-    //     let path = NodePath::from("test");
+        let path = NodePath::from("test");
 
-    //     let node = graph.create_node_by_path(path.clone(), None);
+        let node = graph.open_node(&path);
 
-    //     let open = graph.open_node(path);
+        assert_eq!(node.is_ok(), false, "Node should not be found nor opened");
+    }
 
-    //     assert_eq!(open.is_ok(), true);
+    #[test]
+    fn can_create_nodes_with_long_paths() {
+        let func_name = "can_create_nodes_with_long_paths";
+        let file = TestGraph::new(func_name);
+        let mut graph = file.setup();
 
-    //     cleanup_graph(&func_name);
-    // }
+        let long_path = NodePath::from("this/is/a/long/path/with/many/segments/verylongindeed/evenlonger/wow/are/we/still/here/there/must/be/something/we/can/do/about/all/this/tech/debt");
 
-    // #[test]
-    // fn open_node_that_does_not_exist() {
-    //     let func_name = "open_node_that_does_not_exist";
-    //     let graph = setup_graph(func_name);
+        let node = graph.create_node_by_path(&long_path, None);
 
-    //     let open = graph.open_node(NodePath::from("test"));
-
-    //     assert_eq!(open.is_ok(), false);
-
-    //     cleanup_graph(&func_name);
-    // }
+        assert_eq!(node.is_ok(), true, "Node should be created even with long paths");
+    }
 
     // #[test]
     // fn opening_root_connections() {
@@ -197,92 +195,6 @@ qq
     //     cleanup_graph(func_name);
     // }
 
-    // #[test]
-    // fn create_new_node() {
-    //     let func_name = "create_new_node";
-    //     let mut graph = setup_graph(func_name);
-
-    //     let path = NodePath::from("test");
-
-    //     let node = graph.create_node_by_path(path, None);
-
-    //     assert_eq!(node.is_ok(), true);
-
-    //     let nid = node.unwrap().id;
-
-    //     let node = graph
-    //         .db()
-    //         .exec(&QueryBuilder::select().ids("root/test").query());
-
-    //     println!("Node: {:#?}", node);
-    //     assert_eq!(node.is_ok(), true);
-
-    //     let node = node.unwrap();
-    //     assert_eq!(node.elements.len(), 1);
-
-    //     let node = node.elements.first().unwrap();
-    //     assert_eq!(node.id, nid);
-
-    //     // Checking for ntype, nphys, created-time, modified-time
-    //     assert_eq!(
-    //         node.values
-    //             .iter()
-    //             .any(|x| x.key == "ntype".into() && x.value == "Other".into()),
-    //         true
-    //     );
-    //     assert_eq!(node.values.iter().any(|x| x.key == "nphys".into()), true);
-    //     assert_eq!(
-    //         node.values.iter().any(|x| x.key == "created_time".into()),
-    //         true
-    //     );
-    //     assert_eq!(
-    //         node.values.iter().any(|x| x.key == "modified_time".into()),
-    //         true
-    //     );
-
-    //     let aliases = graph.db().exec(&QueryBuilder::select().aliases().query());
-
-    //     assert_eq!(aliases.is_ok(), true);
-    //     let alias_exists = aliases.unwrap().elements.iter().any(|x| {
-    //         x.values
-    //             .iter()
-    //             .any(|y| y.value.to_string() == "root/test".to_string())
-    //     });
-    //     assert_eq!(alias_exists, true);
-
-    //     cleanup_graph(&func_name);
-    // }
-
-    // #[test]
-    // /// Test whether you can add a long path as an alias to a node and retrieve it.
-    // fn long_alias_path() {
-    //     let func_name = "long_alias_path";
-    //     let mut graph = setup_graph(func_name);
-
-    //     let long_path = "root/this/is/a/long/path/with/many/segments/verylongindeed/evenlonger/wow/are/we/still/here/there/must/be/something/we/can/do/about/all/this/tech/debt";
-
-    //     let _ = graph
-    //         .db_mut()
-    //         .exec_mut(&QueryBuilder::insert().nodes().aliases(long_path).query());
-
-    //     let root_node_result = graph
-    //         .db()
-    //         .exec(&QueryBuilder::select().ids(long_path).query());
-
-    //     let success: bool;
-    //     match root_node_result {
-    //         Ok(root_node) => {
-    //             success = root_node.result == 1;
-    //         }
-    //         Err(e) => {
-    //             println!("Failed to execute query: {}", e);
-    //             success = false;
-    //         }
-    //     }
-    //     assert_eq!(success, true);
-
-    //     cleanup_graph(func_name);
-    // }
 
     // /// When a node is created, it should have a path to the root. If a node is created with a deep
     // /// path, then intermediate nodes should be created.
@@ -293,6 +205,44 @@ qq
     // /// Or should nodes with only a parent connection be considered relatively disconnected?
     // /// Presumably it would be useful to be able to just dump new nodes in and sort them later.
     // /// But that could still be implemented without fragmenting the database.
+    #[test]
+    fn creating_node_with_deep_path_creates_intermediate_nodes() {
+        let func_name = "creating_node_with_deep_path_creates_intermediate_nodes";
+        let file = TestGraph::new(func_name);
+        let mut graph = file.setup();
+
+        let path = NodePath::from("one/two/three");
+        let mut parent = path.clone().parent().unwrap();
+        let mut grandparent = parent.clone().parent().unwrap();
+
+        // only create the child
+        let node = graph.create_node_by_path(&path, None);
+        assert_eq!(node.is_ok(), true, "Node should be created");
+
+        // parent and grandparent should also exist now
+        let parent_node = graph.open_node(&parent);
+        assert_eq!(parent_node.is_ok(), true, "Parent node should exist");
+
+        let grandparent_node = graph.open_node(&grandparent);
+        assert_eq!(grandparent_node.is_ok(), true, "Grandparent node should exist");
+
+        // make sure they are connected by edges
+        let parent_to_child_edge = graph.get_edge(&parent, &path);
+        assert_eq!(parent_to_child_edge.is_ok(), true, "Parent to child edge should exist");
+        let pce = parent_to_child_edge.unwrap();
+        assert_eq!(pce.contains(), true, "Parent to child should be physical");
+        assert_eq!(*pce.source(), parent, "Parent should be source");
+        assert_eq!(*pce.target(), path, "Child should be target");
+
+        let grandparent_to_parent_edge = graph.get_edge(&grandparent, &parent);
+        assert_eq!(grandparent_to_parent_edge.is_ok(), true, "Grandparent to parent edge should exist");
+        let gpe = grandparent_to_parent_edge.unwrap();
+        assert_eq!(gpe.contains(), true, "Grandparent to parent edge should be physical");
+        assert_eq!(*gpe.source(), grandparent, "Grandparent to parent edge should have correct source path");
+        assert_eq!(*gpe.target(), parent, "Grandparent to parent edge should have correct target path");
+    }
+
+
     // #[test]
     // fn creating_deep_path_creates_intermediate_nodes() {
     //     let func_name = "creating_deep_path_creates_intermediate_nodes";
