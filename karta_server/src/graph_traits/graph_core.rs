@@ -4,11 +4,9 @@ use std::path::PathBuf;
 pub(crate) trait GraphCore {
     fn storage_path(&self) -> StoragePath;
 
-    fn userroot_path(&self) -> PathBuf;
+    fn user_root_dirpath(&self) -> PathBuf;
 
     fn root_nodepath(&self) -> NodePath;
-
-    fn userroot_nodepath(&self) -> NodePath;
 
     /// Constructor. Panics if the db cannot be created.
     ///
@@ -54,7 +52,7 @@ mod tests {
     use directories::ProjectDirs;
 
     use crate::{
-        elements::node_path::NodePath,
+        elements::{node, node_path::NodePath},
         graph_agdb::GraphAgdb,
         graph_traits::{graph_core::GraphCore, graph_edge::GraphEdge, graph_node::GraphNode, StoragePath},
         utils::TestContext,
@@ -99,7 +97,7 @@ mod tests {
         );
 
         assert_eq!(
-            ctx.graph.userroot_path().exists(),
+            ctx.graph.user_root_dirpath().exists(),
             true,
             "Graph was not created in storage directory"
         );
@@ -117,72 +115,36 @@ mod tests {
         std::fs::remove_dir_all(storage).expect("Failed to remove storage directory");
     }
 
-    #[test]
-    fn creating_new_graph__creates_userroot_node() {
-        let func_name = "creating_new_graph__creates_userroot_node";
-        let ctx = TestContext::new(func_name);
 
-        let root_path = NodePath::root();
-
-        let userroot_path = ctx.graph.userroot_nodepath();
-
-        assert_eq!(userroot_path.parent().unwrap(), root_path);
-
-        let userroot_node = ctx.graph.open_node(&userroot_path);
-        assert_eq!(userroot_node.is_ok(), true);
-
-        let edge = ctx.graph.get_edge_strict(&root_path, &userroot_path);
-        assert_eq!(edge.is_ok(), true);
-    }
 
     #[test]
     /// Test whether the db creates attributes/settings/etc. nodes when the db is first created.
     fn creating_new_graph_creates_archetype_nodes() {
         let func_name = "creating_new_graph_creates_archetype_nodes";
         let ctx = TestContext::new(func_name);
-
-        let root_path = NodePath::root();
-        let root_node = ctx.graph.open_node(&root_path);
-
-        assert_eq!(root_node.is_ok(), true, "Root node not found");
-
-
-
-        let atr_path = NodePath::new("attributes".into());
-        let atr_node = ctx.graph.open_node(&atr_path);
-
-        assert_eq!(atr_node.is_ok(), true, "Attributes node not found");
-
-        let edge = ctx.graph.get_edge_strict(&root_path, &atr_path);
-        assert_eq!(edge.is_ok(), true, "Edge not found");
-
         
+        let atypes = crate::elements::nodetype::ARCHETYPES;
 
-        let settings_path = NodePath::new("settings".into());
-        let settings_node = ctx.graph.open_node(&settings_path);
+        atypes.iter().for_each(|atype| {
+            let path =  NodePath::from(atype.to_string());
+            println!("Atype as buf {:?}", path.buf());
+            println!("looking for achetype node {:?}", path.alias());
 
-        assert_eq!(
-            settings_node.is_ok(),
-            true,
-            "Settings node not found"
-        );
+            let node = ctx.graph.open_node(&path);
+            assert_eq!(node.is_ok(), true, "Node {} not found", path.alias());
 
-        let edge = ctx.graph.get_edge_strict(&root_path, &settings_path);
-        assert_eq!(edge.is_ok(), true, "Edge not found");
+            if path != NodePath::root() {
+                let parent_path = path.parent().unwrap();
 
+                assert_eq!(parent_path, NodePath::root(), "Node {} is not a child of root", path.alias());
 
+                let parent_node = ctx.graph.open_node(&parent_path);
+                assert_eq!(parent_node.is_ok(), true, "Parent of node {} not found", path.alias());
 
-        let nodetypes_path = NodePath::new("nodetypes".into());
-        let nodetypes_node = ctx.graph.open_node(&nodetypes_path);
-
-        assert_eq!(
-            nodetypes_node.is_ok(),
-            true,
-            "Node types node not found"
-        );
-
-        let edge = ctx.graph.get_edge_strict(&root_path, &nodetypes_path);
-        assert_eq!(edge.is_ok(), true, "Edge not found");
+                let edge = ctx.graph.get_edge_strict(&parent_path, &path);
+                assert_eq!(edge.is_ok(), true, "Edge not found");
+            }
+        });
     }
 
     // /// Test for whether a file gets properly indexed into the db after it is

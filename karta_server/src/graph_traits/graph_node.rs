@@ -123,12 +123,18 @@ mod tests {
         let func_name = "create_node_and_open_it";
         let mut ctx = TestContext::new(func_name);
 
+        // Creating node
         let path = NodePath::new("test".into());
         let node = ctx.graph.create_node_by_path(&path, None);
 
         assert_eq!(node.is_ok(), true, "Node should be created");
         let created_node = node.unwrap();
 
+        // Check connection with user_root
+        let user_root = NodePath::user_root();
+        assert_eq!(path.parent().unwrap(), user_root, "Node path should be child of user_root");
+
+        // Opening node
         let opened_node = ctx.graph.open_node(&path);
 
         assert_eq!(opened_node.is_ok(), true, "Node should be opened");
@@ -136,6 +142,8 @@ mod tests {
 
         println!("Created node: {:#?}", created_node);
         println!("Opened node: {:#?}", opened_node);
+
+
 
         assert_eq!(
             created_node.path(),

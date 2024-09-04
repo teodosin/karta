@@ -7,13 +7,28 @@ use agdb::{DbError, DbValue};
 pub struct NodePath(PathBuf);
 
 impl NodePath {
+    /// Get NodePath of the root node. Note that this is not
+    /// the user_root, which must be accessed through the graph.
     pub fn root() -> Self {
-        NodePath(PathBuf::from(""))
+        NodePath::from("")
     }
 
-    /// Create a new NodePath from a pathbuf. 
-    /// Supplying an empty pathbuf will create a NodePath to the root. 
+    /// Get the user_root of the graph
+    pub fn user_root() -> Self {
+        NodePath(PathBuf::from("user_root"))
+    }
+
+    /// Create a new NodePath from a pathbuf relative to the user_root.
+    /// Supplying an empty pathbuf will create a NodePath to the userroot. 
     pub fn new(path: PathBuf) -> Self {
+        if path.to_str().unwrap().is_empty(){
+            return NodePath::user_root();
+        }
+        let root = NodePath::user_root().buf().clone();
+        return NodePath(root.join(path)); 
+    }
+
+    fn raw(path: PathBuf) -> Self {
         NodePath(path)
     }
 
@@ -72,13 +87,13 @@ impl NodePath {
 
 impl From<String> for NodePath {
     fn from(path: String) -> Self {
-        NodePath::new(PathBuf::from(path))
+        NodePath::raw(PathBuf::from(path))
     }
 }
 
 impl From<&str> for NodePath {
     fn from(path: &str) -> Self {
-        NodePath::new(PathBuf::from(path))
+        NodePath::raw(PathBuf::from(path))
     }
 }
 

@@ -16,7 +16,7 @@ impl GraphCore for GraphAgdb {
         self.storage_path.clone()
     }
     
-    fn userroot_path(&self) -> PathBuf {
+    fn user_root_dirpath(&self) -> PathBuf {
         self.root_path.clone()
     }
 
@@ -24,17 +24,10 @@ impl GraphCore for GraphAgdb {
         NodePath::root()
     }
 
-    fn userroot_nodepath(&self) -> NodePath {
-        let binding = self.userroot_path();
-        let name = binding.file_name().unwrap();
-        let buf = PathBuf::from(name);
-        NodePath::new(buf)
-    }
-
     /// Constructor. Panics if the db cannot be created.
     ///
     /// Takes the desired root directory of the graph as a parameter and the name for the db.
-    /// The name of the root directory will become the userroot of the graph,
+    /// The name of the root directory will become the user_root of the graph,
     /// as first child of the root node. 
     /// 
     /// Creates the db at the storage_path, or initialises the db if it already exists there.
@@ -75,7 +68,10 @@ impl GraphCore for GraphAgdb {
             maintain_readable_files: false,
         };
 
+        println!("WE ARE ABOUT TO CREATE ARCHHHHH");
+
         if !open_existing {
+            println!("WE HAVE ENTERED THE IF");
             giraphe.init_archetype_nodes();
         }
 
@@ -90,11 +86,18 @@ impl GraphCore for GraphAgdb {
     fn init_archetype_nodes(&mut self) {
 
         let archetypes = ARCHETYPES;
-        let root_path = NodePath::root();
-        
+
+        println!("Length of archetypes {}", archetypes.len());
+
+        archetypes.iter().for_each(|at| {
+            println!("{}", at);
+        });
+
+
         archetypes.iter().for_each(|atype| {
-            let buf = PathBuf::from(atype.to_string());
-            let atype_path = NodePath::new(buf);
+            let atype_path = NodePath::from(*atype);
+
+            println!("Creating archetype node: {}", atype_path.alias());
 
             let ntype = if atype_path == NodePath::root() {
                 NodeType::root_type()
@@ -117,38 +120,16 @@ impl GraphCore for GraphAgdb {
                     println!("Created archetype node: {}", atype_path.alias());
                 }
                 Err(ref err) => {
+                    panic!("Failed to create archetype node: {}", err);
                     println!("Failed to create archetype node: {}", err);
                 }
             }
 
             if atype_path != NodePath::root() {
-                self.autoparent_nodes(&root_path, &atype_path);
+                println!("trying to autoparent {:?} to {:?}", &NodePath::root(), &atype_path);
+                self.autoparent_nodes(&NodePath::root(), &atype_path);
             }
         });
-
-        // Initialise the userroot node
-        // let userroot_path = self.userroot_path();
-
-        let node: Node = Node::new(&self.userroot_nodepath(), NodeType::other());
-
-        let query = self.db.exec_mut(
-            &QueryBuilder::insert()
-                .nodes()
-                .aliases(self.userroot_nodepath().alias())
-                .values(&node)
-                .query(),
-        );
-
-        match query {
-            Ok(_) => {
-                println!("Created userroot node: {}", self.userroot_nodepath().alias());
-            }
-            Err(ref err) => {
-                println!("Failed to create userroot node: {}", err);
-            }
-        }
-
-        self.autoparent_nodes(&root_path, &self.userroot_nodepath());
     }
 
     /// Syncs a node in the db with the file system
