@@ -172,7 +172,7 @@ impl GraphNode for GraphAgdb {
         todo!()
     }
 
-    /// Deletes a node.
+    /// Deletes a node. Error if trying to delete root or archetype nodes. 
     ///
     /// Setting "files" and/or "dirs" to true could also delete from the file system,
     /// and recursively. Very dangerous. Though not implementing this would mean that
@@ -186,7 +186,7 @@ impl GraphNode for GraphAgdb {
     /// Is this even needed? Does open node get all attributes?
     fn get_node_attrs(
         &self,
-        path: NodePath,
+        path: &NodePath,
     ) -> Result<Vec<Attribute>, Box<dyn Error>> {
         let alias = path.alias();
         let keys = Vec::new();
@@ -219,10 +219,9 @@ impl GraphNode for GraphAgdb {
         }
     }
 
-    /// Insert attributes to a node. Ignore reserved attribute names. Update attributes that already exist.
     fn insert_node_attrs(
         &mut self,
-        path: NodePath,
+        path: &NodePath,
         attrs: Vec<Attribute>,
     ) -> Result<(), Box<dyn Error>>{
         use RESERVED_NODE_ATTRS;
@@ -231,14 +230,9 @@ impl GraphNode for GraphAgdb {
         let alias = path.alias();
         let node = self.db.exec(&QueryBuilder::select().ids(alias.clone()).query());
         match node {
-            Ok(node) => {
-                if node.elements.len() == 0 {
-                    // return Err(DbError::from(format!("Node not found: {}", alias)));
-                }
-            }
+            Ok(node) => {}
             Err(e) => {
-                println!("Failed to get node: {}", e);
-                // return Err(DbError::from(e.to_string()));
+                return Err(e.into());
             }
         }
 
@@ -277,32 +271,41 @@ impl GraphNode for GraphAgdb {
         }
     }
 
-    /// Delete attributes from a node. Ignore reserved attribute names.
-    fn delete_node_attr(
+    fn delete_node_attrs(
         &mut self,
-        path: NodePath,
-        attr_name: &str,
+        path: &NodePath,
+        attr_names: Vec<&str>,
     ) -> Result<(), Box<dyn Error>> {
         use RESERVED_NODE_ATTRS;
-        let is_reserved = RESERVED_NODE_ATTRS.contains(&attr_name);
 
-        if is_reserved {
-            return Err(format!(
-                "Cannot delete reserved attribute name: {}",
-                attr_name
-            ).into());
+        if attr_names.len() == 0 {
+            return Err("No attributes to delete".into());
         }
 
-        let alias = path.alias();
+        // Protect reserved attribute names
+        let filtered_attrs: Vec<agdb::DbValue> = attr_names.iter().filter(| &&attr_name | {
+            !RESERVED_NODE_ATTRS.contains(&attr_name)
+        }).map(|&s| agdb::DbValue::from(s)).collect();
+
+        if filtered_attrs.len() == 0 {
+            return Err("All deletion requests were for protected attributes".into());
+        }
 
         let node = self.db.exec_mut(
             &QueryBuilder::remove()
-                .values(vec![attr_name.into()])
-                .ids(alias)
+                .values(filtered_attrs)
+                .ids(path.alias())
                 .query(),
         );
 
-        todo!()
+        match node {
+            Ok(node) => {
+                Ok(())
+            }
+            Err(e) => {
+                Err(e.into())
+            }
+        }
     }
 
     /// Merges a vector of nodes into the last one.

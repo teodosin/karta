@@ -4,7 +4,6 @@ use crate::nodetype::TypeName;
 
 use super::{attribute::Attribute, node::Node, node_path::NodePath};
 
-
 pub(crate) trait GraphNode {
     // -------------------------------------------------------------------
     // Nodes
@@ -39,7 +38,9 @@ pub(crate) trait GraphNode {
     /// Perhaps not. Perhaps the parent of the node should be specified.
     /// The insert_node_by_name function calls this one anyway.
     fn create_node_by_path(
-        &mut self, path: &NodePath, ntype: Option<TypeName>
+        &mut self,
+        path: &NodePath,
+        ntype: Option<TypeName>,
     ) -> Result<Node, Box<dyn Error>>;
 
     /// Creates a node under a given parent with the given name.
@@ -64,18 +65,22 @@ pub(crate) trait GraphNode {
     /// but never actually delete them, which seems like a smelly solution to me.
     fn delete_node(&self, path: PathBuf, files: bool, dirs: bool) -> Result<(), agdb::DbError>;
 
+    /// Get node attributes
+    fn get_node_attrs(&self, path: &NodePath) -> Result<Vec<Attribute>, Box<dyn Error>>;
+
     /// Insert attributes to a node. Ignore reserved attribute names. Update attributes that already exist.
     fn insert_node_attrs(
         &mut self,
-        path: NodePath,
+        path: &NodePath,
         attrs: Vec<Attribute>,
     ) -> Result<(), Box<dyn Error>>;
 
-    /// Get node attributes
-    fn get_node_attrs(&self, path: NodePath) -> Result<Vec<Attribute>, Box<dyn Error>>;
-
     /// Delete attributes from a node. Ignore reserved attribute names.
-    fn delete_node_attr(&mut self, path: NodePath, attr_name: &str) -> Result<(), Box<dyn Error>>;
+    fn delete_node_attrs(
+        &mut self,
+        path: &NodePath,
+        attr_name: Vec<&str>,
+    ) -> Result<(), Box<dyn Error>>;
 
     /// Merges a vector of nodes into the last one.
     fn merge_nodes(&mut self, nodes: Vec<NodePath>) -> Result<(), agdb::DbError>;
@@ -90,25 +95,26 @@ pub(crate) trait GraphNode {
     /// Uses agdb types directly to create an exclusive parent-child connection.
     /// The attribute is "contains" and is reserved in elements.rs.
     fn autoparent_nodes(
-        &mut self, parent: &NodePath, child: &NodePath
+        &mut self,
+        parent: &NodePath,
+        child: &NodePath,
     ) -> Result<(), Box<dyn Error>>;
 }
 
-
-
 // --------------------------------------------------------------------
-
-
 
 mod tests {
     #![allow(warnings)]
 
     use crate::{
-        elements::node_path::NodePath, graph_agdb::GraphAgdb, graph_traits::graph_edge::GraphEdge, utils::TestGraph
+        elements::{attribute::Attribute, node, node_path::NodePath},
+        graph_agdb::GraphAgdb,
+        graph_traits::graph_edge::GraphEdge,
+        utils::TestGraph,
     };
     use agdb::QueryBuilder;
 
-    use std::path::PathBuf;
+    use std::{path::PathBuf, vec};
 
     use crate::graph_traits::{graph_core::GraphCore, graph_node::GraphNode};
 
@@ -121,7 +127,11 @@ mod tests {
         let root_path = NodePath::root();
         let root_node = graph.open_node(&root_path);
 
-        assert_eq!(root_node.is_ok(), true, "Root node should exist, thought it don'teth");
+        assert_eq!(
+            root_node.is_ok(),
+            true,
+            "Root node should exist, thought it don'teth"
+        );
     }
 
     #[test]
@@ -144,9 +154,21 @@ mod tests {
         println!("Created node: {:#?}", created_node);
         println!("Opened node: {:#?}", opened_node);
 
-        assert_eq!(created_node.path(), opened_node.path(), "Node paths should be equal");
-        assert_eq!(created_node.name(), opened_node.name(), "Node names should be equal");
-        assert_eq!(created_node.ntype_name(), opened_node.ntype_name(), "Node type names should be equal");
+        assert_eq!(
+            created_node.path(),
+            opened_node.path(),
+            "Node paths should be equal"
+        );
+        assert_eq!(
+            created_node.name(),
+            opened_node.name(),
+            "Node names should be equal"
+        );
+        assert_eq!(
+            created_node.ntype_name(),
+            opened_node.ntype_name(),
+            "Node type names should be equal"
+        );
     }
 
     #[test]
@@ -172,29 +194,12 @@ mod tests {
 
         let node = graph.create_node_by_path(&long_path, None);
 
-        assert_eq!(node.is_ok(), true, "Node should be created even with long paths");
+        assert_eq!(
+            node.is_ok(),
+            true,
+            "Node should be created even with long paths"
+        );
     }
-
-    // #[test]
-    // fn opening_root_connections() {
-    //     let func_name = "opening_node_connections";
-    //     let mut graph = setup_graph(func_name);
-
-    //     todo!();
-
-    //     cleanup_graph(func_name);
-    // }
-
-    // #[test]
-    // fn opening_node_connections() {
-    //     let func_name = "opening_node_connections";
-    //     let mut graph = setup_graph(func_name);
-
-    //     todo!();
-
-    //     cleanup_graph(func_name);
-    // }
-
 
     // /// When a node is created, it should have a path to the root. If a node is created with a deep
     // /// path, then intermediate nodes should be created.
@@ -224,128 +229,136 @@ mod tests {
         assert_eq!(parent_node.is_ok(), true, "Parent node should exist");
 
         let grandparent_node = graph.open_node(&grandparent);
-        assert_eq!(grandparent_node.is_ok(), true, "Grandparent node should exist");
+        assert_eq!(
+            grandparent_node.is_ok(),
+            true,
+            "Grandparent node should exist"
+        );
 
         // make sure they are connected by edges
         let parent_to_child_edge = graph.get_edge(&parent, &path);
-        assert_eq!(parent_to_child_edge.is_ok(), true, "Parent to child edge should exist");
+        assert_eq!(
+            parent_to_child_edge.is_ok(),
+            true,
+            "Parent to child edge should exist"
+        );
         let pce = parent_to_child_edge.unwrap();
         assert_eq!(pce.contains(), true, "Parent to child should be physical");
         assert_eq!(*pce.source(), parent, "Parent should be source");
         assert_eq!(*pce.target(), path, "Child should be target");
 
         let grandparent_to_parent_edge = graph.get_edge(&grandparent, &parent);
-        assert_eq!(grandparent_to_parent_edge.is_ok(), true, "Grandparent to parent edge should exist");
+        assert_eq!(
+            grandparent_to_parent_edge.is_ok(),
+            true,
+            "Grandparent to parent edge should exist"
+        );
         let gpe = grandparent_to_parent_edge.unwrap();
-        assert_eq!(gpe.contains(), true, "Grandparent to parent edge should be physical");
-        assert_eq!(*gpe.source(), grandparent, "Grandparent to parent edge should have correct source path");
-        assert_eq!(*gpe.target(), parent, "Grandparent to parent edge should have correct target path");
+        assert_eq!(
+            gpe.contains(),
+            true,
+            "Grandparent to parent edge should be physical"
+        );
+        assert_eq!(
+            *gpe.source(),
+            grandparent,
+            "Grandparent to parent edge should have correct source path"
+        );
+        assert_eq!(
+            *gpe.target(),
+            parent,
+            "Grandparent to parent edge should have correct target path"
+        );
     }
 
+    #[test]
+    fn able_to_insert_and_delete_node_attributes() {
+        let func_name = "able_to_insert_and_delete_node_attributes";
+        let file = TestGraph::new(func_name);
+        let mut graph = file.setup();
 
-    // #[test]
-    // fn creating_deep_path_creates_intermediate_nodes() {
-    //     let func_name = "creating_deep_path_creates_intermediate_nodes";
-    //     let mut graph = setup_graph(func_name);
+        let path = NodePath::from("test");
+        let node = graph.create_node_by_path(&path, None);
 
-    //     let path = NodePath::from("one/two/three");
-    //     let mut first = path.clone().parent().unwrap();
-    //     let mut second = first.clone().parent().unwrap();
+        assert_eq!(node.is_ok(), true, "Node should be created");
+        let node = node.unwrap();
 
-    //     let node = graph.create_node_by_path(path.clone(), None);
+        let attrs: Vec<Attribute> = vec![
+            Attribute {
+                name: "first_attr".to_string(),
+                value: 10.0,
+            },
+            Attribute {
+                name: "second_attr".to_string(),
+                value: 20.0,
+            },
+        ];
 
-    //     assert_eq!(node.is_ok(), true);
+        let added = graph.insert_node_attrs(&path, attrs.clone());
+        assert_eq!(added.is_ok(), true, "Attributes should be added");
 
-    //     let node = graph
-    //         .db()
-    //         .exec(&QueryBuilder::select().ids(path.alias()).query());
+        let opened_node = graph.open_node(&path);
+        assert_eq!(opened_node.is_ok(), true, "Node should be opened");
+        let opened_node = opened_node.unwrap();
 
-    //     let fir = graph
-    //         .db()
-    //         .exec(&QueryBuilder::select().ids(first.alias()).query());
+        let opened_attrs = opened_node.attributes();
 
-    //     let sec = graph
-    //         .db()
-    //         .exec(&QueryBuilder::select().ids(second.alias()).query());
+        // All original attributes should be contained in opened_attrs
+        for attr in attrs.iter() {
+            assert_eq!(
+                opened_attrs.contains(&attr),
+                true,
+                "Attribute {} should be contained in opened_attrs",
+                attr.name
+            )
+        }
 
-    //     assert_eq!(node.is_ok(), true);
-    //     assert_eq!(fir.is_ok(), true);
-    //     assert_eq!(sec.is_ok(), true);
+        let attr_names = attrs
+            .iter()
+            .map(|attr| &attr.name as &str)
+            .collect::<Vec<&str>>();
 
-    //     let elems = graph
-    //         .db()
-    //         .exec(&QueryBuilder::select().node_count().query());
-    //     let aliases = graph.db().exec(&QueryBuilder::select().aliases().query());
+        let deleted = graph.delete_node_attrs(&path, attr_names.clone());
+        assert_eq!(deleted.is_ok(), true, "Attributes should be deleted");
 
-    //     assert_eq!(elems.is_ok(), true);
-    //     assert_eq!(aliases.is_ok(), true);
+        let opened_node_no_attrs = graph.open_node(&path);
+        assert_eq!(opened_node_no_attrs.is_ok(), true, "Node should be opened");
 
-    //     let nodes = aliases.unwrap().elements;
-    //     let edges = elems.unwrap();
-    //     let edges = edges.elements;
+        let opened_node_no_attrs = opened_node_no_attrs.unwrap();
+        let opened_attrs_no_attrs = opened_node_no_attrs.attributes();
 
-    //     // NOTE: The below assertions are commented out because the amount of
-    //     // nodes created at startup is not set in stone. The most recent breakage
-    //     // was because of adding a nodetypes node. No point in breaking a test
-    //     // every time that happens.
+        // No original attributes should be contained in opened_atts_no_attrs
+        for attr in attrs.iter() {
+            assert_eq!(
+                opened_attrs_no_attrs.contains(&attr),
+                false,
+                "Attribute {} should have been deleted",
+                attr.name
+            )
+        }
+    }
 
-    //     // let edges = edges.elements.iter().filter(|x| x.id.0 < 0).collect::<Vec<_>>();
-    //     // Length is 6:
-    //     // root, attributes, settings, one, two, three
-    //     // assert_eq!(nodes.len(), 6);
+    #[test]
+    fn insertion_of_attributes_on_nonexisting_node_should_fail() {
+        let func_name = "insertion_of_attributes_on_nonexisting_node_should_fail";
+        let file = TestGraph::new(func_name);
+        let mut graph = file.setup();
 
-    //     // Length is 5:
-    //     // root
-    //     // - one
-    //     //   - two
-    //     //     - three
-    //     // - attributes
-    //     // - settings
-    //     // - = edge
+        let fakepath = NodePath::from("fakepath");
 
-    //     // todo! Fix this test. Can't find a way to just get all edges...
-    //     // println!("Edges: {:#?}", edges);
-    //     // assert_eq!(edges.len(), 5);
+        let attr = vec![Attribute {
+            name: "test".to_string(),
+            value: 10.0,
+        }];
 
-    //     cleanup_graph(&func_name);
-    // }
+        let shouldfail = graph.insert_node_attrs(&fakepath, attr);
 
-    // #[test]
-    // fn insert_and_delete_node_attribute() {
-    //     let func_name = "insert_and_delete_node_attribute";
-    //     let mut graph = setup_graph(func_name);
-
-    //     let path = NodePath::new("test".into());
-
-    //     let attr = Attribute {
-    //         name: "test".to_string(),
-    //         value: 10.0,
-    //     };
-
-    //     let node = graph.create_node_by_path(path.clone(), None);
-    //     assert_eq!(node.is_ok(), true);
-
-    //     let added = graph.insert_node_attrs(path.clone(), vec![attr]);
-    //     assert_eq!(added.is_ok(), true);
-
-    //     let noder = graph.open_node(path.clone());
-    //     let noder = noder.unwrap();
-
-    //     assert_eq!(noder.attributes().len(), 1);
-
-    //     assert_eq!(noder.attributes()[0].name, "test");
-    //     assert_eq!(noder.attributes()[0].value, 10.0);
-
-    //     // Test deleting the attribute
-    //     let deleted = graph.delete_node_attr(path.clone(), "test");
-    //     assert_eq!(deleted.is_ok(), true);
-
-    //     let nodest = graph.open_node(path.clone());
-    //     let nodest = nodest.unwrap();
-    //     assert_eq!(nodest.attributes().len(), 0);
-
-    //     cleanup_graph(&func_name);
-    // }
+        assert_eq!(
+            shouldfail.is_ok(),
+            false,
+            "Inserting attributes on a non-existing node should fail"
+        );
+    }
 
     // /// Insertion of attributes on non-existing nodes should fail.
     // /// Insertion of attributes on a non-existing node shouldn't
@@ -428,6 +441,26 @@ mod tests {
     //     assert_eq!(removed.is_ok(), false);
 
     //     cleanup_graph(&func_name);
+    // }
+
+    // #[test]
+    // fn opening_root_connections() {
+    //     let func_name = "opening_node_connections";
+    //     let mut graph = setup_graph(func_name);
+
+    //     todo!();
+
+    //     cleanup_graph(func_name);
+    // }
+
+    // #[test]
+    // fn opening_node_connections() {
+    //     let func_name = "opening_node_connections";
+    //     let mut graph = setup_graph(func_name);
+
+    //     todo!();
+
+    //     cleanup_graph(func_name);
     // }
 
     /// Test creating a Node with different NodeTypes
