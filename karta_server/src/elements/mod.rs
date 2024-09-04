@@ -2,12 +2,12 @@ use std::{path::PathBuf, time::SystemTime};
 
 use agdb::{DbElement, DbError, DbId, DbKeyValue, DbUserValue, DbValue, QueryId, UserValue};
 
-use crate::nodetype::{NodePhysicality, TypeName};
-
 pub (crate) mod node;
 pub (crate) mod node_path;
+pub (crate) mod nodetype;
 pub (crate) mod edge;
 pub (crate) mod attribute;
+
 
 
 #[derive(Debug, Clone, PartialEq)]

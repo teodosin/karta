@@ -1,6 +1,6 @@
 use std::{error::Error, path::PathBuf};
 
-use crate::{elements, nodetype::TypeName};
+use crate::elements;
 use elements::*;
 
 use graph_core::GraphCore;

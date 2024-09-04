@@ -2,7 +2,7 @@ use std::time::SystemTime;
 
 use agdb::{DbElement, DbError, DbId, DbKeyValue, DbUserValue, DbValue, QueryId};
 
-use crate::nodetype::{NodePhysicality, TypeName};
+use crate::elements::nodetype::{NodePhysicality, TypeName};
 
 use super::{attribute::Attribute, node_path::NodePath, SysTime};
 

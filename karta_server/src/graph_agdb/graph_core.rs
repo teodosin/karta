@@ -4,7 +4,7 @@ use agdb::QueryBuilder;
 
 use crate::{
     graph_traits::{self, graph_core::GraphCore, graph_node::GraphNode},
-    nodetype::TypeName,
+    elements::nodetype::TypeName,
 };
 
 use super::{node::Node, node_path::NodePath, GraphAgdb, StoragePath};

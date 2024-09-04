@@ -2,7 +2,7 @@ use std::{error::Error, path::PathBuf};
 
 use agdb::{DbElement, QueryBuilder};
 
-use crate::{elements, graph_traits::graph_edge::GraphEdge, nodetype::TypeName};
+use crate::{elements, graph_traits::graph_edge::GraphEdge};
 
 use super::{attribute::{Attribute, RESERVED_EDGE_ATTRS}, edge::Edge, node_path::NodePath, GraphAgdb, StoragePath};
 

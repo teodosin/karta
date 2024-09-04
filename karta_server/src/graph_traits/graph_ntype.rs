@@ -1,6 +1,6 @@
 use std::error::Error;
 
-use crate::nodetype::TypeName;
+use crate::elements::nodetype::TypeName;
 
 pub(crate) trait GraphNtype {
     // -------------------------------------------------------------------

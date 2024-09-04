@@ -1,6 +1,6 @@
 use std::{error::Error, path::PathBuf};
 
-use crate::nodetype::TypeName;
+use crate::elements::nodetype::TypeName;
 
 use super::{attribute::Attribute, node::Node, node_path::NodePath};
 
