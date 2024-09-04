@@ -4,9 +4,11 @@ use std::path::PathBuf;
 pub(crate) trait GraphCore {
     fn storage_path(&self) -> StoragePath;
 
-    fn root_path(&self) -> PathBuf;
+    fn userroot_path(&self) -> PathBuf;
 
     fn root_nodepath(&self) -> NodePath;
+
+    fn userroot_nodepath(&self) -> NodePath;
 
     /// Constructor. Panics if the db cannot be created.
     ///
@@ -97,7 +99,7 @@ mod tests {
         );
 
         assert_eq!(
-            ctx.graph.root_path().exists(),
+            ctx.graph.userroot_path().exists(),
             true,
             "Graph was not created in storage directory"
         );
@@ -113,6 +115,19 @@ mod tests {
 
         // Clean up the custom storage directory
         std::fs::remove_dir_all(storage).expect("Failed to remove storage directory");
+    }
+
+    #[test]
+    fn creating_new_graph__creates_userroot_node() {
+        let func_name = "creating_new_graph__creates_userroot_node";
+        let ctx = TestContext::new(func_name);
+
+        let root_path = NodePath::root();
+
+        let userroot_path = ctx.graph.userroot_nodepath();
+
+        assert_eq!(userroot_path.parent().unwrap(), root_path);
+
     }
 
     #[test]

@@ -7,7 +7,7 @@ use crate::elements::node;
 // not urgent quite yet.
 
 
-const ARCHETYPES: [&str; 4] = ["root", "attribute", "nodetype", "settings"];
+const ARCHETYPES: [&str; 4] = ["root", "attributes", "nodetypes", "settings"];
 
 pub struct NodeData;
 

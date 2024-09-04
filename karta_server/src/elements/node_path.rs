@@ -10,6 +10,7 @@ impl NodePath {
     pub fn root() -> Self {
         NodePath(PathBuf::from(""))
     }
+
     /// Create a new NodePath from a pathbuf. 
     /// Supplying an empty pathbuf will create a NodePath to the root. 
     pub fn new(path: PathBuf) -> Self {

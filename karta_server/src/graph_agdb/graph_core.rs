@@ -16,18 +16,24 @@ impl GraphCore for GraphAgdb {
         self.storage_path.clone()
     }
     
-    fn root_path(&self) -> PathBuf {
+    fn userroot_path(&self) -> PathBuf {
         self.root_path.clone()
     }
 
     fn root_nodepath(&self) -> NodePath {
-        NodePath::new(self.root_path.clone())
+        NodePath::root()
+    }
+
+    fn userroot_nodepath(&self) -> NodePath {
+        todo!()
     }
 
     /// Constructor. Panics if the db cannot be created.
     ///
-    /// Takes the desired root of the graph as a parameter and the name for the db.
-    ///
+    /// Takes the desired root directory of the graph as a parameter and the name for the db.
+    /// The name of the root directory will become the userroot of the graph,
+    /// as first child of the root node. 
+    /// 
     /// Creates the db at the storage_path, or initialises the db if it already exists there.
     ///
     /// TODO: Add error handling.
