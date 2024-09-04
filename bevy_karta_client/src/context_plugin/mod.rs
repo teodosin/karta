@@ -2,7 +2,7 @@
 use std::{collections::HashMap, path::{Path, PathBuf}};
 
 use bevy::{app::{App, Plugin, PreUpdate}, prelude::{Entity, Event, Resource}};
-use fs_graph::elements::NodePath;
+use fs_graph::prelude::*;
 
 // -----------------------------------------------------------------
 // Plugin

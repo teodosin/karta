@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 
-use bevy::{app::{App, Plugin}, prelude::{Deref, Resource}};
 use directories::ProjectDirs;
-use fs_graph::graph::Graph;
+use bevy::prelude::*;
+use fs_graph::prelude::*;
 
 
 
@@ -13,6 +13,9 @@ impl Plugin for VaultPlugin {
     fn build(&self, app: &mut App) {
         app
             .insert_resource(VaultOfVaults::new())
+            .insert_resource(CurrentVault::new())
+
+            .add_systems(PreStartup, initialise_default_vault_until_theres_a_vault_menu)
         ;
     }
 }
@@ -45,7 +48,23 @@ impl VaultOfVaults {
 #[derive(Resource)]
 pub struct CurrentVault {
     vault: Option<KartaVault>,
-    graph: Option<Graph>,
+    graph: Option<GraphAgdb>,
+}
+
+impl CurrentVault {
+    pub fn new() -> Self {
+        CurrentVault {
+            vault: None,
+            graph: None,
+        }
+    }
 }
 
 pub struct KartaVault;
+
+fn initialise_default_vault_until_theres_a_vault_menu(
+    vault_of_vaults: Res<VaultOfVaults>,
+    current_cault: Res<CurrentVault>,
+) {
+
+}
