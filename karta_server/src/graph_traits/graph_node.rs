@@ -384,6 +384,16 @@ mod tests {
         });
     }
 
+    #[test]
+    fn opening_root_node_connections__returns_vector_of_nodes() {
+        let func_name = "opening_root_node_connections__returns_vector_of_nodes";
+        let mut ctx = TestContext::new(func_name);
+
+        let root_path = NodePath::root();
+
+        
+    }
+
     // #[test]
     // fn opening_root_connections() {
     //     let func_name = "opening_node_connections";

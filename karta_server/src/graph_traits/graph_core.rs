@@ -19,11 +19,7 @@ pub(crate) trait GraphCore {
     ///
     /// TODO: Add error handling.
 
-    fn new(root_path: PathBuf, name: &str) -> Self;
-
-    /// Alternate constructor. Use this if you want to set a custom storage path for the db.
-    /// Panics if the db cannot be created
-    fn new_custom_storage(root_path: PathBuf, name: &str, storage_path: PathBuf) -> Self;
+    fn new(name: &str, root_path: PathBuf, custom_storage_path: Option<PathBuf>) -> Self;
 
     /// Create the initial archetype nodes for the graph. Includes
     /// the root,

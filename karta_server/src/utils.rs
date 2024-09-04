@@ -53,7 +53,7 @@ impl TestContext {
 
         println!("Trying to create test directory: {:#?}", full_path);
 
-        let graph = GraphAgdb::new_custom_storage(full_path.clone(), &test_name, strg_dir);
+        let graph = GraphAgdb::new(&test_name, full_path.clone(), Some(strg_dir));
 
         assert_eq!(
             full_path.exists(),

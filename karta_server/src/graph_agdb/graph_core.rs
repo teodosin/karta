@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{self, PathBuf};
 
 use agdb::QueryBuilder;
 
@@ -31,42 +31,21 @@ impl GraphCore for GraphAgdb {
     /// Creates the db at the storage_path, or initialises the db if it already exists there.
     ///
     /// TODO: Add error handling.
-    fn new(root_path: PathBuf, name: &str) -> Self {
-        let storage_path = directories::ProjectDirs::from("com", "teodosin_labs", "fs_graph")
-            .unwrap()
-            .data_dir()
-            .to_path_buf();
-
-        // Create the path if it doesn't exist
-        if !storage_path.exists() {
-            std::fs::create_dir_all(&storage_path).expect("Failed to create storage path");
-        }
-
-        let db_path = storage_path.join(format!("{}.agdb", name));
-
-        // Check if the database already exists
-        let open_existing = db_path.exists();
-
-        let db = agdb::Db::new(db_path.to_str().unwrap()).expect("Failed to create new db");
-
-        let mut giraphe = GraphAgdb {
-            name: name.to_string(),
-            db,
-            root_path: root_path.into(),
-            storage_path: StoragePath::Default,
-            maintain_readable_files: false,
+    fn new(name: &str, root_path: PathBuf, custom_storage_path: Option<PathBuf>) -> Self {
+        let storage_enum = match custom_storage_path {
+            Some(path) => graph_traits::StoragePath::Custom(path),
+            None => graph_traits::StoragePath::Default,
+        };
+        let storage_path = match storage_enum.clone() {
+            StoragePath::Custom(path) => path,
+            StoragePath::Default => {
+                directories::ProjectDirs::from("com", "teodosin_labs", "fs_graph")
+                    .unwrap()
+                    .data_dir()
+                    .to_path_buf()
+                }
         };
 
-        if !open_existing {
-            giraphe.init_archetype_nodes();
-        }
-
-        return giraphe;
-    }
-
-    /// Alternate constructor. Use this if you want to set a custom storage path for the db.
-    /// Panics if the db cannot be created
-    fn new_custom_storage(root_path: PathBuf, name: &str, storage_path: PathBuf) -> Self {
         // Create the path if it doesn't exist
         if !storage_path.exists() {
             std::fs::create_dir_all(&storage_path).expect("Failed to create storage path");
@@ -83,7 +62,7 @@ impl GraphCore for GraphAgdb {
             name: name.to_string(),
             db,
             root_path: root_path.into(),
-            storage_path: StoragePath::Custom(storage_path),
+            storage_path: storage_enum,
             maintain_readable_files: false,
         };
 
