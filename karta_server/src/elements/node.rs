@@ -15,7 +15,7 @@ use super::{attribute::Attribute, node_path::NodePath, SysTime};
 /// How exactly the other direction, the saving of data, should work, is, 
 /// as of writing this, undetermined. Likely in most cases Graph's methods will
 /// be used directly to make modifictions rather than creating a Node instance.
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Node {
     /// The id of the node in the database.
     db_id: Option<DbId>,
@@ -119,13 +119,17 @@ impl Node {
         self.db_id
     }
 
+    pub fn name(&self) -> &str {
+        &self.path.name()
+    }
+
     /// Get the NodePath of the node. 
     pub fn path(&self) -> &NodePath {
         &self.path
     }
 
-    pub fn ntype(&self) -> TypeName {
-        todo!();
+    pub fn ntype_name(&self) -> TypeName {
+        self.ntype.clone()
     }
 
     pub fn nphys(&self) -> NodePhysicality {
@@ -169,7 +173,7 @@ impl TryFrom<DbElement> for Node {
 
         let node = Node {
             db_id: Some(db_id),
-            path: NodePath::new(path.unwrap().value.to_string().into()),
+            path: NodePath::try_from(path.unwrap().value.clone())?,
             ntype: TypeName::try_from(ntype.unwrap().value.clone())?,
             nphys: NodePhysicality::try_from(nphys.unwrap().value.clone())?,
             alive: alive.unwrap().value.to_bool().unwrap(),

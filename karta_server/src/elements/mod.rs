@@ -10,7 +10,7 @@ pub (crate) mod edge;
 pub (crate) mod attribute;
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct SysTime(SystemTime);
 
 impl From<SysTime> for DbValue {

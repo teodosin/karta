@@ -104,7 +104,7 @@ mod tests {
     #![allow(warnings)]
 
     use crate::{
-        graph_agdb::GraphAgdb,
+        elements::node_path::NodePath, graph_agdb::GraphAgdb, utils::TestGraph
     };
     use agdb::QueryBuilder;
 
@@ -112,52 +112,42 @@ mod tests {
 
     use crate::graph_traits::{graph_core::GraphCore, graph_node::GraphNode};
 
-    /// The root node should exist and be openable.
-    // #[test]
-    // fn open_root_node() {
-    //     let func_name = "open_root_node";
-    //     let mut graph = setup_graph(func_name);
-    //     let root_path = graph.root_path();
+    #[test]
+    fn fresh_graph_root_node_should_exist_and_be_openable() {
+        let func_name = "fresh_graph_root_node_should_exist_and_be_openable";
+        let file = TestGraph::new(func_name);
+        let graph = file.setup();
 
-    //     // Nodepath initialised with empty pathbuf will refer to root node.
-    //     let root_buf = NodePath::new("".into());
-    //     let root_node = graph.db().exec(
-    //         &QueryBuilder::select()
-    //             .aliases()
-    //             .ids(root_buf.alias())
-    //             .query(),
-    //     );
+        let root_path = NodePath::root();
+        let root_node = graph.open_node(&root_path);
 
-    //     assert_eq!(root_node.is_ok(), true);
+        assert_eq!(root_node.is_ok(), true, "Root node should exist, thought it don'teth");
+    }
+qq
+    #[test]
+    fn create_node_and_open_it() {
+        let func_name = "create_node_and_open_it";
+        let file = TestGraph::new(func_name);
+        let mut graph = file.setup();
 
-    //     match root_node {
-    //         Ok(root_node) => {
-    //             println!("Root node: {:#?}", root_node);
-    //             let rid = root_node.ids();
-    //             assert_eq!(rid.len(), 1);
-    //             let root_id = rid.first().unwrap();
+        let path = NodePath::new("test".into());
+        let node = graph.create_node_by_path(&path, None);
 
-    //             // This is chaos, but that's what it should look like based on the println above.
-    //             let ralias = &root_node
-    //                 .elements
-    //                 .first()
-    //                 .unwrap()
-    //                 .values
-    //                 .first()
-    //                 .unwrap()
-    //                 .value
-    //                 .string()
-    //                 .unwrap();
+        assert_eq!(node.is_ok(), true, "Node should be created");
+        let created_node = node.unwrap();
 
-    //             assert_eq!(*ralias, "root");
-    //         }
-    //         Err(e) => {
-    //             println!("Failed to execute query: {}", e);
-    //         }
-    //     }
+        let opened_node = graph.open_node(&path);
 
-    //     cleanup_graph(func_name);
-    // }
+        assert_eq!(opened_node.is_ok(), true, "Node should be opened");
+        let opened_node = opened_node.unwrap();
+
+        println!("Created node: {:#?}", created_node);
+        println!("Opened node: {:#?}", opened_node);
+
+        assert_eq!(created_node.path(), opened_node.path(), "Node paths should be equal");
+        assert_eq!(created_node.name(), opened_node.name(), "Node names should be equal");
+        assert_eq!(created_node.ntype_name(), opened_node.ntype_name(), "Node type names should be equal");
+    }
 
     // #[test]
     // fn open_node_that_exists() {

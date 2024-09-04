@@ -16,6 +16,10 @@ impl NodePath {
         NodePath(path)
     }
 
+    pub fn name(&self) -> &str {
+        self.0.file_name().unwrap().to_str().unwrap()
+    }
+
     /// Get the path as a pathbuf, excluding the root. 
     pub fn buf(&self) -> &PathBuf {
         &self.0
@@ -67,13 +71,13 @@ impl NodePath {
 
 impl From<String> for NodePath {
     fn from(path: String) -> Self {
-        NodePath(PathBuf::from(path))
+        NodePath::new(PathBuf::from(path))
     }
 }
 
 impl From<&str> for NodePath {
     fn from(path: &str) -> Self {
-        NodePath(PathBuf::from(path))
+        NodePath::new(PathBuf::from(path))
     }
 }
 

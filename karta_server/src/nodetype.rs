@@ -14,7 +14,7 @@ pub enum NodeType {
     Virtual(VirtualCategory),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum NodePhysicality {
     /// A node that only exists in the db and not in the file system.
     Virtual,
@@ -83,7 +83,7 @@ pub enum DataType {
 }
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TypeName {
     type_name: String,
 }
