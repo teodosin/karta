@@ -17,4 +17,7 @@ pub struct DataNode {
     pub path: NodePath,
 }
 
+#[derive(Component, Deref)]
+pub struct DataNodeType(pub NodeType);
+
 fn spawn_data_node(){}

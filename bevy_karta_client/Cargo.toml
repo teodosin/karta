@@ -12,10 +12,10 @@ native-dialog = "0.7.0"
 
 
 # Karta subcrates
-bevy_fs_graph = { git = "https://github.com/teodosin/bevy_fs_graph", branch="main"}
+fs_graph = { git = "https://github.com/teodosin/fs_graph", branch="main"}
 bevy_overlay_graph = { git = "https://github.com/teodosin/bevy_overlay_graph", branch="main" }
 
-[patch."https://github.com/teodosin/bevy_fs_graph.git"]
-bevy_fs_graph = { path = "../bevy_fs_graph" }
+[patch."https://github.com/teodosin/fs_graph.git"]
+fs_graph = { path = "../fs_graph" }
 [patch."https://github.com/teodosin/bevy_overlay_graph.git"]
 bevy_overlay_graph = { path = "../bevy_overlay_graph" }
