@@ -94,14 +94,26 @@ fn initialise_default_vault_until_theres_a_vault_menu(
 
     _: NonSend<bevy::winit::WinitWindows>,
 ) {
-    let folder = FileDialog::new()
-        .set_title("Select Karta Vault location")
-        .show_open_single_dir();
+    print!("Enter vault path (leave empty for file dialog): ");
+    std::io::Write::flush(&mut std::io::stdout()).unwrap();
+    
+    let mut input = String::new();
+    std::io::stdin().read_line(&mut input).expect("Failed to read line");
+    let input = input.trim();
 
-    let folder = match folder {
-        Ok(folder) => folder,
-        Err(_) => None,
+    let folder = if input.is_empty() {
+        FileDialog::new()
+            .set_title("Select Karta Vault location")
+            .show_open_single_dir()
+            .unwrap_or(None)
+    } else {
+        let path = std::path::PathBuf::from(input);
+        if !path.is_dir() {
+            panic!("The provided path is not a valid directory");
+        }
+        Some(path)
     };
+
 
     match folder {
         Some(folder) => {
