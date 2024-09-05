@@ -62,9 +62,13 @@ impl CurrentVault {
 
     pub fn set_vault(&mut self, vault: KartaVault){
         println!("Setting vault to be: {:?}", vault.path);
-        self.graph = Some(GraphAgdb::new("karta_test_vault", vault.path.clone(), None));
+        let name = vault.path.file_stem();
+        let name: &str = match name {
+            Some(name) => name.to_str().unwrap(),
+            None => return,
+        };
+        self.graph = Some(GraphAgdb::new(name, vault.path.clone(), None));
         self.vault = Some(vault);
-
     }
 }
 
