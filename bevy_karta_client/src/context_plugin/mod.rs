@@ -147,10 +147,10 @@ fn on_context_change(
     };
     
     let nodepath = node.path().clone();
-    // let name = node.name().to_string();
+    let name = node.name().to_string();
 
     commands.spawn(DataNodeBundle{
-        name: Name::new("moh"),
+        name: Name::new(name),
         data_node: DataNode {
             path: nodepath,
             created_time: node.created_time().clone(),
