@@ -18,6 +18,7 @@ pub mod prelude {
     pub use crate::events::*;
     pub use crate::input::*;
     pub use crate::ui::*;
+    pub use crate::OverlayGraphPlugin;
 }
 pub struct OverlayGraphPlugin;
 
