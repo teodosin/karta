@@ -2,9 +2,10 @@
 use std::{collections::HashMap, path::{Path, PathBuf}};
 
 use bevy::prelude::*;
+use bevy_overlay_graph::core::GraphEntity;
 use fs_graph::prelude::*;
 
-use crate::prelude::CurrentVault;
+use crate::{node_plugin, prelude::{CurrentVault, DataNode, DataNodeBundle}};
 
 // -----------------------------------------------------------------
 // Plugin
@@ -115,6 +116,7 @@ pub struct EdgeDeletedEvent {}
 // Systems
 
 fn on_context_change(
+    mut commands: Commands,
     context: Res<CurrentContext>,
     vault: Res<CurrentVault>,
 ){
@@ -132,14 +134,32 @@ fn on_context_change(
 
     let node = graph.open_node(&ctx_root_nodepath);
 
-    match node {
+    let node: fs_graph::prelude::Node = match node {
         Ok(node) => {
             println!("Node found: {:#?}", node);
+            node
         },
         Err(e) => {
             println!("Node not found: {}", e);
+            return;
         }
-    }
+    };
+
+    let nodepath = node.path().clone();
+    let name = nodepath.name().to_owned();
+
+
+    commands.spawn(DataNodeBundle{
+        data_node: DataNode {
+            path: node.path().clone(),
+            created_time: node.created_time().clone(),
+            modified_time: node.modified_time().clone(),
+        },
+        name: Name::new(name),
+        data_node_type: node_plugin::DataNodeType(node.ntype_name()),
+        attributes: node_plugin::Attributes(node.attributes().clone()),
+        ui_marker: GraphEntity,
+    });
 
 
 }

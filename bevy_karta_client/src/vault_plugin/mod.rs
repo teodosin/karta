@@ -117,6 +117,7 @@ fn initialise_default_vault_until_theres_a_vault_menu(
         },
         None => {
             println!("No folder selected");
+            return;
         }
     }
 }
