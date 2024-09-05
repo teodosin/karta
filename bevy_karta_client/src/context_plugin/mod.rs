@@ -132,8 +132,9 @@ fn on_context_change(
     
     let ctx_root_nodepath = ctx.path.clone();
 
+    
     let node = graph.open_node(&ctx_root_nodepath);
-
+    
     let node: fs_graph::prelude::Node = match node {
         Ok(node) => {
             println!("Node found: {:#?}", node);
@@ -144,18 +145,17 @@ fn on_context_change(
             return;
         }
     };
-
+    
     let nodepath = node.path().clone();
-    let name = nodepath.name().to_owned();
-
+    // let name = node.name().to_string();
 
     commands.spawn(DataNodeBundle{
+        name: Name::new("moh"),
         data_node: DataNode {
-            path: node.path().clone(),
+            path: nodepath,
             created_time: node.created_time().clone(),
             modified_time: node.modified_time().clone(),
         },
-        name: Name::new(name),
         data_node_type: node_plugin::DataNodeType(node.ntype_name()),
         attributes: node_plugin::Attributes(node.attributes().clone()),
         ui_marker: GraphEntity,
