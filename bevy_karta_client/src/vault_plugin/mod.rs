@@ -5,6 +5,8 @@ use bevy::prelude::*;
 use fs_graph::prelude::*;
 use native_dialog::FileDialog;
 
+use crate::prelude::{CurrentContext, KartaContext};
+
 
 
 
@@ -48,8 +50,8 @@ impl VaultOfVaults {
 /// Resource that stores the current vault. 
 #[derive(Resource)]
 pub struct CurrentVault {
-    vault: Option<KartaVault>,
-    graph: Option<GraphAgdb>,
+    pub vault: Option<KartaVault>,
+    pub graph: Option<GraphAgdb>,
 }
 
 impl CurrentVault {
@@ -88,6 +90,7 @@ impl KartaVault {
 fn initialise_default_vault_until_theres_a_vault_menu(
     mut vaults: ResMut<VaultOfVaults>,
     mut current_vault: ResMut<CurrentVault>,
+    mut current_context: ResMut<CurrentContext>,
 
     _: NonSend<bevy::winit::WinitWindows>,
 ) {
@@ -109,7 +112,8 @@ fn initialise_default_vault_until_theres_a_vault_menu(
 
             let vault = KartaVault::new(folder);
             vaults.add_vault(vault.clone());
-            current_vault.set_vault(vault)
+            current_vault.set_vault(vault);
+            current_context.set(NodePath::root());
         },
         None => {
             println!("No folder selected");

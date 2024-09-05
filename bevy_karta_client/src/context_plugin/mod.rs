@@ -1,8 +1,10 @@
 //TODO: Would using Bevy's Hashmap be better for performance?
 use std::{collections::HashMap, path::{Path, PathBuf}};
 
-use bevy::{app::{App, Plugin, PreUpdate}, prelude::{Entity, Event, Resource}};
+use bevy::prelude::*;
 use fs_graph::prelude::*;
+
+use crate::prelude::CurrentVault;
 
 // -----------------------------------------------------------------
 // Plugin
@@ -14,7 +16,7 @@ impl Plugin for ContextPlugin {
             .insert_resource(CurrentContext::empty())
             .insert_resource(PathsToEntitiesIndex::new())
 
-            .add_systems(PreUpdate, on_context_change)
+            .add_systems(PreUpdate, on_context_change.run_if(resource_changed::<CurrentContext>))
         ;
     }
 }
@@ -34,10 +36,17 @@ impl CurrentContext {
     pub fn empty() -> Self {
         CurrentContext {
             context: None,
+
             undo_stack: Vec::new(),
             redo_stack: Vec::new(),
             setting_from_undo_redo: false,
         }
+    }
+
+    pub fn set(&mut self, ctx_path: NodePath){
+        self.context = Some(KartaContext {
+            path: ctx_path,
+        });
     }
 }
 
@@ -61,6 +70,20 @@ impl PathsToEntitiesIndex {
 
 pub struct KartaContext {
     path: NodePath, 
+}
+
+impl KartaContext {
+    pub fn root() -> Self{
+        KartaContext {
+            path: NodePath::root(),
+        }
+    }
+
+    pub fn user_root() -> Self {
+        KartaContext {
+            path: NodePath::user_root(),
+        }
+    }
 }
 
 // Events
@@ -90,4 +113,33 @@ pub struct EdgeDeletedEvent {}
 
 // --------------------------------------------------------------------
 // Systems
-fn on_context_change(){}
+
+fn on_context_change(
+    context: Res<CurrentContext>,
+    vault: Res<CurrentVault>,
+){
+    let graph = match &vault.graph {
+        Some(graph) => graph,
+        None => return, // TODO: Better error handling here
+    };
+
+    let ctx = match &context.context {
+        Some(ctx) => ctx,
+        None => return, // TODO: Better error handling here
+    };
+    
+    let ctx_root_nodepath = ctx.path.clone();
+
+    let node = graph.open_node(&ctx_root_nodepath);
+
+    match node {
+        Ok(node) => {
+            println!("Node found: {:#?}", node);
+        },
+        Err(e) => {
+            println!("Node not found: {}", e);
+        }
+    }
+
+
+}
