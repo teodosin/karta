@@ -33,7 +33,9 @@ impl NodePath {
     }
 
     pub fn name(&self) -> String {
-        let name = self.0.file_name();
+        // Get the name of the node
+        let name = self.0.clone();
+        let name = name.file_name();
         
         match name {
             Some(name) => {
