@@ -3,7 +3,7 @@
 use bevy::{prelude::*, log::LogPlugin, window::WindowResolution};
 use bevy_fs_graph::prelude::*;
 use bevy_overlay_graph::prelude::*;
-
+use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 
 
 
@@ -25,6 +25,7 @@ pub fn karta_app() {
             .build()
             .disable::<LogPlugin>()
         )
+        .add_plugins(FrameTimeDiagnosticsPlugin::default())
 
         // .add_plugins(EmbeddedAssetPlugin{
         //     mode: bevy_embedded_assets::PluginMode::AutoLoad,
@@ -33,12 +34,18 @@ pub fn karta_app() {
         
         .add_plugins(KartaCorePlugin)
         .add_plugins(OverlayGraphPlugin)
+
+        .add_systems(PreStartup, debugging_setup)
     ;
 
     app.run();
 }
 
-
+fn debugging_setup(
+    mut commands: Commands,
+) {
+    commands.spawn(iyes_perf_ui::entries::PerfUiBundle::default());
+}
 
 
 

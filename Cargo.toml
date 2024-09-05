@@ -28,6 +28,7 @@ cross = "0.2.5"
 # Karta subcrates
 bevy_fs_graph = { git = "https://github.com/teodosin/bevy_fs_graph", branch="main"}
 bevy_overlay_graph = { git = "https://github.com/teodosin/bevy_overlay_graph", branch="main" }
+iyes_perf_ui = "0.3.0"
 
 [patch."https://github.com/teodosin/bevy_fs_graph.git"]
 bevy_fs_graph = { path = "../bevy_fs_graph" }
