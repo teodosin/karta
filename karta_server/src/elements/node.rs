@@ -119,13 +119,13 @@ impl Node {
         self.db_id
     }
 
-    pub fn name(&self) -> &str {
-        &self.path.name()
+    pub fn name(&self) -> String {
+        self.path.name()
     }
 
     /// Get the NodePath of the node. 
-    pub fn path(&self) -> &NodePath {
-        &self.path
+    pub fn path(&self) -> NodePath {
+        self.path.clone()
     }
 
     pub fn ntype_name(&self) -> NodeType {
@@ -136,16 +136,16 @@ impl Node {
         self.nphys.clone()
     }
 
-    pub fn created_time(&self) -> &SysTime {
-        &self.created_time
+    pub fn created_time(&self) -> SysTime {
+        self.created_time.clone()
     }
 
-    pub fn modified_time(&self) -> &SysTime {
-        &self.modified_time
+    pub fn modified_time(&self) -> SysTime {
+        self.modified_time.clone()
     }
 
-    pub fn attributes(&self) -> &Vec<Attribute> {
-        &self.attributes
+    pub fn attributes(&self) -> Vec<Attribute> {
+        self.attributes.clone()
     }
 }
 

@@ -32,8 +32,15 @@ impl NodePath {
         NodePath(path)
     }
 
-    pub fn name(&self) -> &str {
-        self.0.file_name().unwrap().to_str().unwrap()
+    pub fn name(&self) -> String {
+        let name = self.0.file_name();
+        
+        match name {
+            Some(name) => {
+                name.to_string_lossy().to_string()
+            },
+            None => "root".to_string(),
+        }   
     }
 
     /// Get the path as a pathbuf, excluding the root. 

@@ -13,6 +13,7 @@ pub mod prelude {
         node::Node,
         node_path::NodePath,
         nodetype::NodeType,
+        SysTime,
     };
 
     pub use crate::graph_traits::{
