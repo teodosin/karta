@@ -749,6 +749,7 @@ dependencies = [
  "bevy",
  "directories 5.0.1",
  "fs_graph",
+ "native-dialog",
 ]
 
 [[package]]
