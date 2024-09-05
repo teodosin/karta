@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use directories::ProjectDirs;
 use bevy::prelude::*;
 use fs_graph::prelude::*;
+use native_dialog::FileDialog;
 
 
 
@@ -58,13 +59,56 @@ impl CurrentVault {
             graph: None,
         }
     }
+
+    pub fn set_vault(&mut self, vault: KartaVault){
+        println!("Setting vault to be: {:?}", vault.path);
+        self.graph = Some(GraphAgdb::new("karta_test_vault", vault.path.clone(), None));
+        self.vault = Some(vault);
+
+    }
 }
 
-pub struct KartaVault;
+#[derive(Clone)]
+pub struct KartaVault {
+    path: PathBuf
+}
+
+impl KartaVault {
+    pub fn new(path: PathBuf) -> Self {
+        KartaVault {
+            path,
+        }
+    }
+}
 
 fn initialise_default_vault_until_theres_a_vault_menu(
-    vault_of_vaults: Res<VaultOfVaults>,
-    current_cault: Res<CurrentVault>,
-) {
+    mut vaults: ResMut<VaultOfVaults>,
+    mut current_vault: ResMut<CurrentVault>,
 
+    _: NonSend<bevy::winit::WinitWindows>,
+) {
+    let folder = FileDialog::new()
+        .set_title("Select Karta Vault location")
+        .show_open_single_dir();
+
+    let folder = match folder {
+        Ok(folder) => folder,
+        Err(_) => None,
+    };
+
+    match folder {
+        Some(folder) => {
+            if !folder.is_dir() {
+                println!("Not a folder");
+                return;
+            }
+
+            let vault = KartaVault::new(folder);
+            vaults.add_vault(vault.clone());
+            current_vault.set_vault(vault)
+        },
+        None => {
+            println!("No folder selected");
+        }
+    }
 }

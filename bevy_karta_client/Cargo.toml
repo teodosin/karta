@@ -11,6 +11,7 @@ directories = "5.0.1"
 
 
 fs_graph = { git = "https://github.com/teodosin/fs_graph.git", branch = "main" }
+native-dialog = "0.7.0"
 
 [patch."https://github.com/teodosin/fs_graph.git"]
 fs_graph = { path = "../fs_graph" }
