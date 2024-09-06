@@ -56,7 +56,7 @@ impl CommandManager {
     }
 }
 
-pub trait CommandAgdb {
+pub trait CommandAgdb: Send + Sync {
     fn command_name(&self) -> String;
 
     fn apply(&mut self, graph: &mut GraphAgdb) -> Result<CommandResult, Box<dyn Error>>;
