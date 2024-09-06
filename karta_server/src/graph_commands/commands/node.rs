@@ -40,8 +40,8 @@ impl CommandAgdb for CreateNodeCommand {
                     ancestor_found = true;
                 }
                 Err(e) => {
-                    ancestor_path = ancestor_path.parent().unwrap().clone();
                     missing_ancestors.push(ancestor_path.clone());
+                    ancestor_path = ancestor_path.parent().unwrap();
                 }
             }
         }

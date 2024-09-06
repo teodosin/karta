@@ -144,6 +144,7 @@ mod tests {
         let parent = ctx.graph.open_node(&npath.parent().unwrap());
         assert_eq!(parent.is_ok(), true, "Parent should be created");
         let grandparent = ctx.graph.open_node(&npath.parent().unwrap().parent().unwrap());
+        assert_eq!(grandparent.is_ok(), true, "Grandparent should be created");
 
         ctx.graph.undo();
 
@@ -153,5 +154,29 @@ mod tests {
         assert_eq!(parent.is_err(), true, "Parent should not be found");
         let grandparent = ctx.graph.open_node(&npath.parent().unwrap().parent().unwrap());
         assert_eq!(grandparent.is_err(), true, "Grandparent should not be found");
+    }
+
+    #[test]
+    fn create_node_command_can_be_reapplied() {
+        let mut func_name = "create_node_command_can_be_reapplied";
+        let mut ctx = TestCommandContext::new(&func_name);
+
+        let npath = NodePath::from("test");
+        let node = ctx.graph.create_node_by_path(
+            &npath,
+            None,
+        );
+
+        assert_eq!(node.is_ok(), true, "Node should be created");
+
+        ctx.graph.undo();
+
+        let found = ctx.graph.open_node(&npath);
+        assert_eq!(found.is_err(), true, "Node should not be found");
+
+        ctx.graph.redo();
+
+        let found = ctx.graph.open_node(&npath);
+        assert_eq!(found.is_ok(), true, "Node should be found");
     }
 }
