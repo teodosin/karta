@@ -6,15 +6,15 @@ use crate::prelude::*;
 /// Note that this action may create multiple nodes if its
 /// ancestor nodes are missing. Therefore the undo of this action 
 /// must also undo the creation of all the ancestor nodes.
-pub struct CreateNodeCommand {
+pub struct CreateNodeByPathCommand {
     created_ancestors: Vec<NodePath>,
     node_path: NodePath,
     node_type: Option<NodeType>,
 }
 
-impl CreateNodeCommand {
+impl CreateNodeByPathCommand {
     pub fn new(node_path: NodePath, node_type: Option<NodeType>) -> Self {
-        CreateNodeCommand {
+        CreateNodeByPathCommand {
             created_ancestors: Vec::new(),
             node_path,
             node_type,
@@ -22,9 +22,9 @@ impl CreateNodeCommand {
     }
 }
 
-impl CommandAgdb for CreateNodeCommand {
+impl CommandAgdb for CreateNodeByPathCommand {
     fn command_name(&self) -> String {
-        "Create Node".to_string()
+        "Create Node From Path".to_string()
     }
 
     fn apply(&mut self, graph: &mut GraphAgdb) -> Result<CommandResult, Box<dyn Error>> {
@@ -98,15 +98,80 @@ impl CommandAgdb for CreateNodeCommand {
     }
 }
 
-pub struct InsertNodeAttributeAction {
+pub struct CreateNodeByNameCommand {
+    parent_path: NodePath,
+    node_name: String,
+    node_type: Option<NodeType>,
+}
+
+impl CommandAgdb for CreateNodeByNameCommand {
+    fn command_name(&self) -> String {
+        "Create Node From Name".to_string()
+    }
+    fn apply(&mut self, graph: &mut GraphAgdb) -> Result<CommandResult, Box<dyn Error>> {
+        todo!();
+    }
+    fn undo(&mut self, graph: &mut GraphAgdb) -> Result<CommandResult, Box<dyn Error>> {
+        todo!();
+    }
+    fn redo(&mut self, graph: &mut GraphAgdb) -> Result<CommandResult, Box<dyn Error>> {
+        todo!();
+    }
+}
+
+pub struct DeleteNodesCommand {
+    node_paths: Vec<NodePath>,
+    deleted_nodes: Vec<Node>,
+    files: bool,
+    dirs: bool,
+}
+
+impl CommandAgdb for DeleteNodesCommand {
+    fn command_name(&self) -> String {
+        "Delete Nodes".to_string()
+    }
+    fn apply(&mut self, graph: &mut GraphAgdb) -> Result<CommandResult, Box<dyn Error>> {
+        todo!();
+    }
+    fn undo(&mut self, graph: &mut GraphAgdb) -> Result<CommandResult, Box<dyn Error>> {
+        todo!();
+    }
+    fn redo(&mut self, graph: &mut GraphAgdb) -> Result<CommandResult, Box<dyn Error>> {
+        todo!();
+    }
+}
+
+pub struct InsertNodeAttributesCommand {
     node_path: NodePath,
     old_values: Vec<Attribute>,
     new_values: Vec<Attribute>,
 }
 
-impl CommandAgdb for InsertNodeAttributeAction {
+impl CommandAgdb for InsertNodeAttributesCommand {
     fn command_name(&self) -> String {
         "Insert Node Attribute".to_string()
+    }
+    fn apply(&mut self, graph: &mut GraphAgdb) -> Result<CommandResult, Box<dyn Error>> {
+        todo!();
+    }
+    fn undo(&mut self, graph: &mut GraphAgdb) -> Result<CommandResult, Box<dyn Error>> {
+        todo!();
+    }
+    fn redo(&mut self, graph: &mut GraphAgdb) -> Result<CommandResult, Box<dyn Error>> {
+        todo!();
+    }
+}
+
+pub struct DeleteNodeAttributesCommand {
+    node_path: NodePath,
+    attr_names: Vec<String>,
+    old_values: Vec<Attribute>,
+    new_values: Vec<Attribute>,
+}
+
+impl CommandAgdb for DeleteNodeAttributesCommand {
+    fn command_name(&self) -> String {
+        "Delete Node Attributes".to_string()
     }
     fn apply(&mut self, graph: &mut GraphAgdb) -> Result<CommandResult, Box<dyn Error>> {
         todo!();

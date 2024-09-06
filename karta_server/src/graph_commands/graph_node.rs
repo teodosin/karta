@@ -1,6 +1,6 @@
 use std::{error::Error, path::PathBuf};
 
-use node::CreateNodeCommand;
+use node::CreateNodeByPathCommand;
 
 use crate::prelude::*;
 
@@ -19,7 +19,7 @@ impl GraphNode for GraphCommands {
         path: &NodePath,
         ntype: Option<NodeType>,
     ) -> Result<Node, Box<dyn std::error::Error>> {
-        let cmd = CreateNodeCommand::new(path.clone(), ntype);
+        let cmd = CreateNodeByPathCommand::new(path.clone(), ntype);
 
         let result = match self.apply(Box::new(cmd)) {
             Ok(result) => result,
