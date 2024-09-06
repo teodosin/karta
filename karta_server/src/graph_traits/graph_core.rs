@@ -48,7 +48,6 @@ pub trait GraphCore {
 
     // fn undo(&mut self, num: usize);
     // fn redo(&mut self, num: usize);
-
 }
 
 mod tests {

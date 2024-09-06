@@ -50,14 +50,14 @@ pub trait GraphNode {
     /// Inserts a Node.
     fn insert_node(&mut self, node: Node) -> Result<(), Box<dyn Error>>;
 
-    /// Deletes a node.
+    /// Deletes nodes.
     ///
     /// Setting "files" and/or "dirs" to true could also delete from the file system,
     /// and recursively. Very dangerous. Though not implementing this would mean that
     /// those files would constantly be at a risk of getting reindexed, so this
     /// should probably still be implemented, unless we want to just mark nodes as deleted
     /// but never actually delete them, which seems like a smelly solution to me.
-    fn delete_node(&self, path: PathBuf, files: bool, dirs: bool) -> Result<(), agdb::DbError>;
+    fn delete_nodes(&mut self, paths: &Vec<NodePath>, files: bool, dirs: bool) -> Result<(), Box<dyn Error>>;
 
     /// Get node attributes
     fn get_node_attrs(&self, path: &NodePath) -> Result<Vec<Attribute>, Box<dyn Error>>;
@@ -77,7 +77,7 @@ pub trait GraphNode {
     ) -> Result<(), Box<dyn Error>>;
 
     /// Merges a vector of nodes into the last one.
-    fn merge_nodes(&mut self, nodes: Vec<NodePath>) -> Result<(), agdb::DbError>;
+    fn merge_nodes(&mut self, nodes: Vec<NodePath>) -> Result<(), Box<dyn Error>>;
 
     // pub fn set_relative_positions
 

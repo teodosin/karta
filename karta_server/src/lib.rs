@@ -1,9 +1,9 @@
 #![allow(warnings)]
 
 mod elements;
-mod graph_agdb;
 mod graph_traits;
-mod actions;
+mod graph_agdb;
+mod graph_commands;
 
 mod utils;
 
@@ -25,4 +25,9 @@ pub mod prelude {
     };
 
     pub use crate::graph_agdb::GraphAgdb;
+
+    pub use crate::graph_commands::{
+        commands::*,
+        GraphCommands,
+    };
 }

@@ -179,8 +179,19 @@ impl GraphNode for GraphAgdb {
     /// those files would constantly be at a risk of getting reindexed, so this
     /// should probably still be implemented, unless we want to just mark nodes as deleted
     /// but never actually delete them, which seems like a smelly solution to me.
-    fn delete_node(&self, path: PathBuf, files: bool, dirs: bool) -> Result<(), agdb::DbError> {
-        Ok(())
+    fn delete_nodes(&mut self, paths: &Vec<NodePath>, files: bool, dirs: bool) -> Result<(), Box<dyn Error>> {
+        let aliases = paths.iter().map(|path| path.alias()).collect::<Vec<String>>();
+
+        let query = self.db.exec_mut(&QueryBuilder::remove().ids(aliases).query());
+
+        match query {
+            Ok(query) => {
+                Ok(())
+            }
+            Err(e) => {
+                Err(e.into())
+            }
+        }
     }
 
     /// Is this even needed? Does open node get all attributes?
@@ -319,7 +330,7 @@ impl GraphNode for GraphAgdb {
     }
 
     /// Merges a vector of nodes into the last one.
-    fn merge_nodes(&mut self, nodes: Vec<NodePath>) -> Result<(), agdb::DbError> {
+    fn merge_nodes(&mut self, nodes: Vec<NodePath>) -> Result<(), Box<dyn Error>> {
         Ok(())
     }
 
