@@ -51,7 +51,7 @@ impl VaultOfVaults {
 #[derive(Resource)]
 pub struct CurrentVault {
     pub vault: Option<KartaVault>,
-    pub graph: Option<GraphAgdb>,
+    pub graph: Option<GraphCommands>,
 }
 
 impl CurrentVault {
@@ -69,7 +69,7 @@ impl CurrentVault {
             Some(name) => name.to_str().unwrap(),
             None => return,
         };
-        self.graph = Some(GraphAgdb::new(name, vault.path.clone(), None));
+        self.graph = Some(GraphCommands::new(name, vault.path.clone(), None));
         self.vault = Some(vault);
     }
 }
