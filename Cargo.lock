@@ -91,18 +91,18 @@ checksum = "f26201604c87b1e01bd3d98f8d5d9a8fcbb815e8cedb41ffccbeb4bf593a35fe"
 
 [[package]]
 name = "agdb"
-version = "0.8.1"
+version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a78cd1c225d37187d9e366617931e0de085871b83ae4ba1ab5526d472081a41c"
+checksum = "a0d0079c75c244232fce0221a3e952711f5773ead6195badc2ab0868c597a0e2"
 dependencies = [
  "agdb_derive",
 ]
 
 [[package]]
 name = "agdb_derive"
-version = "0.8.1"
+version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f765be9f52574c9c430508a21820d2f6ca2ebdb8e18fbffad458d8179e8fa136"
+checksum = "d7c485f8ae48c4a9dd43678a3dc0b8f26ba4016e57bdc17532e534aacc6465fa"
 dependencies = [
  "quote",
  "syn 2.0.71",
@@ -2609,7 +2609,6 @@ dependencies = [
 [[package]]
 name = "fs_graph"
 version = "0.1.0"
-source = "git+https://github.com/teodosin/fs_graph.git?branch=main#b08f78b53625d6961cee1d9848cb123a1e97d721"
 dependencies = [
  "agdb",
  "directories 5.0.1",
