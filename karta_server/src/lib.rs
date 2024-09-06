@@ -1,8 +1,9 @@
 #![allow(warnings)]
 
-pub mod elements;
-pub mod graph_agdb;
-pub mod graph_traits;
+mod elements;
+mod graph_agdb;
+mod graph_traits;
+mod actions;
 
 mod utils;
 

@@ -12,6 +12,9 @@ pub trait GraphNode {
     /// The path is relative to the root of the graph.
     fn open_node(&self, path: &NodePath) -> Result<Node, Box<dyn Error>>;
 
+    // Retrieves the edges of a particular node.
+    // fn get_node_edges(&self, path: &NodePath) -> Vec<Edge>;
+
     /// Opens the connections of a particular node.
     /// Takes in the path to the node relative to the root of the graph.
     ///
@@ -20,15 +23,6 @@ pub trait GraphNode {
     /// would have to be connected to some node, which would just turn
     /// this into a generic "open_nodes" function, or "search_nodes".
     /// Then filters could just be wrappers around agdb's QueryConditions...
-    ///
-    /// This opens a can of worms about whether the nodes loaded up in Karta
-    /// even need to be from a specific context. What if everything was just
-    /// in a "soup"? But what would navigation even mean then, when you're not
-    /// traveling through contexts? When are relative positions enforced?
-    /// How do you determine which node has priority? Is it the one that's open?
-    /// If multiple are open, how do the relative positions work?
-    /// Parent takes priority over other connection?
-    /// What if neither is the parent? Are the priorities configurable?
     fn open_node_connections(&self, path: &NodePath) -> Vec<Node>;
 
     /// Creates a node from the given path. Inserts it into the graph.
@@ -99,6 +93,9 @@ pub trait GraphNode {
         parent: &NodePath,
         child: &NodePath,
     ) -> Result<(), Box<dyn Error>>;
+
+    // Get all nodes in the graph.
+    // fn get_all_nodes(&self) -> Vec<Node>;
 }
 
 // --------------------------------------------------------------------

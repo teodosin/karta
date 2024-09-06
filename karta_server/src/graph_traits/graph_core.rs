@@ -7,6 +7,8 @@ pub trait GraphCore {
     fn user_root_dirpath(&self) -> PathBuf;
 
     fn root_nodepath(&self) -> NodePath;
+    /// Gets the name of the root directory without the full path
+    fn root_name(&self) -> String;
 
     /// Constructor. Panics if the db cannot be created.
     ///
@@ -25,7 +27,8 @@ pub trait GraphCore {
     /// the root,
     /// attributes,
     /// settings,
-    /// nodetypes
+    /// nodetypes,
+    /// history?
     fn init_archetype_nodes(&mut self);
 
     /// Syncs a node in the db with the file system
@@ -37,11 +40,15 @@ pub trait GraphCore {
     /// Delete all dead nodes from the graph.
     fn cleanup_dead_nodes(&mut self);
 
+    // Open all nodes and edges in the graph.
+    // fn open_all(&self) -> (Vec<Node>, Vec<Edge>);
+
     /// Set whether the library should maintain readable files for the nodes in the graph.
     fn maintain_readable_files(&mut self, maintain: bool);
 
-    /// Gets the name of the root directory without the full path
-    fn root_name(&self) -> String;
+    // fn undo(&mut self, num: usize);
+    // fn redo(&mut self, num: usize);
+
 }
 
 mod tests {

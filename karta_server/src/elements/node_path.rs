@@ -2,7 +2,9 @@ use std::path::PathBuf;
 
 use agdb::{DbError, DbValue};
 
-/// Newtype wrapper for the node path. 
+/// Newtype wrapper for the node path. Acts as the main struct for 
+/// creating and modifying node paths, turning them into db aliases/strings and 
+/// back. Path includes the name of the node itself. 
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub struct NodePath(PathBuf);
 

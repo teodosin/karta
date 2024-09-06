@@ -3,8 +3,8 @@ use std::path::{self, PathBuf};
 use agdb::QueryBuilder;
 
 use crate::{
-    graph_traits::{self, graph_core::GraphCore, graph_node::GraphNode},
     elements::nodetype::NodeType,
+    graph_traits::{self, graph_core::GraphCore, graph_node::GraphNode},
 };
 
 use super::{node::Node, node_path::NodePath, nodetype::ARCHETYPES, GraphAgdb, StoragePath};
@@ -15,7 +15,7 @@ impl GraphCore for GraphAgdb {
     fn storage_path(&self) -> graph_traits::StoragePath {
         self.storage_path.clone()
     }
-    
+
     fn user_root_dirpath(&self) -> PathBuf {
         self.root_path.clone()
     }
@@ -24,12 +24,22 @@ impl GraphCore for GraphAgdb {
         NodePath::root()
     }
 
+    /// Gets the name of the root directory without the full path
+    fn root_name(&self) -> String {
+        self.root_path
+            .file_name()
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .to_string()
+    }
+
     /// Constructor. Panics if the db cannot be created.
     ///
     /// Takes the desired root directory of the graph as a parameter and the name for the db.
     /// The name of the root directory will become the user_root of the graph,
-    /// as first child of the root node. 
-    /// 
+    /// as first child of the root node.
+    ///
     /// Creates the db at the storage_path, or initialises the db if it already exists there.
     ///
     /// TODO: Add error handling.
@@ -45,7 +55,7 @@ impl GraphCore for GraphAgdb {
                     .unwrap()
                     .data_dir()
                     .to_path_buf()
-                }
+            }
         };
 
         // Create the path if it doesn't exist
@@ -84,7 +94,6 @@ impl GraphCore for GraphAgdb {
     /// settings,
     /// nodetypes
     fn init_archetype_nodes(&mut self) {
-
         let archetypes = ARCHETYPES;
 
         println!("Length of archetypes {}", archetypes.len());
@@ -92,7 +101,6 @@ impl GraphCore for GraphAgdb {
         archetypes.iter().for_each(|at| {
             println!("{}", at);
         });
-
 
         archetypes.iter().for_each(|atype| {
             let atype_path = NodePath::from(*atype);
@@ -114,7 +122,7 @@ impl GraphCore for GraphAgdb {
                     .values(&node)
                     .query(),
             );
-            
+
             match query {
                 Ok(_) => {
                     println!("Created archetype node: {}", atype_path.alias());
@@ -126,7 +134,11 @@ impl GraphCore for GraphAgdb {
             }
 
             if atype_path != NodePath::root() {
-                println!("trying to autoparent {:?} to {:?}", &NodePath::root(), &atype_path);
+                println!(
+                    "trying to autoparent {:?} to {:?}",
+                    &NodePath::root(),
+                    &atype_path
+                );
                 self.autoparent_nodes(&NodePath::root(), &atype_path);
             }
         });
@@ -206,15 +218,5 @@ impl GraphCore for GraphAgdb {
     /// Set whether the library should maintain readable files for the nodes in the graph.
     fn maintain_readable_files(&mut self, maintain: bool) {
         self.maintain_readable_files = maintain;
-    }
-
-    /// Gets the name of the root directory without the full path
-    fn root_name(&self) -> String {
-        self.root_path
-            .file_name()
-            .unwrap()
-            .to_str()
-            .unwrap()
-            .to_string()
     }
 }

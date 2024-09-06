@@ -45,6 +45,9 @@ pub trait GraphEdge {
 
     /// Delete attributes from an edge. Ignore reserved attribute names.
     fn delete_edge_attr(&self, edge: Edge, attr: Attribute) -> Result<(), Box<dyn Error>>;
+
+    // Open all edges in the graph
+    // fn open_all_edges(&self) -> Vec<Edge>;
 }
 
 // mod tests {
