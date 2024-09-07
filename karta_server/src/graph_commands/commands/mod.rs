@@ -4,6 +4,7 @@ use agdb::QueryBuilder;
 use crate::{graph_traits::Graph, prelude::*};
 
 pub mod node;
+pub mod edge;
 
 pub struct CommandManager {
     queue: Vec<Box<dyn CommandAgdb>>,
