@@ -50,7 +50,8 @@ pub trait GraphEdge {
     // fn open_all_edges(&self) -> Vec<Edge>;
 }
 
-// mod tests {
+#[cfg(test)]
+mod tests {
 //     #![allow(warnings)]
 
 //     use crate::{
@@ -95,4 +96,4 @@ pub trait GraphEdge {
 //     // Test inserting edge attributes (normal and reserved)
 //     // Test deleting edge attributes (normal and reserved)
 //     // Test creating a parent-child relationship between nodes
-// }
+}

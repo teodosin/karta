@@ -1,0 +1,14 @@
+[
+    /*[0]*/ (
+        commit: "74bcaf1bf91b395d01b2527787c5f58f196e0439",
+        elapsed_ms: 40,
+        db_size_bytes: 53106,
+        timestamp: "1725777743",
+    ),
+    /*[1]*/ (
+        commit: "74bcaf1bf91b395d01b2527787c5f58f196e0439",
+        elapsed_ms: 60,
+        db_size_bytes: 61650,
+        timestamp: "1725777771",
+    ),
+]

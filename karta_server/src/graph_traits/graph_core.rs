@@ -50,6 +50,7 @@ pub trait GraphCore {
     // fn redo(&mut self, num: usize);
 }
 
+#[cfg(test)]
 mod tests {
     #![allow(warnings)]
 
@@ -61,7 +62,7 @@ mod tests {
         elements::{node, node_path::NodePath},
         graph_agdb::GraphAgdb,
         graph_traits::{graph_core::GraphCore, graph_edge::GraphEdge, graph_node::GraphNode, StoragePath},
-        utils::TestContext,
+        utils::utils::TestContext,
     };
 
     /// Add a node to the db, then create a new graph with the same name.

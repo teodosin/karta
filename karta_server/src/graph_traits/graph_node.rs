@@ -100,6 +100,7 @@ pub trait GraphNode {
 
 // --------------------------------------------------------------------
 
+#[cfg(test)]
 mod tests {
     #![allow(warnings)]
 
@@ -107,7 +108,7 @@ mod tests {
         elements::{attribute::{Attribute, RESERVED_NODE_ATTRS}, node, node_path::NodePath},
         graph_agdb::GraphAgdb,
         graph_traits::graph_edge::GraphEdge,
-        utils::TestContext,
+        utils::utils::TestContext,
     };
     use agdb::QueryBuilder;
 
