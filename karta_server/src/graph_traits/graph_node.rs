@@ -2,7 +2,7 @@ use std::{error::Error, path::PathBuf};
 
 use crate::elements::nodetype::NodeType;
 
-use super::{attribute::Attribute, node::Node, node_path::NodePath};
+use super::{attribute::Attribute, edge::Edge, node::Node, node_path::NodePath};
 
 pub trait GraphNode {
     // -------------------------------------------------------------------
@@ -23,7 +23,7 @@ pub trait GraphNode {
     /// would have to be connected to some node, which would just turn
     /// this into a generic "open_nodes" function, or "search_nodes".
     /// Then filters could just be wrappers around agdb's QueryConditions...
-    fn open_node_connections(&self, path: &NodePath) -> Vec<Node>;
+    fn open_node_connections(&self, path: &NodePath) -> Vec<(Node, Edge)>;
 
     /// Creates a node from the given path. Inserts it into the graph.
     /// Insert the relative path from the root, not including the root dir.
@@ -105,7 +105,7 @@ mod tests {
     #![allow(warnings)]
 
     use crate::{
-        elements::{attribute::{Attribute, RESERVED_NODE_ATTRS}, node, node_path::NodePath},
+        elements::{attribute::{Attribute, RESERVED_NODE_ATTRS}, node, node_path::NodePath, nodetype::ARCHETYPES},
         graph_agdb::GraphAgdb,
         graph_traits::graph_edge::GraphEdge,
         utils::utils::TestContext,
@@ -397,7 +397,21 @@ mod tests {
 
         let root_path = NodePath::root();
 
-        
+        let connections = ctx.graph.open_node_connections(&root_path);
+
+        let archetypes: Vec<&&str> = ARCHETYPES.iter().filter(|ar| **ar != "").collect();
+
+        assert_eq!(
+            connections.len(), archetypes.len(), 
+            "Root path should have its archetype connections: {}", archetypes.len()
+        );
+    }
+
+    #[test]
+    fn opening_folder_connections__indexes_folder_contents() {
+        let func_name = "opening_folder_connections__indexes_folder_contents";
+        let mut ctx = TestContext::new(func_name);
+
     }
 
     // #[test]

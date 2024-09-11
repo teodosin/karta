@@ -11,4 +11,28 @@
         db_size_bytes: 11144,
         timestamp: "1725777771",
     ),
+    /*[2]*/ (
+        commit: "7948b882127b08259cf30a1947bc19bb0e8ed676",
+        elapsed_ms: 0,
+        db_size_bytes: 11144,
+        timestamp: "1726062287",
+    ),
+    /*[3]*/ (
+        commit: "7948b882127b08259cf30a1947bc19bb0e8ed676",
+        elapsed_ms: 12,
+        db_size_bytes: 11144,
+        timestamp: "1726062287",
+    ),
+    /*[4]*/ (
+        commit: "7948b882127b08259cf30a1947bc19bb0e8ed676",
+        elapsed_ms: 0,
+        db_size_bytes: 11144,
+        timestamp: "1726062350",
+    ),
+    /*[5]*/ (
+        commit: "7948b882127b08259cf30a1947bc19bb0e8ed676",
+        elapsed_ms: 18,
+        db_size_bytes: 11144,
+        timestamp: "1726062350",
+    ),
 ]

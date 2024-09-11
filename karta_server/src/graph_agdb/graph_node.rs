@@ -1,4 +1,4 @@
-use std::{error::Error, path::PathBuf};
+use std::{error::Error, path::PathBuf, vec};
 
 use agdb::{DbElement, DbId, QueryBuilder};
 
@@ -28,7 +28,9 @@ impl GraphNode for GraphAgdb {
         }
     }
 
-    fn open_node_connections(&self, path: &NodePath) -> Vec<Node> {
+    /// Retrieves all of a node's connections from the database.
+    /// Both links and backlinks. 
+    fn open_node_connections(&self, path: &NodePath) -> Vec<(Node, Edge)> {
         // Step 1: Check if the node is a physical node in the file system.
         // Step 2: Check if the node exists in the db.
         // Step 3: Check if all the physical dirs and files in the node are in the db.
@@ -44,11 +46,76 @@ impl GraphNode for GraphAgdb {
 
         let as_str = path.alias();
 
-        let mut nodes: Vec<Node> = Vec::new();
+        let mut node_ids: Vec<DbId> = Vec::new();
+        let mut edge_ids: Vec<DbId> = Vec::new();
 
-        // Query the db for the node
+        // Links from node
+        let links = self.db.exec(&QueryBuilder::search().from(path.alias()).query());
 
-        nodes
+        match links {
+            Ok(links) => {
+                for elem in links.elements.iter() {
+                    if elem.id.0 < 0 {
+                        // Is edge
+                        edge_ids.push(elem.id);
+                    } else if elem.id.0 > 0 {
+                        // Is node
+                        node_ids.push(elem.id);
+                    }
+                }
+            }
+            Err(_e) => {}
+        }
+
+        // Backlinks to node
+        let backlinks = self.db.exec(&QueryBuilder::search().to(path.alias()).query());
+
+        match backlinks {
+            Ok(backlinks) => {
+                for elem in backlinks.elements.iter() {
+                    if elem.id.0 < 0 {
+                        // Is edge
+                        edge_ids.push(elem.id);
+                    } else if elem.id.0 > 0 {
+                        // Is node
+                        node_ids.push(elem.id);
+                    }
+                }
+            }
+            Err(_e) => {}
+        }
+
+        let full_nodes = match self.db.exec(&QueryBuilder::select().values(vec![]).ids(node_ids).query()) {
+            Ok(nodes) => nodes.elements,
+            Err(_e) => vec![]
+        };
+        let full_edges = match self.db.exec(&QueryBuilder::select().values(vec![]).ids(edge_ids).query()) {
+            Ok(edges) => edges.elements,
+            Err(_e) => vec![]
+        };
+
+        let connections: Vec<(Node, Edge)> = full_nodes.iter().filter_map(|node| {
+            let node = Node::try_from(node.clone()).unwrap();
+
+            
+            // Ignore the original node
+            if node.path() == *path {
+                return None;
+            }
+            let edge = full_edges.iter().find(|edge| {
+                if edge.from.unwrap() == node.id().unwrap() || edge.to.unwrap() == node.id().unwrap() {
+                    true
+                } else {
+                    false
+                }
+            }).unwrap();
+            let edge = Edge::try_from(edge.clone()).unwrap();
+            
+            println!("Nodes: {:?}", node.path());
+            Some((node, edge))
+        }).collect();
+
+        connections
     }
 
     fn create_node_by_path(
