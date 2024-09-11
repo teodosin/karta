@@ -1,0 +1,50 @@
+[
+    /*[0]*/ (
+        commit: "d09880c77148824f504db0df259180b023c4319f",
+        elapsed_ms: 52,
+        db_size_bytes: 11066,
+        timestamp: "1726070817",
+    ),
+    /*[1]*/ (
+        commit: "d09880c77148824f504db0df259180b023c4319f",
+        elapsed_ms: 75,
+        db_size_bytes: 11066,
+        timestamp: "1726071769",
+    ),
+    /*[2]*/ (
+        commit: "d09880c77148824f504db0df259180b023c4319f",
+        elapsed_ms: 73,
+        db_size_bytes: 11066,
+        timestamp: "1726072010",
+    ),
+    /*[3]*/ (
+        commit: "d09880c77148824f504db0df259180b023c4319f",
+        elapsed_ms: 52,
+        db_size_bytes: 11066,
+        timestamp: "1726072214",
+    ),
+    /*[4]*/ (
+        commit: "d09880c77148824f504db0df259180b023c4319f",
+        elapsed_ms: 5,
+        db_size_bytes: 18446,
+        timestamp: "1726072267",
+    ),
+    /*[5]*/ (
+        commit: "d09880c77148824f504db0df259180b023c4319f",
+        elapsed_ms: 5,
+        db_size_bytes: 18446,
+        timestamp: "1726072405",
+    ),
+    /*[6]*/ (
+        commit: "d09880c77148824f504db0df259180b023c4319f",
+        elapsed_ms: 0,
+        db_size_bytes: 11132,
+        timestamp: "1726072431",
+    ),
+    /*[7]*/ (
+        commit: "d09880c77148824f504db0df259180b023c4319f",
+        elapsed_ms: 0,
+        db_size_bytes: 11132,
+        timestamp: "1726072483",
+    ),
+]

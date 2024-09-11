@@ -6,7 +6,7 @@ use crate::prelude::*;
 
 
 impl GraphNode for GraphCommands {
-    fn open_node(&self, path: &NodePath) -> Result<Node, Box<dyn std::error::Error>> {
+    fn open_node(&mut self, path: &NodePath) -> Result<Node, Box<dyn std::error::Error>> {
         self.graph.open_node(path)
     }
 

@@ -2,14 +2,12 @@ use std::{error::Error, path::PathBuf, vec};
 
 use agdb::{DbElement, DbId, QueryBuilder};
 
-use crate::{elements::{nodetype::NodeType, self, edge::Edge}, graph_traits::graph_node::GraphNode};
+use crate::{elements::{self, edge::Edge, nodetype::NodeType}, graph_traits::graph_node::GraphNode, prelude::GraphCore};
 
 use super::{attribute::{Attribute, RESERVED_NODE_ATTRS}, node::Node, node_path::NodePath, GraphAgdb, StoragePath};
 
 impl GraphNode for GraphAgdb {
-/// Retrieves a particular node's data from the database.
-    /// The path is relative to the root of the graph.
-    fn open_node(&self, path: &NodePath) -> Result<Node, Box<dyn Error>> {
+    fn open_node(&mut self, path: &NodePath) -> Result<Node, Box<dyn Error>> {
         let alias = path.alias();
 
         let node = self.db.exec(&QueryBuilder::select().ids(alias).query());
@@ -23,13 +21,15 @@ impl GraphNode for GraphAgdb {
                 Ok(node.unwrap())
             }
             Err(_err) => {
-                return Err("Could not open node".into());
+                if path.full(&self.user_root_dirpath()).exists() {
+                    self.index_single_node(path)
+                } else {
+                    return Err("Could not open node".into());
+                }
             }
         }
     }
 
-    /// Retrieves all of a node's connections from the database.
-    /// Both links and backlinks. 
     fn open_node_connections(&self, path: &NodePath) -> Vec<(Node, Edge)> {
         // Step 1: Check if the node is a physical node in the file system.
         // Step 2: Check if the node exists in the db.

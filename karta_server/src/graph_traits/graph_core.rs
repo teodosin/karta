@@ -1,5 +1,5 @@
-use super::{node_path::NodePath, StoragePath};
-use std::path::PathBuf;
+use super::{node::Node, node_path::NodePath, StoragePath};
+use std::{error::Error, path::PathBuf};
 
 pub trait GraphCore {
     fn storage_path(&self) -> StoragePath;
@@ -32,7 +32,7 @@ pub trait GraphCore {
     fn init_archetype_nodes(&mut self);
 
     /// Syncs a node in the db with the file system
-    fn index_single_node(&mut self, path: &NodePath);
+    fn index_single_node(&mut self, path: &NodePath) -> Result<Node, Box<dyn Error>>;
 
     /// Syncs the node's relationships in the db with the file system.
     fn index_node_connections(&mut self, path: &NodePath);
@@ -77,7 +77,7 @@ mod tests {
 
         first.graph.create_node_by_path(&node_path, None);
 
-        let second = TestContext::new(func_name);
+        let mut second = TestContext::new(func_name);
 
         let root_node_result = second.graph.open_node(&node_path);
 
@@ -89,7 +89,7 @@ mod tests {
     #[test]
     fn create_graph_db_file_in_custom_storage_directory() {
         let func_name = "create_graph_db_file_in_custom_storage_directory";
-        let ctx = TestContext::custom_storage(func_name);
+        let mut ctx = TestContext::custom_storage(func_name);
 
         let storage = ctx.graph.storage_path().strg_path();
 
@@ -128,7 +128,7 @@ mod tests {
     /// Test whether the db creates attributes/settings/etc. nodes when the db is first created.
     fn creating_new_graph_creates_archetype_nodes() {
         let func_name = "creating_new_graph_creates_archetype_nodes";
-        let ctx = TestContext::new(func_name);
+        let mut ctx = TestContext::new(func_name);
         
         let atypes = crate::elements::nodetype::ARCHETYPES;
 

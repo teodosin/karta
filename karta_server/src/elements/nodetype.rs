@@ -109,6 +109,18 @@ impl NodeType {
         }
     }
 
+    pub fn dir() -> Self {
+        Self {
+            type_name: "Directory".to_string(),
+        }
+    }
+
+    pub fn file() -> Self {
+        Self {
+            type_name: "File".to_string(),
+        }
+    }
+
     pub fn other() -> Self {
         Self {
             type_name: "Other".to_string(),

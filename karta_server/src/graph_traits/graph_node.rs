@@ -10,7 +10,10 @@ pub trait GraphNode {
 
     /// Retrieves a particular node's data from the database.
     /// The path is relative to the root of the graph.
-    fn open_node(&self, path: &NodePath) -> Result<Node, Box<dyn Error>>;
+    /// 
+    /// TODO: This takes a mutable reference because of the indexing requirement, which is
+    /// awkward and tech debt. 
+    fn open_node(&mut self, path: &NodePath) -> Result<Node, Box<dyn Error>>;
 
     // Retrieves the edges of a particular node.
     // fn get_node_edges(&self, path: &NodePath) -> Vec<Edge>;
@@ -112,7 +115,7 @@ mod tests {
     };
     use agdb::QueryBuilder;
 
-    use std::{path::PathBuf, vec};
+    use std::{fs::create_dir, path::PathBuf, vec};
 
     use crate::graph_traits::{graph_core::GraphCore, graph_node::GraphNode};
 
@@ -163,7 +166,7 @@ mod tests {
     #[test]
     fn opening_node_that_does_not_exist_fails() {
         let func_name = "opening_node_that_does_not_exist_fails";
-        let ctx = TestContext::new(func_name);
+        let mut ctx = TestContext::new(func_name);
 
         let path = NodePath::from("test");
 
@@ -399,6 +402,8 @@ mod tests {
 
         let connections = ctx.graph.open_node_connections(&root_path);
 
+        // Archetypes includes the root, but the source node is excluded from the function so
+        // so the length should be one less than the number of archetypes
         let archetypes: Vec<&&str> = ARCHETYPES.iter().filter(|ar| **ar != "").collect();
 
         assert_eq!(
@@ -408,10 +413,46 @@ mod tests {
     }
 
     #[test]
-    fn opening_folder_connections__indexes_folder_contents() {
-        let func_name = "opening_folder_connections__indexes_folder_contents";
+    fn opening_physical_dir__is_indexed_and_created() {
+        let func_name = "opening_physical_dir__is_indexed_and_created";
         let mut ctx = TestContext::new(func_name);
 
+        let root_dir = ctx.graph.user_root_dirpath();
+
+        let dir_nodepath = NodePath::from("test_dir");
+
+        let dir_path = dir_nodepath.full(&root_dir);
+
+        create_dir(&dir_path);
+
+        let dir_path_node = ctx.graph.open_node(&dir_nodepath);
+        assert_eq!(dir_path_node.is_ok(), true, "Node should be indexed and opened");
+    }
+
+        #[test]
+    fn opening_dir_connections__indexes_and_creates_nodes() {
+        let func_name = "opening_dir_connections__indexes_and_creates_nodes";
+        let mut ctx = TestContext::new(func_name);
+
+        let root_dir = ctx.graph.user_root_dirpath();
+
+        let dir_nodepath = NodePath::from("test_dir");
+        let file1_nodepath = NodePath::from("test_dir/test_file1.txt");
+        let file2_nodepath = NodePath::from("test_dir/test_file2.txt");
+        let file3_nodepath = NodePath::from("test_dir/test_file3.txt");
+
+        let dir_path = dir_nodepath.full(&root_dir);
+        let dir_file1 = file1_nodepath.full(&root_dir);
+        let dir_file2 = file2_nodepath.full(&root_dir);
+        let dir_file3 = file3_nodepath.full(&root_dir);
+
+        // create the dir and files
+        create_dir(&dir_path);        
+
+        let dir_path_node = ctx.graph.open_node(&dir_nodepath);
+        assert_eq!(dir_path_node.is_ok(), true, "Node should be indexed and opened");
+
+        todo!();
     }
 
     // #[test]

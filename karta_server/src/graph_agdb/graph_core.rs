@@ -1,4 +1,4 @@
-use std::path::{self, PathBuf};
+use std::{error::Error, path::{self, PathBuf}};
 
 use agdb::QueryBuilder;
 
@@ -145,14 +145,22 @@ impl GraphCore for GraphAgdb {
     }
 
     /// Syncs a node in the db with the file system
-    fn index_single_node(&mut self, path: &NodePath) {
+    fn index_single_node(&mut self, path: &NodePath) -> Result<Node, Box<dyn Error>>{
         let full_path = path.full(&self.root_path);
         let node_alias = path.alias();
 
         let is_phys = full_path.exists();
         let is_dir = full_path.is_dir();
 
-        todo!()
+        if is_phys {
+            println!("Indexing node: {}", node_alias);
+            if is_dir {
+                return self.create_node_by_path(path, Some(NodeType::dir()))
+            } else {
+                return self.create_node_by_path(path, Some(NodeType::file()))
+            } 
+        }
+        return Err("Indexing of path failed".into())
     }
 
     /// Syncs the node's relationships in the db with the file system.
