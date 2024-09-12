@@ -115,7 +115,7 @@ mod tests {
     };
     use agdb::QueryBuilder;
 
-    use std::{fs::create_dir, path::PathBuf, vec};
+    use std::{fs::{create_dir, File}, path::PathBuf, vec};
 
     use crate::graph_traits::{graph_core::GraphCore, graph_node::GraphNode};
 
@@ -410,6 +410,15 @@ mod tests {
             connections.len(), archetypes.len(), 
             "Root path should have its archetype connections: {}", archetypes.len()
         );
+
+        // Check that the tuples contain matching edges
+        for (i, connection) in connections.iter().enumerate() {
+            assert!(
+                *connection.1.source() == connection.0.path() || 
+                *connection.1.target() == connection.0.path(), 
+                "Edge should be connected to Node"
+            )
+        }
     }
 
     #[test]
@@ -429,7 +438,7 @@ mod tests {
         assert_eq!(dir_path_node.is_ok(), true, "Node should be indexed and opened");
     }
 
-        #[test]
+    #[test]
     fn opening_dir_connections__indexes_and_creates_nodes() {
         let func_name = "opening_dir_connections__indexes_and_creates_nodes";
         let mut ctx = TestContext::new(func_name);
@@ -448,11 +457,16 @@ mod tests {
 
         // create the dir and files
         create_dir(&dir_path);        
+        File::create(&dir_file1).unwrap();
+        File::create(&dir_file2).unwrap();
+        File::create(&dir_file3).unwrap();
 
         let dir_path_node = ctx.graph.open_node(&dir_nodepath);
         assert_eq!(dir_path_node.is_ok(), true, "Node should be indexed and opened");
 
-        todo!();
+        let nodes = ctx.graph.open_node_connections(&dir_nodepath);
+        // Result should be test files + the user_root
+        assert_eq!(nodes.len(), 4, "Should be 4 nodes: user_root, test_file1, test_file2, test_file3");
     }
 
     // #[test]
