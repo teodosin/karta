@@ -21,7 +21,9 @@ impl GraphNode for GraphAgdb {
                 Ok(node.unwrap())
             }
             Err(_err) => {
+                let full = path.full(&self.user_root_dirpath());
                 if path.full(&self.user_root_dirpath()).exists() {
+                    println!("{:?} is supposed to be right", full);
                     self.index_single_node(path)
                 } else {
                     return Err("Could not open node".into());
@@ -30,7 +32,7 @@ impl GraphNode for GraphAgdb {
         }
     }
 
-    fn open_node_connections(&self, path: &NodePath) -> Vec<(Node, Edge)> {
+    fn open_node_connections(&mut self, path: &NodePath) -> Vec<(Node, Edge)> {
         // Step 1: Check if the node is a physical node in the file system.
         // Step 2: Check if the node exists in the db.
         // Step 3: Check if all the physical dirs and files in the node are in the db.
@@ -41,8 +43,53 @@ impl GraphNode for GraphAgdb {
 
         // Resolve the full path to the node
         let full_path = path.full(&self.root_path);
-
         let is_physical = full_path.exists();
+        let is_dir = full_path.is_dir();
+
+
+        if is_physical {
+            // Index the parent
+            let parent = path.parent();
+            match parent {
+                Some(parent) => {
+                    let parent_dir = parent.full(&self.root_path);
+                    if parent_dir.exists() {
+                        self.index_single_node(&parent);
+                    } else {
+                        panic!("A physical directory's parent not existing should be impossible!");
+                    }
+                }
+                None => {
+                }
+            }
+            println!("is dir: {}", is_dir);
+            // Index the dir contents
+            if is_dir {
+                println!("indexing {:?}", full_path);
+                let dir_contents = std::fs::read_dir(full_path).unwrap();
+                println!("dir_contents: {:?}", dir_contents);
+                for entry in dir_contents {
+                    println!("entry: {:?}", entry);
+                    let entry = entry.unwrap();
+                    let entry_path = entry.path();
+                    match entry_path.extension() {
+                        Some(ext) => {
+                            if ext == "agdb" {
+                                continue;
+                            }
+                        }
+                        None => {
+                        }
+                    }
+                    let entry_name = entry_path.file_name().unwrap().to_str().unwrap();
+                    let entry_path = path.join(entry_name);
+                    println!("Close to indexing {:?}", entry_path);
+                    self.index_single_node(&entry_path);
+                }
+            }
+        }
+
+
 
         let as_str = path.alias();
 
@@ -50,7 +97,8 @@ impl GraphNode for GraphAgdb {
         let mut edge_ids: Vec<DbId> = Vec::new();
 
         // Links from node
-        let links = self.db.exec(&QueryBuilder::search().from(path.alias()).query());
+        println!("Searching for links from node {}", as_str);
+        let links = self.db.exec(&QueryBuilder::search().from(path.alias()).where_().distance(agdb::CountComparison::LessThanOrEqual(2)).query());
 
         match links {
             Ok(links) => {
@@ -60,6 +108,7 @@ impl GraphNode for GraphAgdb {
                         edge_ids.push(elem.id);
                     } else if elem.id.0 > 0 {
                         // Is node
+                        println!("Link: {:?}", elem);
                         node_ids.push(elem.id);
                     }
                 }
@@ -68,7 +117,7 @@ impl GraphNode for GraphAgdb {
         }
 
         // Backlinks to node
-        let backlinks = self.db.exec(&QueryBuilder::search().to(path.alias()).query());
+        let backlinks = self.db.exec(&QueryBuilder::search().to(path.alias()).where_().distance(agdb::CountComparison::LessThanOrEqual(2)).query());
 
         match backlinks {
             Ok(backlinks) => {
@@ -78,6 +127,9 @@ impl GraphNode for GraphAgdb {
                         edge_ids.push(elem.id);
                     } else if elem.id.0 > 0 {
                         // Is node
+                        println!("Backlink: {:?}", elem);
+                        let balias = self.db.exec(&QueryBuilder::select().aliases().ids(elem.id).query());
+                        println!("balias: {:?}", balias);
                         node_ids.push(elem.id);
                     }
                 }
@@ -97,7 +149,7 @@ impl GraphNode for GraphAgdb {
         let connections: Vec<(Node, Edge)> = full_nodes.iter().filter_map(|node| {
             let node = Node::try_from(node.clone()).unwrap();
 
-            
+            println!("Returning node {:?}", node.path());
             // Ignore the original node
             if node.path() == *path {
                 return None;
@@ -136,7 +188,7 @@ impl GraphNode for GraphAgdb {
 
         match existing {
             Ok(_) => {
-                
+                // return Err("node already exists".into());
             }
             Err(_e) => {
                 // Node doesn't exist, proceed to insertion
@@ -410,6 +462,7 @@ impl GraphNode for GraphAgdb {
     fn autoparent_nodes(
         &mut self, parent: &NodePath, child: &NodePath
     ) -> Result<(), Box<dyn Error>> {
+        println!("Autoparenting nodes: {:?} and {:?}", parent, child);
         let edge = Edge::new_cont(parent, child);
 
         let edge = self.db.exec_mut(

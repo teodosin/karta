@@ -17,7 +17,9 @@ impl GraphCore for GraphAgdb {
     }
 
     fn user_root_dirpath(&self) -> PathBuf {
-        self.root_path.clone()
+        let path = self.root_path.clone();
+        println!("root_path: {:?}", path);
+        path
     }
 
     fn root_nodepath(&self) -> NodePath {
@@ -103,17 +105,22 @@ impl GraphCore for GraphAgdb {
         });
 
         archetypes.iter().for_each(|atype| {
-            let atype_path = NodePath::from(*atype);
+            let atype_path = NodePath::atype(*atype);
+            println!("Atypepath {:?}", atype_path);
 
             println!("Creating archetype node: {}", atype_path.alias());
 
             let ntype = if atype_path == NodePath::root() {
+                println!("Root node in question");
                 NodeType::root_type()
             } else {
+                println!("Archetype node in question");
                 NodeType::archetype_type()
             };
 
             let node: Node = Node::new(&atype_path, ntype);
+
+            println!("alias is {}", atype_path.alias());
 
             let query = self.db.exec_mut(
                 &QueryBuilder::insert()
@@ -135,11 +142,13 @@ impl GraphCore for GraphAgdb {
 
             if atype_path != NodePath::root() {
                 println!(
-                    "trying to autoparent {:?} to {:?}",
+                    "autoparent: parent {:?} to child {:?}",
                     &NodePath::root(),
                     &atype_path
                 );
                 self.autoparent_nodes(&NodePath::root(), &atype_path);
+            } else {
+                println!("Root node, no autoparenting");
             }
         });
     }

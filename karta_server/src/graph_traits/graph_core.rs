@@ -133,7 +133,7 @@ mod tests {
         let atypes = crate::elements::nodetype::ARCHETYPES;
 
         atypes.iter().for_each(|atype| {
-            let path =  NodePath::from(atype.to_string());
+            let path =  NodePath::atype(atype);
             println!("Atype as buf {:?}", path.buf());
             println!("looking for achetype node {:?}", path.alias());
 

@@ -26,7 +26,7 @@ pub trait GraphNode {
     /// would have to be connected to some node, which would just turn
     /// this into a generic "open_nodes" function, or "search_nodes".
     /// Then filters could just be wrappers around agdb's QueryConditions...
-    fn open_node_connections(&self, path: &NodePath) -> Vec<(Node, Edge)>;
+    fn open_node_connections(&mut self, path: &NodePath) -> Vec<(Node, Edge)>;
 
     /// Creates a node from the given path. Inserts it into the graph.
     /// Insert the relative path from the root, not including the root dir.
@@ -454,6 +454,11 @@ mod tests {
         let dir_file1 = file1_nodepath.full(&root_dir);
         let dir_file2 = file2_nodepath.full(&root_dir);
         let dir_file3 = file3_nodepath.full(&root_dir);
+        println!("dir_path: {:?}", dir_path);
+        println!("dir_file1: {:?}", dir_file1);
+        println!("dir_file2: {:?}", dir_file2);
+        println!("dir_file3: {:?}", dir_file3);
+        
 
         // create the dir and files
         create_dir(&dir_path);        
@@ -466,6 +471,17 @@ mod tests {
 
         let nodes = ctx.graph.open_node_connections(&dir_nodepath);
         // Result should be test files + the user_root
+        // let all = ctx.graph.db().exec(&QueryBuilder::search().from(dir_nodepath.alias()).query());
+        // println!("all nodes that are children to {}: {:#?}", dir_nodepath.alias(), all);
+        // let all = ctx.graph.db().exec(&QueryBuilder::search().to(dir_nodepath.alias()).query());
+        // println!("all nodes that are parent to {}: {:#?}", dir_nodepath.alias(), all);
+
+        // println!("Nodes: {:#?}", nodes);
+        assert!(!nodes.iter().any(|(node, _)| node.path() == NodePath::root()), "{:?} should NOT exist in the found nodes", NodePath::root());
+        assert!(nodes.iter().any(|(node, _)| node.path() == file1_nodepath), "{:?} should exist in the found nodes", &file1_nodepath);
+        assert!(nodes.iter().any(|(node, _)| node.path() == file2_nodepath), "{:?} should exist in the found nodes", &file2_nodepath);
+        assert!(nodes.iter().any(|(node, _)| node.path() == file3_nodepath), "{:?} should exist in the found nodes", &file3_nodepath);
+        assert!(nodes.iter().any(|(node, _)| node.path() == NodePath::user_root()), "dir_nodepath should exist in the found nodes");
         assert_eq!(nodes.len(), 4, "Should be 4 nodes: user_root, test_file1, test_file2, test_file3");
     }
 

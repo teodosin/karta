@@ -10,7 +10,7 @@ impl GraphNode for GraphCommands {
         self.graph.open_node(path)
     }
 
-    fn open_node_connections(&self, path: &NodePath) -> Vec<(Node, Edge)> {
+    fn open_node_connections(&mut self, path: &NodePath) -> Vec<(Node, Edge)> {
         self.graph.open_node_connections(path)
     }
 
