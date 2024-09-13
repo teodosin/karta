@@ -87,40 +87,15 @@ impl KartaContext {
     }
 }
 
-// Events
-// --------------------------------------------------------------------
-// How many of these are necessary, when systems can use change detection?
-
-#[derive(Event)]
-pub struct NodeSpawnedEvent {}
-
-#[derive(Event)]
-pub struct NodeDespawnedEvent {}
-
-
-#[derive(Event)]
-pub struct NodeCreatedEvent {} 
-
-#[derive(Event)]
-pub struct NodeDeletedEvent {}
-
-
-#[derive(Event)]
-pub struct EdgeCreatedEvent {}
-
-#[derive(Event)]
-pub struct EdgeDeletedEvent {}
-
-
 // --------------------------------------------------------------------
 // Systems
 
 fn on_context_change(
     mut commands: Commands,
     context: Res<CurrentContext>,
-    vault: Res<CurrentVault>,
+    mut vault: ResMut<CurrentVault>,
 ){
-    let graph = match &vault.graph {
+    let graph = match &mut vault.graph {
         Some(graph) => graph,
         None => return, // TODO: Better error handling here
     };
@@ -134,7 +109,9 @@ fn on_context_change(
 
     
     let node = graph.open_node(&ctx_root_nodepath);
-    
+
+
+
     let node: fs_graph::prelude::Node = match node {
         Ok(node) => {
             println!("Node found: {:#?}", node);
@@ -161,5 +138,23 @@ fn on_context_change(
         ui_marker: GraphEntity,
     });
 
+    let connections: Vec<(fs_graph::prelude::Node, Edge)> = graph.open_node_connections(&ctx_root_nodepath);
 
+    for node in connections.iter() {
+        let (node, edge) = node;
+        let node_path = node.path().clone();
+        let name = node.name().to_string();
+
+        commands.spawn(DataNodeBundle{
+            name: Name::new(name),
+            data_node: DataNode {
+                path: node_path,
+                created_time: node.created_time().clone(),
+                modified_time: node.modified_time().clone(),
+            },
+            data_node_type: node_plugin::DataNodeType(node.ntype_name()),
+            attributes: node_plugin::Attributes(node.attributes().clone()),
+            ui_marker: GraphEntity,
+        });
+    }
 }
