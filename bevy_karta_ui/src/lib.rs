@@ -33,6 +33,8 @@ impl Plugin for OverlayGraphPlugin {
             //     mode: bevy_embedded_assets::PluginMode::AutoLoad,
             // })
 
+            .add_plugins(bevy_inspector_egui::quick::WorldInspectorPlugin::new())
+
             .add_plugins(core::CorePlugin)
 
             .add_plugins(assets::AssetsPlugin)

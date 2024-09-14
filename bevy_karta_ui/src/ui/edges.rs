@@ -4,7 +4,75 @@
 // use bevy_mod_picking::{events::{Pointer, Over, Out, Click}, prelude::On, pointer::{PointerId, PointerLocation}, backend::{PointerHits, HitData}, picking_core::{PickSet, Pickable}};
 // use bevy_prototype_lyon::{shapes, prelude::{ShapeBundle, GeometryBuilder, Path, Stroke}};
 // use crate::{settings::theme::*, events::edges::EdgeClickEvent, prelude::theme::EDGE_PARENT_COLOR};
-// use super::{nodes::GraphViewNode, graph_cam::ViewData};
+// use super::{nodes::ViewNode, graph_cam::ViewData};
+
+use bevy::prelude::*;
+use bevy_fs_graph::prelude::{DataEdge, PathsToEntitiesIndex, ViewNode};
+
+
+pub struct EdgeUiPlugin;
+
+impl Plugin for EdgeUiPlugin {
+    fn build(&self, app: &mut App) {
+        // let material_plugin = Material2dPlugin::<EdgeMaterial>::default();
+        app
+            .add_systems(PostUpdate, update_and_draw_edges)
+
+            // .add_systems(PostUpdate, visualise_edge_transforms)
+        ;
+    }
+}
+
+pub fn update_and_draw_edges(
+    mut edges: Query<(Entity, &DataEdge), Without<ViewNode>>,
+    nodes: Query<&Transform, With<ViewNode>>,
+    pe_index: Res<PathsToEntitiesIndex>,
+    mut gizmos: Gizmos,
+){
+    for (_edge, data) in edges.iter_mut() {
+        let source_entity = match pe_index.get_view(&data.source){
+            Some(entity) => entity,
+            None => {
+                println!("Failed to find entity for edge source");
+                continue
+            },
+        };
+        let target_entity = match pe_index.get_view(&data.target){
+            Some(entity) => entity,
+            None => {
+                println!("Failed to find entity for edge target");
+                continue
+            },
+        };
+        let start = match nodes.get(source_entity) {
+            Ok(node) => node,
+            Err(_) => {
+                println!("Failed to find node for edge source");
+                // commands.entity(edge).despawn_recursive();
+                continue
+            },
+        };
+        let end = match nodes.get(target_entity){
+            Ok(node) => node,
+            Err(_) => {
+                println!("Failed to find node for edge target");
+                // commands.entity(edge).despawn_recursive();
+                continue
+            },
+        };
+
+
+        // Check that all positions are valid
+        if !start.translation.x.is_finite() || !start.translation.y.is_finite() || !end.translation.x.is_finite() || !end.translation.y.is_finite() {
+            // commands.entity(edge).despawn_recursive();
+            continue
+        }
+
+        let color = LinearRgba::GREEN;
+        gizmos.line_2d(start.translation.xy(), end.translation.xy(), color);
+
+    }
+}
 
 // pub struct EdgeUiPlugin;
 
@@ -22,6 +90,8 @@
 //         ;
 //     }
 // }
+
+
 
 // /// Component containing data only relevant for drawn edges
 // #[derive(Component, Debug, Default)]
@@ -122,8 +192,8 @@
 // }
 
 // pub fn update_edges(
-//     mut edges: Query<(Entity, &GraphDataEdge, &mut Path, &mut GraphViewEdge, &mut Transform), Without<GraphViewNode>>,
-//     nodes: Query<&Transform, With<GraphViewNode>>,
+//     mut edges: Query<(Entity, &GraphDataEdge, &mut Path, &mut GraphViewEdge, &mut Transform), Without<ViewNode>>,
+//     nodes: Query<&Transform, With<ViewNode>>,
 //     pe_index: Res<PathsToEntitiesIndex>,
 // ){
 //     for (_edge, data, mut path, mut ends, mut tform) in edges.iter_mut() {

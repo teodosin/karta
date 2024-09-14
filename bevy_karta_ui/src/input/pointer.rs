@@ -1,12 +1,24 @@
 use bevy::{
-    ecs::{entity::Entity, event::EventReader, query::Without}, hierarchy::Parent, input::ButtonInput, prelude::{
-        Camera, Camera2d, GlobalTransform, MouseButton, Query, Res, ResMut, Resource, Vec2,
-        With,
-    }, render::view, time::{self, Time}, window::Window
+    ecs::{entity::Entity, event::EventReader, query::Without},
+    hierarchy::Parent,
+    input::ButtonInput,
+    prelude::{
+        Camera, Camera2d, GlobalTransform, MouseButton, Query, Res, ResMut, Resource, Vec2, With,
+    },
+    render::view,
+    time::{self, Time},
+    window::Window,
 };
+use bevy_fs_graph::prelude::ViewNode;
 use bevy_mod_picking::pointer::PointerButton;
 
-use crate::{prelude::{graph_cam::GraphCamera, node_events::{NodeClickEvent, NodeHoverEvent, NodeHoverStopEvent, NodePressedEvent}}, ui::nodes::{GraphViewNode, NodeOutline}};
+use crate::{
+    prelude::{
+        graph_cam::GraphCamera,
+        node_events::{NodeClickEvent, NodeHoverEvent, NodeHoverStopEvent, NodePressedEvent},
+    },
+    ui::nodes::NodeOutline,
+};
 
 // #[derive(Resource, Debug)]
 // pub struct InputData {
@@ -45,19 +57,19 @@ pub struct SinglePositionData {
     pub time: f64,
 }
 
-/// Enum of potential targets for picking in the graph and in the scene. 
-/// 
+/// Enum of potential targets for picking in the graph and in the scene.
+///
 /// Will eventually also include node sockets and the ends of edges for disconnection/reconnection.
 #[derive(Debug, Clone, Copy)]
 pub enum GraphPickingTarget {
     Node,
     NodeOutline,
     Edge,
-    SceneEntity, 
+    SceneEntity,
     None,
 }
 
-/// Enum of potential interaction types for picking with entities. 
+/// Enum of potential interaction types for picking with entities.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum InteractionType {
     Click(PointerButton),
@@ -68,15 +80,14 @@ pub enum InteractionType {
 
 /// Resource for storing rich input data over time. Has functions
 /// for accessing this data in various ways, for example in order to implement
-/// double-clicking. 
+/// double-clicking.
 #[derive(Resource, Debug)]
 pub struct InputData {
-
     input_limit: usize,
     inputs: Vec<SingleInputData>,
 
     /// Store the latest input events for each interaction type. Ensures that we always know
-    /// which entity was the target of the latest click, press, hover, etc. no matter how 
+    /// which entity was the target of the latest click, press, hover, etc. no matter how
     /// many other events have occurred since then.
     latest_click_data: Option<SingleInputData>,
     latest_press_data: Option<SingleInputData>,
@@ -85,10 +96,8 @@ pub struct InputData {
 
     pos_limit: usize,
     positions: Vec<SinglePositionData>,
-
-    // Should this struct also have data 
+    // Should this struct also have data
 }
-
 
 impl Default for InputData {
     fn default() -> Self {
@@ -135,7 +144,7 @@ impl InputData {
     }
 
     /// Function for inserting a cursor position into the InputData resource.
-    /// Used by the update_cursor_info system. 
+    /// Used by the update_cursor_info system.
     pub fn insert_cursor_position(&mut self, position: SinglePositionData) {
         self.positions.push(position);
         if self.positions.len() > self.pos_limit {
@@ -225,29 +234,27 @@ pub fn handle_node_click(
     mut event: EventReader<NodeClickEvent>,
     mut input_data: ResMut<InputData>,
 
-    nodes: Query<(Entity, &GraphViewNode), Without<NodeOutline>>,
-    outlines: Query<&Parent, (With<NodeOutline>, Without<GraphViewNode>)>,
-){
-    if event.is_empty(){
-        return
+    nodes: Query<(Entity, &ViewNode), Without<NodeOutline>>,
+    outlines: Query<&Parent, (With<NodeOutline>, Without<ViewNode>)>,
+) {
+    if event.is_empty() {
+        return;
     }
 
     for ev in event.read() {
         let interaction_type: InteractionType = InteractionType::Click(ev.button);
         let time = time.elapsed_seconds_f64();
-        
+
         let target = ev.target.unwrap();
-        
+
         // Determine the type of the picking target.
-        // Currently this is done by checking if the target can be found in a 
+        // Currently this is done by checking if the target can be found in a
         // few mutually exclusive queries. Would be nice if there was a better way.
         let mut target_type = GraphPickingTarget::None;
 
         if nodes.get(target).is_ok() {
             target_type = GraphPickingTarget::Node;
-        }
-
-        else if outlines.get(target).is_ok() {
+        } else if outlines.get(target).is_ok() {
             target_type = GraphPickingTarget::NodeOutline;
         }
 
@@ -270,11 +277,11 @@ pub fn handle_node_press(
     mut event: EventReader<NodePressedEvent>,
     mut input_data: ResMut<InputData>,
 
-    nodes: Query<(Entity, &GraphViewNode), Without<NodeOutline>>,
-    outlines: Query<&Parent, (With<NodeOutline>, Without<GraphViewNode>)>,
-){
+    nodes: Query<(Entity, &ViewNode), Without<NodeOutline>>,
+    outlines: Query<&Parent, (With<NodeOutline>, Without<ViewNode>)>,
+) {
     if event.is_empty() {
-        return
+        return;
     }
 
     for ev in event.read() {
@@ -284,15 +291,13 @@ pub fn handle_node_press(
         let target = ev.target.unwrap();
 
         // Determine the type of the picking target.
-        // Currently this is done by checking if the target can be found in a 
+        // Currently this is done by checking if the target can be found in a
         // few mutually exclusive queries. Would be nice if there was a better way.
         let mut target_type = GraphPickingTarget::None;
 
         if nodes.get(target).is_ok() {
             target_type = GraphPickingTarget::Node;
-        }
-
-        else if outlines.get(target).is_ok() {
+        } else if outlines.get(target).is_ok() {
             target_type = GraphPickingTarget::NodeOutline;
         }
 
@@ -315,13 +320,13 @@ pub fn handle_node_hover(
     mut event: EventReader<NodePressedEvent>,
     mut input_data: ResMut<InputData>,
 
-    nodes: Query<(Entity, &GraphViewNode), Without<NodeOutline>>,
-    outlines: Query<&Parent, (With<NodeOutline>, Without<GraphViewNode>)>,
-){
+    nodes: Query<(Entity, &ViewNode), Without<NodeOutline>>,
+    outlines: Query<&Parent, (With<NodeOutline>, Without<ViewNode>)>,
+) {
     if event.is_empty() {
-        return
+        return;
     }
-    
+
     for ev in event.read() {
         let interaction_type: InteractionType = InteractionType::Hover;
         let time = time.elapsed_seconds_f64();
@@ -329,15 +334,13 @@ pub fn handle_node_hover(
         let target = ev.target.unwrap();
 
         // Determine the type of the picking target.
-        // Currently this is done by checking if the target can be found in a 
+        // Currently this is done by checking if the target can be found in a
         // few mutually exclusive queries. Would be nice if there was a better way.
         let mut target_type = GraphPickingTarget::None;
 
         if nodes.get(target).is_ok() {
             target_type = GraphPickingTarget::Node;
-        }
-
-        else if outlines.get(target).is_ok() {
+        } else if outlines.get(target).is_ok() {
             target_type = GraphPickingTarget::NodeOutline;
         }
 
@@ -358,10 +361,9 @@ pub fn handle_node_hover_stop(
     time: Res<Time>,
     mut event: EventReader<NodeHoverStopEvent>,
     mut input_data: ResMut<InputData>,
-
-){
+) {
     if event.is_empty() {
-        return
+        return;
     }
 
     for ev in event.read() {

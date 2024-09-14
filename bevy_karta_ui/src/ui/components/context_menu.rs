@@ -14,7 +14,7 @@ use bevy_mod_picking::{
 };
 
 use crate::{
-    events::{edges::EdgeClickEvent, node_events::NodeClickEvent}, prelude::context_commands::{ContextComponentSystems, ContextEntitySystems, ContextSystem}, ui::nodes::GraphViewNode
+    events::{edges::EdgeClickEvent, node_events::NodeClickEvent}, prelude::context_commands::{ContextComponentSystems, ContextEntitySystems, ContextSystem}, ui::nodes::ViewNode
 };
 
 use super::popup::*;
@@ -45,7 +45,7 @@ pub fn despawn_context_menus_on_any_click(
 /// System for spawning the context menu on right click of a node.
 pub fn spawn_node_context_menu(
     mut mouse_event: EventReader<NodeClickEvent>, 
-    view_nodes: Query<&GraphViewNode>,
+    view_nodes: Query<&ViewNode>,
     mut commands: Commands,
     window: Query<&Window>,
     mut menus: Query<(Entity, &PopupGroup), With<Popup>>,

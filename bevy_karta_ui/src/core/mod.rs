@@ -56,23 +56,3 @@ impl Pins {
         }
     }
 }
-
-/// Function that spawns all component types as entities to be visualised
-/// in the graph. 
-/// 
-/// Currently does nothing because there doesn't seem to be 
-/// a way to get a list of components from the World, but that will probably
-/// be trivial once components are entities. 
-fn spawn_components(
-    world: &mut World,
-){
-    let components = world.components();
-    let comps = components.iter().map(|c| c.name().to_owned()).collect::<Vec<String>>();
-
-    for component in comps.iter() {
-        world.spawn((
-            GraphEntity,
-            Name::new(component.clone()),
-        ));
-    }
-}

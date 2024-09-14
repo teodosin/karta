@@ -1,6 +1,7 @@
 use std::{time::Duration, path::PathBuf};
 
 use bevy::{prelude::*, text::Text2dBounds, sprite::Anchor, render::view::RenderLayers, window::PrimaryWindow};
+use bevy_fs_graph::prelude::{DataNode, ViewNode};
 use bevy_mod_picking::{prelude::*, backends::raycast::RaycastPickable, backend::{PointerHits, HitData}};
 use bevy_prototype_lyon::{shapes, prelude::{GeometryBuilder, ShapeBundle, Stroke, StrokeOptions}};
 use bevy_tweening::{Tween, EaseFunction, lens::TransformPositionLens, Animator, TweenCompleted, TweeningPlugin};
@@ -74,16 +75,16 @@ impl GraphStartingPositions {
 /// Basic marker component to identify all nodes that have a graphical representation
 /// in the graph. 
 /// Also stores the dimensions of the view node for the purpose of the custom picking backend.
-#[derive(Component)]
-pub struct GraphViewNode {
-    target: Entity,
-}
+// #[derive(Component)]
+// pub struct ViewNode {
+//     target: Entity,
+// }
 
-impl GraphViewNode {
-    pub fn get_target(&self) -> Entity {
-        self.target
-    }
-}
+// impl ViewNode {
+//     pub fn get_target(&self) -> Entity {
+//         self.target
+//     }
+// }
 
 #[derive(Component)]
 pub enum ViewNodeShape {
@@ -146,7 +147,7 @@ impl Default for ViewNodeScale {
 // TODO: Convert to One-Shot System
 // Is that even possible? This function requires input parameters. 
 pub fn add_node_ui(
-    new_nodes: Query<(Entity, &GraphEntity, Option<&Name>, Option<&TargetPosition>), Added<GraphEntity>>,
+    new_nodes: Query<(Entity, &DataNode, Option<&Name>, Option<&TargetPosition>), Added<DataNode>>,
     spawn: Res<GraphStartingPositions>,
 
     mut commands: Commands,
@@ -171,8 +172,9 @@ pub fn add_node_ui(
                 ..default()
             },
             RenderLayers::layer(31),
-            GraphViewNode {
-                target: entity,
+            ViewNode {
+                path: Some(data.path.clone()),
+                data: Some(entity),
             },
             Pins::default(),
             Velocity2D::default(),
@@ -214,7 +216,7 @@ pub fn add_node_ui(
         // }
 
         add_base_node_ui(
-            node, &data, name, spawn.get_pos(), tpos,
+            node, data, name, spawn.get_pos(), tpos,
             &mut commands, &mut meshes, &mut materials, &mut view_data
         )
 
@@ -322,7 +324,7 @@ pub fn add_node_base_outline(
 // --------------------------------------------------------------------------------------------------------------------------------------------
 pub fn tween_to_target_position(
     mut commands: Commands,
-    mut nodes: Query<(Entity, &mut Transform, &TargetPosition), (With<GraphViewNode>, Added<TargetPosition>)>,
+    mut nodes: Query<(Entity, &mut Transform, &TargetPosition), (With<ViewNode>, Added<TargetPosition>)>,
 ){
     if nodes.iter_mut().count() == 0 {
         return
@@ -364,7 +366,7 @@ pub fn move_node_selection(
     mut ev_mouse_drag: EventReader<MoveNodesEvent>,
     mouse: Res<ButtonInput<MouseButton>>,
     input_data: Res<InputData>,
-    mut query: Query<(Entity, &GraphViewNode, &mut Transform, &PickSelection), /*With<Selected>*/>,
+    mut query: Query<(Entity, &ViewNode, &mut Transform, &PickSelection), /*With<Selected>*/>,
 ) {
 
     if mouse.just_pressed(MouseButton::Left) {

@@ -9,6 +9,7 @@ use bevy::{
     sprite::{ColorMaterial, MaterialMesh2dBundle, Sprite, SpriteBundle},
     transform::components::Transform,
 };
+use bevy_fs_graph::prelude::DataNode;
 use rand::Rng;
 
 use crate::{
@@ -47,7 +48,7 @@ use super::{add_node_base_outline, add_node_label, TargetPosition};
 
 pub fn add_base_node_ui(
     entity: Entity,
-    data: &GraphEntity,
+    data: &DataNode,
     name: Option<&Name>,
     spawn_pos: Vec2,
     tpos: Option<&TargetPosition>,

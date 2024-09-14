@@ -1,6 +1,6 @@
 // Base entity for nodes pinned to the UI
 // Should be extendable so that crate users can define their own types
-// Will eventually be merged with GraphViewNodes once those are ready to be 
+// Will eventually be merged with ViewNodes once those are ready to be 
 // transferred to using Bevy UI instead of prototype_lyon meshes
 
 use bevy::{

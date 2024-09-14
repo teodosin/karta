@@ -3,11 +3,12 @@
 use bevy::{prelude::{
     Query, Transform, Without, Vec2, Plugin, App, Entity, Res, Gizmos, PostUpdate, Resource
 }, time::Time, input::{ButtonInput, keyboard::KeyCode}, utils::HashMap, ecs::query::With, app::Update};
+use bevy_fs_graph::prelude::ViewNode;
 use bevy_mod_picking::selection::PickSelection;
 
 use crate::prelude::Pins;
 
-use super::nodes::{GraphViewNode, TargetPosition, Velocity2D};
+use super::nodes::{TargetPosition, Velocity2D};
 
 pub struct GraphSimPlugin;
 
@@ -55,8 +56,8 @@ impl Default for GraphSimSettings {
 /// For now, the attributes that will be read will be hard-coded (k and length).
 /// In the future, the resting length and stiffness values will be inputs to the node.
 // pub fn edge_spring_constraints (
-//     _forces: Query<(&GraphViewNode, &mut NodeForce)>,
-//     mut nodes: Query<(Entity, &GraphViewNode, &Transform, &mut Velocity2D)>,
+//     _forces: Query<(&ViewNode, &mut NodeForce)>,
+//     mut nodes: Query<(Entity, &ViewNode, &Transform, &mut Velocity2D)>,
 //     edges: Query<(&GraphDataEdge, &Attributes)>,
 //     pe_index: Res<PathsToEntitiesIndex>,
 // ){
@@ -131,7 +132,7 @@ impl Default for GraphSimSettings {
 
 // Same current restrictions and future plans as for the edge spring constraints apply here. 
 pub fn repulsion_constraints (
-    mut nodes: Query<(Entity, &GraphViewNode, &Transform, &mut Velocity2D)>,
+    mut nodes: Query<(Entity, &ViewNode, &Transform, &mut Velocity2D)>,
 ){
     let mut forces: HashMap<Entity, Vec2> = HashMap::new();
 
@@ -172,7 +173,7 @@ fn apply_forces(
     sim_settings: Res<GraphSimSettings>,
     time: Res<Time>,
     mut nodes: Query<
-        (Entity, &GraphViewNode, &mut Transform, &mut Velocity2D, &Pins, &PickSelection), 
+        (Entity, &ViewNode, &mut Transform, &mut Velocity2D, &Pins, &PickSelection), 
         Without<TargetPosition>
     >,
     _gizmos: Gizmos,

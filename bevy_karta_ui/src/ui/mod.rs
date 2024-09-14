@@ -5,9 +5,9 @@ use bevy::{ecs::identifier, prelude::*, render::view::VisibleEntities, ui::{Focu
 
 use bevy_mod_picking::backends::raycast::RaycastBackendSettings;
 use bevy_prototype_lyon::prelude::*;
+use edges::EdgeUiPlugin;
 
 use self::{
-    context_menu::{add_component_systems_to_context_menu, context_menu_button_system, spawn_edge_context_menu, spawn_node_context_menu, ContextMenuSpawnEvent}, 
     nodes::NodesUiPlugin, // edges::EdgeUiPlugin, 
     grid::InfiniteGrid2DPlugin, graph_cam::GraphCamera, asset_manager::{ImageLoadTracker, on_image_load},
 };
@@ -15,16 +15,15 @@ use self::{
 use super::events::{node_events::NodeClickEvent, edges::EdgeClickEvent};
 
 // Building blocks of specific components
-pub mod popup;
 
-pub(crate) mod context_menu;
 pub(crate) mod grid;
 pub(crate) mod ui_base_panel;
 pub(crate) mod nodes;
-// pub(crate) mod edges;
+pub(crate) mod edges;
 pub(crate) mod graph_cam;
 pub(crate) mod simulation;
 pub(crate) mod asset_manager;
+pub(crate) mod curve_material;
 
 pub struct KartaUiPlugin;
 
@@ -41,7 +40,7 @@ impl Plugin for KartaUiPlugin {
 
             .insert_resource(ImageLoadTracker::new())
 
-            .add_event::<ContextMenuSpawnEvent>()
+            // .add_event::<ContextMenuSpawnEvent>()
 
             // Resources
             .add_systems(PreStartup, require_markers_for_raycasting)
@@ -52,30 +51,32 @@ impl Plugin for KartaUiPlugin {
             .add_systems(Startup, gizmo_settings)
 
             .add_plugins(NodesUiPlugin)
-            // .add_plugins(EdgeUiPlugin)
+            .add_plugins(EdgeUiPlugin)
             // .add_plugins(InfiniteGrid2DPlugin)
             
             // Element Systems
-            .add_systems(PostUpdate, popup::popup_position_system.after(UiSystem::Layout))
+            // .add_systems(PostUpdate, popup::popup_position_system.after(UiSystem::Layout))
                         
             
-            .add_systems(Update, context_menu::despawn_context_menus_on_any_click)
-            .add_systems(
-                Update, 
-                (
-                    spawn_node_context_menu.run_if(on_event::<NodeClickEvent>()),
-                    spawn_edge_context_menu.run_if(on_event::<EdgeClickEvent>())
-                )
-                .after(context_menu::despawn_context_menus_on_any_click)
-                // .before(add_component_systems_to_context_menu)
-            )
+            // .add_systems(Update, context_menu::despawn_context_menus_on_any_click)
+            // .add_systems(
+            //     Update, 
+            //     (
+            //         spawn_node_context_menu.run_if(on_event::<NodeClickEvent>()),
+            //         spawn_edge_context_menu.run_if(on_event::<EdgeClickEvent>())
+            //     )
+            //     // .after(context_menu::despawn_context_menus_on_any_click)
+            //     // .before(add_component_systems_to_context_menu)
+            // )
 
-            .add_systems(PostUpdate, add_component_systems_to_context_menu
-                .run_if(on_event::<ContextMenuSpawnEvent>())
-            ) 
+            // .add_systems(PostUpdate, add_component_systems_to_context_menu
+            //     .run_if(on_event::<ContextMenuSpawnEvent>())
+            // ) 
             
-            .add_systems(PostUpdate, context_menu_button_system)
+            // .add_systems(PostUpdate, context_menu_button_system)
             .add_systems(PostUpdate, on_image_load)
+
+            .add_plugins(curve_material::CurveMaterialPlugin)
         ;
     }
 }

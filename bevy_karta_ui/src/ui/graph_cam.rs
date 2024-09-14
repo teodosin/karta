@@ -86,7 +86,7 @@ fn cam_setup(
                 ..Default::default()
             },
             camera: Camera {
-                clear_color: ClearColorConfig::None,
+                clear_color: ClearColorConfig::Default,
                 order: 1,
                 ..default()
             },

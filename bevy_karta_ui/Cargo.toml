@@ -22,6 +22,7 @@ bevy_tweening = "0.11.0"
 bevy_mod_debugdump = "0.11.0"
 bevy-inspector-egui = "0.25.1"
 
+bevy_fs_graph = { path = "../bevy_fs_graph" }
 
 lyon = "1.0.1"
 rand = "0.8.5"
