@@ -137,3 +137,10 @@ impl From<NodePath> for DbValue {
         path.alias().into()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    
+}
