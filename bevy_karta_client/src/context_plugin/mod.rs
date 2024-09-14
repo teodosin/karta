@@ -2,9 +2,15 @@
 use std::{collections::HashMap, path::{Path, PathBuf}};
 
 use bevy::prelude::*;
+use events::{ChangeContextEvent, ContextEventsPlugin};
 use fs_graph::prelude::*;
 
-use crate::{node_plugin, prelude::{CurrentVault, DataEdge, DataEdgeBundle, DataNode, DataNodeBundle, Relation, Relations, ViewNode}};
+use crate::{node_plugin, prelude::{CurrentVault, DataEdge, DataEdgeBundle, DataNode, DataNodeBundle, Relation, Relations, ToBeDespawned, ViewNode}};
+
+pub mod pe_index;
+pub mod events;
+
+use pe_index::*;
 
 // -----------------------------------------------------------------
 // Plugin
@@ -13,16 +19,22 @@ pub struct ContextPlugin;
 impl Plugin for ContextPlugin {
     fn build(&self, app: &mut App) {
         app
+            .add_plugins(ContextEventsPlugin)
             .insert_resource(CurrentContext::empty())
             .insert_resource(PathsToEntitiesIndex::new())
 
-            .add_systems(PreUpdate, on_context_change.run_if(resource_changed::<CurrentContext>))
+            .add_systems(PreUpdate, (
+                change_context,
+                on_context_change.run_if(resource_changed::<CurrentContext>)
+            ).chain())
 
             .add_systems(Update, (
                 update_pe_index_on_datanode_spawn,
                 update_pe_index_on_viewnode_spawn,
                 update_relations_on_edge_spawn,
             ).chain())
+
+            .add_systems(PostUpdate, cleanup_to_be_despawned)
         ;
     }
 }
@@ -56,185 +68,8 @@ impl CurrentContext {
     }
 }
 
-/// Struct for keeping together a DataNode and its corresponding
-/// ViewNode. Mostly used in the PathsToEntitiesIndex.
-#[derive(Debug)]
-pub struct NodeEntityPair {
-    data: Option<Entity>,
-    view: Option<Entity>,
-}
 
-impl NodeEntityPair {
-    pub fn empty() -> Self {
-        NodeEntityPair {
-            data: None,
-            view: None,
-        }
-    }
 
-    pub fn new(data: Entity, view: Entity) -> Self {
-        NodeEntityPair {
-            data: Some(data),
-            view: Some(view),
-        }
-    }
-
-    pub fn new_data(data: Entity) -> Self {
-        NodeEntityPair {
-            data: Some(data),
-            view: None,
-        }
-    }
-
-    pub fn new_view(view: Entity) -> Self {
-        NodeEntityPair {
-            data: None,
-            view: Some(view),
-        }
-    }
-
-    pub fn update_data(&mut self, data: Entity) {
-        self.data = Some(data);
-    }
-
-    pub fn update_view(&mut self, view: Entity) {
-        self.view = Some(view);
-    }
-}
-
-/// Index that allows for quick lookup of node entities by their path.
-/// Must be updated every time a node is spawned or despawned. 
-/// Can be used to quickly check for whether a node is spawned or not. 
-#[derive(Resource, Debug)]
-pub struct PathsToEntitiesIndex(
-    HashMap<NodePath, NodeEntityPair>,
-);
-
-impl PathsToEntitiesIndex {
-    pub fn new() -> Self {
-        PathsToEntitiesIndex(HashMap::default())
-    }
-
-    pub fn add_pair(&mut self, path: NodePath, entities: NodeEntityPair){
-        self.0.insert(path, entities);
-    }
-
-    pub fn add_view(&mut self, path: NodePath, view: Entity){
-        let pair = self.0.get_mut(&path);
-        match pair {
-            Some(pair) => pair.view = Some(view),
-            None => {
-                let pair = NodeEntityPair::new_view(view);
-                self.0.insert(path, pair);
-            },
-        }
-    }
-
-    pub fn add_data(&mut self, path: NodePath, data: Entity){
-        let pair = self.0.get_mut(&path);
-        match pair {
-            Some(pair) => pair.data = Some(data),
-            None => {
-                let pair = NodeEntityPair::new_data(data);
-                self.0.insert(path, pair);
-            },
-        }
-    }
-
-    pub fn remove(&mut self, path: &NodePath) -> Option<NodeEntityPair> {
-        self.0.remove(path)
-    }
-
-    pub fn get_pair(&self, path: &NodePath) -> Option<&NodeEntityPair> {
-        self.0.get(path)
-    }
-
-    pub fn get_view(&self, path: &NodePath) -> Option<Entity> {
-        let pair = self.0.get(path);
-        match pair {
-            Some(pair) => pair.view.clone(),
-            None => None,
-        }
-    }
-
-    pub fn get_data(&self, path: &NodePath) -> Option<Entity> {
-        let pair = self.0.get(path);
-        match pair {
-            Some(pair) => pair.data.clone(),
-            None => None,
-        }
-    }
-}
-
-fn update_pe_index_on_datanode_spawn(
-    mut nodes: Query<(Entity, &DataNode), Added<DataNode>>,
-    mut pe_index: ResMut<PathsToEntitiesIndex>,
-){
-    for (entity, node) in nodes.iter_mut() {
-        // println!("Adding to pe_index: {:?} | {:?}", node.path.clone(), entity);
-        
-        pe_index.add_data(node.path.clone(), entity);
-    }
-}
-
-fn update_pe_index_on_viewnode_spawn(
-    mut nodes: Query<(Entity, &ViewNode), Added<ViewNode>>,
-    mut pe_index: ResMut<PathsToEntitiesIndex>,
-){
-    for (entity, node) in nodes.iter_mut() {
-        println!("Adding to pe_index: {:?} | {:?}", node.path.clone(), entity);
-        let path = node.path.clone();
-        let path = match path {
-            Some(path) => path,
-            None => continue,
-        };
-        pe_index.add_view(path, entity);
-    }
-}
-
-fn update_relations_on_edge_spawn(
-    edges: Query<(Entity, &DataEdge), Added<DataEdge>>,
-    mut nodes: Query<(Entity, &mut Relations)>,
-    pe_index: Res<PathsToEntitiesIndex>,
-){
-    for (edge_e, edge) in edges.iter() {
-        let source_path = edge.source.clone();
-        let target_path = edge.target.clone();
-
-        let source_e = match pe_index.get_view(&source_path){
-            Some(e) => e,
-            None => {
-                warn!("Could not find source node for edge {edge_e}");
-                continue;
-            },
-        };
-        let target_e = match pe_index.get_view(&target_path) {
-            Some(e) => e,
-            None => {
-                warn!("Could not find target node for edge {edge_e}");
-                continue;
-            },
-        };
-
-        match nodes.get_mut(source_e) {
-            Ok((_, mut relations)) => {
-                relations.add(Relation::new(target_e, edge_e, true));
-            },
-            Err(_) => {
-                warn!("Could not find source node for edge {edge_e}");
-            },
-        }
-
-        match nodes.get_mut(target_e) {
-            Ok((_, mut relations)) => {
-                relations.add(Relation::new(source_e, edge_e, false));
-            },
-            Err(_) => {
-                warn!("Could not find target node for edge {edge_e}");
-            },
-        }
-    }
-}
 
 pub struct KartaContext {
     path: NodePath, 
@@ -261,6 +96,8 @@ fn on_context_change(
     mut commands: Commands,
     context: Res<CurrentContext>,
     mut vault: ResMut<CurrentVault>,
+    open_nodes: Query<Entity, With<DataNode>>,
+    pe_index: Res<PathsToEntitiesIndex>,
 ){
     let graph = match &mut vault.graph {
         Some(graph) => graph,
@@ -292,24 +129,57 @@ fn on_context_change(
     
     let nodepath = node.path().clone();
     let name = node.name().to_string();
+    let mut ctx_rt_e: Option<Entity> = None;
 
-    commands.spawn(DataNodeBundle{
-        name: Name::new(name),
-        data_node: DataNode {
-            path: nodepath,
-            created_time: node.created_time().clone(),
-            modified_time: node.modified_time().clone(),
-        },
-        data_node_type: node_plugin::DataNodeType(node.ntype_name()),
-        attributes: node_plugin::Attributes(node.attributes().clone()),
-    });
+    if !pe_index.0.contains_key(&nodepath){
+        ctx_rt_e = Some(commands.spawn(DataNodeBundle{
+            name: Name::new(name),
+            data_node: DataNode {
+                path: nodepath,
+                created_time: node.created_time().clone(),
+                modified_time: node.modified_time().clone(),
+            },
+            data_node_type: node_plugin::DataNodeType(node.ntype_name()),
+            attributes: node_plugin::Attributes(node.attributes().clone()),
+        }).id());
+    }
+
+    for node in open_nodes.iter(){
+        match ctx_rt_e {
+            Some(rt_e) => {
+                if node == rt_e {
+                    continue;
+                }
+            },
+            None => {}
+        }
+
+        commands.entity(node).insert(ToBeDespawned);
+    }
 
     let connections: Vec<(fs_graph::prelude::Node, Edge)> = graph.open_node_connections(&ctx_root_nodepath);
 
     for node in connections.iter() {
+        println!("Node: {:#?}", node);
         let (node, edge) = node;
         let node_path = node.path().clone();
         let name = node.name().to_string();
+
+        if pe_index.0.contains_key(&node_path) {
+            let rt_e = pe_index.get_data(&node_path);
+            match rt_e {
+                Some(rt_e) => {
+                    match commands.get_entity(rt_e) {
+                        Some(mut entity) => {
+                            entity.remove::<ToBeDespawned>();
+                        },
+                        None => {}
+                    }
+                },
+                None => {}
+            }
+            continue;
+        }
 
         commands.spawn(DataNodeBundle{
             name: Name::new(name),
@@ -331,5 +201,31 @@ fn on_context_change(
             },
             attributes: node_plugin::Attributes(edge.attributes().clone()),
         });
+    }
+}
+
+fn change_context(
+    mut event: EventReader<ChangeContextEvent>,
+    mut context: ResMut<CurrentContext>,
+){
+    for event in event.read() {
+        context.context = Some(KartaContext {
+            path: event.new_ctx.clone(),
+        });
+    }
+}
+
+fn cleanup_to_be_despawned(
+    mut commands: Commands,
+    to_be_despawnd: Query<(Entity, &DataNode), With<ToBeDespawned>>,
+    mut pe_index: ResMut<PathsToEntitiesIndex>,
+){
+    if to_be_despawnd.is_empty() {
+        return;
+    }
+    println!("Cleaning up to be despawned: {}", to_be_despawnd.iter().count());
+    for (e, data) in to_be_despawnd.iter() {
+        pe_index.remove(&data.path);
+        commands.entity(e).despawn_recursive();
     }
 }

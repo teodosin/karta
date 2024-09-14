@@ -5,12 +5,12 @@ use crate::prelude::Attributes;
 
 pub struct DataEdgePlugin;
 
-impl Plugin for DataEdgePlugin {
-    fn build(&self, app: &mut App) {
-        app
-            .add_systems(Startup, spawn_data_edge);
-    }
-}
+// impl Plugin for DataEdgePlugin {
+//     fn build(&self, app: &mut App) {
+//         app
+//             .add_systems(Startup, spawn_data_edge);
+//     }
+// }
 
 #[derive(Component)]
 pub struct DataEdge {
@@ -64,5 +64,3 @@ pub struct DataEdgeBundle {
     pub data_edge: DataEdge,
     pub attributes: Attributes,
 }
-
-fn spawn_data_edge(){}

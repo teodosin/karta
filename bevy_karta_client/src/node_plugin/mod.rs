@@ -1,14 +1,17 @@
 use bevy::prelude::*;
 use fs_graph::prelude::*;
 
-pub struct DataNodePlugin;
+// pub struct DataNodePlugin;
 
-impl Plugin for DataNodePlugin {
-    fn build(&self, app: &mut App) {
-        app
-            .add_systems(Startup, spawn_data_node);
-    }
-}
+// impl Plugin for DataNodePlugin {
+//     fn build(&self, app: &mut App) {
+//         app
+//             .add_systems(Startup, spawn_data_node);
+//     }
+// }
+
+#[derive(Component)]
+pub struct ToBeDespawned;
 
 #[derive(Component)]
 pub struct DataNode {
@@ -31,8 +34,6 @@ pub struct DataNodeBundle {
     pub data_node_type: DataNodeType,
     pub attributes: Attributes,
 }
-
-fn spawn_data_node(){}
 
 #[derive(Component)]
 pub struct ViewNode {
