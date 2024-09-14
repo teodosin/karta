@@ -97,9 +97,9 @@ fn initialise_default_vault_until_theres_a_vault_menu(
     print!("Enter vault path (leave empty for file dialog): ");
     std::io::Write::flush(&mut std::io::stdout()).unwrap();
     
-    let mut input = String::new();
-    std::io::stdin().read_line(&mut input).expect("Failed to read line");
-    let input = input.trim();
+    let mut initial_vault_input = String::new();
+    std::io::stdin().read_line(&mut initial_vault_input).expect("Failed to read line");
+    let input = initial_vault_input.trim();
 
     let folder = if input.is_empty() {
         FileDialog::new()

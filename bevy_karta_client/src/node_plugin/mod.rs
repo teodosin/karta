@@ -1,8 +1,6 @@
 use bevy::prelude::*;
 use fs_graph::prelude::*;
 
-use bevy_overlay_graph::prelude::*;
-
 pub struct DataNodePlugin;
 
 impl Plugin for DataNodePlugin {
@@ -32,7 +30,12 @@ pub struct DataNodeBundle {
     pub data_node: DataNode,
     pub data_node_type: DataNodeType,
     pub attributes: Attributes,
-    pub ui_marker: GraphEntity,
 }
 
 fn spawn_data_node(){}
+
+#[derive(Component)]
+pub struct ViewNode {
+    pub path: Option<NodePath>,
+    pub data: Option<Entity>,
+}
