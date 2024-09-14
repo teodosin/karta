@@ -158,6 +158,12 @@ impl GraphCore for GraphAgdb {
         let full_path = path.full(&self.root_path);
         let node_alias = path.alias();
 
+        // let node = self.open_node(path);
+
+        // if node.is_ok(){
+        //     return node;
+        // }
+
         let is_phys = full_path.exists();
         let is_dir = full_path.is_dir();
 
