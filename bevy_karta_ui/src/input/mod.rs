@@ -1,6 +1,6 @@
 use bevy::prelude::{Plugin, PreUpdate, App};
 
-use self::pointer::{handle_node_click, handle_node_hover, handle_node_hover_stop, handle_node_press, update_cursor_info, InputData};
+use self::pointer::{handle_node_click, handle_node_hover, handle_node_press, update_cursor_info, InputData};
 
 pub mod pointer;
 
@@ -16,7 +16,6 @@ impl Plugin for InputPlugin {
                 handle_node_click,
                 handle_node_press,
                 handle_node_hover,
-                handle_node_hover_stop,    
             ))
 
             

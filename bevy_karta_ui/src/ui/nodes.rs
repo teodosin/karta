@@ -30,9 +30,11 @@ impl Plugin for NodesUiPlugin {
             .add_systems(PreUpdate, node_picking.in_set(picking_core::PickSet::Backend))
 
             .add_systems(Update, move_node_selection)
+            .add_systems(Update, change_current_context_on_c)
             .add_systems(Update, toggle_outline_on_node_select)
 
             .add_systems(PostUpdate, add_node_ui)
+            .add_systems(Last, remove_view_node_on_data_node_removal)
             .add_systems(Last, tween_to_target_position)
 
             .add_systems(PostUpdate, tween_to_target_position_complete)
@@ -190,7 +192,7 @@ pub fn add_node_ui(
             
             On::<Pointer<Drag>>::send_event::<MoveNodesEvent>(),
             On::<Pointer<Click>>::send_event::<NodeClickEvent>(),
-            On::<Pointer<Down>>::send_event::<NodePressedEvent>(),
+            On::<Pointer<Down>>::send_event::<NodePressEvent>(),
             On::<Pointer<Over>>::send_event::<NodeHoverEvent>(),
             On::<Pointer<Out>>::send_event::<NodeHoverStopEvent>(),
             
@@ -404,6 +406,50 @@ pub fn toggle_outline_on_node_select(
                     }
                 },
                 Err(_) => continue
+            }
+        }
+    }
+}
+
+pub fn change_current_context_on_c(
+    input_data: Res<InputData>,
+    ev_key: Res<ButtonInput<KeyCode>>,
+    mut ctx_event: EventWriter<bevy_fs_graph::prelude::events::ChangeContextEvent>,
+    nodes: Query<&ViewNode>,
+){
+    if ev_key.just_pressed(KeyCode::KeyC){
+        let current_path = input_data.latest_hover_entity();
+        match current_path {
+            Some(path) => {
+                let node = nodes.get(path);
+                match node {
+                    Ok(node) => {
+                        match &node.path {
+                            Some(path) => {
+                                ctx_event.send(bevy_fs_graph::prelude::events::ChangeContextEvent{
+                                    new_ctx: path.clone(),
+                                });
+                            },
+                            None => {}
+                        }
+                    }
+                    Err(_) => {}
+                };
+            },
+            None => {}
+        }
+    }
+}
+
+pub fn remove_view_node_on_data_node_removal(
+    mut commands: Commands,
+    mut ev_node_removal: RemovedComponents<DataNode>,
+    nodes: Query<Entity, With<ViewNode>>,
+){
+    for ev in ev_node_removal.read() {
+        for node in nodes.iter(){
+            if node == ev {
+                commands.entity(node).despawn_recursive();
             }
         }
     }

@@ -7,7 +7,8 @@
 // use super::{nodes::ViewNode, graph_cam::ViewData};
 
 use bevy::prelude::*;
-use bevy_fs_graph::prelude::{DataEdge, PathsToEntitiesIndex, ViewNode};
+use bevy_fs_graph::prelude::*;
+use pe_index::PathsToEntitiesIndex;
 
 
 pub struct EdgeUiPlugin;
@@ -68,7 +69,7 @@ pub fn update_and_draw_edges(
             continue
         }
 
-        let color = LinearRgba::GREEN;
+        let color = LinearRgba::BLUE;
         gizmos.line_2d(start.translation.xy(), end.translation.xy(), color);
 
     }

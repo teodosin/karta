@@ -3,7 +3,7 @@
 use bevy::{prelude::{
     Query, Transform, Without, Vec2, Plugin, App, Entity, Res, Gizmos, PostUpdate, Resource
 }, time::Time, input::{ButtonInput, keyboard::KeyCode}, utils::HashMap, ecs::query::With, app::Update};
-use bevy_fs_graph::prelude::ViewNode;
+use bevy_fs_graph::prelude::{pe_index::PathsToEntitiesIndex, Attributes, DataEdge, ViewNode};
 use bevy_mod_picking::selection::PickSelection;
 
 use crate::prelude::Pins;
@@ -19,6 +19,7 @@ impl Plugin for GraphSimPlugin {
 
             .insert_resource(GraphSimSettings::default())
             .add_systems(Update, repulsion_constraints)
+            .add_systems(Update, edge_spring_constraints)
             .add_systems(PostUpdate, apply_forces)
         ;
     }
@@ -55,75 +56,63 @@ impl Default for GraphSimSettings {
 /// This constraint treats edges like springs, and applies a force to each node.
 /// For now, the attributes that will be read will be hard-coded (k and length).
 /// In the future, the resting length and stiffness values will be inputs to the node.
-// pub fn edge_spring_constraints (
-//     _forces: Query<(&ViewNode, &mut NodeForce)>,
-//     mut nodes: Query<(Entity, &ViewNode, &Transform, &mut Velocity2D)>,
-//     edges: Query<(&GraphDataEdge, &Attributes)>,
-//     pe_index: Res<PathsToEntitiesIndex>,
-// ){
-//     // When this force is implemented as a node, we will need to handle multiple of them.
+pub fn edge_spring_constraints (
+    // _forces: Query<(&ViewNode, &mut NodeForce)>,
+    mut nodes: Query<(Entity, &ViewNode, &Transform, &mut Velocity2D)>,
+    edges: Query<(&DataEdge, &Attributes)>,
+    pe_index: Res<PathsToEntitiesIndex>,
+){
+    // When this force is implemented as a node, we will need to handle multiple of them.
 
-//     for (edge, attr) in edges.iter(){
-//         let source_entity = match pe_index.0.get(&edge.source){
-//             Some(entity) => entity,
-//             None => continue,
-//         };
-//         let target_entity = match pe_index.0.get(&edge.target){
-//             Some(entity) => entity,
-//             None => continue,
-//         };
+    for (edge, attr) in edges.iter(){
+        let source_entity = match pe_index.get_view(&edge.source){
+            Some(entity) => entity,
+            None => continue,
+        };
+        let target_entity = match pe_index.get_view(&edge.target){
+            Some(entity) => entity,
+            None => continue,
+        };
 
-//         let from = match nodes.get(*source_entity){
-//             Ok(node) => node,
-//             Err(_) => continue,
-//         };
-//         let to = match nodes.get(*target_entity){
-//             Ok(node) => node,
-//             Err(_) => continue,
-//         };
+        let from = match nodes.get(source_entity){
+            Ok(node) => node,
+            Err(_) => continue,
+        };
+        let to = match nodes.get(target_entity){
+            Ok(node) => node,
+            Err(_) => continue,
+        };
         
-//         let diff = Vec2::new(
-//             from.2.translation.x - to.2.translation.x,
-//             from.2.translation.y - to.2.translation.y,
-//         );
+        let diff = Vec2::new(
+            from.2.translation.x - to.2.translation.x,
+            from.2.translation.y - to.2.translation.y,
+        );
         
-//         // distance between the two positions
-//         let dist = diff.length() + 0.0001;
+        // distance between the two positions
+        let dist = diff.length() + 0.0001;
         
-//         let len = match attr.attributes.get("length") {
-//             Some(len) => match len {
-//                 Some(len) => *len,
-//                 None => continue,
-//             },
-//             None => continue,
-//         };
+        let len = 200.0;
         
-//         let displacement = dist - len;
+        let displacement = dist - len;
         
-//         let attractive_force = match attr.attributes.get("k") {
-//             Some(k) => match k {
-//                 Some(k) => *k,
-//                 None => continue,
-//             },
-//             None => continue,
-//         } * displacement;      
+        let attractive_force = 0.3 * displacement;      
             
-//         match nodes.get_mut(*source_entity){
-//             Ok(mut node) => {
-//                 node.3.velocity -= diff / dist * attractive_force;
+        match nodes.get_mut(source_entity){
+            Ok(mut node) => {
+                node.3.velocity -= diff / dist * attractive_force;
                 
-//             },
-//             Err(_) => continue,
-//         }
+            },
+            Err(_) => continue,
+        }
         
-//         match nodes.get_mut(*target_entity){
-//             Ok(mut node) => {                
-//                 node.3.velocity += diff / dist * attractive_force;                
-//             },
-//             Err(_) => continue,
-//         }        
-//     } 
-// }
+        match nodes.get_mut(target_entity){
+            Ok(mut node) => {                
+                node.3.velocity += diff / dist * attractive_force;                
+            },
+            Err(_) => continue,
+        }        
+    } 
+}
 
 // Constraint: Repulsion
 // ----------------------------------------------------------------

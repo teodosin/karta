@@ -19,7 +19,7 @@ impl Plugin for EventPlugin {
 
             // Node Events
             .add_event::<NodeClickEvent>()
-            .add_event::<NodePressedEvent>()
+            .add_event::<NodePressEvent>()
             .add_event::<NodeHoverEvent>()
             .add_event::<NodeHoverStopEvent>()
             .add_event::<MoveNodesEvent>()

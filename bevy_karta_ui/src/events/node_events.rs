@@ -33,15 +33,15 @@ impl From<ListenerInput<Pointer<Click>>> for NodeClickEvent {
 }
 
 #[derive(Event)]
-pub struct NodePressedEvent {
+pub struct NodePressEvent {
     pub target: Option<Entity>,
     pub button: PointerButton,
 
 }
 
-impl From<ListenerInput<Pointer<Down>>> for NodePressedEvent {
+impl From<ListenerInput<Pointer<Down>>> for NodePressEvent {
     fn from(event: ListenerInput<Pointer<Down>>) -> Self {
-        NodePressedEvent {
+        NodePressEvent {
             target: Some(event.target),
             button: event.button
         }

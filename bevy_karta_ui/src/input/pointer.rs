@@ -15,7 +15,7 @@ use bevy_mod_picking::pointer::PointerButton;
 use crate::{
     prelude::{
         graph_cam::GraphCamera,
-        node_events::{NodeClickEvent, NodeHoverEvent, NodeHoverStopEvent, NodePressedEvent},
+        node_events::{NodeClickEvent, NodeHoverEvent, NodeHoverStopEvent, NodePressEvent},
     },
     ui::nodes::NodeOutline,
 };
@@ -138,6 +138,7 @@ impl InputData {
                 self.latest_hover_data = Some(input);
             }
             InteractionType::HoverStop => {
+                self.latest_hover_data = None;
                 self.latest_hover_stop_data = Some(input);
             }
         }
@@ -169,6 +170,20 @@ impl InputData {
 
     pub fn latest_click_entity(&self) -> Option<Entity> {
         match &self.latest_click_data {
+            Some(data) => data.target,
+            None => None,
+        }
+    }
+
+    pub fn latest_press_entity(&self) -> Option<Entity> {
+        match &self.latest_press_data {
+            Some(data) => data.target,
+            None => None,
+        }
+    }
+
+    pub fn latest_hover_entity(&self) -> Option<Entity> {
+        match &self.latest_hover_data {
             Some(data) => data.target,
             None => None,
         }
@@ -274,7 +289,7 @@ pub fn handle_node_click(
 pub fn handle_node_press(
     time: Res<Time>,
 
-    mut event: EventReader<NodePressedEvent>,
+    mut event: EventReader<NodePressEvent>,
     mut input_data: ResMut<InputData>,
 
     nodes: Query<(Entity, &ViewNode), Without<NodeOutline>>,
@@ -317,17 +332,27 @@ pub fn handle_node_press(
 pub fn handle_node_hover(
     time: Res<Time>,
 
-    mut event: EventReader<NodePressedEvent>,
+    mut ev_start: EventReader<NodeHoverEvent>,
+    mut ev_end: EventReader<NodeHoverStopEvent>,
     mut input_data: ResMut<InputData>,
 
     nodes: Query<(Entity, &ViewNode), Without<NodeOutline>>,
     outlines: Query<&Parent, (With<NodeOutline>, Without<ViewNode>)>,
 ) {
-    if event.is_empty() {
-        return;
-    }
+    for _ev in ev_end.read() {
+        let interaction_type: InteractionType = InteractionType::HoverStop;
+        let time = time.elapsed_seconds_f64();
 
-    for ev in event.read() {
+        let data = SingleInputData {
+            target: None,
+            target_type: GraphPickingTarget::None,
+            interaction_type,
+            time,
+        };
+
+        input_data.insert_input(data);
+    }
+    for ev in ev_start.read() {
         let interaction_type: InteractionType = InteractionType::Hover;
         let time = time.elapsed_seconds_f64();
 
@@ -353,30 +378,5 @@ pub fn handle_node_hover(
 
         input_data.insert_input(data);
     }
-}
 
-/// System that updates InputData whenever a node is no longer hovered over. This system and its siblings
-/// run in the PreUpdate stage.
-pub fn handle_node_hover_stop(
-    time: Res<Time>,
-    mut event: EventReader<NodeHoverStopEvent>,
-    mut input_data: ResMut<InputData>,
-) {
-    if event.is_empty() {
-        return;
-    }
-
-    for ev in event.read() {
-        let interaction_type: InteractionType = InteractionType::HoverStop;
-        let time = time.elapsed_seconds_f64();
-
-        let data = SingleInputData {
-            target: None,
-            target_type: GraphPickingTarget::None,
-            interaction_type,
-            time,
-        };
-
-        input_data.insert_input(data);
-    }
 }
