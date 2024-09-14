@@ -747,7 +747,6 @@ name = "bevy_fs_graph"
 version = "0.1.0"
 dependencies = [
  "bevy",
- "bevy_overlay_graph",
  "directories 5.0.1",
  "fs_graph",
  "native-dialog",
@@ -1027,6 +1026,7 @@ version = "0.0.1"
 dependencies = [
  "bevy",
  "bevy-inspector-egui",
+ "bevy_fs_graph",
  "bevy_mod_debugdump",
  "bevy_mod_picking",
  "bevy_prototype_lyon",
