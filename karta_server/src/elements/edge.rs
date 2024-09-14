@@ -61,6 +61,14 @@ impl Edge {
         self.contains
     }
 
+    pub fn created_time(&self) -> SysTime {
+        self.created_time.clone()
+    }
+
+    pub fn modified_time(&self) -> SysTime {
+        self.modified_time.clone()
+    }
+
     pub fn attributes(&self) -> &Vec<Attribute> {
         &self.attributes
     }
