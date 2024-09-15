@@ -129,7 +129,9 @@ fn on_context_change(
     
     let nodepath = node.path().clone();
     let name = node.name().to_string();
-    let mut ctx_rt_e: Option<Entity> = None;
+    let ctx_rt_e: Option<Entity>;
+    
+    graph.index_node_context(&nodepath);
 
     if !pe_index.0.contains_key(&nodepath){
         ctx_rt_e = Some(commands.spawn(DataNodeBundle{
@@ -142,12 +144,18 @@ fn on_context_change(
             data_node_type: node_plugin::DataNodeType(node.ntype_name()),
             attributes: node_plugin::Attributes(node.attributes().clone()),
         }).id());
+    } else {
+        ctx_rt_e = match pe_index.get_data(&nodepath) {
+            Some(e) => Some(e),
+            None => None,
+        };
     }
 
     for node in open_nodes.iter(){
         match ctx_rt_e {
             Some(rt_e) => {
                 if node == rt_e {
+                    println!("Not deleting new context root: {}", rt_e);
                     continue;
                 }
             },
@@ -156,6 +164,7 @@ fn on_context_change(
 
         commands.entity(node).insert(ToBeDespawned);
     }
+
 
     let connections: Vec<(fs_graph::prelude::Node, Edge)> = graph.open_node_connections(&ctx_root_nodepath);
 
