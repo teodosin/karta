@@ -444,12 +444,22 @@ pub fn change_current_context_on_c(
 pub fn remove_view_node_on_data_node_removal(
     mut commands: Commands,
     mut ev_node_removal: RemovedComponents<DataNode>,
-    nodes: Query<Entity, With<ViewNode>>,
+    nodes: Query<(Entity, &ViewNode)>,
 ){
     for ev in ev_node_removal.read() {
-        for node in nodes.iter(){
-            if node == ev {
-                commands.entity(node).despawn_recursive();
+        for (view_e, view_node) in nodes.iter(){
+            match view_node.data {
+                Some(data) => {
+                    if data == ev {
+                        match commands.get_entity(view_e) {
+                            Some(entity) => {
+                                entity.despawn_recursive();
+                            },
+                            None => {}
+                        }
+                    }
+                },
+                None => {}
             }
         }
     }

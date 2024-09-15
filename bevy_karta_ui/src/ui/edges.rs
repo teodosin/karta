@@ -34,21 +34,21 @@ pub fn update_and_draw_edges(
         let source_entity = match pe_index.get_view(&data.source){
             Some(entity) => entity,
             None => {
-                println!("Failed to find entity for edge source");
+                // println!("Failed to find entity for edge source");
                 continue
             },
         };
         let target_entity = match pe_index.get_view(&data.target){
             Some(entity) => entity,
             None => {
-                println!("Failed to find entity for edge target");
+                // println!("Failed to find entity for edge target");
                 continue
             },
         };
         let start = match nodes.get(source_entity) {
             Ok(node) => node,
             Err(_) => {
-                println!("Failed to find node for edge source");
+                // println!("Failed to find node for edge source");
                 // commands.entity(edge).despawn_recursive();
                 continue
             },
@@ -56,7 +56,7 @@ pub fn update_and_draw_edges(
         let end = match nodes.get(target_entity){
             Ok(node) => node,
             Err(_) => {
-                println!("Failed to find node for edge target");
+                // println!("Failed to find node for edge target");
                 // commands.entity(edge).despawn_recursive();
                 continue
             },

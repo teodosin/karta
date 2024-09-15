@@ -4,8 +4,6 @@ use bevy::{
 };
 use bevy_mod_picking::{prelude::*, backends::raycast::RaycastPickable};
 
-use crate::events::background::RectangleSelectionEndEvent;
-
 use super::graph_cam::{GraphCamera, graph_zoom};
 // Modeled after lib.rs of bevy_infinite_grid
 
@@ -48,7 +46,6 @@ fn setup_grid(
             should_block_lower: true,
         },
 
-        On::<Pointer<DragEnd>>::send_event::<RectangleSelectionEndEvent>(),
     ));
 }
 

@@ -1,41 +1,12 @@
-use bevy::{
-    ecs::{entity::Entity, event::EventReader, query::Without},
-    hierarchy::Parent,
-    input::ButtonInput,
-    prelude::{
-        Camera, Camera2d, GlobalTransform, MouseButton, Query, Res, ResMut, Resource, Vec2, With,
-    },
-    render::view,
-    time::{self, Time},
-    window::Window,
-};
+use bevy::prelude::*;
 use bevy_fs_graph::prelude::ViewNode;
 use bevy_mod_picking::pointer::PointerButton;
+use events::node_events::{NodeClickEvent, NodeHoverEvent, NodeHoverStopEvent, NodePressEvent};
+use ui::{graph_cam::GraphCamera, nodes::NodeOutline};
 
-use crate::{
-    prelude::{
-        graph_cam::GraphCamera,
-        node_events::{NodeClickEvent, NodeHoverEvent, NodeHoverStopEvent, NodePressEvent},
-    },
-    ui::nodes::NodeOutline,
-};
+use crate::*;
+    
 
-// #[derive(Resource, Debug)]
-// pub struct InputData {
-//     pub latest_click_entity: Option<Entity>,
-//     pub latest_press_entity: Option<Entity>,
-//     pub latest_hover_entity: Option<Entity>,
-
-//     pub latest_edge_entity: Option<Entity>,
-
-//     pub target_type: GraphPickingTarget,
-
-//     pub left_just_released: bool,
-
-//     pub drag_position: Vec2,
-//     pub prev_position: Vec2,
-//     pub curr_position: Vec2,
-// }
 
 /// Struct that stores information about a single input event. Used by the
 /// InputData resource to store the recent history of input events.
