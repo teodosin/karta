@@ -2,12 +2,21 @@ use std::{error::Error, path::PathBuf, vec};
 
 use agdb::{DbElement, DbId, QueryBuilder};
 
-use crate::{elements::{self, edge::Edge, nodetype::NodeType}, graph_traits::graph_node::GraphNode, prelude::GraphCore};
+use crate::{
+    elements::{self, edge::Edge, nodetype::NodeType},
+    graph_traits::graph_node::GraphNode,
+    prelude::GraphCore,
+};
 
-use super::{attribute::{Attribute, RESERVED_NODE_ATTRS}, node::Node, node_path::NodePath, GraphAgdb, StoragePath};
+use super::{
+    attribute::{Attribute, RESERVED_NODE_ATTRS},
+    node::Node,
+    node_path::NodePath,
+    GraphAgdb, StoragePath,
+};
 
 impl GraphNode for GraphAgdb {
-    fn open_node(&mut self, path: &NodePath) -> Result<Node, Box<dyn Error>> {
+    fn open_node(&self, path: &NodePath) -> Result<Node, Box<dyn Error>> {
         let alias = path.alias();
 
         let node = self.db.exec(&QueryBuilder::select().ids(alias).query());
@@ -21,18 +30,12 @@ impl GraphNode for GraphAgdb {
                 Ok(node.unwrap())
             }
             Err(_err) => {
-                let full = path.full(&self.user_root_dirpath());
-                if path.full(&self.user_root_dirpath()).exists() {
-                    println!("{:?} is supposed to be right", full);
-                    self.index_single_node(path)
-                } else {
-                    return Err("Could not open node".into());
-                }
+                return Err("Could not open node".into());
             }
         }
     }
 
-    fn open_node_connections(&mut self, path: &NodePath) -> Vec<(Node, Edge)> {
+    fn open_node_connections(&self, path: &NodePath) -> Vec<(Node, Edge)> {
         // Step 1: Check if the node is a physical node in the file system.
         // Step 2: Check if the node exists in the db.
         // Step 3: Check if all the physical dirs and files in the node are in the db.
@@ -46,51 +49,6 @@ impl GraphNode for GraphAgdb {
         let is_physical = full_path.exists();
         let is_dir = full_path.is_dir();
 
-
-        if is_physical {
-            // Index the parent
-            let parent = path.parent();
-            match parent {
-                Some(parent) => {
-                    let parent_dir = parent.full(&self.root_path);
-                    if parent_dir.exists() {
-                        self.index_single_node(&parent);
-                    } else {
-                        panic!("A physical directory's parent not existing should be impossible!");
-                    }
-                }
-                None => {
-                }
-            }
-            println!("is dir: {}", is_dir);
-            // Index the dir contents
-            if is_dir {
-                println!("indexing {:?}", full_path);
-                let dir_contents = std::fs::read_dir(full_path).unwrap();
-                println!("dir_contents: {:?}", dir_contents);
-                for entry in dir_contents {
-                    println!("entry: {:?}", entry);
-                    let entry = entry.unwrap();
-                    let entry_path = entry.path();
-                    match entry_path.extension() {
-                        Some(ext) => {
-                            if ext == "agdb" {
-                                continue;
-                            }
-                        }
-                        None => {
-                        }
-                    }
-                    let entry_name = entry_path.file_name().unwrap().to_str().unwrap();
-                    let entry_path = path.join(entry_name);
-                    println!("Close to indexing {:?}", entry_path);
-                    self.index_single_node(&entry_path);
-                }
-            }
-        }
-
-
-
         let as_str = path.alias();
 
         let mut node_ids: Vec<DbId> = Vec::new();
@@ -98,7 +56,13 @@ impl GraphNode for GraphAgdb {
 
         // Links from node
         println!("Searching for links from node {}", as_str);
-        let links = self.db.exec(&QueryBuilder::search().from(path.alias()).where_().distance(agdb::CountComparison::LessThanOrEqual(2)).query());
+        let links = self.db.exec(
+            &QueryBuilder::search()
+                .from(path.alias())
+                .where_()
+                .distance(agdb::CountComparison::LessThanOrEqual(2))
+                .query(),
+        );
 
         match links {
             Ok(links) => {
@@ -117,7 +81,13 @@ impl GraphNode for GraphAgdb {
         }
 
         // Backlinks to node
-        let backlinks = self.db.exec(&QueryBuilder::search().to(path.alias()).where_().distance(agdb::CountComparison::LessThanOrEqual(2)).query());
+        let backlinks = self.db.exec(
+            &QueryBuilder::search()
+                .to(path.alias())
+                .where_()
+                .distance(agdb::CountComparison::LessThanOrEqual(2))
+                .query(),
+        );
 
         match backlinks {
             Ok(backlinks) => {
@@ -128,7 +98,9 @@ impl GraphNode for GraphAgdb {
                     } else if elem.id.0 > 0 {
                         // Is node
                         println!("Backlink: {:?}", elem);
-                        let balias = self.db.exec(&QueryBuilder::select().aliases().ids(elem.id).query());
+                        let balias = self
+                            .db
+                            .exec(&QueryBuilder::select().aliases().ids(elem.id).query());
                         println!("balias: {:?}", balias);
                         node_ids.push(elem.id);
                     }
@@ -137,35 +109,49 @@ impl GraphNode for GraphAgdb {
             Err(_e) => {}
         }
 
-        let full_nodes = match self.db.exec(&QueryBuilder::select().values(vec![]).ids(node_ids).query()) {
+        let full_nodes = match self
+            .db
+            .exec(&QueryBuilder::select().values(vec![]).ids(node_ids).query())
+        {
             Ok(nodes) => nodes.elements,
-            Err(_e) => vec![]
+            Err(_e) => vec![],
         };
-        let full_edges = match self.db.exec(&QueryBuilder::select().values(vec![]).ids(edge_ids).query()) {
+        let full_edges = match self
+            .db
+            .exec(&QueryBuilder::select().values(vec![]).ids(edge_ids).query())
+        {
             Ok(edges) => edges.elements,
-            Err(_e) => vec![]
+            Err(_e) => vec![],
         };
 
-        let connections: Vec<(Node, Edge)> = full_nodes.iter().filter_map(|node| {
-            let node = Node::try_from(node.clone()).unwrap();
+        let connections: Vec<(Node, Edge)> = full_nodes
+            .iter()
+            .filter_map(|node| {
+                let node = Node::try_from(node.clone()).unwrap();
 
-            println!("Returning node {:?}", node.path());
-            // Ignore the original node
-            if node.path() == *path {
-                return None;
-            }
-            let edge = full_edges.iter().find(|edge| {
-                if edge.from.unwrap() == node.id().unwrap() || edge.to.unwrap() == node.id().unwrap() {
-                    true
-                } else {
-                    false
+                println!("Returning node {:?}", node.path());
+                // Ignore the original node
+                if node.path() == *path {
+                    return None;
                 }
-            }).unwrap();
-            let edge = Edge::try_from(edge.clone()).unwrap();
-            
-            println!("Nodes: {:?}", node.path());
-            Some((node, edge))
-        }).collect();
+                let edge = full_edges
+                    .iter()
+                    .find(|edge| {
+                        if edge.from.unwrap() == node.id().unwrap()
+                            || edge.to.unwrap() == node.id().unwrap()
+                        {
+                            true
+                        } else {
+                            false
+                        }
+                    })
+                    .unwrap();
+                let edge = Edge::try_from(edge.clone()).unwrap();
+
+                println!("Nodes: {:?}", node.path());
+                Some((node, edge))
+            })
+            .collect();
 
         connections
     }
@@ -175,7 +161,6 @@ impl GraphNode for GraphAgdb {
         path: &NodePath,
         ntype: Option<NodeType>,
     ) -> Result<Node, Box<dyn Error>> {
-
         let full_path = path.full(&self.root_path);
         let alias = path.alias();
 
@@ -214,6 +199,8 @@ impl GraphNode for GraphAgdb {
 
         let node = Node::new(&path.clone(), ntype);
 
+        println!("Creating node: {:?}", node.path());
+
         let nodeqr = self.db.exec_mut(
             &QueryBuilder::insert()
                 .nodes()
@@ -234,10 +221,7 @@ impl GraphNode for GraphAgdb {
                         if parent_path.parent().is_some() {
                             println!("About to insert parent node: {:?}", parent_path);
 
-                            let n = self.create_node_by_path(
-                                &parent_path,
-                                Some(NodeType::other()),
-                            );
+                            let n = self.create_node_by_path(&parent_path, Some(NodeType::other()));
 
                             match n {
                                 Ok(n) => {
@@ -257,7 +241,6 @@ impl GraphNode for GraphAgdb {
                         Ok(node)
                     }
                 }
-
             }
             Err(e) => {
                 println!("Failed to insert node: {}", e);
@@ -291,36 +274,41 @@ impl GraphNode for GraphAgdb {
         todo!()
     }
 
-    /// Deletes a node. Error if trying to delete root or archetype nodes. 
+    /// Deletes a node. Error if trying to delete root or archetype nodes.
     ///
     /// Setting "files" and/or "dirs" to true could also delete from the file system,
     /// and recursively. Very dangerous. Though not implementing this would mean that
     /// those files would constantly be at a risk of getting reindexed, so this
     /// should probably still be implemented, unless we want to just mark nodes as deleted
     /// but never actually delete them, which seems like a smelly solution to me.
-    fn delete_nodes(&mut self, paths: &Vec<NodePath>, files: bool, dirs: bool) -> Result<(), Box<dyn Error>> {
-        let aliases = paths.iter().map(|path| path.alias()).collect::<Vec<String>>();
+    fn delete_nodes(
+        &mut self,
+        paths: &Vec<NodePath>,
+        files: bool,
+        dirs: bool,
+    ) -> Result<(), Box<dyn Error>> {
+        let aliases = paths
+            .iter()
+            .map(|path| path.alias())
+            .collect::<Vec<String>>();
 
-        let query = self.db.exec_mut(&QueryBuilder::remove().ids(aliases).query());
+        let query = self
+            .db
+            .exec_mut(&QueryBuilder::remove().ids(aliases).query());
 
         match query {
-            Ok(query) => {
-                Ok(())
-            }
-            Err(e) => {
-                Err(e.into())
-            }
+            Ok(query) => Ok(()),
+            Err(e) => Err(e.into()),
         }
     }
 
     /// Is this even needed? Does open node get all attributes?
-    fn get_node_attrs(
-        &self,
-        path: &NodePath,
-    ) -> Result<Vec<Attribute>, Box<dyn Error>> {
+    fn get_node_attrs(&self, path: &NodePath) -> Result<Vec<Attribute>, Box<dyn Error>> {
         let alias = path.alias();
         let keys = Vec::new();
-        let attrs = self.db.exec(&QueryBuilder::select().values(keys).ids(alias).query());
+        let attrs = self
+            .db
+            .exec(&QueryBuilder::select().values(keys).ids(alias).query());
 
         match attrs {
             Ok(attrs) => {
@@ -331,7 +319,7 @@ impl GraphNode for GraphAgdb {
                     .unwrap()
                     .values
                     .iter()
-                    .map(| attr | {
+                    .map(|attr| {
                         let attr = attr.to_owned();
                         Attribute {
                             name: attr.key.to_string(),
@@ -353,12 +341,14 @@ impl GraphNode for GraphAgdb {
         &mut self,
         path: &NodePath,
         attrs: Vec<Attribute>,
-    ) -> Result<(), Box<dyn Error>>{
+    ) -> Result<(), Box<dyn Error>> {
         use RESERVED_NODE_ATTRS;
 
         // Check if the node exists. If it doesn't, errrrrrrr
         let alias = path.alias();
-        let node = self.db.exec(&QueryBuilder::select().ids(alias.clone()).query());
+        let node = self
+            .db
+            .exec(&QueryBuilder::select().ids(alias.clone()).query());
         match node {
             Ok(node) => {}
             Err(e) => {
@@ -371,8 +361,9 @@ impl GraphNode for GraphAgdb {
             return Err("Attributes cannot be empty".into());
         }
 
-        let filtered_attrs = attrs.iter()
-            .filter(| attr | {
+        let filtered_attrs = attrs
+            .iter()
+            .filter(|attr| {
                 let slice = attr.name.as_str();
                 let is_reserved = RESERVED_NODE_ATTRS.contains(&slice);
 
@@ -381,10 +372,10 @@ impl GraphNode for GraphAgdb {
                 }
                 return true;
             })
-            .map(| attr | {
-                 let attr = (attr.name.clone(), attr.value).into();
-                 return attr;
-             })
+            .map(|attr| {
+                let attr = (attr.name.clone(), attr.value).into();
+                return attr;
+            })
             .collect::<Vec<agdb::DbKeyValue>>();
 
         // Error if filtered attrs is empty
@@ -394,7 +385,7 @@ impl GraphNode for GraphAgdb {
 
         let added = self.db.exec_mut(
             &QueryBuilder::insert()
-                .values(vec!(filtered_attrs))
+                .values(vec![filtered_attrs])
                 .ids(alias)
                 .query(),
         );
@@ -423,9 +414,11 @@ impl GraphNode for GraphAgdb {
         }
 
         // Protect reserved attribute names
-        let filtered_attrs: Vec<agdb::DbValue> = attr_names.iter().filter(| &&attr_name | {
-            !RESERVED_NODE_ATTRS.contains(&attr_name)
-        }).map(|&s| agdb::DbValue::from(s)).collect();
+        let filtered_attrs: Vec<agdb::DbValue> = attr_names
+            .iter()
+            .filter(|&&attr_name| !RESERVED_NODE_ATTRS.contains(&attr_name))
+            .map(|&s| agdb::DbValue::from(s))
+            .collect();
 
         if filtered_attrs.len() == 0 {
             return Err("All deletion requests were for protected attributes".into());
@@ -439,12 +432,8 @@ impl GraphNode for GraphAgdb {
         );
 
         match node {
-            Ok(node) => {
-                Ok(())
-            }
-            Err(e) => {
-                Err(e.into())
-            }
+            Ok(node) => Ok(()),
+            Err(e) => Err(e.into()),
         }
     }
 
@@ -460,7 +449,9 @@ impl GraphNode for GraphAgdb {
     // fn set_pin_on nodes
 
     fn autoparent_nodes(
-        &mut self, parent: &NodePath, child: &NodePath
+        &mut self,
+        parent: &NodePath,
+        child: &NodePath,
     ) -> Result<(), Box<dyn Error>> {
         println!("Autoparenting nodes: {:?} and {:?}", parent, child);
         let edge = Edge::new_cont(parent, child);
@@ -478,7 +469,9 @@ impl GraphNode for GraphAgdb {
         let eid = eid.first().unwrap();
         println!("Id of the edge: {:#?}", eid);
 
-        let edge = self.db.exec(&QueryBuilder::select().keys().ids(*eid).query());
+        let edge = self
+            .db
+            .exec(&QueryBuilder::select().keys().ids(*eid).query());
 
         match edge {
             Ok(edge) => {
@@ -486,10 +479,7 @@ impl GraphNode for GraphAgdb {
                 // println!("Edge inserted: {:#?}", edge.elements);
                 Ok(())
             }
-            Err(e) => {
-                Err(e.into())
-            }
+            Err(e) => Err(e.into()),
         }
     }
-
 }

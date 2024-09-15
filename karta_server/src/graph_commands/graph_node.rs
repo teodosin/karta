@@ -6,11 +6,11 @@ use crate::prelude::*;
 
 
 impl GraphNode for GraphCommands {
-    fn open_node(&mut self, path: &NodePath) -> Result<Node, Box<dyn std::error::Error>> {
+    fn open_node(&self, path: &NodePath) -> Result<Node, Box<dyn std::error::Error>> {
         self.graph.open_node(path)
     }
 
-    fn open_node_connections(&mut self, path: &NodePath) -> Vec<(Node, Edge)> {
+    fn open_node_connections(&self, path: &NodePath) -> Vec<(Node, Edge)> {
         self.graph.open_node_connections(path)
     }
 

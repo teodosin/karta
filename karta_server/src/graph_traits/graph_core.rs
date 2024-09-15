@@ -35,7 +35,7 @@ pub trait GraphCore {
     fn index_single_node(&mut self, path: &NodePath) -> Result<Node, Box<dyn Error>>;
 
     /// Syncs the node's relationships in the db with the file system.
-    fn index_node_connections(&mut self, path: &NodePath);
+    fn index_node_context(&mut self, path: &NodePath);
 
     /// Delete all dead nodes from the graph.
     fn cleanup_dead_nodes(&mut self);

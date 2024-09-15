@@ -13,7 +13,7 @@ pub trait GraphNode {
     /// 
     /// TODO: This takes a mutable reference because of the indexing requirement, which is
     /// awkward and tech debt. 
-    fn open_node(&mut self, path: &NodePath) -> Result<Node, Box<dyn Error>>;
+    fn open_node(&self, path: &NodePath) -> Result<Node, Box<dyn Error>>;
 
     // Retrieves the edges of a particular node.
     // fn get_node_edges(&self, path: &NodePath) -> Vec<Edge>;
@@ -26,7 +26,7 @@ pub trait GraphNode {
     /// would have to be connected to some node, which would just turn
     /// this into a generic "open_nodes" function, or "search_nodes".
     /// Then filters could just be wrappers around agdb's QueryConditions...
-    fn open_node_connections(&mut self, path: &NodePath) -> Vec<(Node, Edge)>;
+    fn open_node_connections(&self, path: &NodePath) -> Vec<(Node, Edge)>;
 
     /// Creates a node from the given path. Inserts it into the graph.
     /// Insert the relative path from the root, not including the root dir.
@@ -421,26 +421,27 @@ mod tests {
         }
     }
 
+    // Deprecated test. Nodes are no longer indexed automatically when opening. 
+    // #[test]
+    // fn opening_physical_dir__is_indexed_and_created() {
+    //     let func_name = "opening_physical_dir__is_indexed_and_created";
+    //     let mut ctx = TestContext::new(func_name);
+
+    //     let root_dir = ctx.graph.user_root_dirpath();
+
+    //     let dir_nodepath = NodePath::from("test_dir");
+
+    //     let dir_path = dir_nodepath.full(&root_dir);
+
+    //     create_dir(&dir_path);
+
+    //     let dir_path_node = ctx.graph.open_node(&dir_nodepath);
+    //     assert_eq!(dir_path_node.is_ok(), true, "Node should be indexed and opened");
+    // }
+
     #[test]
-    fn opening_physical_dir__is_indexed_and_created() {
-        let func_name = "opening_physical_dir__is_indexed_and_created";
-        let mut ctx = TestContext::new(func_name);
-
-        let root_dir = ctx.graph.user_root_dirpath();
-
-        let dir_nodepath = NodePath::from("test_dir");
-
-        let dir_path = dir_nodepath.full(&root_dir);
-
-        create_dir(&dir_path);
-
-        let dir_path_node = ctx.graph.open_node(&dir_nodepath);
-        assert_eq!(dir_path_node.is_ok(), true, "Node should be indexed and opened");
-    }
-
-    #[test]
-    fn opening_dir_connections__indexes_and_creates_nodes() {
-        let func_name = "opening_dir_connections__indexes_and_creates_nodes";
+    fn node_context_can_be_indexed() {
+        let func_name = "node_context_can_be_indexed";
         let mut ctx = TestContext::new(func_name);
 
         let root_dir = ctx.graph.user_root_dirpath();
@@ -465,6 +466,11 @@ mod tests {
         File::create(&dir_file1).unwrap();
         File::create(&dir_file2).unwrap();
         File::create(&dir_file3).unwrap();
+
+        ctx.graph.index_node_context(&dir_nodepath);
+
+        let temp = ctx.graph.db().exec(&QueryBuilder::select().aliases().query());
+        println!("Temp is {:#?}", temp);
 
         let dir_path_node = ctx.graph.open_node(&dir_nodepath);
         assert_eq!(dir_path_node.is_ok(), true, "Node should be indexed and opened");

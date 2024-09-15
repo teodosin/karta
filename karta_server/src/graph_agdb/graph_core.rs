@@ -153,19 +153,43 @@ impl GraphCore for GraphAgdb {
         });
     }
 
-    /// Syncs a node in the db with the file system
+    /// Syncs a node in the db with the file system. Errs on archetype nodes as
+    /// well as other virtual nodes. 
     fn index_single_node(&mut self, path: &NodePath) -> Result<Node, Box<dyn Error>>{
+        
         let full_path = path.full(&self.root_path);
-        let node_alias = path.alias();
+        let is_user_root = full_path == self.user_root_dirpath();
 
-        // let node = self.open_node(path);
+        let mut node_alias: String;
 
-        // if node.is_ok(){
-        //     return node;
-        // }
+        let mut is_phys: bool;
+        let mut is_dir: bool;
 
-        let is_phys = full_path.exists();
-        let is_dir = full_path.is_dir();
+        // The user_root is a special case, because its directory name and its
+        // alias are different. So we need to check for that.
+        if is_user_root {
+            node_alias = NodePath::user_root().alias();
+            is_phys = full_path.exists();
+            is_dir = full_path.is_dir();
+            assert!(is_phys && is_dir, "User root directory must exist and be a directory");
+        } else {
+            if path.is_atype() {
+                return Err("Archetype nodes cannot be indexed".into())
+            }
+            node_alias = path.alias();
+            is_phys = full_path.exists();
+            is_dir = full_path.is_dir();
+        }
+
+        println!("Indexing node: {}", node_alias);
+        println!("Is phys: {} is dir: {}", is_phys, is_dir);
+
+        // Handle the case where the node is already in the db
+        let node = self.db.exec(&QueryBuilder::select().ids(node_alias.clone()).query());
+        if node.is_ok() {
+            println!("Node already exists");
+            return Err("Node already exists".into())
+        }
 
         if is_phys {
             println!("Indexing node: {}", node_alias);
@@ -174,63 +198,68 @@ impl GraphCore for GraphAgdb {
             } else {
                 return self.create_node_by_path(path, Some(NodeType::file()))
             } 
+        } else {
+            return Err("Cannot index virtual node".into())
         }
         return Err("Indexing of path failed".into())
     }
 
-    /// Syncs the node's relationships in the db with the file system.
-    fn index_node_connections(&mut self, path: &NodePath) {
+    /// Syncs the node's and its relationships in the db with the file system.
+    fn index_node_context(&mut self, path: &NodePath) {
         let full_path = path.full(&self.root_path);
-        let node_alias = path.alias();
+        let mut node_alias: String;
 
-        let is_phys = full_path.exists();
-        let is_dir = full_path.is_dir();
+        let is_user_root = full_path == self.user_root_dirpath();
+        let mut is_phys: bool;
+        let mut is_dir: bool;
 
-        if is_phys {
-            // Check if the path has a node in the db. If not, it will be created.
-            let nnode = self
-                .db
-                .exec(&QueryBuilder::select().ids(node_alias.clone()).query());
-            match nnode {
-                Ok(nnode) => {
-                    let mut ntype = NodeType::new("file".into());
-                    if is_dir {
-                        ntype = NodeType::new("folder".into());
-                    }
-                    if nnode.elements.len() == 0 {
-                        // If the node doesn't exist, create it.
-                        let node = Node::new(&path.clone(), ntype);
-                        let node_id = self.db.exec_mut(
-                            &QueryBuilder::insert()
-                                .nodes()
-                                .aliases(node_alias)
-                                .values(&node)
-                                .query(),
-                        );
-                        match node_id {
-                            Ok(node_id) => {
-                                // Create an edge between the root and the node
-                                //Graph::parent_nodes_by_dbids(&mut self.db, rt_id, node_id);
-                            }
-                            Err(ref err) => {
-                                println!("Failed to create node: {}", err);
-                            }
-                        }
-                    }
-                }
-                Err(ref err) => {
-                    println!("Failed to get node: {}", err);
-                }
+        // The user_root is a special case, because its directory name and its
+        // alias are different. So we need to check for that.
+        if is_user_root {
+            node_alias = NodePath::user_root().alias();
+            is_phys = full_path.exists();
+            is_dir = full_path.is_dir();
+            assert!(is_phys && is_dir, "User root directory must exist and be a directory");
+        } else {
+            node_alias = path.alias();
+            is_phys = full_path.exists();
+            is_dir = full_path.is_dir();
+        }
+
+        // Only the user_root nodes is guaranteed to not have a valid parent
+        // in the current vault. Other parents should be indexed. 
+        if !is_user_root {
+            let parent = path.parent();
+            if parent.is_some(){
+                self.index_single_node(&parent.unwrap());
             }
         }
 
+        // If the path is a directory, we must check for its contents in the 
+        // file system and index them.
         if is_dir {
-            // If full_path exists, its parent does too.
+            let children = full_path.read_dir().unwrap();
+            children.into_iter().for_each(|child| {
+                match child {
+                    Ok(child) => {
+                        let path = child.path();
+                        let child_path = NodePath::from_dir_path(&self.user_root_dirpath(), &path);
+                        println!("Indexing child: {:?}", child_path);
+
+                        self.index_single_node(&child_path);
+                    },
+                    Err(err) => {
+                        println!("Error reading directory: {}", err);
+                    }
+                }
+            });
         }
 
-        //
+        // TODO: Check an existing node's relationships to find nodes that need updating 
 
-        todo!()
+        // More code here pls
+        // More pls
+        // Pls?
     }
 
     /// Delete all dead nodes from the graph.

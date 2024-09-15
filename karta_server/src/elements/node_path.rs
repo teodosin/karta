@@ -96,11 +96,30 @@ impl NodePath {
         }
     }
 
-    /// Get the full path, including the root. Root path must be provided.
+    pub fn is_atype(&self) -> bool {
+        let atypes = ARCHETYPES;
+        for atype in atypes {
+            if NodePath::atype(atype) == *self {
+                return true;
+            }
+        } 
+        false
+    }
+
+    /// Get the absolute file path, including the user_root. Root path must be provided.
+    /// Note that this function doesn't take into account whether the path exists or not.
     pub fn full(&self, root_path: &PathBuf) -> PathBuf {
         let full_path = root_path.clone();
         let path_to_join = self.0.strip_prefix("user_root").unwrap_or(&self.0).to_path_buf();
         full_path.join(path_to_join)
+    }
+
+    /// Get a NodePath from an absolute path and the vault user_root path.
+    /// users/me/projects/my_vault/big/medium/small.txt -> NodePath("big/medium/small.txt")
+    /// NodePath("big/medium/small.txt").alias() -> "/user_root/big/medium/small.txt"
+    pub fn from_dir_path(root_path: &PathBuf, file_path: &PathBuf) -> Self {
+        let relative_path = file_path.strip_prefix(root_path).unwrap_or(file_path);
+        NodePath::new(relative_path.to_path_buf())
     }
 
     pub fn parent(&self) -> Option<NodePath> {

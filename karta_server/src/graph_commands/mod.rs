@@ -6,6 +6,7 @@ use crate::prelude::*;
 
 pub mod commands;
 pub mod graph_node;
+pub mod graph_core;
 
 pub struct GraphCommands {
     command_manager: CommandManager,
