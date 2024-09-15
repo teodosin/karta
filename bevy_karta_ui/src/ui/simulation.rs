@@ -1,8 +1,6 @@
 // FORCE SIMULATION
 
-use bevy::{prelude::{
-    Query, Transform, Without, Vec2, Plugin, App, Entity, Res, Gizmos, PostUpdate, Resource
-}, time::Time, input::{ButtonInput, keyboard::KeyCode}, utils::HashMap, ecs::query::With, app::Update};
+use bevy::{prelude::*, utils::HashMap};
 use bevy_fs_graph::prelude::{pe_index::PathsToEntitiesIndex, Attributes, DataEdge, ViewNode};
 use bevy_mod_picking::selection::PickSelection;
 
@@ -18,8 +16,10 @@ impl Plugin for GraphSimPlugin {
             //.add_systems(Update, simulation.before(move_node_selection))
 
             .insert_resource(GraphSimSettings::default())
-            .add_systems(Update, repulsion_constraints)
-            .add_systems(Update, edge_spring_constraints)
+            .add_systems(Update, (
+                repulsion_constraints,
+                edge_spring_constraints
+            ).chain())
             .add_systems(PostUpdate, apply_forces)
         ;
     }
@@ -95,12 +95,11 @@ pub fn edge_spring_constraints (
         
         let displacement = dist - len;
         
-        let attractive_force = 0.3 * displacement;      
+        let attractive_force = 0.85 * displacement;      
             
         match nodes.get_mut(source_entity){
             Ok(mut node) => {
                 node.3.velocity -= diff / dist * attractive_force;
-                
             },
             Err(_) => continue,
         }
@@ -139,9 +138,9 @@ pub fn repulsion_constraints (
             // distance between the two positions
             let dist = diff.length();
 
-            if dist > 150.0 {
-                continue
-            }
+            // if dist > 150.0 {
+            //     continue
+            // }
             
             let repulsive_force = 20000.0 / dist.powf(1.25);
 
@@ -165,7 +164,7 @@ fn apply_forces(
         (Entity, &ViewNode, &mut Transform, &mut Velocity2D, &Pins, &PickSelection), 
         Without<TargetPosition>
     >,
-    _gizmos: Gizmos,
+    mut _gizmos: Gizmos,
     keys: Res<ButtonInput<KeyCode>>,
 ) {
     // if !keys.pressed(KeyCode::Space) {
@@ -190,11 +189,11 @@ fn apply_forces(
             force = force * sim_settings.damping_factor * time.delta().as_secs_f32();
             
             // Lines for debugging the forces
-            // gizmos.line_2d(
-            //     pos.translation.truncate(), 
-            //     pos.translation.truncate() + force * 100.0, 
-            //     Color::RED,
-            // );
+            _gizmos.line_2d(
+                pos.translation.truncate(), 
+                pos.translation.truncate() + force * 100.0, 
+                LinearRgba::RED,
+            );
                 
             pos.translation.x += force.x;
             pos.translation.y += force.y;
