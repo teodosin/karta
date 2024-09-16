@@ -40,4 +40,8 @@ impl GraphCore for GraphCommands {
     fn maintain_readable_files(&mut self, maintain: bool) {
         todo!()
     }
+
+    fn get_all_aliases(&self) -> Vec<String> {
+        todo!()
+    }
 }

@@ -48,6 +48,9 @@ pub trait GraphCore {
 
     // fn undo(&mut self, num: usize);
     // fn redo(&mut self, num: usize);
+
+    /// For debugging purposes, print all aliases.
+    fn get_all_aliases(&self) -> Vec<String>;
 }
 
 #[cfg(test)]

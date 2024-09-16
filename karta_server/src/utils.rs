@@ -13,7 +13,7 @@ pub mod utils {
     use directories::ProjectDirs;
 
     use ron::ser::{to_string_pretty, PrettyConfig};
-    use serde::{Serialize, Deserialize};
+    use serde::{Deserialize, Serialize};
 
     use crate::{
         graph_agdb::GraphAgdb,
@@ -94,61 +94,62 @@ pub mod utils {
 
             let name = &self.test_name;
 
-            // Compile a performance report and append it to the tests file
-            let elapsed = self.start_time.elapsed().as_millis();
-            let db_size = self.graph.db().size();
-            let commit = {
-                let repo = Repository::open(".").expect("Failed to open repository");
-                let head = repo.head().expect("Failed to get HEAD");
-                let commit = head.peel_to_commit().expect("Failed to peel the commit");
-                commit.id().to_string()
-            };
+            let compile_report = false;
+            if compile_report {
+                // Compile a performance report and append it to the tests file
+                let elapsed = self.start_time.elapsed().as_millis();
+                let db_size = self.graph.db().size();
+                let commit = {
+                    let repo = Repository::open(".").expect("Failed to open repository");
+                    let head = repo.head().expect("Failed to get HEAD");
+                    let commit = head.peel_to_commit().expect("Failed to peel the commit");
+                    commit.id().to_string()
+                };
 
-            // Format the report as a ron object
-            let report = PerfReport {
-                commit,
-                elapsed_ms: elapsed as u64,
-                db_size_bytes: db_size,
-                timestamp: std::time::SystemTime::now()
-                    .duration_since(SystemTime::UNIX_EPOCH)
-                    .unwrap()
-                    .as_secs()
-                    .to_string(),
-            };
+                // Format the report as a ron object
+                let report = PerfReport {
+                    commit,
+                    elapsed_ms: elapsed as u64,
+                    db_size_bytes: db_size,
+                    timestamp: std::time::SystemTime::now()
+                        .duration_since(SystemTime::UNIX_EPOCH)
+                        .unwrap()
+                        .as_secs()
+                        .to_string(),
+                };
 
-            let perf_report_dir = PathBuf::from("docs/perf_reports");
-            std::fs::create_dir_all(&perf_report_dir).unwrap();
-            let perf_file_path = perf_report_dir.join(format!("{}.ron", self.test_name));
+                let perf_report_dir = PathBuf::from("docs/perf_reports");
+                std::fs::create_dir_all(&perf_report_dir).unwrap();
+                let perf_file_path = perf_report_dir.join(format!("{}.ron", self.test_name));
 
-            let mut file = std::fs::OpenOptions::new()
-                .create(true)
-                .read(true)
-                .append(true)
-                .open(perf_file_path)
-                .unwrap();
+                let mut file = std::fs::OpenOptions::new()
+                    .create(true)
+                    .read(true)
+                    .append(true)
+                    .open(perf_file_path)
+                    .unwrap();
 
-            let mut contents = String::new();
-            file.read_to_string(&mut contents).unwrap();
+                let mut contents = String::new();
+                file.read_to_string(&mut contents).unwrap();
 
-            let mut reports: Vec<PerfReport> = if contents.is_empty() {
-                Vec::new()
-            } else {
-                ron::from_str(&contents).unwrap()
-            };
+                let mut reports: Vec<PerfReport> = if contents.is_empty() {
+                    Vec::new()
+                } else {
+                    ron::from_str(&contents).unwrap()
+                };
 
-            reports.push(report);
+                reports.push(report);
 
-            let pretty = PrettyConfig::new()
-                .separate_tuple_members(true)
-                .enumerate_arrays(true);
-            let ser = to_string_pretty(&reports, pretty).unwrap();
+                let pretty = PrettyConfig::new()
+                    .separate_tuple_members(true)
+                    .enumerate_arrays(true);
+                let ser = to_string_pretty(&reports, pretty).unwrap();
 
-            // Append to end of file
-            file.set_len(0).unwrap();
-            std::io::Seek::seek(&mut file, std::io::SeekFrom::Start(0)).unwrap();
-            file.write_all(ser.as_bytes()).unwrap();
-
-            
+                // Append to end of file
+                file.set_len(0).unwrap();
+                std::io::Seek::seek(&mut file, std::io::SeekFrom::Start(0)).unwrap();
+                file.write_all(ser.as_bytes()).unwrap();
+            }
 
             // Find and remove test db
             let root = ProjectDirs::from("com", "fs_graph", "fs_graph")

@@ -262,13 +262,28 @@ impl GraphCore for GraphAgdb {
         // Pls?
     }
 
-    /// Delete all dead nodes from the graph.
     fn cleanup_dead_nodes(&mut self) {
         todo!()
     }
 
-    /// Set whether the library should maintain readable files for the nodes in the graph.
     fn maintain_readable_files(&mut self, maintain: bool) {
         self.maintain_readable_files = maintain;
+    }
+
+    fn get_all_aliases(&self) -> Vec<String> {
+        let all = self.db().exec(&QueryBuilder::select().aliases().query());
+        match all {
+            Ok(aliases) => {
+                let all: Vec<String> = aliases.elements.iter().map(|alias| {
+                    alias.values[0].value.to_string()
+                }).collect();
+
+                all
+            },
+            Err(err) => {
+                println!("Error: {}", err);
+                vec![]
+            }
+        }
     }
 }
