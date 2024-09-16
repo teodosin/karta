@@ -13,7 +13,7 @@ dev = [
 ]
 
 [dependencies]
-bevy = { version = "0.14.1", features = ["bevy_asset","jpeg", "bmp", "tga","webp", "file_watcher", "exr"] }
+bevy = { version = "0.14.2", features = ["bevy_asset","jpeg", "bmp", "tga","webp", "file_watcher", "exr"] }
 
 
 ron = "0.8.1"
