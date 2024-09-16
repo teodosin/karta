@@ -141,7 +141,7 @@ pub fn repulsion_constraints (
             // if dist > 150.0 {
             //     continue
             // }
-            
+             
             let repulsive_force = 20000.0 / dist.powf(1.25);
 
             *forces.entry(node_a).or_insert(Vec2::ZERO) += diff / dist * repulsive_force;
@@ -189,11 +189,11 @@ fn apply_forces(
             force = force * sim_settings.damping_factor * time.delta().as_secs_f32();
             
             // Lines for debugging the forces
-            _gizmos.line_2d(
-                pos.translation.truncate(), 
-                pos.translation.truncate() + force * 100.0, 
-                LinearRgba::RED,
-            );
+            // _gizmos.line_2d(
+            //     pos.translation.truncate(), 
+            //     pos.translation.truncate() + force * 100.0, 
+            //     LinearRgba::RED,
+            // );
                 
             pos.translation.x += force.x;
             pos.translation.y += force.y;

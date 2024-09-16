@@ -13,7 +13,7 @@ dev = [
 ]
 
 [dependencies]
-bevy = { version = "0.14.1", features = ["bevy_asset","jpeg", "bmp", "tga","webp", "exr"] }
+bevy = { version = "0.14.2", features = ["bevy_asset","jpeg", "bmp", "tga","webp", "exr"] }
 
 bevy_mod_picking = { version = "0.20.1", features = ["backend_bevy_ui"]}
 bevy_prototype_lyon = "0.12.0"
