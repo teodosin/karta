@@ -1,0 +1,42 @@
+[package]
+name = "bevy_overlay_graph"
+version = "0.0.1"
+edition = "2021"
+rust_version = "1.74.1"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+dev = [
+    "bevy/embedded_watcher",
+    "bevy/dynamic_linking",
+]
+
+[dependencies]
+bevy = { version = "0.14.2", features = ["bevy_asset","jpeg", "bmp", "tga","webp", "exr"] }
+
+bevy_mod_picking = { version = "0.20.1", features = ["backend_bevy_ui"]}
+bevy_prototype_lyon = "0.12.0"
+bevy_tweening = "0.11.0"
+
+bevy_mod_debugdump = "0.11.0"
+bevy-inspector-egui = "0.25.1"
+
+bevy_fs_graph = { path = "../bevy_fs_graph" }
+
+lyon = "1.0.1"
+rand = "0.8.5"
+thiserror = "1.0"
+enum-iterator = "1.4.1"
+
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[toolchain]
+channel = "nightly"
+
+#[target.wasm32-unknown-unknown]
+# runner = "wasm-server-runner"
