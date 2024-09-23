@@ -5,7 +5,7 @@
 
 #### Disclaimer
 
-This project is in its very early stages and is therefore highly experimental, barely usable and not really useful yet. Most of the mentioned features are planned but not yet implemented. Developed on Linux, not tested on Windows, tested but not certified on MacOS. 
+This project is in its very early stages and is therefore highly experimental, barely usable and not really useful yet. Most of the mentioned features are planned but not yet implemented. The version shown in the gif above is in the v.0.0.1_legacy branch. 
 
 ## Introduction
 
