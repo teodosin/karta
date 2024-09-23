@@ -1,0 +1,18 @@
+[package]
+name = "bevy_fs_graph"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bevy = "0.14.2"
+directories = "5.0.1"
+native-dialog = "0.7.0"
+
+
+# Karta subcrates
+# fs_graph = { git = "https://github.com/teodosin/fs_graph", branch="main"}
+
+# [patch."https://github.com/teodosin/fs_graph.git"]
+fs_graph = { path = "../fs_graph" }
