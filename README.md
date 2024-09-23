@@ -1,6 +1,8 @@
 # Karta
 ![Demo gif](/docs/karta.gif)
 
+![demo gif](/docs/karta.gif)
+
 #### Disclaimer
 
 This project is in its very early stages and is therefore highly experimental, barely usable and not really useful yet. Most of the mentioned features are planned but not yet implemented. Developed on Linux, not tested on Windows, tested but not certified on MacOS. 
