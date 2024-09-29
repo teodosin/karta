@@ -7,7 +7,7 @@ use super::nodetype::ARCHETYPES;
 /// Newtype wrapper for the node path. Acts as the main struct for
 /// creating and modifying node paths, turning them into db aliases/strings and
 /// back. Path includes the name of the node itself.
-#[derive(Debug, Clone, Hash, Eq, PartialEq)]
+#[derive(Debug, Clone, Hash, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct NodePath(PathBuf);
 
 impl NodePath {
