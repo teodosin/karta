@@ -19,12 +19,14 @@ pub fn create_router(state: AppState) -> Router {
     let router = Router::new()
         .route("/", get(|| async { "You gonna get some nodes, aight?" }))
 
-        .route("/index/*id", post(index_node_connections))
+        .route("/idx/*id", post(index_node_connections))
 
         .route("/nodes", get(get_all_aliases))
-        
+
         .route("/nodes/", get(get_root_node))
         .route("/nodes/*id", get(get_node))
+
+        .route("/ctx/*id", get(get_node_context))
         // .with_state(state)
         .layer(Extension(state));
     router
@@ -71,6 +73,16 @@ async fn get_node(
     let result = graph
         .open_node(&node_path)
         .map_err(|e| e.to_string());
+    Json(result)
+}
+
+async fn get_node_context(
+    Extension(state): Extension<AppState>,
+    Path(id): Path<String>,
+) -> Json<Vec<(Node, Edge)>> {
+    let graph = &state.graph_commands.read().unwrap();
+    let node_path = NodePath::from_alias(&id);
+    let result = graph.open_node_connections(&node_path);
     Json(result)
 }
 
