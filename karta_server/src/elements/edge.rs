@@ -4,7 +4,7 @@ use agdb::{DbElement, DbError, DbId, DbKeyValue, DbUserValue, DbValue, QueryId};
 
 use super::{attribute::Attribute, node_path::NodePath, SysTime};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Edge {
     db_id: Option<DbId>,
     source: NodePath,
