@@ -9,8 +9,8 @@ use super::{attribute::Attribute, node_path::NodePath, SysTime};
 /// The universal node type. 
 /// Nodes loaded for users of this crate should be in this type. 
 /// 
-/// Bevy_fs_graph destructures this type into components on an entity
-/// to be then later used by bevy_overlay_graph. 
+/// bevy_karta_client destructures this type into components on an entity
+/// to be then later used by bevy_karta_ui. 
 /// 
 /// How exactly the other direction, the saving of data, should work, is, 
 /// as of writing this, undetermined. Likely in most cases Graph's methods will

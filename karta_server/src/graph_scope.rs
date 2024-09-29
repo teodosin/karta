@@ -10,7 +10,7 @@
 // game during development gets properly exported and bundled with the game.
 
 // This is a complex problem. My initial hunch is that the game should run its own instance of 
-// fs_graph with the same access to the db as the development environment. The game would then
+// karta_server with the same access to the db as the development environment. The game would then
 // have a Scope defined which restricts its access to only nodes that match a certain pattern. That 
 // way it can't end up relying on data that exists in the large graph but not in the extracted
 // subgraph. 

@@ -47,7 +47,7 @@ impl GraphPosition {
 /// This is a sketch for a component that stores all the possible actions for a given entity. To get 
 /// actions for the entity's context menu, for example. 
 /// 
-/// The idea is that each GraphEntity would get this component added to it by bevy_overlay_graph.
+/// The idea is that each GraphEntity would get this component added to it by bevy_karta_ui.
 /// Users wouldn't manage it themselves, necessarily. There could be a change-detecting system or something.
 #[derive(Component)]
 pub struct ContextActions {
@@ -117,10 +117,10 @@ pub trait Action {
 /// This is the Action trait as it is implemented in Karta. 
 /// As you can see, it was built with undo/redo in mind. 
 /// That brings up an important question that needs answering:
-/// Should bevy_overlay_graph have an undo/redo system? Or should that 
+/// Should bevy_karta_ui have an undo/redo system? Or should that 
 /// be left to the user to implement?
 /// 
-/// Considering that bevy_overlay_graph is an editor candidate similar to 
+/// Considering that bevy_karta_ui is an editor candidate similar to 
 /// bevy_editor_pls, it would be nice to have an undo/redo system built in.
 /// People building games don't necessarily need an undo/redo system, so it 
 /// makes sense to provide one. 

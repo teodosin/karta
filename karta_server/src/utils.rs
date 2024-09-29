@@ -36,7 +36,7 @@ pub mod utils {
 
     impl TestContext {
         pub fn new(name: &str) -> Self {
-            let name = format!("fs_graph_test_{}", name);
+            let name = format!("karta_server_test_{}", name);
 
             Self {
                 test_name: name.to_string(),
@@ -46,7 +46,7 @@ pub mod utils {
         }
 
         pub fn custom_storage(name: &str) -> Self {
-            let name = format!("fs_graph_test_{}", name);
+            let name = format!("karta_server_test_{}", name);
 
             Self {
                 test_name: name.to_string(),
@@ -58,9 +58,9 @@ pub mod utils {
         /// Graph setup function for tests. Always stores the db in the data_dir.
         fn setup(test_name: &str, storage: Option<PathBuf>) -> GraphAgdb {
             // let test_name = self.test_name.clone();
-            let strg_name = "fs_graph";
+            let strg_name = "karta_server";
 
-            let root = ProjectDirs::from("com", "fs_graph", strg_name)
+            let root = ProjectDirs::from("com", "karta_server", strg_name)
                 .unwrap()
                 .data_dir()
                 .to_path_buf();
@@ -152,7 +152,7 @@ pub mod utils {
             }
 
             // Find and remove test db
-            let root = ProjectDirs::from("com", "fs_graph", "fs_graph")
+            let root = ProjectDirs::from("com", "karta_server", "karta_server")
                 .unwrap()
                 .data_dir()
                 .to_path_buf();

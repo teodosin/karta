@@ -7,7 +7,7 @@
 // use super::{nodes::ViewNode, graph_cam::ViewData};
 
 use bevy::prelude::*;
-use bevy_fs_graph::prelude::*;
+use bevy_karta_client::prelude::*;
 use pe_index::PathsToEntitiesIndex;
 
 

@@ -53,7 +53,7 @@ impl GraphCore for GraphAgdb {
         let storage_path = match storage_enum.clone() {
             StoragePath::Custom(path) => path,
             StoragePath::Default => {
-                directories::ProjectDirs::from("com", "teodosin_labs", "fs_graph")
+                directories::ProjectDirs::from("com", "teodosin_labs", "karta_server")
                     .unwrap()
                     .data_dir()
                     .to_path_buf()
