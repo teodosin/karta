@@ -1,13 +1,16 @@
 [package]
-name = "fs_graph"
+name = "karta_server"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-agdb = "0.8.0"
+agdb = { version = "0.8.0", features = ["serde"] }
+axum = "0.7.7"
 directories = "5.0.1"
+serde = { version = "1.0.210", features = ["serde_derive"] }
+tokio = { version = "1.40.0", features = ["rt-multi-thread", "macros"] }
 
 [dev-dependencies]
 git2 = "0.19.0"
