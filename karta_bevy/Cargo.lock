@@ -743,16 +743,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bevy_fs_graph"
-version = "0.1.0"
-dependencies = [
- "bevy",
- "directories 5.0.1",
- "fs_graph",
- "native-dialog",
-]
-
-[[package]]
 name = "bevy_gilrs"
 version = "0.14.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -904,6 +894,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy_karta_client"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "directories 5.0.1",
+ "karta_server",
+ "native-dialog",
+]
+
+[[package]]
+name = "bevy_karta_ui"
+version = "0.0.1"
+dependencies = [
+ "bevy",
+ "bevy-inspector-egui",
+ "bevy_karta_client",
+ "bevy_mod_debugdump",
+ "bevy_mod_picking",
+ "bevy_prototype_lyon",
+ "bevy_tweening",
+ "enum-iterator",
+ "lyon",
+ "rand",
+ "thiserror",
+]
+
+[[package]]
 name = "bevy_log"
 version = "0.14.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1018,23 +1035,6 @@ dependencies = [
  "bevy_utils",
  "bevy_window",
  "crossbeam-channel",
-]
-
-[[package]]
-name = "bevy_overlay_graph"
-version = "0.0.1"
-dependencies = [
- "bevy",
- "bevy-inspector-egui",
- "bevy_fs_graph",
- "bevy_mod_debugdump",
- "bevy_mod_picking",
- "bevy_prototype_lyon",
- "bevy_tweening",
- "enum-iterator",
- "lyon",
- "rand",
- "thiserror",
 ]
 
 [[package]]
@@ -2607,14 +2607,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "fs_graph"
-version = "0.1.0"
-dependencies = [
- "agdb",
- "directories 5.0.1",
-]
-
-[[package]]
 name = "fsevent-sys"
 version = "4.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3201,8 +3193,8 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "bevy_embedded_assets",
- "bevy_fs_graph",
- "bevy_overlay_graph",
+ "bevy_karta_client",
+ "bevy_karta_ui",
  "blake3",
  "cross",
  "iyes_perf_ui",
@@ -3210,6 +3202,14 @@ dependencies = [
  "ron",
  "serde",
  "thiserror",
+]
+
+[[package]]
+name = "karta_server"
+version = "0.1.0"
+dependencies = [
+ "agdb",
+ "directories 5.0.1",
 ]
 
 [[package]]

@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use fs_graph::prelude::*;
+use karta_server::prelude::*;
 
 // pub struct DataNodePlugin;
 

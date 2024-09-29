@@ -1,5 +1,7 @@
 This document outlines some of the architectural decisions made so far as well as open questions. It is not exhaustive. Comments and feedback are appreciated. 
 
+Note: This doc has not been updated yet since the formation of the monorepo. Things are in flux, but some of the decisions made here are still relevant. 
+
 ### Background
 
 #### Previous prototype
@@ -19,7 +21,7 @@ As of writing this, Karta is undergoing a refactoring to better prepare it for n
 
 ### Crate structure
 
-#### Indexing - fs_graph
+#### Indexing - karta_server
 
 The core of Karta and its concept relies on an efficient and effective indexing of files into a graph structure. The library for this should be decoupled from the main Karta application so that it could eventually be accessed and modified by other applications as well. The separation also allows for the db to be run on a local or cloud server in addition to the local database file. 
 
@@ -29,17 +31,17 @@ Preferably, the solution would fulfill these requirements:
 * Support for virtual nodes (nodes that don't reference a file or directory)
 * Support for arbitrary attributes on nodes and edges
 
-The crate developed for this purpose is [fs_graph](https://github.com/teodosin/fs_graph), which is essentially Karta's wrapper around [Agnesoft Graph Database](https://github.com/agnesoft/agdb). 
+The crate developed for this purpose is [karta_server](https://github.com/teodosin/karta_server), which is essentially Karta's wrapper around [Agnesoft Graph Database](https://github.com/agnesoft/agdb). 
 
-#### Bevy Plugin - bevy_fs_graph
+#### Bevy Plugin - bevy_karta_client
 
-Since the main Karta application is developed using Bevy, there needs to be a connective layer between the user interface and graphical elements being coded in Bevy and the database backend. [Bevy_fs_graph](https://github.com/teodosin/bevy_fs_graph) is essentially the high-level backend of Karta, responsible for communication with the database. 
+Since the main Karta application is developed using Bevy, there needs to be a connective layer between the user interface and graphical elements being coded in Bevy and the database backend. [bevy_karta_client](https://github.com/teodosin/bevy_karta_client) is essentially the high-level backend of Karta, responsible for communication with the database. 
 
-Bevy_fs_graph loads in nodes and edges from the database and turns them into Entities in Bevy's ECS. 
+bevy_karta_client loads in nodes and edges from the database and turns them into Entities in Bevy's ECS. 
 
-#### User Interface - bevy_overlay_graph
+#### User Interface - bevy_karta_ui
 
-[Bevy_overlay_graph](https://github.com/teodosin/bevy_overlay_graph).
+[bevy_karta_ui](https://github.com/teodosin/bevy_karta_ui).
 
 ### Open questions
 Some things I'm not currently dealing with but am imagining will be important in the future. Refer to VISION.md for the features that will want these technical challenges addressed. 
