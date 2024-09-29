@@ -18,7 +18,7 @@ bevy = { version = "0.14.2", features = ["bevy_asset","jpeg", "bmp", "tga","webp
 
 ron = "0.8.1"
 thiserror = "1.0"
-serde = { version = "1.0.188", features = ["derive"]}
+serde = { version = "1.0.210", features = ["derive"]}
 native-dialog = "0.7.0"
 bevy_embedded_assets = "0.11"
 
