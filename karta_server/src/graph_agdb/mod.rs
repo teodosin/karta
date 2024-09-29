@@ -13,7 +13,7 @@ pub (crate) mod graph_edge;
 
 /// The main graph structure to be interacted with.
 ///
-/// Bevy_fs_graph will instantiate this as a Resource through a newtype.
+/// bevy_karta_client will instantiate this as a Resource through a newtype.
 pub struct GraphAgdb {
     /// The name of the application using this library.
     name: String,
@@ -106,7 +106,7 @@ impl GraphAgdb {
 //     ///
 //     /// TODO: Add error handling.
 //     pub fn new(root_path: PathBuf, name: &str) -> Self {
-//         let storage_path = directories::ProjectDirs::from("com", "fs_graph", name)
+//         let storage_path = directories::ProjectDirs::from("com", "karta_server", name)
 //             .unwrap()
 //             .data_dir()
 //             .to_path_buf();

@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_fs_graph::prelude::ViewNode;
+use bevy_karta_client::prelude::ViewNode;
 use bevy_mod_picking::pointer::PointerButton;
 use events::node_events::{NodeClickEvent, NodeHoverEvent, NodeHoverStopEvent, NodePressEvent};
 use ui::{graph_cam::GraphCamera, nodes::NodeOutline};

@@ -1,5 +1,5 @@
 use bevy::{app::{App, Plugin}, prelude::Event};
-use fs_graph::prelude::NodePath;
+use karta_server::prelude::NodePath;
 
 pub struct ContextEventsPlugin;
 

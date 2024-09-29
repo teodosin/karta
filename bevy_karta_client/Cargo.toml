@@ -1,5 +1,5 @@
 [package]
-name = "bevy_fs_graph"
+name = "bevy_karta_client"
 version = "0.1.0"
 edition = "2021"
 
@@ -12,7 +12,7 @@ native-dialog = "0.7.0"
 
 
 # Karta subcrates
-# fs_graph = { git = "https://github.com/teodosin/fs_graph", branch="main"}
+# karta_server = { git = "https://github.com/teodosin/karta_server", branch="main"}
 
-# [patch."https://github.com/teodosin/fs_graph.git"]
-fs_graph = { path = "../fs_graph" }
+# [patch."https://github.com/teodosin/karta_server.git"]
+karta_server = { path = "../karta_server" }
