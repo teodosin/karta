@@ -26,14 +26,14 @@ blake3 = { version = "1.5", features=["pure"] }
 cross = "0.2.5"
 
 # Karta subcrates
-bevy_fs_graph = { git = "https://github.com/teodosin/bevy_fs_graph", branch="main"}
-bevy_overlay_graph = { git = "https://github.com/teodosin/bevy_overlay_graph", branch="main" }
+bevy_karta_client = { git = "https://github.com/teodosin/bevy_karta_client", branch="main"}
+bevy_karta_ui = { git = "https://github.com/teodosin/bevy_karta_ui", branch="main" }
 iyes_perf_ui = "0.3.0"
 
-[patch."https://github.com/teodosin/bevy_fs_graph.git"]
-bevy_fs_graph = { path = "../bevy_fs_graph" }
-[patch."https://github.com/teodosin/bevy_overlay_graph.git"]
-bevy_overlay_graph = { path = "../bevy_overlay_graph" }
+[patch."https://github.com/teodosin/bevy_karta_client.git"]
+bevy_karta_client = { path = "../bevy_karta_client" }
+[patch."https://github.com/teodosin/bevy_karta_ui.git"]
+bevy_karta_ui = { path = "../bevy_karta_ui" }
 
 
 [profile.dev]
