@@ -1,7 +1,7 @@
 // FORCE SIMULATION
 
 use bevy::{prelude::*, utils::HashMap};
-use bevy_fs_graph::prelude::{pe_index::PathsToEntitiesIndex, Attributes, DataEdge, ViewNode};
+use bevy_karta_client::prelude::{pe_index::PathsToEntitiesIndex, Attributes, DataEdge, ViewNode};
 use bevy_mod_picking::selection::PickSelection;
 
 use crate::prelude::Pins;

@@ -1,4 +1,4 @@
-// Root file of the bevy_overlay_graph crate.
+// Root file of the bevy_karta_ui crate.
 
 use bevy::{prelude::*, asset::embedded_asset};
 use bevy_mod_picking::{DefaultPickingPlugins, debug::DebugPickingPlugin};

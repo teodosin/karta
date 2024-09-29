@@ -1,6 +1,6 @@
 use crate::prelude::{DataEdge, DataNode, Relation, Relations, ViewNode};
 use bevy::{prelude::*, utils::HashMap};
-use fs_graph::prelude::NodePath;
+use karta_server::prelude::NodePath;
 
 /// Struct for keeping together a DataNode and its corresponding
 /// ViewNode. Mostly used in the PathsToEntitiesIndex.

@@ -3,7 +3,7 @@ use std::{collections::HashMap, path::{Path, PathBuf}};
 
 use bevy::prelude::*;
 use events::{ChangeContextEvent, ContextEventsPlugin};
-use fs_graph::prelude::*;
+use karta_server::prelude::*;
 
 use crate::{node_plugin, prelude::{CurrentVault, DataEdge, DataEdgeBundle, DataNode, DataNodeBundle, Relation, Relations, ToBeDespawned, ViewNode}};
 
@@ -116,7 +116,7 @@ fn on_context_change(
 
 
 
-    let node: fs_graph::prelude::Node = match node {
+    let node: karta_server::prelude::Node = match node {
         Ok(node) => {
             println!("Node found: {:#?}", node);
             node
@@ -166,7 +166,7 @@ fn on_context_change(
     }
 
 
-    let connections: Vec<(fs_graph::prelude::Node, Edge)> = graph.open_node_connections(&ctx_root_nodepath);
+    let connections: Vec<(karta_server::prelude::Node, Edge)> = graph.open_node_connections(&ctx_root_nodepath);
 
     for node in connections.iter() {
         println!("Node: {:#?}", node);

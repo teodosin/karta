@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use directories::ProjectDirs;
 use bevy::prelude::*;
-use fs_graph::prelude::*;
+use karta_server::prelude::*;
 use native_dialog::FileDialog;
 
 use crate::prelude::{CurrentContext, KartaContext};
