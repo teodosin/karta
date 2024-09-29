@@ -42,6 +42,6 @@ impl GraphCore for GraphCommands {
     }
 
     fn get_all_aliases(&self) -> Vec<String> {
-        todo!()
+        self.graph.get_all_aliases()
     }
 }
