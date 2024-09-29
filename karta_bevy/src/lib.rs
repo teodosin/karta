@@ -1,8 +1,8 @@
 //lib
 
 use bevy::{prelude::*, log::LogPlugin, window::WindowResolution};
-use bevy_fs_graph::prelude::*;
-use bevy_overlay_graph::prelude::*;
+use bevy_karta_client::prelude::*;
+use bevy_karta_ui::prelude::*;
 use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 
 

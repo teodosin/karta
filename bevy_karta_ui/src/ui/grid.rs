@@ -93,6 +93,6 @@ impl Default for GridMaterial {
 
 impl Material2d for GridMaterial {
     fn fragment_shader() -> ShaderRef {
-        "embedded://bevy_overlay_graph/assets/grid_material.wgsl".into()
+        "embedded://bevy_karta_ui/assets/grid_material.wgsl".into()
     }
 }

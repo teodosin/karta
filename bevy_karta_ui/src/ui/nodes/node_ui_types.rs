@@ -9,7 +9,7 @@ use bevy::{
     sprite::{ColorMaterial, MaterialMesh2dBundle, Sprite, SpriteBundle},
     transform::components::Transform,
 };
-use bevy_fs_graph::prelude::DataNode;
+use bevy_karta_client::prelude::DataNode;
 use rand::Rng;
 
 use crate::{

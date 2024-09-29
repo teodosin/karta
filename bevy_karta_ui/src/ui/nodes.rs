@@ -1,7 +1,7 @@
 use std::{time::Duration, path::PathBuf};
 
 use bevy::{prelude::*, text::Text2dBounds, sprite::Anchor, render::view::RenderLayers, window::PrimaryWindow};
-use bevy_fs_graph::prelude::{DataNode, ViewNode};
+use bevy_karta_client::prelude::{DataNode, ViewNode};
 use bevy_mod_picking::{prelude::*, backends::raycast::RaycastPickable, backend::{PointerHits, HitData}};
 use bevy_prototype_lyon::{shapes, prelude::{GeometryBuilder, ShapeBundle, Stroke, StrokeOptions}};
 use bevy_tweening::{Tween, EaseFunction, lens::TransformPositionLens, Animator, TweenCompleted, TweeningPlugin};
@@ -414,7 +414,7 @@ pub fn toggle_outline_on_node_select(
 pub fn change_current_context_on_c(
     input_data: Res<InputData>,
     ev_key: Res<ButtonInput<KeyCode>>,
-    mut ctx_event: EventWriter<bevy_fs_graph::prelude::events::ChangeContextEvent>,
+    mut ctx_event: EventWriter<bevy_karta_client::prelude::events::ChangeContextEvent>,
     nodes: Query<&ViewNode>,
 ){
     if ev_key.just_pressed(KeyCode::KeyC){
@@ -426,7 +426,7 @@ pub fn change_current_context_on_c(
                     Ok(node) => {
                         match &node.path {
                             Some(path) => {
-                                ctx_event.send(bevy_fs_graph::prelude::events::ChangeContextEvent{
+                                ctx_event.send(bevy_karta_client::prelude::events::ChangeContextEvent{
                                     new_ctx: path.clone(),
                                 });
                             },
