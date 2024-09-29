@@ -16,7 +16,7 @@ pub enum NodeTyppe {
     Virtual(VirtualCategory),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum NodePhysicality {
     /// A node that only exists in the db and not in the file system.
     Virtual,
@@ -84,7 +84,7 @@ pub enum DataType {
     Other,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct NodeType {
     type_name: String,
 }
