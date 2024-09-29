@@ -1,4 +1,4 @@
-use fs_graph::prelude::run_server;
+use karta_server::prelude::run_server;
 
 #[tokio::main]
 async fn main() {
