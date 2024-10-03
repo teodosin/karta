@@ -1,6 +1,6 @@
 use agdb::DbKeyValue;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Attribute {
     pub name: String,
     pub value: f32,

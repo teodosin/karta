@@ -5,6 +5,8 @@ mod graph_traits;
 mod graph_agdb;
 mod graph_commands;
 
+mod server;
+
 mod utils;
 
 pub mod prelude {
@@ -30,4 +32,6 @@ pub mod prelude {
         commands::*,
         GraphCommands,
     };
+
+    pub use crate::server::*;
 }

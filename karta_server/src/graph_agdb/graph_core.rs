@@ -80,10 +80,7 @@ impl GraphCore for GraphAgdb {
             maintain_readable_files: false,
         };
 
-        println!("WE ARE ABOUT TO CREATE ARCHHHHH");
-
         if !open_existing {
-            println!("WE HAVE ENTERED THE IF");
             giraphe.init_archetype_nodes();
         }
 

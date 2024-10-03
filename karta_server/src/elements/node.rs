@@ -15,7 +15,7 @@ use super::{attribute::Attribute, node_path::NodePath, SysTime};
 /// How exactly the other direction, the saving of data, should work, is, 
 /// as of writing this, undetermined. Likely in most cases Graph's methods will
 /// be used directly to make modifictions rather than creating a Node instance.
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Node {
     /// The id of the node in the database.
     db_id: Option<DbId>,
