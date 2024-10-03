@@ -10,7 +10,7 @@ pub (crate) mod attribute;
 
 
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct SysTime(SystemTime);
 
 impl From<SysTime> for DbValue {
