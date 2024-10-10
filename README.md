@@ -1,9 +1,9 @@
 # Karta
 ![Demo gif](/docs/karta.gif)
 
-![demo gif](/docs/karta.gif)
-
 #### Disclaimer
+
+This readme hasn't been updated since the monorepo was established. 
 
 This project is in its very early stages and is therefore highly experimental, barely usable and not really useful yet. Most of the mentioned features are planned but not yet implemented. The version shown in the gif above is in the v.0.0.1_legacy branch. 
 
