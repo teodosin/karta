@@ -2,40 +2,26 @@
 ![Demo gif](/docs/karta.gif)
 
 > [!IMPORTANT] 
-> This readme hasn't been updated since the monorepo was established. 
-
 > This project is in its very early stages and is therefore highly experimental, barely usable and not really useful yet. Most of the mentioned features are planned but not yet implemented. The version shown in the gif above is in the v.0.0.1_legacy branch. 
 
 ## Introduction
 
-**Karta** is a node-based file explorer and compositor. It creates a network out of a selected section of the file system and allows for files and folders to be arranged spatially and for arbitrary connections to be made between them. Attributes may be added to any node or connection. This network could then be queried for various purposes, though chiefly intended for structuring creative projects and making media art. 
+**Karta** is a node-based file explorer and compositor. It creates a network out of a selected section of the file system and allows for files and folders to be arranged spatially and for arbitrary connections to be made between them. Attributes may be added to any node or connection. This network could then be queried for various purposes, though originally intended for structuring creative projects and making media art. 
 
 The project is free and open-sourced under a GPL license. 
 
 For a more detailed explanation of the project's purpose and goals, refer to docs/vision.md. For technical details refer to docs/architecture.md. 
 
 Key features:
-* Local first - the files and network database exist locally on your machine. No lock-in. The goal is to keep the storage format well documented and allow for syncing and exporting to plain text files.
+* Local first - the files and network database exist locally on your machine. No lock-in. The goal is to keep the storage format well documented and allow for syncing and exporting to plain text files. 
 * Contextual - nodes don't have absolute spatial positions, but rather contextual ones. Since the network is always viewed from the point of view or "context" of some individual node, the positions of its connections are always relative to it. Two nodes can be positioned differently relative to each other depending on which context you look from.
-* Simulated - node arrangement may be force simulated. Currently not much more than a novelty, but the idea is to provide a varied selection of arrangement tools to free the user up to focus more on the content, especially when creating many nodes at once. 
 * Virtual nodes - not all nodes have to physically exist in the file system. You can create "virtual" nodes of different types that get stored directly in the database. 
 
-Plans / wishlist
-* Operator nodes - a system for creating functional nodes with inputs and outputs that can manipulate data, like in other node-based programming tools. Useful for quick edits and  experimentation right in the file explorer. 
-* Rich previews - a system for adding custom preview generation support for any file type. 
-* Composition - the ability to package a selection or sequence of nodes into a file, such as a series of images into a pdf or gif. 
-* Presentation - support for displaying the previews of active nodes in the graph background or a separate window. 
-* More dreamy ideas over in docs/vision.md
+## Project Structure
 
-## Getting Started
+The core of the project is karta_server. It's a local HTTP server responsible for managing the underlying graph structure. Multiple clients can read from and write to it. 
 
-* Make sure you have Rust installed. Karta uses the Bevy game engine so familiarity with it is recommended. 
-* Clone the repo
-* Build and run 
-
-## Usage
-
-At first startup, you will be asked to choose a folder to create your vault in. Once set up, the contents of that folder will be spawned in as a force-directed graph. Middle-mouse click to pan the view and scroll to zoom. Dragging from the edge of a node to another will create a new connection between those nodes. Right-clicking on a node will bring up a menu where you can pin and unpin nodes (to be ignored by the force simulation) and move to another nodes' context. 
+Bevy_karta_client is a Karta client for the Bevy game engine. Bevy_karta_ui is the corresponding ui layer. Karta_bevy is the standalone application that combines these. These are all incomplete, but functional, and may be expanded upon. 
 
 ## Contributing
 
