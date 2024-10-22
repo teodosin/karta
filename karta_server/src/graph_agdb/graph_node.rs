@@ -9,7 +9,7 @@ use crate::{
 };
 
 use super::{
-    attribute::{Attribute, RESERVED_NODE_ATTRS},
+    attribute::{Attribute, RelativePosition, RESERVED_NODE_ATTRS},
     node::Node,
     node_path::NodePath,
     GraphAgdb, StoragePath,
@@ -481,5 +481,21 @@ impl GraphNode for GraphAgdb {
             }
             Err(e) => Err(e.into()),
         }
+    }
+
+    fn save_relative_positions(
+        &mut self,
+        ctx_root: &NodePath,
+        nodes: Vec<(&NodePath, RelativePosition)>,
+    ) -> Result<(), Box<dyn Error>> {
+        Ok(())
+    }
+
+    fn get_relative_positions(
+        &self,
+        ctx_root: &NodePath,
+        nodes: Vec<&NodePath>,
+    ) -> Result<Vec<(&NodePath, RelativePosition)>, Box<dyn Error>> {
+        Err("Not implemented".into())
     }
 }

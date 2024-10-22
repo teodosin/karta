@@ -2,7 +2,7 @@ use std::{error::Error, path::PathBuf};
 
 use crate::elements::nodetype::NodeType;
 
-use super::{attribute::Attribute, edge::Edge, node::Node, node_path::NodePath};
+use super::{attribute::{Attribute, RelativePosition}, edge::Edge, node::Node, node_path::NodePath};
 
 pub trait GraphNode {
     // -------------------------------------------------------------------
@@ -10,9 +10,9 @@ pub trait GraphNode {
 
     /// Retrieves a particular node's data from the database.
     /// The path is relative to the root of the graph.
-    /// 
+    ///
     /// TODO: This takes a mutable reference because of the indexing requirement, which is
-    /// awkward and tech debt. 
+    /// awkward and tech debt.
     fn open_node(&self, path: &NodePath) -> Result<Node, Box<dyn Error>>;
 
     // Retrieves the edges of a particular node.
@@ -60,7 +60,12 @@ pub trait GraphNode {
     /// those files would constantly be at a risk of getting reindexed, so this
     /// should probably still be implemented, unless we want to just mark nodes as deleted
     /// but never actually delete them, which seems like a smelly solution to me.
-    fn delete_nodes(&mut self, paths: &Vec<NodePath>, files: bool, dirs: bool) -> Result<(), Box<dyn Error>>;
+    fn delete_nodes(
+        &mut self,
+        paths: &Vec<NodePath>,
+        files: bool,
+        dirs: bool,
+    ) -> Result<(), Box<dyn Error>>;
 
     /// Get node attributes
     fn get_node_attrs(&self, path: &NodePath) -> Result<Vec<Attribute>, Box<dyn Error>>;
@@ -97,8 +102,18 @@ pub trait GraphNode {
         child: &NodePath,
     ) -> Result<(), Box<dyn Error>>;
 
-    // Get all nodes in the graph.
-    // fn get_all_nodes(&self) -> Vec<Node>;
+    /// Sets the positions of nodes relative to the given context root.
+    fn save_relative_positions(
+        &mut self,
+        ctx_root: &NodePath,
+        nodes: Vec<(&NodePath, RelativePosition)>,
+    ) -> Result<(), Box<dyn Error>>;
+
+    fn get_relative_positions(
+        &self,
+        ctx_root: &NodePath,
+        nodes: Vec<&NodePath>,
+    ) -> Result<Vec<(&NodePath, RelativePosition)>, Box<dyn Error>>;
 }
 
 // --------------------------------------------------------------------
@@ -108,14 +123,23 @@ mod tests {
     #![allow(warnings)]
 
     use crate::{
-        elements::{attribute::{Attribute, RESERVED_NODE_ATTRS}, node, node_path::NodePath, nodetype::ARCHETYPES},
+        elements::{
+            attribute::{Attribute, RESERVED_NODE_ATTRS},
+            node,
+            node_path::NodePath,
+            nodetype::ARCHETYPES,
+        },
         graph_agdb::GraphAgdb,
         graph_traits::graph_edge::GraphEdge,
         utils::utils::TestContext,
     };
     use agdb::QueryBuilder;
 
-    use std::{fs::{create_dir, File}, path::PathBuf, vec};
+    use std::{
+        fs::{create_dir, File},
+        path::PathBuf,
+        vec,
+    };
 
     use crate::graph_traits::{graph_core::GraphCore, graph_node::GraphNode};
 
@@ -133,7 +157,11 @@ mod tests {
 
         // Check connection with user_root
         let user_root = NodePath::user_root();
-        assert_eq!(path.parent().unwrap(), user_root, "Node path should be child of user_root");
+        assert_eq!(
+            path.parent().unwrap(),
+            user_root,
+            "Node path should be child of user_root"
+        );
 
         // Opening node
         let opened_node = ctx.graph.open_node(&path);
@@ -143,8 +171,6 @@ mod tests {
 
         println!("Created node: {:#?}", created_node);
         println!("Opened node: {:#?}", opened_node);
-
-
 
         assert_eq!(
             created_node.path(),
@@ -270,7 +296,7 @@ mod tests {
     fn able_to_insert_and_delete_node_attributes() {
         let func_name = "able_to_insert_and_delete_node_attributes";
         let mut ctx = TestContext::new(func_name);
-        
+
         let path = NodePath::from("test");
         let node = ctx.graph.create_node_by_path(&path, None);
 
@@ -373,7 +399,6 @@ mod tests {
             let added = ctx.graph.insert_node_attrs(&path, vec![attr]);
             assert_eq!(added.is_ok(), false, "Attribute should not be added");
         });
-
     }
 
     #[test]
@@ -389,7 +414,12 @@ mod tests {
 
         attr_names.iter().for_each(|name| {
             let deleted = ctx.graph.delete_node_attrs(&path, vec![*name]);
-            assert_eq!(deleted.is_ok(), false, "Reserved attribute {} should not be deleted", name);
+            assert_eq!(
+                deleted.is_ok(),
+                false,
+                "Reserved attribute {} should not be deleted",
+                name
+            );
         });
     }
 
@@ -407,21 +437,23 @@ mod tests {
         let archetypes: Vec<&&str> = ARCHETYPES.iter().filter(|ar| **ar != "").collect();
 
         assert_eq!(
-            connections.len(), archetypes.len(), 
-            "Root path should have its archetype connections: {}", archetypes.len()
+            connections.len(),
+            archetypes.len(),
+            "Root path should have its archetype connections: {}",
+            archetypes.len()
         );
 
         // Check that the tuples contain matching edges
         for (i, connection) in connections.iter().enumerate() {
             assert!(
-                *connection.1.source() == connection.0.path() || 
-                *connection.1.target() == connection.0.path(), 
+                *connection.1.source() == connection.0.path()
+                    || *connection.1.target() == connection.0.path(),
                 "Edge should be connected to Node"
             )
         }
     }
 
-    // Deprecated test. Nodes are no longer indexed automatically when opening. 
+    // Deprecated test. Nodes are no longer indexed automatically when opening.
     // #[test]
     // fn opening_physical_dir__is_indexed_and_created() {
     //     let func_name = "opening_physical_dir__is_indexed_and_created";
@@ -459,21 +491,27 @@ mod tests {
         println!("dir_file1: {:?}", dir_file1);
         println!("dir_file2: {:?}", dir_file2);
         println!("dir_file3: {:?}", dir_file3);
-        
 
         // create the dir and files
-        create_dir(&dir_path);        
+        create_dir(&dir_path);
         File::create(&dir_file1).unwrap();
         File::create(&dir_file2).unwrap();
         File::create(&dir_file3).unwrap();
 
         ctx.graph.index_node_context(&dir_nodepath);
 
-        let temp = ctx.graph.db().exec(&QueryBuilder::select().aliases().query());
+        let temp = ctx
+            .graph
+            .db()
+            .exec(&QueryBuilder::select().aliases().query());
         println!("Temp is {:#?}", temp);
 
         let dir_path_node = ctx.graph.open_node(&dir_nodepath);
-        assert_eq!(dir_path_node.is_ok(), true, "Node should be indexed and opened");
+        assert_eq!(
+            dir_path_node.is_ok(),
+            true,
+            "Node should be indexed and opened"
+        );
 
         let nodes = ctx.graph.open_node_connections(&dir_nodepath);
         // Result should be test files + the user_root
@@ -483,12 +521,39 @@ mod tests {
         // println!("all nodes that are parent to {}: {:#?}", dir_nodepath.alias(), all);
 
         // println!("Nodes: {:#?}", nodes);
-        assert!(!nodes.iter().any(|(node, _)| node.path() == NodePath::root()), "{:?} should NOT exist in the found nodes", NodePath::root());
-        assert!(nodes.iter().any(|(node, _)| node.path() == file1_nodepath), "{:?} should exist in the found nodes", &file1_nodepath);
-        assert!(nodes.iter().any(|(node, _)| node.path() == file2_nodepath), "{:?} should exist in the found nodes", &file2_nodepath);
-        assert!(nodes.iter().any(|(node, _)| node.path() == file3_nodepath), "{:?} should exist in the found nodes", &file3_nodepath);
-        assert!(nodes.iter().any(|(node, _)| node.path() == NodePath::user_root()), "dir_nodepath should exist in the found nodes");
-        assert_eq!(nodes.len(), 4, "Should be 4 nodes: user_root, test_file1, test_file2, test_file3");
+        assert!(
+            !nodes
+                .iter()
+                .any(|(node, _)| node.path() == NodePath::root()),
+            "{:?} should NOT exist in the found nodes",
+            NodePath::root()
+        );
+        assert!(
+            nodes.iter().any(|(node, _)| node.path() == file1_nodepath),
+            "{:?} should exist in the found nodes",
+            &file1_nodepath
+        );
+        assert!(
+            nodes.iter().any(|(node, _)| node.path() == file2_nodepath),
+            "{:?} should exist in the found nodes",
+            &file2_nodepath
+        );
+        assert!(
+            nodes.iter().any(|(node, _)| node.path() == file3_nodepath),
+            "{:?} should exist in the found nodes",
+            &file3_nodepath
+        );
+        assert!(
+            nodes
+                .iter()
+                .any(|(node, _)| node.path() == NodePath::user_root()),
+            "dir_nodepath should exist in the found nodes"
+        );
+        assert_eq!(
+            nodes.len(),
+            4,
+            "Should be 4 nodes: user_root, test_file1, test_file2, test_file3"
+        );
     }
 
     // #[test]

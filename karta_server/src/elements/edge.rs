@@ -2,6 +2,8 @@ use std::time::SystemTime;
 
 use agdb::{DbElement, DbError, DbId, DbKeyValue, DbUserValue, DbValue, QueryId};
 
+use crate::elements::attribute::RESERVED_EDGE_ATTRS;
+
 use super::{attribute::Attribute, node_path::NodePath, SysTime};
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
@@ -10,9 +12,9 @@ pub struct Edge {
     source: NodePath,
     target: NodePath,
     contains: bool,
-    attributes: Vec<Attribute>,
     created_time: SysTime,
     modified_time: SysTime,
+    attributes: Vec<Attribute>,
 }
 
 impl Edge {
@@ -117,7 +119,8 @@ impl TryFrom<DbElement> for Edge {
     type Error = DbError;
     
     fn try_from(value: DbElement) -> Result<Self, Self::Error> {
-        let fixed: [&str; 2] = ["source", "target"];
+        // let fixed: [&str; 5] = ["source", "target", "contains", "created_time", "modified_time"];
+        let fixed = RESERVED_EDGE_ATTRS;
         let rest = value.values.iter().filter(|v|!fixed.contains(&v.key.string().unwrap().as_str())).collect::<Vec<_>>();
 
         let db_id = value.id;
@@ -146,9 +149,9 @@ impl TryFrom<DbElement> for Edge {
             source: NodePath::try_from(source.unwrap().value.clone())?,
             target: NodePath::try_from(target.unwrap().value.clone())?,
             contains: contains.is_some(),
-            attributes: attrs,
             created_time: SysTime::try_from(created_time.unwrap().value.clone())?,
             modified_time: SysTime::try_from(modified_time.unwrap().value.clone())?,
+            attributes: attrs,
         };
 
         Ok(edge)
