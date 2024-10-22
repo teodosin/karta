@@ -44,6 +44,66 @@ impl Into<Attribute> for DbKeyValue {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub enum SourceOrTarget {
+    Source,
+    Target,
+}
+
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct RelativePosition {
+    origin: SourceOrTarget,
+    position: Vec<f64>
+}
+
+impl Into<Vec<DbKeyValue>> for RelativePosition {
+    fn into(self) -> Vec<DbKeyValue> {
+        let key = match self.origin {
+            SourceOrTarget::Source => "source_position",
+            SourceOrTarget::Target => "target_position",
+        };
+        vec![DbKeyValue::from((key.to_string(), self.position))]
+    }
+}
+
+impl Into<DbKeyValue> for RelativePosition {
+    fn into(self) -> DbKeyValue {
+        let key = match self.origin {
+            SourceOrTarget::Source => "source_position",
+            SourceOrTarget::Target => "target_position",
+        };
+        DbKeyValue::from((key.to_string(), self.position))
+    }
+}
+
+impl Into<DbKeyValue> for &RelativePosition {
+    fn into(self) -> DbKeyValue {
+        let key = match self.origin {
+            SourceOrTarget::Source => "source_position",
+            SourceOrTarget::Target => "target_position",
+        };
+        DbKeyValue::from((key.to_string(), self.position.clone()))
+    }
+}
+
+impl From<DbKeyValue> for RelativePosition {
+    fn from(kv: DbKeyValue) -> Self {
+        let origin = if kv.key == "source_position".into() {
+            SourceOrTarget::Source
+        } else {
+            SourceOrTarget::Target
+        };
+        let position = kv.value.vec_f64().unwrap();
+        let position = position.into_iter().map(|f| {
+            f.to_f64()
+        }).collect();
+        RelativePosition {
+            origin,
+            position,
+        }
+    }
+}
+
 /// A list of reserved node attribute names that cannot be set by the user directly.
 pub const RESERVED_NODE_ATTRS: [&str; 12] = [
     "path", // The full path of the node, name included. Implemented as an alias, but still reserved.
@@ -80,35 +140,35 @@ pub const RESERVED_EDGE_ATTRS: [&str; 22] = [
     // Alternatively, transition animations could be stored in their own nodes. Might make it more 
     // explicit and ergonomic to edit them, and more easily support multiple animations. 
     // Or just have a vector of paths in the attributes below. 
-    "from_transition", // Path to an animation file for when the edge is traversed in play mode. 
-    "to_transition", // Path to an animation file for when the edge is traversed in play mode.
+    "source_transition", // Path to an animation file for when the edge is traversed in play mode. 
+    "target_transition", // Path to an animation file for when the edge is traversed in play mode.
 
-    "from_preload", // Preload settings for source node when in the target's context & play mode
-    "to_preload", // Preload settings for the target node when in source node's context & play mode
+    "source_preload", // Preload settings for source node when in the target's context & play mode
+    "target_preload", // Preload settings for the target node when in source node's context & play mode
 
-    "from_output", // ID of an output socket in source node. Must be validated.
-    "to_input", // ID of an input socket in target node. Must be validated. 
+    "source_output", // ID of an output socket in source node. Must be validated.
+    "target_input", // ID of an input socket in target node. Must be validated. 
 
     // The following attributes are all Vecs of 2 f32s. 
-    "from_position", // Relative position of source node to the target node
-    "to_position", // Relative position of the target node to source node
-    "from_scale", // Relative scale of source node to the target node
-    "to_scale", // Relative scale of the target node to source node
-    "from_rotation", // Relative rotation of source node to the target node
-    "to_rotation", // Relative rotation of the target node to source node
+    "source_position", // Relative position of source node to the target node
+    "target_position", // Relative position of the target node to source node
+    "source_scale", // Relative scale of source node to the target node
+    "target_scale", // Relative scale of the target node to source node
+    "source_rotation", // Relative rotation of source node to the target node
+    "target_rotation", // Relative rotation of the target node to source node
 
     // The following attributes are all Vecs of 4 f32s. Or single hex values?
-    "from_color", // Color of the source node when in the target's context
-    "to_color", // Color of the target node when in the source node's context
+    "source_color", // Color of the source node when in the target's context
+    "target_color", // Color of the target node when in the source node's context
 
     // The state pins of the node. 
-    "from_pins", // The state pins of the source node when in the target's context
-    "to_pins", // The state pins of the target node when in the source node's context
+    "source_pins", // The state pins of the source node when in the target's context
+    "target_pins", // The state pins of the target node when in the source node's context
 
     // Bezier control points for the edge. 2 f32s for each point, arbitrary number of points.
     // If empty, the edge is a straight line.
-    "from_bezier_control", // Control points for the bezier curve between the two nodes. 
-    "to_bezier_control", // Control points for the bezier curve between the two nodes.
+    "source_bezier_control", // Control points for the bezier curve between the two nodes. 
+    "target_bezier_control", // Control points for the bezier curve between the two nodes.
 
     // Karta needs a way to track whether a string of edges belongs to the same "sequence", indicating
     // that there is a preferred order to them. Use cases are for compiling 

@@ -2,8 +2,7 @@ use std::{error::Error, path::PathBuf};
 
 use node::CreateNodeByPathCommand;
 
-use crate::prelude::*;
-
+use crate::{elements::attribute::RelativePosition, prelude::*};
 
 impl GraphNode for GraphCommands {
     fn open_node(&self, path: &NodePath) -> Result<Node, Box<dyn std::error::Error>> {
@@ -47,11 +46,19 @@ impl GraphNode for GraphCommands {
         todo!()
     }
 
-    fn delete_nodes(&mut self, paths: &Vec<NodePath>, files: bool, dirs: bool) -> Result<(), Box<dyn Error>> {
+    fn delete_nodes(
+        &mut self,
+        paths: &Vec<NodePath>,
+        files: bool,
+        dirs: bool,
+    ) -> Result<(), Box<dyn Error>> {
         todo!()
     }
 
-    fn get_node_attrs(&self, path: &NodePath) -> Result<Vec<Attribute>, Box<dyn std::error::Error>> {
+    fn get_node_attrs(
+        &self,
+        path: &NodePath,
+    ) -> Result<Vec<Attribute>, Box<dyn std::error::Error>> {
         todo!()
     }
 
@@ -82,6 +89,22 @@ impl GraphNode for GraphCommands {
     ) -> Result<(), Box<dyn std::error::Error>> {
         self.graph.autoparent_nodes(parent, child)
     }
+
+    fn save_relative_positions(
+        &mut self,
+        ctx_root: &NodePath,
+        nodes: Vec<(&NodePath, RelativePosition)>,
+    ) -> Result<(), Box<dyn Error>> {
+        Ok(())
+    }
+
+    fn get_relative_positions(
+        &self,
+        ctx_root: &NodePath,
+        nodes: Vec<&NodePath>,
+    ) -> Result<Vec<(&NodePath, RelativePosition)>, Box<dyn Error>> {
+        Err("Not implemented".into())
+    }
 }
 
 mod tests {
@@ -96,16 +119,17 @@ mod tests {
 
         let undo_queue_before = ctx.graph.command_manager.get_undo_stack().len();
 
-        let node = ctx.graph.create_node_by_path(
-            &NodePath::from("test"),
-            None,
-        );
+        let node = ctx.graph.create_node_by_path(&NodePath::from("test"), None);
 
         let undo_queue_after = ctx.graph.command_manager.get_undo_stack().len();
 
         assert!(node.is_ok());
         assert_eq!(node.unwrap().path(), NodePath::from("test"));
-        assert_eq!(undo_queue_after, undo_queue_before + 1, "Undo stack should have increased by 1");
+        assert_eq!(
+            undo_queue_after,
+            undo_queue_before + 1,
+            "Undo stack should have increased by 1"
+        );
     }
 
     #[test]
@@ -114,10 +138,7 @@ mod tests {
         let mut ctx = TestCommandContext::new(&func_name);
 
         let npath = NodePath::from("test");
-        let node = ctx.graph.create_node_by_path(
-            &npath,
-            None,
-        );
+        let node = ctx.graph.create_node_by_path(&npath, None);
 
         assert_eq!(node.is_ok(), true, "Node should be created");
 
@@ -135,15 +156,14 @@ mod tests {
 
         let npath = NodePath::from("test/test2/test3");
 
-        let node = ctx.graph.create_node_by_path(
-            &npath,
-            None,
-        );
+        let node = ctx.graph.create_node_by_path(&npath, None);
 
         assert_eq!(node.is_ok(), true, "Node should be created");
         let parent = ctx.graph.open_node(&npath.parent().unwrap());
         assert_eq!(parent.is_ok(), true, "Parent should be created");
-        let grandparent = ctx.graph.open_node(&npath.parent().unwrap().parent().unwrap());
+        let grandparent = ctx
+            .graph
+            .open_node(&npath.parent().unwrap().parent().unwrap());
         assert_eq!(grandparent.is_ok(), true, "Grandparent should be created");
 
         ctx.graph.undo();
@@ -152,8 +172,14 @@ mod tests {
         assert_eq!(node.is_err(), true, "Node should not be found");
         let parent = ctx.graph.open_node(&npath.parent().unwrap());
         assert_eq!(parent.is_err(), true, "Parent should not be found");
-        let grandparent = ctx.graph.open_node(&npath.parent().unwrap().parent().unwrap());
-        assert_eq!(grandparent.is_err(), true, "Grandparent should not be found");
+        let grandparent = ctx
+            .graph
+            .open_node(&npath.parent().unwrap().parent().unwrap());
+        assert_eq!(
+            grandparent.is_err(),
+            true,
+            "Grandparent should not be found"
+        );
     }
 
     #[test]
@@ -162,10 +188,7 @@ mod tests {
         let mut ctx = TestCommandContext::new(&func_name);
 
         let npath = NodePath::from("test");
-        let node = ctx.graph.create_node_by_path(
-            &npath,
-            None,
-        );
+        let node = ctx.graph.create_node_by_path(&npath, None);
 
         assert_eq!(node.is_ok(), true, "Node should be created");
 
