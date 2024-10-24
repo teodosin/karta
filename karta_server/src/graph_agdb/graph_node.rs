@@ -321,10 +321,7 @@ impl GraphNode for GraphAgdb {
                     .iter()
                     .map(|attr| {
                         let attr = attr.to_owned();
-                        Attribute {
-                            name: attr.key.to_string(),
-                            value: attr.value.to_f64().unwrap().to_f64() as f32,
-                        }
+                        Attribute::new_float(attr.key.to_string(), attr.value.to_f64().unwrap().to_f64() as f32)
                     })
                     .collect();
 
@@ -373,7 +370,7 @@ impl GraphNode for GraphAgdb {
                 return true;
             })
             .map(|attr| {
-                let attr = (attr.name.clone(), attr.value).into();
+                let attr = (attr.name.clone(), attr.value.clone()).into();
                 return attr;
             })
             .collect::<Vec<agdb::DbKeyValue>>();

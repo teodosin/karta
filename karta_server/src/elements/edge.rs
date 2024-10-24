@@ -137,11 +137,11 @@ impl TryFrom<DbElement> for Edge {
             return Err(DbError::from("Edge must have source and target"));
         }
 
+
         let attrs: Vec<Attribute> = rest.iter().map(|attr| {
-            Attribute {
-                name: attr.key.to_string(),
-                value: attr.value.to_f64().unwrap().to_f64() as f32,
-            }
+            println!("Creating attribute - {:#?}", attr);
+
+            Attribute::try_from(*attr).unwrap()
         }).collect();
 
         let edge = Edge {

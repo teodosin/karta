@@ -153,7 +153,8 @@ impl TryFrom<DbElement> for Node {
     type Error = DbError;
 
     fn try_from(value: DbElement) -> Result<Self, Self::Error> {
-        let fixed: [&str; 6] = ["path", "ntype", "nphys", "alive", "created_time", "modified_time"];
+        // let fixed: [&str; 6] = ["path", "ntype", "nphys", "alive", "created_time", "modified_time"];
+        let fixed = super::attribute::RESERVED_NODE_ATTRS;
         let rest = value.values.iter().filter(|v|!fixed.contains(&v.key.string().unwrap().as_str())).collect::<Vec<_>>();
 
         let db_id = value.id;
@@ -165,10 +166,7 @@ impl TryFrom<DbElement> for Node {
         let modified_time = value.values.iter().find(|v| v.key == "modified_time".into());
 
         let attrs: Vec<Attribute> = rest.iter().map(|v| {
-            Attribute {
-                name: v.key.to_string(),
-                value: v.value.to_f64().unwrap().to_f64() as f32,
-            }
+            Attribute::try_from(*v).unwrap()
         }).collect();
 
         let node = Node {

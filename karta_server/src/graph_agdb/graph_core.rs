@@ -59,13 +59,15 @@ impl GraphCore for GraphAgdb {
                     .to_path_buf()
             }
         };
+        let storage_dir = storage_path.join(".kartaVault");
+
 
         // Create the path if it doesn't exist
-        if !storage_path.exists() {
-            std::fs::create_dir_all(&storage_path).expect("Failed to create storage path");
+        if !storage_dir.exists() {
+            std::fs::create_dir_all(&storage_dir).expect("Failed to create storage path");
         }
-
-        let db_path = storage_path.join(format!("{}.agdb", name));
+        
+        let db_path = storage_dir.join(format!("{}.agdb", name));
 
         // Check if the database already exists
         let open_existing = db_path.exists();
