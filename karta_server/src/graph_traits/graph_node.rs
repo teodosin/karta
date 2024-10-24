@@ -124,10 +124,7 @@ mod tests {
 
     use crate::{
         elements::{
-            attribute::{Attribute, RESERVED_NODE_ATTRS},
-            node,
-            node_path::NodePath,
-            nodetype::ARCHETYPES,
+            self, attribute::{Attribute, RESERVED_NODE_ATTRS}, node, node_path::NodePath, nodetype::ARCHETYPES
         },
         graph_agdb::GraphAgdb,
         graph_traits::graph_edge::GraphEdge,
@@ -306,11 +303,11 @@ mod tests {
         let attrs: Vec<Attribute> = vec![
             Attribute {
                 name: "first_attr".to_string(),
-                value: 10.0,
+                value: elements::attribute::AttrValue::Float(10.0),
             },
             Attribute {
                 name: "second_attr".to_string(),
-                value: 20.0,
+                value: elements::attribute::AttrValue::Float(20.0),
             },
         ];
 
@@ -367,7 +364,7 @@ mod tests {
 
         let attr = vec![Attribute {
             name: "test".to_string(),
-            value: 10.0,
+            value: elements::attribute::AttrValue::Float(10.0),
         }];
 
         let shouldfail = ctx.graph.insert_node_attrs(&fakepath, attr);
@@ -393,7 +390,7 @@ mod tests {
         protected.iter().for_each(|attr| {
             let attr = Attribute {
                 name: attr.to_string(),
-                value: 10.0,
+                value: elements::attribute::AttrValue::Float(10.0),
             };
 
             let added = ctx.graph.insert_node_attrs(&path, vec![attr]);
