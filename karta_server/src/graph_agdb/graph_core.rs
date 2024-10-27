@@ -18,7 +18,7 @@ impl GraphCore for GraphAgdb {
 
     fn user_root_dirpath(&self) -> PathBuf {
         let path = self.root_path.clone();
-        println!("root_path: {:?}", path);
+        // println!("root_path: {:?}", path);
         path
     }
 
@@ -97,29 +97,29 @@ impl GraphCore for GraphAgdb {
     fn init_archetype_nodes(&mut self) {
         let archetypes = ARCHETYPES;
 
-        println!("Length of archetypes {}", archetypes.len());
+        // println!("Length of archetypes {}", archetypes.len());
 
         archetypes.iter().for_each(|at| {
-            println!("{}", at);
+            // println!("{}", at);
         });
 
         archetypes.iter().for_each(|atype| {
             let atype_path = NodePath::atype(*atype);
-            println!("Atypepath {:?}", atype_path);
+            // println!("Atypepath {:?}", atype_path);
 
-            println!("Creating archetype node: {}", atype_path.alias());
+            // println!("Creating archetype node: {}", atype_path.alias());
 
             let ntype = if atype_path == NodePath::root() {
-                println!("Root node in question");
+                // println!("Root node in question");
                 NodeType::root_type()
             } else {
-                println!("Archetype node in question");
+                // println!("Archetype node in question");
                 NodeType::archetype_type()
             };
 
             let node: Node = Node::new(&atype_path, ntype);
 
-            println!("alias is {}", atype_path.alias());
+            // println!("alias is {}", atype_path.alias());
 
             let query = self.db.exec_mut(
                 &QueryBuilder::insert()
@@ -131,23 +131,23 @@ impl GraphCore for GraphAgdb {
 
             match query {
                 Ok(_) => {
-                    println!("Created archetype node: {}", atype_path.alias());
+                    // println!("Created archetype node: {}", atype_path.alias());
                 }
                 Err(ref err) => {
                     panic!("Failed to create archetype node: {}", err);
-                    println!("Failed to create archetype node: {}", err);
+                    // println!("Failed to create archetype node: {}", err);
                 }
             }
 
             if atype_path != NodePath::root() {
-                println!(
-                    "autoparent: parent {:?} to child {:?}",
-                    &NodePath::root(),
-                    &atype_path
-                );
+                // println!(
+                //     "autoparent: parent {:?} to child {:?}",
+                //     &NodePath::root(),
+                //     &atype_path
+                // );
                 self.autoparent_nodes(&NodePath::root(), &atype_path);
             } else {
-                println!("Root node, no autoparenting");
+                // println!("Root node, no autoparenting");
             }
         });
     }
@@ -180,18 +180,18 @@ impl GraphCore for GraphAgdb {
             is_dir = full_path.is_dir();
         }
 
-        println!("Indexing node: {}", node_alias);
-        println!("Is phys: {} is dir: {}", is_phys, is_dir);
+        // println!("Indexing node: {}", node_alias);
+        // println!("Is phys: {} is dir: {}", is_phys, is_dir);
 
         // Handle the case where the node is already in the db
         let node = self.db.exec(&QueryBuilder::select().ids(node_alias.clone()).query());
         if node.is_ok() {
-            println!("Node already exists");
+            // println!("Node already exists");
             return Err("Node already exists".into())
         }
 
         if is_phys {
-            println!("Indexing node: {}", node_alias);
+            // println!("Indexing node: {}", node_alias);
             if is_dir {
                 return self.create_node_by_path(path, Some(NodeType::dir()))
             } else {
@@ -243,12 +243,12 @@ impl GraphCore for GraphAgdb {
                     Ok(child) => {
                         let path = child.path();
                         let child_path = NodePath::from_dir_path(&self.user_root_dirpath(), &path);
-                        println!("Indexing child: {:?}", child_path);
+                        // println!("Indexing child: {:?}", child_path);
 
                         self.index_single_node(&child_path);
                     },
                     Err(err) => {
-                        println!("Error reading directory: {}", err);
+                        // println!("Error reading directory: {}", err);
                     }
                 }
             });
@@ -280,7 +280,7 @@ impl GraphCore for GraphAgdb {
                 all
             },
             Err(err) => {
-                println!("Error: {}", err);
+                // println!("Error: {}", err);
                 vec![]
             }
         }

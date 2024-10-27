@@ -3395,6 +3395,8 @@ dependencies = [
  "directories 5.0.1",
  "serde",
  "tokio",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]

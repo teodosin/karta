@@ -66,10 +66,10 @@ async fn get_node(
 ) -> Json<Result<Node, String>> {
     let graph = &state.graph_commands.read().unwrap();
 
-    println!("Requested node with id: {}", id);
+    // println!("Requested node with id: {}", id);
     let node_path = NodePath::from_alias(&id);
-    println!("Resulting node_path: {:#?}", node_path);
-    println!("Resulting alias: {}", node_path.alias());
+    // println!("Resulting node_path: {:#?}", node_path);
+    // println!("Resulting alias: {}", node_path.alias());
     let result = graph
         .open_node(&node_path)
         .map_err(|e| e.to_string());
@@ -96,7 +96,7 @@ pub async fn run_server() {
         let input = input.trim();
 
         if input.is_empty() {
-            println!("Exiting server.");
+            // println!("Exiting server.");
             return;
         }
 
@@ -104,7 +104,7 @@ pub async fn run_server() {
         if path.is_dir() {
             break path;
         } else {
-            println!("Invalid path. Please enter a valid directory path.");
+            // println!("Invalid path. Please enter a valid directory path.");
         }
     };
 

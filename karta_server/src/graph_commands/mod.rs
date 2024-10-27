@@ -15,6 +15,8 @@ pub struct GraphCommands {
 
 impl GraphCommands {    
     pub fn new(name: &str, root_path: PathBuf, custom_storage_path: Option<PathBuf>) -> Self {
+        tracing_subscriber::fmt::init();
+
         let graph = GraphAgdb::new(name, root_path, custom_storage_path);
         let action_manager = CommandManager::new();
         GraphCommands {
@@ -78,7 +80,7 @@ impl TestCommandContext {
             None => full_path.clone(),
         };
 
-        println!("Trying to create test directory: {:#?}", full_path);
+        // println!("Trying to create test directory: {:#?}", full_path);
 
         let graph = GraphCommands::new(&test_name, full_path.clone(), Some(strg_dir));
 
@@ -110,7 +112,7 @@ impl Drop for TestCommandContext {
         match removal {
             Ok(_) => {}
             Err(_err) => {
-                //println!("Failed to remove test directory: {}", err);
+                //// println!("Failed to remove test directory: {}", err);
             }
         }
     }

@@ -166,8 +166,8 @@ mod tests {
         assert_eq!(opened_node.is_ok(), true, "Node should be opened");
         let opened_node = opened_node.unwrap();
 
-        println!("Created node: {:#?}", created_node);
-        println!("Opened node: {:#?}", opened_node);
+        // println!("Created node: {:#?}", created_node);
+        // println!("Opened node: {:#?}", opened_node);
 
         assert_eq!(
             created_node.path(),
@@ -484,10 +484,10 @@ mod tests {
         let dir_file1 = file1_nodepath.full(&root_dir);
         let dir_file2 = file2_nodepath.full(&root_dir);
         let dir_file3 = file3_nodepath.full(&root_dir);
-        println!("dir_path: {:?}", dir_path);
-        println!("dir_file1: {:?}", dir_file1);
-        println!("dir_file2: {:?}", dir_file2);
-        println!("dir_file3: {:?}", dir_file3);
+        // println!("dir_path: {:?}", dir_path);
+        // println!("dir_file1: {:?}", dir_file1);
+        // println!("dir_file2: {:?}", dir_file2);
+        // println!("dir_file3: {:?}", dir_file3);
 
         // create the dir and files
         create_dir(&dir_path);
@@ -501,7 +501,7 @@ mod tests {
             .graph
             .db()
             .exec(&QueryBuilder::select().aliases().query());
-        println!("Temp is {:#?}", temp);
+        // println!("Temp is {:#?}", temp);
 
         let dir_path_node = ctx.graph.open_node(&dir_nodepath);
         assert_eq!(
@@ -513,11 +513,11 @@ mod tests {
         let nodes = ctx.graph.open_node_connections(&dir_nodepath);
         // Result should be test files + the user_root
         // let all = ctx.graph.db().exec(&QueryBuilder::search().from(dir_nodepath.alias()).query());
-        // println!("all nodes that are children to {}: {:#?}", dir_nodepath.alias(), all);
+        // // println!("all nodes that are children to {}: {:#?}", dir_nodepath.alias(), all);
         // let all = ctx.graph.db().exec(&QueryBuilder::search().to(dir_nodepath.alias()).query());
-        // println!("all nodes that are parent to {}: {:#?}", dir_nodepath.alias(), all);
+        // // println!("all nodes that are parent to {}: {:#?}", dir_nodepath.alias(), all);
 
-        // println!("Nodes: {:#?}", nodes);
+        // // println!("Nodes: {:#?}", nodes);
         assert!(
             !nodes
                 .iter()

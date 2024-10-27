@@ -71,7 +71,7 @@ pub mod utils {
                 None => full_path.clone(),
             };
 
-            println!("Trying to create test directory: {:#?}", full_path);
+            // println!("Trying to create test directory: {:#?}", full_path);
 
             let graph = GraphAgdb::new(&test_name, full_path.clone(), Some(strg_dir));
 
@@ -164,7 +164,7 @@ pub mod utils {
             match removal {
                 Ok(_) => {}
                 Err(_err) => {
-                    //println!("Failed to remove test directory: {}", err);
+                    //// println!("Failed to remove test directory: {}", err);
                 }
             }
         }
