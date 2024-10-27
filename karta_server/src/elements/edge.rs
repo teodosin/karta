@@ -130,8 +130,8 @@ impl TryFrom<DbElement> for Edge {
         let created_time = value.values.iter().find(|v| v.key == "created_time".into());
         let modified_time = value.values.iter().find(|v| v.key == "modified_time".into());
 
-        println!("source: {:?}", source);
-        println!("target: {:?}", target);
+        // println!("source: {:?}", source);
+        // println!("target: {:?}", target);
 
         if source.is_none() || target.is_none() {
             return Err(DbError::from("Edge must have source and target"));
@@ -139,7 +139,7 @@ impl TryFrom<DbElement> for Edge {
 
 
         let attrs: Vec<Attribute> = rest.iter().map(|attr| {
-            println!("Creating attribute - {:#?}", attr);
+            // println!("Creating attribute - {:#?}", attr);
 
             Attribute::try_from(*attr).unwrap()
         }).collect();

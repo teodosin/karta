@@ -177,10 +177,10 @@ impl GraphAgdb {
 //         );
 //         match rt_node {
 //             Ok(_) => {
-//                 println!("Created root node");
+//                 // println!("Created root node");
 //             }
 //             Err(ref err) => {
-//                 println!("Failed to create root node: {}", err);
+//                 // println!("Failed to create root node: {}", err);
 //             }
 //         }
 //         let rt_id = rt_node.unwrap().ids();
@@ -204,10 +204,10 @@ impl GraphAgdb {
 //         );
 //         match atr_node {
 //             Ok(_) => {
-//                 println!("Created attributes node");
+//                 // println!("Created attributes node");
 //             }
 //             Err(ref err) => {
-//                 println!("Failed to create attributes node: {}", err);
+//                 // println!("Failed to create attributes node: {}", err);
 //             }
 //         }
 //         // Create an edge between the root and attributes nodes
@@ -230,10 +230,10 @@ impl GraphAgdb {
 //         );
 //         match set_node {
 //             Ok(_) => {
-//                 println!("Created settings node");
+//                 // println!("Created settings node");
 //             }
 //             Err(ref err) => {
-//                 println!("Failed to create settings node: {}", err);
+//                 // println!("Failed to create settings node: {}", err);
 //             }
 //         }
 //         // Create an edge between the root and settings nodes
@@ -257,10 +257,10 @@ impl GraphAgdb {
 //         );
 //         match nca_node {
 //             Ok(_) => {
-//                 println!("Created nodetypes node");
+//                 // println!("Created nodetypes node");
 //             }
 //             Err(ref err) => {
-//                 println!("Failed to create nodetypes node: {}", err);
+//                 // println!("Failed to create nodetypes node: {}", err);
 //             }
 //         }
 //         // Create an edge between the root and nodetypes nodes
@@ -315,13 +315,13 @@ impl GraphAgdb {
 //                                 //Graph::parent_nodes_by_dbids(&mut self.db, rt_id, node_id);
 //                             }
 //                             Err(ref err) => {
-//                                 println!("Failed to create node: {}", err);
+//                                 // println!("Failed to create node: {}", err);
 //                             }
 //                         }
 //                     }
 //                 }
 //                 Err(ref err) => {
-//                     println!("Failed to get node: {}", err);
+//                     // println!("Failed to get node: {}", err);
 //                 }
 //             }
 //         }
@@ -501,7 +501,7 @@ impl GraphAgdb {
 //                 match parent_path {
 //                     Some(parent_path) => {
 //                         if parent_path.buf().to_str().unwrap() != "" {
-//                             println!("About to insert parent node: {:?}", parent_path);
+//                             // println!("About to insert parent node: {:?}", parent_path);
 //                             let n = self.create_node_by_path(
 //                                 parent_path,
 //                                 Some(TypeName::other()),
@@ -521,7 +521,7 @@ impl GraphAgdb {
 //                 return Ok(<DbElement as Clone>::clone(node_elem).try_into().unwrap());
 //             }
 //             Err(e) => {
-//                 println!("Failed to insert node: {}", e);
+//                 // println!("Failed to insert node: {}", e);
 //                 return Err(DbError::from(e.to_string()));
 //             }
 //         }
@@ -549,7 +549,7 @@ impl GraphAgdb {
 //                 return Ok(());
 //             }
 //             Err(e) => {
-//                 println!("Failed to insert node: {}", e);
+//                 // println!("Failed to insert node: {}", e);
 //                 return Err(e);
 //             }
 //         }
@@ -601,7 +601,7 @@ impl GraphAgdb {
 //                 return Ok(vec);
 //             }
 //             Err(e) => {
-//                 println!("Failed to get attributes: {}", e);
+//                 // println!("Failed to get attributes: {}", e);
 //                 return Err(DbError::from(e.to_string()));
 //             }
 //         }
@@ -625,7 +625,7 @@ impl GraphAgdb {
 //                 }
 //             }
 //             Err(e) => {
-//                 println!("Failed to get node: {}", e);
+//                 // println!("Failed to get node: {}", e);
 //                 return Err(DbError::from(e.to_string()));
 //             }
 //         }
@@ -653,7 +653,7 @@ impl GraphAgdb {
 //                 .query(),
 //         );
 
-//         println!("Added: {:?}", added);
+//         // println!("Added: {:?}", added);
 
 //         match added {
 //             query_result => {
@@ -750,17 +750,17 @@ impl GraphAgdb {
 
 //         let eid = edge.unwrap().ids();
 //         let eid = eid.first().unwrap();
-//         println!("Id of the edge: {:#?}", eid);
+//         // println!("Id of the edge: {:#?}", eid);
 
 //         let edge = db.exec(&QueryBuilder::select().keys().ids(*eid).query());
 
 //         match edge {
 //             Ok(edge) => {
 //                 // Insert the attribute to the edge
-//                 println!("Edge inserted: {:#?}", edge.elements);
+//                 // println!("Edge inserted: {:#?}", edge.elements);
 //             }
 //             Err(e) => {
-//                 println!("Failed to insert edge: {}", e);
+//                 // println!("Failed to insert edge: {}", e);
 //             }
 //         }
 //     }

@@ -55,7 +55,7 @@ impl GraphNode for GraphAgdb {
         let mut edge_ids: Vec<DbId> = Vec::new();
 
         // Links from node
-        println!("Searching for links from node {}", as_str);
+        // println!("Searching for links from node {}", as_str);
         let links = self.db.exec(
             &QueryBuilder::search()
                 .from(path.alias())
@@ -72,7 +72,7 @@ impl GraphNode for GraphAgdb {
                         edge_ids.push(elem.id);
                     } else if elem.id.0 > 0 {
                         // Is node
-                        println!("Link: {:?}", elem);
+                        // println!("Link: {:?}", elem);
                         node_ids.push(elem.id);
                     }
                 }
@@ -97,11 +97,11 @@ impl GraphNode for GraphAgdb {
                         edge_ids.push(elem.id);
                     } else if elem.id.0 > 0 {
                         // Is node
-                        println!("Backlink: {:?}", elem);
+                        // println!("Backlink: {:?}", elem);
                         let balias = self
                             .db
                             .exec(&QueryBuilder::select().aliases().ids(elem.id).query());
-                        println!("balias: {:?}", balias);
+                        // println!("balias: {:?}", balias);
                         node_ids.push(elem.id);
                     }
                 }
@@ -129,7 +129,7 @@ impl GraphNode for GraphAgdb {
             .filter_map(|node| {
                 let node = Node::try_from(node.clone()).unwrap();
 
-                println!("Returning node {:?}", node.path());
+                // println!("Returning node {:?}", node.path());
                 // Ignore the original node
                 if node.path() == *path {
                     return None;
@@ -148,7 +148,7 @@ impl GraphNode for GraphAgdb {
                     .unwrap();
                 let edge = Edge::try_from(edge.clone()).unwrap();
 
-                println!("Nodes: {:?}", node.path());
+                // println!("Nodes: {:?}", node.path());
                 Some((node, edge))
             })
             .collect();
@@ -199,7 +199,7 @@ impl GraphNode for GraphAgdb {
 
         let node = Node::new(&path.clone(), ntype);
 
-        println!("Creating node: {:?}", node.path());
+        // println!("Creating node: {:?}", node.path());
 
         let nodeqr = self.db.exec_mut(
             &QueryBuilder::insert()
@@ -219,7 +219,7 @@ impl GraphNode for GraphAgdb {
                 match parent_path {
                     Some(parent_path) => {
                         if parent_path.parent().is_some() {
-                            println!("About to insert parent node: {:?}", parent_path);
+                            // println!("About to insert parent node: {:?}", parent_path);
 
                             let n = self.create_node_by_path(&parent_path, Some(NodeType::other()));
 
@@ -229,7 +229,7 @@ impl GraphNode for GraphAgdb {
                                     self.autoparent_nodes(&parent_path, &path);
                                 }
                                 Err(e) => {
-                                    println!("Failed to insert parent node: {}", e);
+                                    // println!("Failed to insert parent node: {}", e);
                                 }
                             }
                         }
@@ -243,7 +243,7 @@ impl GraphNode for GraphAgdb {
                 }
             }
             Err(e) => {
-                println!("Failed to insert node: {}", e);
+                // println!("Failed to insert node: {}", e);
                 Err(e.into())
             }
         }
@@ -328,7 +328,7 @@ impl GraphNode for GraphAgdb {
                 return Ok(vec);
             }
             Err(e) => {
-                println!("Failed to get attributes: {}", e);
+                // println!("Failed to get attributes: {}", e);
                 return Err(e.to_string().into());
             }
         }
@@ -387,7 +387,7 @@ impl GraphNode for GraphAgdb {
                 .query(),
         );
 
-        println!("Added: {:?}", added);
+        // println!("Added: {:?}", added);
 
         match added {
             query_result => {
@@ -450,7 +450,7 @@ impl GraphNode for GraphAgdb {
         parent: &NodePath,
         child: &NodePath,
     ) -> Result<(), Box<dyn Error>> {
-        println!("Autoparenting nodes: {:?} and {:?}", parent, child);
+        // println!("Autoparenting nodes: {:?} and {:?}", parent, child);
         let edge = Edge::new_cont(parent, child);
 
         let edge = self.db.exec_mut(
@@ -464,7 +464,7 @@ impl GraphNode for GraphAgdb {
 
         let eid = edge.unwrap().ids();
         let eid = eid.first().unwrap();
-        println!("Id of the edge: {:#?}", eid);
+        // println!("Id of the edge: {:#?}", eid);
 
         let edge = self
             .db
@@ -473,7 +473,7 @@ impl GraphNode for GraphAgdb {
         match edge {
             Ok(edge) => {
                 // Insert the attribute to the edge
-                // println!("Edge inserted: {:#?}", edge.elements);
+                // // println!("Edge inserted: {:#?}", edge.elements);
                 Ok(())
             }
             Err(e) => Err(e.into()),

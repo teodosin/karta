@@ -23,7 +23,7 @@ impl GraphNode for GraphCommands {
         let result = match self.apply(Box::new(cmd)) {
             Ok(result) => result,
             Err(e) => {
-                println!("Failed to insert node: {}", e);
+                // println!("Failed to insert node: {}", e);
                 return Err(e.into());
             }
         };

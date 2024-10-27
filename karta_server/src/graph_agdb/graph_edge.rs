@@ -48,11 +48,11 @@ impl GraphEdge for GraphAgdb {
         }
         let data_query = data_query.unwrap();
         let data_elem = data_query.elements.first().unwrap();
-        println!("Edge element: {:#?}", data_elem);
+        // println!("Edge element: {:#?}", data_elem);
 
         let edge = Edge::try_from(data_elem.clone());
 
-        println!("Edge: {:#?}", edge);
+        // println!("Edge: {:#?}", edge);
 
         match edge {
             Ok(edge) => {

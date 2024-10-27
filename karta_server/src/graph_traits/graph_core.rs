@@ -84,7 +84,7 @@ mod tests {
 
         let root_node_result = second.graph.open_node(&node_path);
 
-        println!("Root node result: {:#?}", root_node_result);
+        // println!("Root node result: {:#?}", root_node_result);
 
         assert_eq!(root_node_result.is_ok(), true);
     }
@@ -137,8 +137,8 @@ mod tests {
 
         atypes.iter().for_each(|atype| {
             let path =  NodePath::atype(atype);
-            println!("Atype as buf {:?}", path.buf());
-            println!("looking for achetype node {:?}", path.alias());
+            // println!("Atype as buf {:?}", path.buf());
+            // println!("looking for achetype node {:?}", path.alias());
 
             let node = ctx.graph.open_node(&path);
             assert_eq!(node.is_ok(), true, "Node {} not found", path.alias());
