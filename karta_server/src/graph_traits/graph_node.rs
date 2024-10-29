@@ -2,7 +2,7 @@ use std::{error::Error, path::PathBuf};
 
 use crate::elements::nodetype::NodeType;
 
-use super::{attribute::{Attribute, RelativePosition}, edge::Edge, node::Node, node_path::NodePath};
+use super::{attribute::{Attribute, RelativePosition}, edge::Edge, node::Node, node_path::NodePath, nodetype::NodeTypeId};
 
 pub trait GraphNode {
     // -------------------------------------------------------------------
@@ -37,7 +37,7 @@ pub trait GraphNode {
     fn create_node_by_path(
         &mut self,
         path: &NodePath,
-        ntype: Option<NodeType>,
+        ntype: Option<NodeTypeId>,
     ) -> Result<Node, Box<dyn Error>>;
 
     /// Creates a node under a given parent with the given name.
@@ -47,7 +47,7 @@ pub trait GraphNode {
         &mut self,
         parent_path: Option<NodePath>,
         name: &str,
-        ntype: Option<NodeType>,
+        ntype: Option<NodeTypeId>,
     ) -> Result<Node, Box<dyn Error>>;
 
     /// Inserts a Node.

@@ -9,10 +9,7 @@ use crate::{
 };
 
 use super::{
-    attribute::{Attribute, RelativePosition, RESERVED_NODE_ATTRS},
-    node::Node,
-    node_path::NodePath,
-    GraphAgdb, StoragePath,
+    attribute::{Attribute, RelativePosition, RESERVED_NODE_ATTRS}, node::Node, node_path::NodePath, nodetype::NodeTypeId, GraphAgdb, StoragePath
 };
 
 impl GraphNode for GraphAgdb {
@@ -159,7 +156,7 @@ impl GraphNode for GraphAgdb {
     fn create_node_by_path(
         &mut self,
         path: &NodePath,
-        ntype: Option<NodeType>,
+        ntype: Option<NodeTypeId>,
     ) -> Result<Node, Box<dyn Error>> {
         let full_path = path.full(&self.root_path);
         let alias = path.alias();
@@ -183,18 +180,16 @@ impl GraphNode for GraphAgdb {
         // Determine type of node. If not specified, it's an Other node.
         let mut ntype = match ntype {
             Some(ntype) => ntype,
-            None => NodeType::other(),
+            None => NodeTypeId::new("core/other".to_string(), "1.0".to_string()),
         };
 
-        // Check if the node is physical in the file system.
-        // If it is, check if it exists in the db.
         let is_file = full_path.exists() && !full_path.is_dir();
         let is_dir = full_path.is_dir();
 
         if is_file {
-            ntype = NodeType::new("File".to_string());
+            ntype = NodeTypeId::new("core/file".to_string(), "1.0".to_string());
         } else if is_dir {
-            ntype = NodeType::new("Directory".to_string());
+            ntype = NodeTypeId::new("core/directory".to_string(), "1.0".to_string());
         }
 
         let node = Node::new(&path.clone(), ntype);
@@ -221,7 +216,7 @@ impl GraphNode for GraphAgdb {
                         if parent_path.parent().is_some() {
                             // println!("About to insert parent node: {:?}", parent_path);
 
-                            let n = self.create_node_by_path(&parent_path, Some(NodeType::other()));
+                            let n = self.create_node_by_path(&parent_path, Some(NodeTypeId::dir_type()));
 
                             match n {
                                 Ok(n) => {
@@ -256,7 +251,7 @@ impl GraphNode for GraphAgdb {
         &mut self,
         parent_path: Option<NodePath>,
         name: &str,
-        ntype: Option<NodeType>,
+        ntype: Option<NodeTypeId>,
     ) -> Result<Node, Box<dyn Error>> {
         let parent_path = parent_path.unwrap_or_else(|| NodePath::new("".into()));
 
@@ -321,7 +316,10 @@ impl GraphNode for GraphAgdb {
                     .iter()
                     .map(|attr| {
                         let attr = attr.to_owned();
-                        Attribute::new_float(attr.key.to_string(), attr.value.to_f64().unwrap().to_f64() as f32)
+                        Attribute::new_float(
+                            attr.key.to_string(),
+                            attr.value.to_f64().unwrap().to_f64() as f32,
+                        )
                     })
                     .collect();
 

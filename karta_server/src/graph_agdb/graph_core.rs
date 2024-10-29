@@ -7,7 +7,7 @@ use crate::{
     graph_traits::{self, graph_core::GraphCore, graph_node::GraphNode},
 };
 
-use super::{node::Node, node_path::NodePath, nodetype::ARCHETYPES, GraphAgdb, StoragePath};
+use super::{node::Node, node_path::NodePath, nodetype::{NodeTypeId, ARCHETYPES}, GraphAgdb, StoragePath};
 
 /// Implementation block for the Graph struct itself.
 /// Includes constructors and utility functions.
@@ -111,10 +111,10 @@ impl GraphCore for GraphAgdb {
 
             let ntype = if atype_path == NodePath::root() {
                 // println!("Root node in question");
-                NodeType::root_type()
+                NodeTypeId::root_type()
             } else {
                 // println!("Archetype node in question");
-                NodeType::archetype_type()
+                NodeTypeId::archetype_type()
             };
 
             let node: Node = Node::new(&atype_path, ntype);
@@ -193,9 +193,9 @@ impl GraphCore for GraphAgdb {
         if is_phys {
             // println!("Indexing node: {}", node_alias);
             if is_dir {
-                return self.create_node_by_path(path, Some(NodeType::dir()))
+                return self.create_node_by_path(path, Some(NodeTypeId::dir_type()))
             } else {
-                return self.create_node_by_path(path, Some(NodeType::file()))
+                return self.create_node_by_path(path, Some(NodeTypeId::file_type()))
             } 
         } else {
             return Err("Cannot index virtual node".into())
