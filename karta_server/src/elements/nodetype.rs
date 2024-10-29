@@ -9,58 +9,59 @@ use crate::elements::node;
 
 pub const ARCHETYPES: [&str; 5] = ["", "user_root", "attributes", "nodetypes", "settings"];
 
-pub struct NodeData;
+#[derive(Debug, Clone, Hash, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct NodeTypeId {
+    type_path: String,
+    version: String,
+}
 
-pub enum NodeTyppe {
-    Phys(PhysCategory),
-    Virtual(VirtualCategory),
+impl NodeTypeId {
+    pub fn new(type_path: String, version: String) -> Self {
+        Self { type_path, version }
+    }
+
+    pub fn to_string(&self) -> String {
+        format!("{}@{}", self.type_path, self.version)
+    }
+
+    pub fn root_type() -> Self {
+        Self {
+            type_path: "core/root".to_string(),
+            version: "1.0".to_string(),
+        }
+    }
+
+    pub fn archetype_type() -> Self {
+        Self {
+            type_path: "core/archetype".to_string(),
+            version: "1.0".to_string(),
+        }
+    }
+
+    pub fn dir_type() -> Self {
+        Self {
+            type_path: "core/dir".to_string(),
+            version: "1.0".to_string(),
+        }
+    }
+
+    /// Generic file type. 
+    pub fn file_type() -> Self {
+        Self {
+            type_path: "core/file".to_string(),
+            version: "1.0".to_string(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum NodePhysicality {
-    /// A node that only exists in the db and not in the file system.
-    Virtual,
-    /// A node that exists in the file system and the db.
-    Physical,
+    None,
+    Dir,
+    File(String),  // stores the file extension
 }
 
-impl TryFrom<DbValue> for NodePhysicality {
-    type Error = DbError;
-
-    fn try_from(value: DbValue) -> Result<Self, Self::Error> {
-        match value.to_string().as_str() {
-            "Virtual" => Ok(NodePhysicality::Virtual),
-            "Physical" => Ok(NodePhysicality::Physical),
-            _ => Err(DbError::from("Invalid NodePhysicality")),
-        }
-    }
-}
-
-impl From<NodePhysicality> for DbValue {
-    fn from(nphys: NodePhysicality) -> Self {
-        match nphys {
-            NodePhysicality::Virtual => "Virtual".into(),
-            NodePhysicality::Physical => "Physical".into(),
-        }
-    }
-}
-
-/// Categories of physical nodes.
-pub enum PhysCategory {
-    Root,
-    Directory,
-    File,
-    Filepiece,
-}
-
-/// Categories of virtual nodes.
-pub enum VirtualCategory {
-    Archetype,
-    Data,
-    Operator,
-}
-
-/// Data types that a node can contain or its socket can output.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum DataType {
     String,
     Int,
@@ -81,70 +82,51 @@ pub enum DataType {
     Camera,
     Light,
     Script,
-    Other,
+    Other(String),
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct NodeType {
-    type_name: String,
+    type_id: NodeTypeId,
+    physicality: NodePhysicality,
+    inputs: Vec<InputSocket>,
+    outputs: Vec<OutputSocket>,
 }
 
-impl NodeType {
-    pub fn new(type_name: String) -> Self {
-        Self { type_name }
-    }
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct InputSocket {
+    name: String,
+    data_type: DataType,
+    default_value: Option<String>,
+    is_multiple: bool,
+}
 
-    /// Returns a node type that represents the root of the graph.
-    pub fn root_type() -> Self {
-        Self {
-            type_name: "Root".to_string(),
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct OutputSocket {
+    name: String,
+    data_type: DataType,
+    is_multiple: bool,
+}
+
+impl TryFrom<DbValue> for NodeTypeId {
+    type Error = DbError;
+
+    fn try_from(value: DbValue) -> Result<Self, Self::Error> {
+        let type_str = value.string()?;
+        let parts: Vec<&str> = type_str.split('@').collect();
+        if parts.len() != 2 {
+            return Err(DbError::from("Invalid NodeTypeId format"));
         }
-    }
-
-    /// Type for root-level virtual nodes. Ie. attributes, nodetypes, settings,
-    /// other such archetypes.
-    pub fn archetype_type() -> Self {
-        Self {
-            type_name: "Archetype".to_string(),
-        }
-    }
-
-    pub fn dir() -> Self {
-        Self {
-            type_name: "Directory".to_string(),
-        }
-    }
-
-    pub fn file() -> Self {
-        Self {
-            type_name: "File".to_string(),
-        }
-    }
-
-    pub fn other() -> Self {
-        Self {
-            type_name: "Other".to_string(),
-        }
-    }
-
-    pub fn name(&self) -> &str {
-        &self.type_name
+        
+        Ok(NodeTypeId {
+            type_path: parts[0].to_string(),
+            version: parts[1].to_string(),
+        })
     }
 }
 
-impl TryFrom<agdb::DbValue> for NodeType {
-    type Error = agdb::DbError;
-
-    fn try_from(value: agdb::DbValue) -> Result<Self, Self::Error> {
-        match value.string() {
-            Ok(s) => Ok(NodeType::new(s.to_string())),
-            Err(e) => Err(agdb::DbError::from("Invalid NodeType")),
-        }
-    }
-}
-
-impl From<NodeType> for agdb::DbValue {
-    fn from(ntype: NodeType) -> Self {
-        ntype.name().into()
+impl From<NodeTypeId> for DbValue {
+    fn from(type_id: NodeTypeId) -> Self {
+        type_id.to_string().into()
     }
 }

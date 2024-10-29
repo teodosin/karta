@@ -16,6 +16,7 @@ pub mod prelude {
         node::Node,
         node_path::NodePath,
         nodetype::NodeType,
+        nodetype::NodeTypeId,
         SysTime,
     };
 

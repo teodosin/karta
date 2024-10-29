@@ -21,7 +21,7 @@ pub struct DataNode {
 }
 
 #[derive(Component, Deref)]
-pub struct DataNodeType(pub NodeType);
+pub struct DataNodeType(pub NodeTypeId);
 
 #[derive(Component, Deref)]
 pub struct Attributes(pub Vec<Attribute>);

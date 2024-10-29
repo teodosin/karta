@@ -2,7 +2,7 @@ use std::{error::Error, path::PathBuf};
 
 use node::CreateNodeByPathCommand;
 
-use crate::{elements::attribute::RelativePosition, prelude::*};
+use crate::{elements::{attribute::RelativePosition, nodetype::NodeTypeId}, prelude::*};
 
 impl GraphNode for GraphCommands {
     fn open_node(&self, path: &NodePath) -> Result<Node, Box<dyn std::error::Error>> {
@@ -16,7 +16,7 @@ impl GraphNode for GraphCommands {
     fn create_node_by_path(
         &mut self,
         path: &NodePath,
-        ntype: Option<NodeType>,
+        ntype: Option<NodeTypeId>,
     ) -> Result<Node, Box<dyn std::error::Error>> {
         let cmd = CreateNodeByPathCommand::new(path.clone(), ntype);
 
@@ -37,7 +37,7 @@ impl GraphNode for GraphCommands {
         &mut self,
         parent_path: Option<NodePath>,
         name: &str,
-        ntype: Option<NodeType>,
+        ntype: Option<NodeTypeId>,
     ) -> Result<Node, Box<dyn std::error::Error>> {
         todo!()
     }

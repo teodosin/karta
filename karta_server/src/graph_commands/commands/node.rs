@@ -1,6 +1,6 @@
 use std::{error::Error, path::MAIN_SEPARATOR};
 
-use crate::prelude::*;
+use crate::{elements::nodetype::NodeTypeId, prelude::*};
 
 /// Action for creating a new node. 
 /// Note that this action may create multiple nodes if its
@@ -9,11 +9,11 @@ use crate::prelude::*;
 pub struct CreateNodeByPathCommand {
     created_ancestors: Vec<NodePath>,
     node_path: NodePath,
-    node_type: Option<NodeType>,
+    node_type: Option<NodeTypeId>,
 }
 
 impl CreateNodeByPathCommand {
-    pub fn new(node_path: NodePath, node_type: Option<NodeType>) -> Self {
+    pub fn new(node_path: NodePath, node_type: Option<NodeTypeId>) -> Self {
         CreateNodeByPathCommand {
             created_ancestors: Vec::new(),
             node_path,

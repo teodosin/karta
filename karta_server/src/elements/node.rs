@@ -4,7 +4,7 @@ use agdb::{DbElement, DbError, DbId, DbKeyValue, DbUserValue, DbValue, QueryId};
 
 use crate::elements::nodetype::{NodePhysicality, NodeType};
 
-use super::{attribute::Attribute, node_path::NodePath, SysTime};
+use super::{attribute::Attribute, node_path::NodePath, nodetype::NodeTypeId, SysTime};
 
 /// The universal node type. 
 /// Nodes loaded for users of this crate should be in this type. 
@@ -24,8 +24,7 @@ pub struct Node {
     /// the node is loaded.
     path: NodePath,
 
-    ntype: NodeType,
-    nphys: NodePhysicality,
+    ntype: NodeTypeId,
     alive: bool, 
 
     created_time: SysTime,
@@ -69,7 +68,6 @@ impl DbUserValue for Node {
         let mut values = Vec::new();
         values.push(DbKeyValue::from(("path", self.path.clone())));
         values.push(DbKeyValue::from(("ntype", self.ntype.clone())));
-        values.push(DbKeyValue::from(("nphys", self.nphys.clone())));
         values.push(DbKeyValue::from(("alive", self.alive)));
         values.push(DbKeyValue::from(("created_time", self.created_time.clone())));
         values.push(DbKeyValue::from(("modified_time", self.modified_time.clone())));
@@ -84,8 +82,7 @@ impl DbUserValue for Node {
 
 /// Implementation block for node. 
 impl Node {
-    pub fn new(path: &NodePath, ntype: NodeType) -> Self {
-        let nphys: NodePhysicality = NodePhysicality::Virtual;
+    pub fn new(path: &NodePath, ntype: NodeTypeId) -> Self {
 
         let now = SysTime(SystemTime::now());
 
@@ -93,7 +90,6 @@ impl Node {
             db_id: None,
             path: path.clone(),
             ntype,
-            nphys,
             alive: true,
             created_time: now.clone(),
             modified_time: now,
@@ -128,12 +124,8 @@ impl Node {
         self.path.clone()
     }
 
-    pub fn ntype_name(&self) -> NodeType {
+    pub fn ntype_name(&self) -> NodeTypeId {
         self.ntype.clone()
-    }
-
-    pub fn nphys(&self) -> NodePhysicality {
-        self.nphys.clone()
     }
 
     pub fn created_time(&self) -> SysTime {
@@ -172,8 +164,7 @@ impl TryFrom<DbElement> for Node {
         let node = Node {
             db_id: Some(db_id),
             path: NodePath::try_from(path.unwrap().value.clone())?,
-            ntype: NodeType::try_from(ntype.unwrap().value.clone())?,
-            nphys: NodePhysicality::try_from(nphys.unwrap().value.clone())?,
+            ntype: NodeTypeId::try_from(ntype.unwrap().value.clone())?,
             alive: alive.unwrap().value.to_bool().unwrap(),
             created_time: SysTime::try_from(created_time.unwrap().value.clone())?,
             modified_time: SysTime::try_from(modified_time.unwrap().value.clone())?,
