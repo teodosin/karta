@@ -1,4 +1,4 @@
-use crate::prelude::{DataEdge, DataNode, Relation, Relations, ViewNode};
+use crate::prelude::{DataEdge, DataNode, NodeRelation, Relations, ViewNode};
 use bevy::{prelude::*, utils::HashMap};
 use karta_server::prelude::NodePath;
 
@@ -23,6 +23,13 @@ impl NodeEntityPair {
             data: Some(data),
             view: Some(view),
         }
+    }
+
+    pub fn data(&self) -> Option<Entity> {
+        self.data
+    }
+    pub fn view(&self) -> Option<Entity> {
+        self.view
     }
 
     pub fn new_data(data: Entity) -> Self {
@@ -164,7 +171,7 @@ pub fn update_relations_on_edge_spawn(
 
         match nodes.get_mut(source_e) {
             Ok((_, mut relations)) => {
-                relations.add(Relation::new(target_e, edge_e, true));
+                relations.add(NodeRelation::new(target_e, edge_e, true));
             },
             Err(_) => {
                 warn!("Could not find source node for edge {edge_e}");
@@ -173,7 +180,7 @@ pub fn update_relations_on_edge_spawn(
 
         match nodes.get_mut(target_e) {
             Ok((_, mut relations)) => {
-                relations.add(Relation::new(source_e, edge_e, false));
+                relations.add(NodeRelation::new(source_e, edge_e, false));
             },
             Err(_) => {
                 warn!("Could not find target node for edge {edge_e}");

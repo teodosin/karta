@@ -21,38 +21,7 @@ pub struct DataEdge {
 }
 
 
-pub struct Relation {
-    node: Entity,
-    edge: Entity,
-    is_source: bool,
-}
 
-impl Relation {
-    pub fn new(node: Entity, edge: Entity, is_source: bool) -> Self {
-        Self {
-            node,
-            edge,
-            is_source,
-        }
-    }
-}
-
-#[derive(Component)]
-pub struct Relations {
-    edges: Vec<Relation>,
-}
-
-impl Relations {
-    pub fn new() -> Self {
-        Self {
-            edges: Vec::new(),
-        }
-    }
-
-    pub fn add(&mut self, edge: Relation){
-        self.edges.push(edge);
-    }
-}
 
 // #[derive(Component, Deref)]
 // pub struct DataEdgeType(pub EdgeType);

@@ -16,7 +16,6 @@ impl Plugin for GraphCamPlugin {
 
             .add_systems(Update, graph_zoom)
             .add_systems(Update, graph_pan)
-
         ;
     }
 }
