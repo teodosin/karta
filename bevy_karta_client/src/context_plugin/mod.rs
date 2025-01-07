@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use events::{ChangeContextEvent, ContextEventsPlugin};
 use karta_server::prelude::*;
 
-use crate::{node_plugin, prelude::{CurrentVault, DataEdge, DataEdgeBundle, DataNode, DataNodeBundle, Relation, Relations, ToBeDespawned, ViewNode}};
+use crate::{node_plugin, prelude::{CurrentVault, DataEdge, DataEdgeBundle, DataNode, DataNodeBundle, NodeRelation, Relations, ToBeDespawned, ViewNode}};
 
 pub mod pe_index;
 pub mod events;
@@ -140,6 +140,7 @@ fn on_context_change(
                 path: nodepath,
                 created_time: node.created_time().clone(),
                 modified_time: node.modified_time().clone(),
+                persistent: false,
             },
             data_node_type: node_plugin::DataNodeType(node.ntype_name()),
             attributes: node_plugin::Attributes(node.attributes().clone()),
@@ -196,6 +197,7 @@ fn on_context_change(
                 path: node_path,
                 created_time: node.created_time().clone(),
                 modified_time: node.modified_time().clone(),
+                persistent: false,
             },
             data_node_type: node_plugin::DataNodeType(node.ntype_name()),
             attributes: node_plugin::Attributes(node.attributes().clone()),
