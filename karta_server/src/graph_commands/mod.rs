@@ -15,7 +15,7 @@ pub struct GraphCommands {
 
 impl GraphCommands {    
     pub fn new(name: &str, root_path: PathBuf, custom_storage_path: Option<PathBuf>) -> Self {
-        tracing_subscriber::fmt::init();
+        // tracing_subscriber::fmt::init();
 
         let graph = GraphAgdb::new(name, root_path, custom_storage_path);
         let action_manager = CommandManager::new();
