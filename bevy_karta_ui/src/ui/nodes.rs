@@ -35,9 +35,9 @@ impl Plugin for NodesUiPlugin {
 
             .add_systems(PostUpdate, add_node_ui)
             .add_systems(Last, remove_view_node_on_data_node_removal)
-            .add_systems(Last, tween_to_target_position)
+            // .add_systems(Last, tween_to_target_position)
 
-            .add_systems(PostUpdate, tween_to_target_position_complete)
+            // .add_systems(PostUpdate, tween_to_target_position_complete)
             
             // .add_systems(PostUpdate, visualise_pinned_position)
             // .add_systems(PostUpdate, visualise_root_node)
@@ -322,45 +322,7 @@ pub fn add_node_base_outline(
     commands.entity(*parent).push_children(&[node_outline]);
 }
 
-// Positional tweening systems
-// --------------------------------------------------------------------------------------------------------------------------------------------
-pub fn tween_to_target_position(
-    mut commands: Commands,
-    mut nodes: Query<(Entity, &mut Transform, &TargetPosition), (With<ViewNode>, Added<TargetPosition>)>,
-){
-    if nodes.iter_mut().count() == 0 {
-        return
-    }
-    println!("Tween to target position triggered, length: {}", nodes.iter_mut().count());
-    for (entity, transform, target) in nodes.iter_mut() {
-        let tween = Tween::new(
-            EaseFunction::QuadraticInOut,
-            Duration::from_secs_f32(0.35),
-            TransformPositionLens {
-                start: transform.translation,
-                end: Vec3::new(target.position.x, target.position.y, transform.translation.z),
-            }
-        )
-        .with_completed_event(1);
 
-        println!("Should be tweening from {:#?} to {:#?}", transform.translation, target.position);
-
-        commands.entity(entity).insert(Animator::new(tween));
-
-    }
-}
-
-pub fn tween_to_target_position_complete(
-    mut commands: Commands,
-    mut event: EventReader<TweenCompleted>,
-){
-    for ev in event.read(){
-        if true {
-            println!("Tween complete");
-            commands.entity(ev.entity).remove::<TargetPosition>();
-        }
-    }
-}
 
 // Node interaction systems
 // --------------------------------------------------------------------------------------------------------------------------------------------
