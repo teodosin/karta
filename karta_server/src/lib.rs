@@ -3,9 +3,8 @@
 mod elements;
 mod graph_traits;
 mod graph_agdb;
-mod graph_commands;
 
-mod server;
+// mod server;
 
 mod utils;
 
@@ -29,10 +28,5 @@ pub mod prelude {
 
     pub use crate::graph_agdb::GraphAgdb;
 
-    pub use crate::graph_commands::{
-        commands::*,
-        GraphCommands,
-    };
-
-    pub use crate::server::*;
+    // pub use crate::server::*;
 }
