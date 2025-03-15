@@ -65,13 +65,40 @@ impl GraphEdge for GraphAgdb {
         }
     }
 
-    fn insert_edge(&self, edge: Edge) -> Result<(), Box<dyn Error>> {
-        Ok(())
+    fn insert_edge(&mut self, edge: Edge) -> Result<(), Box<dyn Error>> {
+        let parent = edge.source();
+        let child = edge.target();
+
+        let edge = self.db.exec_mut(
+            &QueryBuilder::insert()
+                .edges()
+                .from(parent.alias())
+                .to(child.alias())
+                .values_uniform(edge)
+                .query(),
+        ); // For whatever reason this does not insert the attribute into the edge.
+
+        let eid = edge.unwrap().ids();
+        let eid = eid.first().unwrap();
+        // println!("Id of the edge: {:#?}", eid);
+
+        let edge = self
+            .db
+            .exec(&QueryBuilder::select().keys().ids(*eid).query());
+
+        match edge {
+            Ok(edge) => {
+                // Insert the attribute to the edge
+                // // println!("Edge inserted: {:#?}", edge.elements);
+                Ok(())
+            }
+            Err(e) => Err(e.into()),
+        }
     }
 
     /// Delete an edge from the graph. Edges with the attribute "contains" refer to the parent-child relationship
     /// between nodes and will be ignored. All other attributes will be cleared from them instead.
-    fn delete_edge(&self, edge: Edge) -> Result<(), Box<dyn Error>> {
+    fn delete_edge(&mut self, edge: Edge) -> Result<(), Box<dyn Error>> {
         Ok(())
     }
 }
