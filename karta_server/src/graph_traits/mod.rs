@@ -6,10 +6,8 @@ use elements::*;
 use graph_core::GraphCore;
 use graph_edge::GraphEdge;
 use graph_node::GraphNode;
-use graph_ntype::GraphNtype;
 
 pub(crate) mod graph_core;
-pub(crate) mod graph_ntype;
 pub(crate) mod graph_node;
 pub(crate) mod graph_edge;
 
@@ -33,5 +31,5 @@ impl StoragePath {
 }
 
 /// The main graph trait.
-pub(crate) trait Graph: GraphCore + GraphNtype + GraphNode + GraphEdge {}
+pub(crate) trait Graph: GraphCore + GraphNode + GraphEdge {}
 

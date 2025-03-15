@@ -7,7 +7,6 @@ use crate::{elements, elements::nodetype::NodeType};
 use elements::*;
 
 pub (crate) mod graph_core;
-pub (crate) mod graph_ntype;
 pub (crate) mod graph_node;
 pub (crate) mod graph_edge;
 

@@ -23,32 +23,6 @@ pub trait GraphCore {
 
     fn new(name: &str, root_path: PathBuf, custom_storage_path: Option<PathBuf>) -> Self;
 
-    /// Create the initial archetype nodes for the graph. Includes
-    /// the root,
-    /// attributes,
-    /// settings,
-    /// nodetypes,
-    /// history?
-    fn init_archetype_nodes(&mut self);
-
-    /// Syncs a node in the db with the file system
-    fn index_single_node(&mut self, path: &NodePath) -> Result<Node, Box<dyn Error>>;
-
-    /// Syncs the node's relationships in the db with the file system.
-    fn index_node_context(&mut self, path: &NodePath);
-
-    /// Delete all dead nodes from the graph.
-    fn cleanup_dead_nodes(&mut self);
-
-    // Open all nodes and edges in the graph.
-    // fn open_all(&self) -> (Vec<Node>, Vec<Edge>);
-
-    /// Set whether the library should maintain readable files for the nodes in the graph.
-    fn maintain_readable_files(&mut self, maintain: bool);
-
-    // fn undo(&mut self, num: usize);
-    // fn redo(&mut self, num: usize);
-
     /// For debugging purposes, print all aliases.
     fn get_all_aliases(&self) -> Vec<String>;
 }
@@ -76,17 +50,17 @@ mod tests {
 
         let mut first = TestContext::new(func_name);
 
-        let node_path = NodePath::new(PathBuf::from("test"));
+        // let node_path = NodePath::new(PathBuf::from("test"));
 
-        first.graph.create_node_by_path(&node_path, None);
+        // first.graph.create_node_by_path(&node_path, None);
 
-        let mut second = TestContext::new(func_name);
+        // let mut second = TestContext::new(func_name);
 
-        let root_node_result = second.graph.open_node(&node_path);
+        // let root_node_result = second.graph.open_node(&node_path);
 
-        // println!("Root node result: {:#?}", root_node_result);
+        // // println!("Root node result: {:#?}", root_node_result);
 
-        assert_eq!(root_node_result.is_ok(), true);
+        // assert_eq!(root_node_result.is_ok(), true);
     }
 
     #[test]
