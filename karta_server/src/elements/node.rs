@@ -96,6 +96,9 @@ impl DataNode {
 
         DataNode {
             db_id: None,
+            // TODO: Make the Uuid not depend on the path but somehow just on the node itself.
+            // The Uuid should be stable regardless of the location of the node,
+            // so that ViewNodes in contexts don't have to get updated when the node is moved.
             uuid: Uuid::new_v5(&Uuid::NAMESPACE_URL, &path.alias().into_bytes()),
             created_time: now.clone(),
             modified_time: now,
