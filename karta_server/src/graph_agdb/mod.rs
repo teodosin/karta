@@ -15,7 +15,6 @@ pub struct GraphAgdb {
     name: String,
 
     /// AGDB database.
-    /// Set to public, though direct access to the db is discouraged.
     db: agdb::Db,
 
     /// Path to the root directory of the graph.
@@ -26,14 +25,6 @@ pub struct GraphAgdb {
     /// Either default for the operating system (as determined by the directories crate) or custom.
     /// Includes the name of the directory.  
     storage_path: StoragePath,
-
-    /// Whether the library should maintain readable files for the nodes
-    /// in the graph.
-    ///
-    /// If true, there will be a directory at the storage path which
-    /// mirrors the directory structure starting from the root path.
-    /// TODO: Should this be behind a feature flag?
-    maintain_readable_files: bool,
 }
 
 
