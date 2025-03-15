@@ -48,3 +48,7 @@ fn destructure_file_path(
 
     return Ok(nodes);
 }
+
+// Todo: some tests for this
+
+

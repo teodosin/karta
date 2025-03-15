@@ -79,7 +79,6 @@ impl GraphCore for GraphAgdb {
             db,
             root_path: root_path.into(),
             storage_path: storage_enum,
-            maintain_readable_files: false,
         };
 
         if !open_existing {
