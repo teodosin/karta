@@ -3,17 +3,15 @@ use std::{error::Error, path::PathBuf, vec};
 use agdb::{DbElement, DbId, QueryBuilder};
 
 use crate::{
-    elements::{self, edge::Edge, nodetype::NodeType},
-    graph_traits::graph_node::GraphNode,
-    prelude::GraphCore,
+    elements::{self, edge::Edge},
+    graph_traits::graph_node::GraphNodes,
+    prelude::{DataNode, GraphCore, NodePath},
 };
 
-use super::{
-    attribute::{Attribute, RelativePosition, RESERVED_NODE_ATTRS}, node::Node, node_path::NodePath, nodetype::NodeTypeId, GraphAgdb, StoragePath
-};
+use super::GraphAgdb;
 
-impl GraphNode for GraphAgdb {
-    fn open_node(&self, path: &NodePath) -> Result<Node, Box<dyn Error>> {
+impl GraphNodes for GraphAgdb {
+    fn open_node(&self, path: &NodePath) -> Result<DataNode, Box<dyn Error>> {
         let alias = path.alias();
 
         let node = self.db.exec(&QueryBuilder::select().ids(alias).query());
@@ -21,7 +19,7 @@ impl GraphNode for GraphAgdb {
         match node {
             Ok(node) => {
                 let node = node.elements.first().unwrap().clone();
-                let node = Node::try_from(node);
+                let node = DataNode::try_from(node);
 
                 // Dirty
                 Ok(node.unwrap())
@@ -32,7 +30,7 @@ impl GraphNode for GraphAgdb {
         }
     }
 
-    fn open_node_connections(&self, path: &NodePath) -> Vec<(Node, Edge)> {
+    fn open_node_connections(&self, path: &NodePath) -> Vec<(DataNode, Edge)> {
         // Step 1: Check if the node is a physical node in the file system.
         // Step 2: Check if the node exists in the db.
         // Step 3: Check if all the physical dirs and files in the node are in the db.
@@ -108,23 +106,23 @@ impl GraphNode for GraphAgdb {
 
         let full_nodes = match self
             .db
-            .exec(&QueryBuilder::select().values(vec![]).ids(node_ids).query())
+            .exec(&QueryBuilder::select().ids(node_ids).query())
         {
             Ok(nodes) => nodes.elements,
             Err(_e) => vec![],
         };
         let full_edges = match self
             .db
-            .exec(&QueryBuilder::select().values(vec![]).ids(edge_ids).query())
+            .exec(&QueryBuilder::select().ids(edge_ids).query())
         {
             Ok(edges) => edges.elements,
             Err(_e) => vec![],
         };
 
-        let connections: Vec<(Node, Edge)> = full_nodes
+        let connections: Vec<(DataNode, Edge)> = full_nodes
             .iter()
             .filter_map(|node| {
-                let node = Node::try_from(node.clone()).unwrap();
+                let node = DataNode::try_from(node.clone()).unwrap();
 
                 // println!("Returning node {:?}", node.path());
                 // Ignore the original node
@@ -155,7 +153,7 @@ impl GraphNode for GraphAgdb {
 
 
     /// Inserts a Node.
-    fn insert_nodes(&mut self, node: Node) -> Result<(), Box<dyn Error>> {
+    fn insert_nodes(&mut self, node: DataNode) -> Result<(), Box<dyn Error>> {
         todo!()
     }
 

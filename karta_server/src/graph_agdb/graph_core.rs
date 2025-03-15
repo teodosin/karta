@@ -3,11 +3,11 @@ use std::{error::Error, path::{self, PathBuf}};
 use agdb::QueryBuilder;
 
 use crate::{
-    elements::nodetype::NodeType,
-    graph_traits::{self, graph_core::GraphCore, graph_node::GraphNode},
+    elements::nodetype::ARCHETYPES, graph_traits::{self, graph_core::GraphCore, graph_node::GraphNodes}, prelude::{DataNode, NodePath, NodeTypeId, StoragePath}
 };
 
-use super::{node::Node, node_path::NodePath, nodetype::{NodeTypeId, ARCHETYPES}, GraphAgdb, StoragePath};
+use super::GraphAgdb;
+
 
 /// Implementation block for the Graph struct itself.
 /// Includes constructors and utility functions.
@@ -105,7 +105,7 @@ impl GraphCore for GraphAgdb {
                     NodeTypeId::archetype_type()
                 };
     
-                let node: Node = Node::new(&atype_path, ntype);
+                let node: DataNode = DataNode::new(&atype_path, ntype);
     
                 // println!("alias is {}", atype_path.alias());
     
@@ -113,7 +113,7 @@ impl GraphCore for GraphAgdb {
                     &QueryBuilder::insert()
                         .nodes()
                         .aliases(atype_path.alias())
-                        .values(&node)
+                        .values(node)
                         .query(),
                 );
     

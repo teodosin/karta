@@ -1,4 +1,4 @@
-use super::{node::Node, node_path::NodePath, StoragePath};
+use super::{node::DataNode, node_path::NodePath, StoragePath};
 use std::{error::Error, path::PathBuf};
 
 pub trait GraphCore {
@@ -38,7 +38,7 @@ mod tests {
     use crate::{
         elements::{node, node_path::NodePath},
         graph_agdb::GraphAgdb,
-        graph_traits::{graph_core::GraphCore, graph_edge::GraphEdge, graph_node::GraphNode, StoragePath},
+        graph_traits::{graph_core::GraphCore, graph_edge::GraphEdge, graph_node::GraphNodes, StoragePath},
         utils::utils::TestContext,
     };
 

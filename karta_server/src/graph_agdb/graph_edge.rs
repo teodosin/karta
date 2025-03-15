@@ -2,9 +2,10 @@ use std::{error::Error, path::PathBuf};
 
 use agdb::{DbElement, QueryBuilder};
 
-use crate::{elements, graph_traits::graph_edge::GraphEdge};
+use crate::{elements, graph_traits::graph_edge::GraphEdge, prelude::{Edge, NodePath}};
 
-use super::{attribute::{Attribute, RESERVED_EDGE_ATTRS}, edge::Edge, node_path::NodePath, GraphAgdb, StoragePath};
+use super::GraphAgdb;
+
 
 impl GraphEdge for GraphAgdb {
     fn get_edge_strict(
@@ -38,7 +39,7 @@ impl GraphEdge for GraphAgdb {
 
         // The search doesn't return the values, so we have to do a separate select
         // on the edge id. 
-        let keys = Vec::new();
+        let keys: Vec<String> = Vec::new();
         let data_query = self.db.exec(
             &QueryBuilder::select().values(keys).ids(edge_id).query()
         );

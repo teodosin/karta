@@ -15,9 +15,9 @@ pub mod prelude {
     pub use crate::elements::{
         attribute::Attribute,
         edge::Edge,
-        node::Node,
+        node::DataNode,
+        view_node::ViewNode,
         node_path::NodePath,
-        nodetype::NodeType,
         nodetype::NodeTypeId,
         SysTime,
     };
@@ -25,7 +25,7 @@ pub mod prelude {
     pub use crate::graph_traits::{
         graph_core::GraphCore,
         graph_edge::GraphEdge,
-        graph_node::GraphNode,
+        graph_node::GraphNodes,
         StoragePath,
     };
 
