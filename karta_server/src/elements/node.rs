@@ -19,6 +19,8 @@ use super::{attribute::Attribute, node_path::NodePath, nodetype::NodeTypeId, Sys
 pub struct Node {
     /// The id of the node in the database.
     db_id: Option<DbId>,
+    created_time: SysTime,
+    modified_time: SysTime,
     /// The path of the node relative to the root of the graph.
     /// The path is stored as a string in the database, but is converted to a PathBuf when
     /// the node is loaded.
@@ -27,10 +29,8 @@ pub struct Node {
     ntype: NodeTypeId,
     alive: bool, 
 
-    created_time: SysTime,
-    modified_time: SysTime,
 
-    attributes: Vec<Attribute>,
+    // attributes: Vec<Attribute>,
 }
 
 impl DbUserValue for Node {
@@ -72,9 +72,9 @@ impl DbUserValue for Node {
         values.push(DbKeyValue::from(("created_time", self.created_time.clone())));
         values.push(DbKeyValue::from(("modified_time", self.modified_time.clone())));
 
-        for attr in &self.attributes {
-            values.push(attr.into());
-        }
+        // for attr in &self.attributes {
+        //     values.push(attr.into());
+        // }
 
         values
     }
@@ -94,7 +94,7 @@ impl Node {
             created_time: now.clone(),
             modified_time: now,
 
-            attributes: Vec::new(),
+            // attributes: Vec::new(),
         }
     }
 
@@ -136,9 +136,9 @@ impl Node {
         self.modified_time.clone()
     }
 
-    pub fn attributes(&self) -> Vec<Attribute> {
-        self.attributes.clone()
-    }
+    // pub fn attributes(&self) -> Vec<Attribute> {
+    //     self.attributes.clone()
+    // }
 }
 
 impl TryFrom<DbElement> for Node {
@@ -157,9 +157,9 @@ impl TryFrom<DbElement> for Node {
         let created_time = value.values.iter().find(|v| v.key == "created_time".into());
         let modified_time = value.values.iter().find(|v| v.key == "modified_time".into());
 
-        let attrs: Vec<Attribute> = rest.iter().map(|v| {
-            Attribute::try_from(*v).unwrap()
-        }).collect();
+        // let attrs: Vec<Attribute> = rest.iter().map(|v| {
+        //     Attribute::try_from(*v).unwrap()
+        // }).collect();
 
         let node = Node {
             db_id: Some(db_id),
@@ -168,7 +168,7 @@ impl TryFrom<DbElement> for Node {
             alive: alive.unwrap().value.to_bool().unwrap(),
             created_time: SysTime::try_from(created_time.unwrap().value.clone())?,
             modified_time: SysTime::try_from(modified_time.unwrap().value.clone())?,
-            attributes: attrs,
+            // attributes: attrs,
         };
 
         Ok(node)

@@ -4,6 +4,9 @@ mod elements;
 mod graph_traits;
 mod graph_agdb;
 
+mod fs_reader;
+mod context;
+
 // mod server;
 
 mod utils;
