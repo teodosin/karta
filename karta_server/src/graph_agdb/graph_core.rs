@@ -3,7 +3,7 @@ use std::{error::Error, path::{self, PathBuf}};
 use agdb::QueryBuilder;
 
 use crate::{
-    elements::nodetype::ARCHETYPES, graph_traits::{self, graph_core::GraphCore, graph_node::GraphNodes}, prelude::{DataNode, NodePath, NodeTypeId, StoragePath}
+    elements::nodetype::ARCHETYPES, graph_traits::{self, graph_core::GraphCore, graph_node::GraphNodes}, prelude::{DataNode, GraphEdge, NodePath, NodeTypeId, StoragePath}
 };
 
 use super::GraphAgdb;
@@ -127,12 +127,12 @@ impl GraphCore for GraphAgdb {
                 }
     
                 if atype_path != NodePath::root() {
-                    // println!(
-                    //     "autoparent: parent {:?} to child {:?}",
-                    //     &NodePath::root(),
-                    //     &atype_path
-                    // );
-                    // giraphe.autoparent_nodes(&NodePath::root(), &atype_path);
+
+                    let root_to_atype_edge = crate::prelude::Edge::new_cont(
+                        &NodePath::root(), &atype_path);
+                    
+                    giraphe.insert_edge(root_to_atype_edge);
+                    
                 } else {
                     // println!("Root node, no autoparenting");
                 }
