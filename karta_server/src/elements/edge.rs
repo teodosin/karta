@@ -77,6 +77,8 @@ impl Edge {
 } 
 
 impl DbUserValue for Edge {
+    type ValueType = Self;
+    
     fn db_id(&self) -> Option<QueryId> {
         match self.db_id {
             Some(id) => Some(id.into()),

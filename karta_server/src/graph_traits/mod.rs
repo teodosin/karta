@@ -5,7 +5,7 @@ use elements::*;
 
 use graph_core::GraphCore;
 use graph_edge::GraphEdge;
-use graph_node::GraphNode;
+use graph_node::GraphNodes;
 
 pub(crate) mod graph_core;
 pub(crate) mod graph_node;
@@ -31,5 +31,5 @@ impl StoragePath {
 }
 
 /// The main graph trait.
-pub(crate) trait Graph: GraphCore + GraphNode + GraphEdge {}
+pub(crate) trait Graph: GraphCore + GraphNodes + GraphEdge {}
 

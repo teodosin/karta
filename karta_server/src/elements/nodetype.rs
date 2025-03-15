@@ -16,10 +16,6 @@ pub struct NodeTypeId {
 }
 
 impl NodeTypeId {
-    pub fn new(type_path: String, version: String) -> Self {
-        Self { type_path, version }
-    }
-
     pub fn to_string(&self) -> String {
         format!("{}@{}", self.type_path, self.version)
     }
@@ -52,60 +48,6 @@ impl NodeTypeId {
             version: "1.0".to_string(),
         }
     }
-}
-
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub enum NodePhysicality {
-    None,
-    Dir,
-    File(String),  // stores the file extension
-}
-
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub enum DataType {
-    String,
-    Int,
-    Float,
-    Bool,
-    Vec2,
-    Vec3,
-    Vec4,
-    Mat4,
-    Texture,
-    Sound,
-    Font,
-    Mesh,
-    GCloud,
-    SDFunction,
-    SDField,
-    Material,
-    Camera,
-    Light,
-    Script,
-    Other(String),
-}
-
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct NodeType {
-    type_id: NodeTypeId,
-    physicality: NodePhysicality,
-    inputs: Vec<InputSocket>,
-    outputs: Vec<OutputSocket>,
-}
-
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct InputSocket {
-    name: String,
-    data_type: DataType,
-    default_value: Option<String>,
-    is_multiple: bool,
-}
-
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct OutputSocket {
-    name: String,
-    data_type: DataType,
-    is_multiple: bool,
 }
 
 impl TryFrom<DbValue> for NodeTypeId {

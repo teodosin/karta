@@ -1,10 +1,8 @@
 use std::{error::Error, path::PathBuf};
 
-use crate::elements::nodetype::NodeType;
+use super::{attribute::{Attribute, RelativePosition}, edge::Edge, node::DataNode, node_path::NodePath, nodetype::NodeTypeId};
 
-use super::{attribute::{Attribute, RelativePosition}, edge::Edge, node::Node, node_path::NodePath, nodetype::NodeTypeId};
-
-pub trait GraphNode {
+pub trait GraphNodes {
     // -------------------------------------------------------------------
     // Nodes
 
@@ -13,7 +11,7 @@ pub trait GraphNode {
     ///
     /// TODO: This takes a mutable reference because of the indexing requirement, which is
     /// awkward and tech debt.
-    fn open_node(&self, path: &NodePath) -> Result<Node, Box<dyn Error>>;
+    fn open_node(&self, path: &NodePath) -> Result<DataNode, Box<dyn Error>>;
 
     // Retrieves the edges of a particular node.
     // fn get_node_edges(&self, path: &NodePath) -> Vec<Edge>;
@@ -26,10 +24,10 @@ pub trait GraphNode {
     /// would have to be connected to some node, which would just turn
     /// this into a generic "open_nodes" function, or "search_nodes".
     /// Then filters could just be wrappers around agdb's QueryConditions...
-    fn open_node_connections(&self, path: &NodePath) -> Vec<(Node, Edge)>;
+    fn open_node_connections(&self, path: &NodePath) -> Vec<(DataNode, Edge)>;
 
     /// Inserts a Node.
-    fn insert_nodes(&mut self, node: Node) -> Result<(), Box<dyn Error>>;
+    fn insert_nodes(&mut self, node: DataNode) -> Result<(), Box<dyn Error>>;
 }
 
 // --------------------------------------------------------------------
@@ -54,7 +52,7 @@ mod tests {
         vec,
     };
 
-    use crate::graph_traits::{graph_core::GraphCore, graph_node::GraphNode};
+    use crate::graph_traits::{graph_core::GraphCore, graph_node::GraphNodes};
 
     #[test]
     fn opening_root_node_connections__returns_vector_of_nodes() {
