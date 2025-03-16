@@ -7,7 +7,7 @@ mod graph_agdb;
 mod fs_reader;
 mod context;
 
-// mod server;
+mod server;
 
 mod utils;
 
@@ -31,5 +31,5 @@ pub mod prelude {
 
     pub use crate::graph_agdb::GraphAgdb;
 
-    // pub use crate::server::*;
+    pub use crate::server::*;
 }
