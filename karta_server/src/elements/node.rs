@@ -117,23 +117,22 @@ impl DataNode {
     pub fn update_modified_time(&mut self) {
         self.modified_time = SysTime(SystemTime::now());
     }
-
-    /// Insert a vector of attibutes into the node. Not for library use. 
-    /// Though perhaps not even this crate needs this function.
-    pub(crate) fn insert_attributes(&mut self, attributes: Vec<Attribute>) {
-        unimplemented!();
-    }
-    // Getters
     
     pub fn id(&self) -> Option<DbId> {
         self.db_id
     }
 
-    pub fn name(&self) -> String {
-        self.path.name()
+    pub fn uuid(&self) -> Uuid {
+        self.uuid.clone()
     }
 
-    /// Get the NodePath of the node. 
+    pub fn name(&self) -> String {
+        self.name.clone()
+    }
+    pub fn set_name(&mut self, name: &str) {
+        self.name = name.to_owned();
+    }
+
     pub fn path(&self) -> NodePath {
         self.path.clone()
     }

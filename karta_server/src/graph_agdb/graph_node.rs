@@ -5,7 +5,7 @@ use agdb::{DbElement, DbId, QueryBuilder};
 use crate::{
     elements::{self, edge::Edge},
     graph_traits::graph_node::GraphNodes,
-    prelude::{DataNode, GraphCore, NodePath},
+    prelude::{DataNode, GraphCore, GraphEdge, NodePath, NodeTypeId},
 };
 
 use super::GraphAgdb;
@@ -13,6 +13,8 @@ use super::GraphAgdb;
 impl GraphNodes for GraphAgdb {
     fn open_node(&self, path: &NodePath) -> Result<DataNode, Box<dyn Error>> {
         let alias = path.alias();
+
+        // TODO: Get all the values out somehow as well
 
         let node = self.db.exec(&QueryBuilder::select().ids(alias).query());
 
@@ -31,14 +33,6 @@ impl GraphNodes for GraphAgdb {
     }
 
     fn open_node_connections(&self, path: &NodePath) -> Vec<(DataNode, Edge)> {
-        // Step 1: Check if the node is a physical node in the file system.
-        // Step 2: Check if the node exists in the db.
-        // Step 3: Check if all the physical dirs and files in the node are in the db.
-        // Step 4: The ones that are not, add to the db.
-        // Step 5?: Delete the physical nodes in the db that are not in the file system.
-        // THOUGH Automatically deleting the nodes
-        // honestly seems like a bad idea. Maybe a warning should be issued instead.
-
         // Resolve the full path to the node
         let full_path = path.full(&self.root_path);
         let is_physical = full_path.exists();
@@ -104,17 +98,11 @@ impl GraphNodes for GraphAgdb {
             Err(_e) => {}
         }
 
-        let full_nodes = match self
-            .db
-            .exec(&QueryBuilder::select().ids(node_ids).query())
-        {
+        let full_nodes = match self.db.exec(&QueryBuilder::select().ids(node_ids).query()) {
             Ok(nodes) => nodes.elements,
             Err(_e) => vec![],
         };
-        let full_edges = match self
-            .db
-            .exec(&QueryBuilder::select().ids(edge_ids).query())
-        {
+        let full_edges = match self.db.exec(&QueryBuilder::select().ids(edge_ids).query()) {
             Ok(edges) => edges.elements,
             Err(_e) => vec![],
         };
@@ -151,21 +139,76 @@ impl GraphNodes for GraphAgdb {
         connections
     }
 
-
     /// Inserts a Node.
     fn insert_nodes(&mut self, nodes: Vec<DataNode>) {
-        
         for node in nodes {
+            let existing = self.db.exec(
+                &QueryBuilder::select()
+                    .ids(node.path().alias().clone())
+                    .query(),
+            );
 
-            let node = self.db.exec_mut(
+            match existing {
+                Ok(_) => {
+                    // return Err("node already exists".into());
+                    println!("Node already exists");
+                }
+                Err(_e) => {
+                    // Node doesn't exist, proceed to insertion
+                }
+            }
+
+            let node_query = self.db.exec_mut(
                 &QueryBuilder::insert()
                     .nodes()
                     .aliases(node.path().alias())
-                    .values_uniform(node)
+                    .values(node.clone())
                     .query(),
             );
-            
+
+            match node_query {
+                Ok(nodeqr) => {
+                    let node_elem = &nodeqr.elements[0];
+                    let nid = node_elem.id;
+                    // If parent is not root, check if the parent node already exists in the db.
+                    // If not, call this function recursively.
+                    let parent_path = node.path().parent();
+                    match parent_path {
+                        Some(parent_path) => {
+                            if parent_path.parent().is_some() {
+                                // println!("About to insert parent node: {:?}", parent_path);
+
+                                let parent_node = DataNode::new(
+                                    &parent_path,
+                                    NodeTypeId::dir_type(),
+                                );
+
+                                self.insert_nodes(vec![parent_node]);
+
+                                let edge = Edge::new(
+                                    &parent_path,
+                                    &node.path(),
+                                );
+
+                                self.insert_edges(vec![edge]);
+                            }
+                        }
+                        None => {
+                            // If the parent is root, parent them and move along.
+                            let root_edge = Edge::new(
+                                &NodePath::root(),
+                                &node.path(),
+                            );
+                            self.insert_edges(vec![root_edge]);
+                        }
+                    }
+                }
+                Err(e) => {
+                    // println!("Failed to insert node: {}", e);
+                }
+            }
+
+            // print!("{:#?}", node);
         }
     }
-
 }
