@@ -116,7 +116,7 @@ impl GraphCore for GraphAgdb {
                     let root_to_atype_edge =
                         crate::prelude::Edge::new_cont(&NodePath::root(), &atype_path);
 
-                    giraphe.insert_edge(root_to_atype_edge);
+                    giraphe.insert_edges(vec![root_to_atype_edge]);
                 } else {
                     // println!("Root node, no autoparenting");
                 }

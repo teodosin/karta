@@ -36,10 +36,7 @@ mod tests {
     use directories::ProjectDirs;
 
     use crate::{
-        elements::{node, node_path::NodePath},
-        graph_agdb::GraphAgdb,
-        graph_traits::{graph_core::GraphCore, graph_edge::GraphEdge, graph_node::GraphNodes, StoragePath},
-        utils::utils::TestContext,
+        elements::{node, node_path::NodePath}, graph_agdb::GraphAgdb, graph_traits::{graph_core::GraphCore, graph_edge::GraphEdge, graph_node::GraphNodes, StoragePath}, prelude::NodeTypeId, utils::utils::TestContext
     };
 
     /// Add a node to the db, then create a new graph with the same name.
@@ -50,17 +47,19 @@ mod tests {
 
         let mut first = TestContext::new(func_name);
 
-        // let node_path = NodePath::new(PathBuf::from("test"));
+        let node_path = NodePath::new(PathBuf::from("test"));
 
-        // first.graph.create_node_by_path(&node_path, None);
+        let node = node::DataNode::new(&node_path.clone(), NodeTypeId::virtual_generic());
 
-        // let mut second = TestContext::new(func_name);
+        first.graph.insert_nodes(vec![node.clone()]);
 
-        // let root_node_result = second.graph.open_node(&node_path);
+        let mut second = TestContext::new(func_name);
 
-        // // println!("Root node result: {:#?}", root_node_result);
+        let root_node_result = second.graph.open_node(&node_path);
 
-        // assert_eq!(root_node_result.is_ok(), true);
+        // println!("Root node result: {:#?}", root_node_result);
+
+        assert_eq!(root_node_result.is_ok(), true);
     }
 
     #[test]
