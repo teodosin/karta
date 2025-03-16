@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::{context::ContextDb, prelude::*};
 use axum::{
     extract::{Path, State},
     routing::{get, post},
@@ -64,13 +64,24 @@ pub async fn run_server() {
 
     };
 
+    let storage_dir = root_path.join(".karta");
+
+    // Create the path if it doesn't exist
+    if !storage_dir.exists() {
+        std::fs::create_dir_all(&storage_dir).expect("Failed to create storage path");
+    }
+
     let graph_agdb = Arc::new(RwLock::new(GraphAgdb::new(
         name,
         root_path.clone(),
-        Some(root_path.clone()),
+        storage_dir.clone(),
     )));
     let context_db = Arc::new(RwLock::new(
-        ContextDb::new()
+        ContextDb::new(
+            name.to_owned(),
+            root_path.clone(),
+            storage_dir.clone(),
+        )
     ));
     let (tx, _rx) = broadcast::channel(100);
 

@@ -22,9 +22,8 @@ pub struct GraphAgdb {
     root_path: std::path::PathBuf,
 
     /// Path to the where the db is stored in the file system.
-    /// Either default for the operating system (as determined by the directories crate) or custom.
     /// Includes the name of the directory.  
-    storage_path: StoragePath,
+    storage_path: std::path::PathBuf,
 }
 
 

@@ -2,7 +2,7 @@ use super::{node::DataNode, node_path::NodePath, StoragePath};
 use std::{error::Error, path::PathBuf};
 
 pub trait GraphCore {
-    fn storage_path(&self) -> StoragePath;
+    fn storage_path(&self) -> PathBuf;
 
     fn user_root_dirpath(&self) -> PathBuf;
 
@@ -21,7 +21,7 @@ pub trait GraphCore {
     ///
     /// TODO: Add error handling.
 
-    fn new(name: &str, root_path: PathBuf, custom_storage_path: Option<PathBuf>) -> Self;
+    fn new(name: &str, root_path: PathBuf, storage_dir: PathBuf) -> Self;
 
     /// For debugging purposes, print all aliases.
     fn get_all_aliases(&self) -> Vec<String>;
@@ -68,10 +68,8 @@ mod tests {
         let func_name = "create_graph_db_file_in_custom_storage_directory";
         let mut ctx = TestContext::custom_storage(func_name);
 
-        let storage = ctx.graph.storage_path().strg_path();
+        let storage = ctx.graph.storage_path();
 
-        assert_eq!(storage.is_some(), true, "Storage path must be set");
-        let storage = storage.unwrap();
         assert_eq!(storage.exists(), true);
 
         assert_eq!(
@@ -88,7 +86,7 @@ mod tests {
 
         assert_eq!(
             ctx.graph.storage_path(),
-            crate::graph_traits::StoragePath::Custom(storage.clone())
+            storage.clone()
         );
 
         let root_node_result = ctx.graph.open_node(&NodePath::root());
