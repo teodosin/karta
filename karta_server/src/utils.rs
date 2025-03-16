@@ -66,14 +66,11 @@ pub mod utils {
                 .to_path_buf();
 
             let full_path = root.join(&test_name);
-            let strg_dir = match storage {
-                Some(path) => full_path.join(path),
-                None => full_path.clone(),
-            };
+            let strg_dir = full_path.join(".karta");
 
             // println!("Trying to create test directory: {:#?}", full_path);
 
-            let graph = GraphAgdb::new(&test_name, full_path.clone(), Some(strg_dir));
+            let graph = GraphAgdb::new(&test_name, full_path.clone(), strg_dir);
 
             assert_eq!(
                 full_path.exists(),

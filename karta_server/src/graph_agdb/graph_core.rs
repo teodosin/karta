@@ -1,18 +1,22 @@
-use std::{error::Error, path::{self, PathBuf}};
+use std::{
+    error::Error,
+    path::{self, PathBuf},
+};
 
 use agdb::QueryBuilder;
 
 use crate::{
-    elements::nodetype::ARCHETYPES, graph_traits::{self, graph_core::GraphCore, graph_node::GraphNodes}, prelude::{DataNode, GraphEdge, NodePath, NodeTypeId, StoragePath}
+    elements::nodetype::ARCHETYPES,
+    graph_traits::{self, graph_core::GraphCore, graph_node::GraphNodes},
+    prelude::{DataNode, GraphEdge, NodePath, NodeTypeId, StoragePath},
 };
 
 use super::GraphAgdb;
 
-
 /// Implementation block for the Graph struct itself.
 /// Includes constructors and utility functions.
 impl GraphCore for GraphAgdb {
-    fn storage_path(&self) -> graph_traits::StoragePath {
+    fn storage_path(&self) -> PathBuf {
         self.storage_path.clone()
     }
 
@@ -45,28 +49,10 @@ impl GraphCore for GraphAgdb {
     /// Creates the db at the storage_path, or initialises the db if it already exists there.
     ///
     /// TODO: Add error handling.
-    fn new(name: &str, root_path: PathBuf, custom_storage_path: Option<PathBuf>) -> Self {
-        let storage_enum = match custom_storage_path {
-            Some(path) => graph_traits::StoragePath::Custom(path),
-            None => graph_traits::StoragePath::Default,
-        };
-        let storage_path = match storage_enum.clone() {
-            StoragePath::Custom(path) => path,
-            StoragePath::Default => {
-                directories::ProjectDirs::from("com", "teodosin_labs", "karta_server")
-                    .unwrap()
-                    .data_dir()
-                    .to_path_buf()
-            }
-        };
-        let storage_dir = storage_path.join(".kartaVault");
-
-
-        // Create the path if it doesn't exist
+    fn new(name: &str, root_path: PathBuf, storage_dir: PathBuf) -> Self {
         if !storage_dir.exists() {
             std::fs::create_dir_all(&storage_dir).expect("Failed to create storage path");
         }
-        
         let db_path = storage_dir.join(format!("{}.agdb", name));
 
         // Check if the database already exists
@@ -78,24 +64,24 @@ impl GraphCore for GraphAgdb {
             name: name.to_string(),
             db,
             root_path: root_path.into(),
-            storage_path: storage_enum,
+            storage_path: storage_dir,
         };
 
         if !open_existing {
             let archetypes = ARCHETYPES;
 
             // println!("Length of archetypes {}", archetypes.len());
-    
+
             archetypes.iter().for_each(|at| {
                 // println!("{}", at);
             });
-    
+
             archetypes.iter().for_each(|atype| {
                 let atype_path = NodePath::atype(*atype);
                 // println!("Atypepath {:?}", atype_path);
-    
+
                 // println!("Creating archetype node: {}", atype_path.alias());
-    
+
                 let ntype = if atype_path == NodePath::root() {
                     // println!("Root node in question");
                     NodeTypeId::root_type()
@@ -103,11 +89,11 @@ impl GraphCore for GraphAgdb {
                     // println!("Archetype node in question");
                     NodeTypeId::archetype_type()
                 };
-    
+
                 let node: DataNode = DataNode::new(&atype_path, ntype);
-    
+
                 // println!("alias is {}", atype_path.alias());
-    
+
                 let query = giraphe.db.exec_mut(
                     &QueryBuilder::insert()
                         .nodes()
@@ -115,7 +101,7 @@ impl GraphCore for GraphAgdb {
                         .values(node)
                         .query(),
                 );
-    
+
                 match query {
                     Ok(_) => {
                         // println!("Created archetype node: {}", atype_path.alias());
@@ -125,14 +111,12 @@ impl GraphCore for GraphAgdb {
                         // println!("Failed to create archetype node: {}", err);
                     }
                 }
-    
-                if atype_path != NodePath::root() {
 
-                    let root_to_atype_edge = crate::prelude::Edge::new_cont(
-                        &NodePath::root(), &atype_path);
-                    
+                if atype_path != NodePath::root() {
+                    let root_to_atype_edge =
+                        crate::prelude::Edge::new_cont(&NodePath::root(), &atype_path);
+
                     giraphe.insert_edge(root_to_atype_edge);
-                    
                 } else {
                     // println!("Root node, no autoparenting");
                 }
@@ -146,12 +130,14 @@ impl GraphCore for GraphAgdb {
         let all = self.db().exec(&QueryBuilder::select().aliases().query());
         match all {
             Ok(aliases) => {
-                let all: Vec<String> = aliases.elements.iter().map(|alias| {
-                    alias.values[0].value.to_string()
-                }).collect();
+                let all: Vec<String> = aliases
+                    .elements
+                    .iter()
+                    .map(|alias| alias.values[0].value.to_string())
+                    .collect();
 
                 all
-            },
+            }
             Err(err) => {
                 // println!("Error: {}", err);
                 vec![]
