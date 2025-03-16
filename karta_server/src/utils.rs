@@ -23,6 +23,7 @@ pub mod utils {
     pub struct TestContext {
         pub test_name: String,
         pub graph: GraphAgdb,
+        measure_perf: bool,
         start_time: std::time::Instant,
     }
 
@@ -41,8 +42,14 @@ pub mod utils {
             Self {
                 test_name: name.to_string(),
                 graph: TestContext::setup(&name, None),
+                measure_perf: false,
                 start_time: std::time::Instant::now(),
             }
+        }
+
+        pub fn measure_perf(mut self) -> Self {
+            self.measure_perf = true;
+            self
         }
 
         pub fn custom_storage(name: &str) -> Self {
@@ -51,6 +58,7 @@ pub mod utils {
             Self {
                 test_name: name.to_string(),
                 graph: TestContext::setup(&name, Some(PathBuf::from("storage"))),
+                measure_perf: false,
                 start_time: std::time::Instant::now(),
             }
         }
@@ -91,8 +99,7 @@ pub mod utils {
 
             let name = &self.test_name;
 
-            let compile_report = false;
-            if compile_report {
+            if self.measure_perf {
                 // Compile a performance report and append it to the tests file
                 let elapsed = self.start_time.elapsed().as_millis();
                 let db_size = self.graph.db().size();
