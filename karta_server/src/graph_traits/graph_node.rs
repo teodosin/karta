@@ -27,7 +27,7 @@ pub trait GraphNodes {
     fn open_node_connections(&self, path: &NodePath) -> Vec<(DataNode, Edge)>;
 
     /// Inserts a Node.
-    fn insert_nodes(&mut self, node: DataNode) -> Result<(), Box<dyn Error>>;
+    fn insert_nodes(&mut self, nodes: Vec<DataNode>);
 }
 
 // --------------------------------------------------------------------

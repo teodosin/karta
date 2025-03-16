@@ -153,8 +153,19 @@ impl GraphNodes for GraphAgdb {
 
 
     /// Inserts a Node.
-    fn insert_nodes(&mut self, node: DataNode) -> Result<(), Box<dyn Error>> {
-        todo!()
+    fn insert_nodes(&mut self, nodes: Vec<DataNode>) {
+        
+        for node in nodes {
+
+            let node = self.db.exec_mut(
+                &QueryBuilder::insert()
+                    .nodes()
+                    .aliases(node.path().alias())
+                    .values_uniform(node)
+                    .query(),
+            );
+            
+        }
     }
 
 }

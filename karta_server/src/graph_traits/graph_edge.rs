@@ -10,7 +10,7 @@ pub trait GraphEdge {
         to: &NodePath
     ) -> Result<Edge, Box<dyn Error>>;
 
-    fn insert_edge(&mut self, edge: Edge) -> Result<(), Box<dyn Error>>;
+    fn insert_edges(&mut self, edges: Vec<Edge>);
 
     /// Delete an edge from the graph. Edges with the attribute "contains" refer to the parent-child relationship
     /// between nodes and will be ignored. All other attributes will be cleared from them instead.

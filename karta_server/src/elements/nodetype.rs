@@ -48,6 +48,13 @@ impl NodeTypeId {
             version: "1.0".to_string(),
         }
     }
+
+    pub fn virtual_generic() -> Self {
+        Self {
+            type_path: "core/virtual_generic".to_string(),
+            version: "1.0".to_string(),
+        }
+    }
 }
 
 impl TryFrom<DbValue> for NodeTypeId {
