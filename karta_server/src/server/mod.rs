@@ -4,6 +4,7 @@ use axum::{
     routing::{get, post},
     Extension, Json, Router,
 };
+use serde::Deserialize;
 use std::{io::{self, Write}, sync::RwLock};
 use std::path::PathBuf;
 use std::{error::Error, sync::Arc};
@@ -38,31 +39,8 @@ pub fn create_router(state: AppState) -> Router {
 
 
 
-pub async fn run_server() {
+pub async fn run_server(root_path: PathBuf) {
     let name = "karta_server";
-
-    let root_path = loop {
-
-        print!("Enter the path for the server (or press Enter to exit): ");
-
-        io::stdout().flush().unwrap();
-        let mut input = String::new();
-        io::stdin().read_line(&mut input).unwrap();
-        let input = input.trim();
-
-        if input.is_empty() {
-            // println!("Exiting server.");
-            return;
-        }
-
-        let path = PathBuf::from(input);
-        if path.is_dir() {
-            break path;
-        } else {
-            // println!("Invalid path. Please enter a valid directory path.");
-        }
-
-    };
 
     let storage_dir = root_path.join(".karta");
 
@@ -96,4 +74,65 @@ pub async fn run_server() {
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
 
     axum::serve(listener, app).await.unwrap();
+}
+
+pub fn load_or_create_vault() -> Result<PathBuf, Box<dyn Error>> {
+    let root_path = loop {
+        println!("Existing vaults:");
+        let vaults = get_vaults_config();
+        println!("{:#?}", vaults);
+
+        println!("Enter the path for the server (or press Enter to exit): ");
+
+        io::stdout().flush().unwrap();
+        let mut input = String::new();
+        io::stdin().read_line(&mut input).unwrap();
+        let input = input.trim();
+
+        if input.is_empty() {
+            // println!("Exiting server.");
+            return Err("Exiting server.".into());
+        }
+
+        let path = PathBuf::from(input);
+        if path.is_dir() {
+            break path;
+        } else {
+            // println!("Invalid path. Please enter a valid directory path.");
+        }
+
+    };
+
+    Ok(root_path)
+}
+
+#[derive(Debug, serde::Serialize, Deserialize, Default)]
+struct Vaults {
+    default: PathBuf,
+    vaults: Vec<PathBuf>,
+}
+
+fn vaults_config_path() -> PathBuf {
+    let file_name = "karta_vaults.ron";
+    let config_path = directories::ProjectDirs::from("com", "karta_server", "karta_server")
+        .unwrap()
+        .config_dir()
+        .to_path_buf();
+    let file_path = config_path.join(file_name);
+    file_path
+}
+
+fn get_vaults_config() -> Vaults {
+    let file_path = vaults_config_path();
+
+    let config_file = match std::fs::File::open(file_path) {
+        Ok(file) => file,
+        Err(_) => {
+            return Vaults::default();
+        }
+    };
+
+    let vaults = ron::de::from_reader(config_file);
+
+    vaults.unwrap_or_default()
 }
