@@ -11,6 +11,8 @@ mod server;
 
 mod utils;
 
+pub(crate) const SERVER_VERSION: &str = "0.1.0";
+
 pub mod prelude {
     pub use crate::elements::{
         attribute::Attribute,
