@@ -10,6 +10,7 @@ agdb = { version = "0.10.0", features = ["serde"] }
 axum = "0.8.1"
 blake3 = "1.6.1"
 directories = "6.0.0"
+ron = "0.8.1"
 serde = { version = "1.0.219", features = ["serde_derive"] }
 tokio = { version = "1.44.1", features = ["rt-multi-thread", "macros"] }
 tracing = "0.1.41"

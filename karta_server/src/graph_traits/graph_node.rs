@@ -156,8 +156,6 @@ mod tests {
         
         let found_by_path = ctx.graph.open_node(&NodeHandle::Path(path)).expect("Node should exist");
         let uuid = found_by_path.uuid().expect("Node should have a uuid");
-        println!(" We will search for uuid {:#?}", uuid);
-
 
         let found_by_uuid = ctx.graph.open_node(&NodeHandle::Uuid(uuid)).expect("Node should exist");
         
