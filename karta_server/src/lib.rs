@@ -6,6 +6,7 @@ mod graph_agdb;
 
 mod fs_reader;
 mod context;
+mod layout;
 
 mod server;
 
