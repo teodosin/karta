@@ -18,7 +18,7 @@ use super::{attribute::Attribute, node_path::NodePath, nodetype::NodeTypeId, Sys
 pub struct DataNode {
     /// The id of the node in the database.
     db_id: Option<DbId>,
-    uuid: Uuid,
+    uuid: Option<Uuid>,
     created_time: SysTime,
     modified_time: SysTime,
     /// The path of the node relative to the root of the graph.
@@ -71,7 +71,9 @@ impl DbUserValue for DataNode {
 
     fn to_db_values(&self) -> Vec<DbKeyValue> {
         let mut values = Vec::new();
-        values.push(DbKeyValue::from(("uuid", self.uuid.clone().to_string())));
+        if let Some(uuid) = &self.uuid {
+            values.push(DbKeyValue::from(("uuid", uuid.to_string())));
+        }
         values.push(DbKeyValue::from(("created_time", self.created_time.clone())));
         values.push(DbKeyValue::from(("modified_time", self.modified_time.clone())));
 
@@ -96,10 +98,8 @@ impl DataNode {
 
         DataNode {
             db_id: None,
-            // TODO: Make the Uuid not depend on the path but somehow just on the node itself.
-            // The Uuid should be stable regardless of the location of the node,
-            // so that ViewNodes in contexts don't have to get updated when the node is moved.
-            uuid: Uuid::new_v5(&Uuid::NAMESPACE_URL, &path.alias().into_bytes()),
+            // Note: The Uuid gets set when the node is inserted into the database.
+            uuid: None,
             created_time: now.clone(),
             modified_time: now,
 
@@ -122,9 +122,14 @@ impl DataNode {
         self.db_id
     }
 
-    pub fn uuid(&self) -> Uuid {
+
+    pub fn uuid(&self) -> Option<Uuid> {
         self.uuid.clone()
     }
+    pub fn set_uuid(&mut self, uuid: Uuid) {
+        self.uuid = Some(uuid);
+    }
+
 
     pub fn name(&self) -> String {
         self.name.clone()
@@ -133,9 +138,11 @@ impl DataNode {
         self.name = name.to_owned();
     }
 
+
     pub fn path(&self) -> NodePath {
         self.path.clone()
     }
+
 
     pub fn ntype_name(&self) -> NodeTypeId {
         self.ntype.clone()
@@ -176,9 +183,14 @@ impl TryFrom<DbElement> for DataNode {
         //     Attribute::try_from(*v).unwrap()
         // }).collect();
 
+        let uuid = match uuid {
+            Some(v) => Some(Uuid::from_str(v.value.clone().to_string().as_str()).unwrap()),
+            None => None,
+        };
+
         let node = DataNode {
             db_id: Some(db_id),
-            uuid: Uuid::from_str(uuid.unwrap().value.clone().to_string().as_str()).unwrap(),
+            uuid,
             created_time: SysTime::try_from(created_time.unwrap().value.clone())?,
             modified_time: SysTime::try_from(modified_time.unwrap().value.clone())?,
 

@@ -1,9 +1,10 @@
-use std::{error::Error, path::PathBuf, vec};
+use std::{error::Error, path::PathBuf, time::SystemTime, vec};
 
 use agdb::{DbElement, DbId, QueryBuilder};
+use uuid::Uuid;
 
 use crate::{
-    elements::{self, edge::Edge},
+    elements::{self, edge::Edge, node_path::NodeHandle},
     graph_traits::graph_node::GraphNodes,
     prelude::{DataNode, GraphCore, GraphEdge, NodePath, NodeTypeId},
 };
@@ -11,13 +12,20 @@ use crate::{
 use super::GraphAgdb;
 
 impl GraphNodes for GraphAgdb {
-    fn open_node(&self, path: &NodePath) -> Result<DataNode, Box<dyn Error>> {
-        let alias = path.alias();
+    fn open_node(&self, handle: &NodeHandle) -> Result<DataNode, Box<dyn Error>> {
+        let mut node: Result<agdb::QueryResult, agdb::QueryError>;
 
-        // TODO: Get all the values out somehow as well
-
-        let node = self.db.exec(&QueryBuilder::select().ids(alias).query());
-
+        match handle {
+            NodeHandle::Path(path) => {
+                let alias = path.alias();
+                node = self.db.exec(&QueryBuilder::select().ids(alias).query());
+            }
+            NodeHandle::Uuid(id) => {
+                node = self.db.exec(&QueryBuilder::select().search().index("uuid").value(id.to_string()).query());
+                println!("Node is {:#?}", node);
+            }
+        }
+        
         match node {
             Ok(node) => {
                 let node = node.elements.first().unwrap().clone();
@@ -141,7 +149,9 @@ impl GraphNodes for GraphAgdb {
 
     /// Inserts a Node.
     fn insert_nodes(&mut self, nodes: Vec<DataNode>) {
-        for node in nodes {
+        for mut node in nodes {
+            let npath = node.path();
+
             let existing = self.db.exec(
                 &QueryBuilder::select()
                     .ids(node.path().alias().clone())
@@ -158,11 +168,27 @@ impl GraphNodes for GraphAgdb {
                 }
             }
 
+
+
+            // Setting a better uuid on insert to db
+            let full_path = self.root_path.join(npath.buf());
+            let created_time: SystemTime = match full_path.exists() {
+                true => full_path.metadata().unwrap().created().unwrap(),
+                false => SystemTime::now(),
+            };
+            // Combine name and creation time
+            let mut combined: String = npath.name();
+            combined.push_str(&created_time.elapsed().unwrap().as_millis().to_string());
+
+            // Hash the combined string
+            let hash = blake3::hash(combined.as_bytes());
+            node.set_uuid(Uuid::new_v5(&Uuid::NAMESPACE_URL, hash.as_bytes()));
+
             let node_query = self.db.exec_mut(
                 &QueryBuilder::insert()
                     .nodes()
                     .aliases(node.path().alias())
-                    .values(node.clone())
+                    .values(node)
                     .query(),
             );
 
@@ -172,33 +198,25 @@ impl GraphNodes for GraphAgdb {
                     let nid = node_elem.id;
                     // If parent is not root, check if the parent node already exists in the db.
                     // If not, call this function recursively.
-                    let parent_path = node.path().parent();
+                    let parent_path = npath.parent();
                     match parent_path {
                         Some(parent_path) => {
                             if parent_path.parent().is_some() {
                                 // println!("About to insert parent node: {:?}", parent_path);
 
-                                let parent_node = DataNode::new(
-                                    &parent_path,
-                                    NodeTypeId::dir_type(),
-                                );
+                                let parent_node =
+                                    DataNode::new(&parent_path, NodeTypeId::dir_type());
 
                                 self.insert_nodes(vec![parent_node]);
 
-                                let edge = Edge::new(
-                                    &parent_path,
-                                    &node.path(),
-                                );
+                                let edge = Edge::new(&parent_path, &npath);
 
                                 self.insert_edges(vec![edge]);
                             }
                         }
                         None => {
                             // If the parent is root, parent them and move along.
-                            let root_edge = Edge::new(
-                                &NodePath::root(),
-                                &node.path(),
-                            );
+                            let root_edge = Edge::new(&NodePath::root(), &npath);
                             self.insert_edges(vec![root_edge]);
                         }
                     }

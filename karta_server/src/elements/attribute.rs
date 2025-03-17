@@ -168,7 +168,12 @@ impl TryFrom<&DbKeyValue> for Attribute {
 }
 
 /// A list of reserved node attribute names that cannot be set by the user directly.
-pub const RESERVED_NODE_ATTRS: [&str; 12] = [
+/// 
+/// NOTE:
+/// This list was created before contexts were decided to exist in their own files instead of
+/// that data being stored on edges. So many of these reservations aren't really needed anymore. 
+pub const RESERVED_NODE_ATTRS: [&str; 13] = [
+    "uuid",
     "path", // The full path of the node, name included. Implemented as an alias, but still reserved.
     "name", // The name of the node, without the path. Maybe allows for different characters?
 
