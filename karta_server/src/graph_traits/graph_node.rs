@@ -1,5 +1,7 @@
 use std::{error::Error, path::PathBuf};
 
+use crate::elements::node_path::NodeHandle;
+
 use super::{attribute::{Attribute, RelativePosition}, edge::Edge, node::DataNode, node_path::NodePath, nodetype::NodeTypeId};
 
 pub trait GraphNodes {
@@ -8,10 +10,7 @@ pub trait GraphNodes {
 
     /// Retrieves a particular node's data from the database.
     /// The path is relative to the root of the graph.
-    ///
-    /// TODO: This takes a mutable reference because of the indexing requirement, which is
-    /// awkward and tech debt.
-    fn open_node(&self, path: &NodePath) -> Result<DataNode, Box<dyn Error>>;
+    fn open_node(&self, handle: &NodeHandle) -> Result<DataNode, Box<dyn Error>>;
 
     // Retrieves the edges of a particular node.
     // fn get_node_edges(&self, path: &NodePath) -> Vec<Edge>;
@@ -38,7 +37,7 @@ mod tests {
 
     use crate::{
         elements::{
-            self, attribute::{Attribute, RESERVED_NODE_ATTRS}, node, node_path::NodePath, nodetype::ARCHETYPES
+            self, attribute::{Attribute, RESERVED_NODE_ATTRS}, node, node_path::{NodeHandle, NodePath}, nodetype::ARCHETYPES
         }, graph_agdb::GraphAgdb, graph_traits::graph_edge::GraphEdge, prelude::{DataNode, NodeTypeId}, utils::utils::TestContext
     };
     use agdb::QueryBuilder;
@@ -92,7 +91,7 @@ mod tests {
 
         ctx.graph.insert_nodes(vec![node]);
 
-        ctx.graph.open_node(&path).expect("Node should exist");
+        ctx.graph.open_node(&NodeHandle::Path(path)).expect("Node should exist");
     }
 
     #[test]
@@ -118,7 +117,7 @@ mod tests {
         assert_eq!(root_connections.len(), second_connections.len());
 
         // Check the name too
-        let mod_node = ctx.graph.open_node(&path).unwrap();
+        let mod_node = ctx.graph.open_node(&NodeHandle::Path(path)).unwrap();
         assert_eq!(mod_node.name(), "testerer");
     }
 
@@ -135,12 +134,33 @@ mod tests {
 
         ctx.graph.insert_nodes(vec![third_node]);
 
-        let second_node = ctx.graph.open_node(&second);
+        let second_node = ctx.graph.open_node(&NodeHandle::Path(second));
         assert!(second_node.is_ok());
 
-        let first_node = ctx.graph.open_node(&first);
+        let first_node = ctx.graph.open_node(&NodeHandle::Path(first));
         assert!(first_node.is_ok());
 
         println!("{:#?}", ctx.graph.get_all_aliases());
+    }
+
+    #[test]
+    fn uuid__can_be_used_to_find_node() {
+        let func_name = "uuid__can_be_used_to_find_node";
+        let mut ctx = TestContext::new(func_name);
+
+        let path = NodePath::new(PathBuf::from("test"));
+
+        let node = DataNode::new(&path, NodeTypeId::virtual_generic());
+        
+        ctx.graph.insert_nodes(vec![node]);
+        
+        let found_by_path = ctx.graph.open_node(&NodeHandle::Path(path)).expect("Node should exist");
+        let uuid = found_by_path.uuid().expect("Node should have a uuid");
+        println!(" We will search for uuid {:#?}", uuid);
+
+
+        let found_by_uuid = ctx.graph.open_node(&NodeHandle::Uuid(uuid)).expect("Node should exist");
+        
+        assert_eq!(found_by_path, found_by_uuid);
     }
 }

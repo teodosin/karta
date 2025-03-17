@@ -1,8 +1,14 @@
 use std::path::PathBuf;
 
 use agdb::{DbError, DbValue};
+use uuid::Uuid;
 
 use super::nodetype::ARCHETYPES;
+
+pub enum NodeHandle {
+    Path(NodePath),
+    Uuid(Uuid)
+}
 
 /// Newtype wrapper for the node path. Acts as the main struct for
 /// creating and modifying node paths, turning them into db aliases/strings and

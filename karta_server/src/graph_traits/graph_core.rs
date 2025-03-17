@@ -36,7 +36,7 @@ mod tests {
     use directories::ProjectDirs;
 
     use crate::{
-        elements::{node, node_path::NodePath}, graph_agdb::GraphAgdb, graph_traits::{graph_core::GraphCore, graph_edge::GraphEdge, graph_node::GraphNodes, StoragePath}, prelude::NodeTypeId, utils::utils::TestContext
+        elements::{node, node_path::{NodeHandle, NodePath}}, graph_agdb::GraphAgdb, graph_traits::{graph_core::GraphCore, graph_edge::GraphEdge, graph_node::GraphNodes, StoragePath}, prelude::NodeTypeId, utils::utils::TestContext
     };
 
     /// Add a node to the db, then create a new graph with the same name.
@@ -55,7 +55,7 @@ mod tests {
 
         let mut second = TestContext::new(func_name);
 
-        let root_node_result = second.graph.open_node(&node_path);
+        let root_node_result = second.graph.open_node(&NodeHandle::Path(node_path));
 
         // println!("Root node result: {:#?}", root_node_result);
 
@@ -88,7 +88,7 @@ mod tests {
             storage.clone()
         );
 
-        let root_node_result = ctx.graph.open_node(&NodePath::root());
+        let root_node_result = ctx.graph.open_node(&NodeHandle::Path(NodePath::root()));
 
         assert_eq!(root_node_result.is_ok(), true);
 
@@ -111,7 +111,7 @@ mod tests {
             // println!("Atype as buf {:?}", path.buf());
             // println!("looking for achetype node {:?}", path.alias());
 
-            let node = ctx.graph.open_node(&path);
+            let node = ctx.graph.open_node(&NodeHandle::Path(path.clone()));
             assert_eq!(node.is_ok(), true, "Node {} not found", path.alias());
 
             if path != NodePath::root() {
@@ -119,7 +119,7 @@ mod tests {
 
                 assert_eq!(parent_path, NodePath::root(), "Node {} is not a child of root", path.alias());
 
-                let parent_node = ctx.graph.open_node(&parent_path);
+                let parent_node = ctx.graph.open_node(&NodeHandle::Path(parent_path.clone()));
                 assert_eq!(parent_node.is_ok(), true, "Parent of node {} not found", path.alias());
 
                 let edge = ctx.graph.get_edge_strict(&parent_path, &path);
