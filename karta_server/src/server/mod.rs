@@ -78,7 +78,7 @@ pub async fn run_server(root_path: PathBuf) {
     axum::serve(listener, app).await.unwrap();
 }
 
-pub fn load_or_create_vault() -> Result<PathBuf, Box<dyn Error>> {
+pub fn cli_load_or_create_vault() -> Result<PathBuf, Box<dyn Error>> {
     let mut vaults = get_vaults_config();
 
 
