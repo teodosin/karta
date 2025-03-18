@@ -142,14 +142,14 @@ pub fn cli_load_or_create_vault() -> Result<PathBuf, Box<dyn Error>> {
 }
 
 #[derive(Debug, serde::Serialize, Deserialize, Default)]
-struct Vaults {
+pub struct Vaults {
     default: PathBuf,
     vaults: Vec<PathBuf>,
 }
 
 impl Vaults {
 
-    fn add_vault(&mut self, vault_path: &PathBuf) {
+    pub fn add_vault(&mut self, vault_path: &PathBuf) {
         self.default = vault_path.clone();
 
         // Check if the vault already exists in the vaults list
@@ -158,7 +158,7 @@ impl Vaults {
     }
     
     // Save the current vaults config to the file.
-    fn save(&self) {
+    pub fn save(&self) {
         let file_path = vaults_config_path();
 
         println!("");
@@ -171,7 +171,7 @@ impl Vaults {
 }
     
 
-fn vaults_config_path() -> PathBuf {
+pub fn vaults_config_path() -> PathBuf {
     let file_name = "karta_vaults.ron";
     let config_path = directories::ProjectDirs::from("com", "karta_server", "karta_server")
         .unwrap()
@@ -183,7 +183,7 @@ fn vaults_config_path() -> PathBuf {
     file_path
 }
 
-fn get_vaults_config() -> Vaults {
+pub fn get_vaults_config() -> Vaults {
     let file_path = vaults_config_path();
 
     let config_file = match std::fs::File::open(file_path) {
