@@ -1,10 +1,10 @@
 // use karta_server::prelude::run_server;
 
-use karta_server::prelude::{load_or_create_vault, run_server};
+use karta_server::prelude::{cli_load_or_create_vault, run_server};
 
 #[tokio::main]
 async fn main() {
-    let vault_path = load_or_create_vault();
+    let vault_path = cli_load_or_create_vault();
     let vault_path = match vault_path {
         Ok(path) => path,
         Err(_) => {
