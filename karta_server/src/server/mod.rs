@@ -97,7 +97,7 @@ pub fn load_or_create_vault() -> Result<PathBuf, Box<dyn Error>> {
             println!("{}: {}", index, vault.to_string_lossy());
         }
         println!("");
-        println!("Type the path or number for the server. A valid path not listed above will create a new vault.");
+        println!("Type the path or number for the vault. A valid path not listed above will create a new vault.");
         println!("Leave empty to exit.");
         println!("");
     }
