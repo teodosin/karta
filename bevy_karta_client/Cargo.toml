@@ -6,13 +6,10 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bevy = "0.15.0"
-directories = "5.0.1"
+bevy = "0.15.3"
+directories = "6.0.0"
 native-dialog = "0.7.0"
 
 
 # Karta subcrates
-# karta_server = { git = "https://github.com/teodosin/karta_server", branch="main"}
-
-# [patch."https://github.com/teodosin/karta_server.git"]
 karta_server = { path = "../karta_server" }

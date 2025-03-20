@@ -1,9 +1,10 @@
-use crate::{context::ContextDb, prelude::*};
+use crate::{prelude::*};
 use axum::{
     extract::{Path, State},
     routing::{get, post},
     Extension, Json, Router,
 };
+use karta_service::KartaService;
 use serde::Deserialize;
 use std::{io::{self, Write}, sync::RwLock};
 use std::path::PathBuf;
@@ -12,17 +13,21 @@ use tokio::sync::broadcast;
 
 mod data_endpoints;
 mod context_endpoints;
+pub mod karta_service;
 
 #[derive(Clone)]
 pub struct AppState {
-    graph_db: Arc<RwLock<GraphAgdb>>,
-    context_db: Arc<RwLock<ContextDb>>,
+    service: Arc<RwLock<KartaService>>,
     tx: broadcast::Sender<String>,
 }
 
 pub fn create_router(state: AppState) -> Router {
     let router = Router::new()
-        .route("/", get(|| async { "You gonna get some nodes, aight?" }))
+        .route("/", get(|| async { "Karta Server" }))
+
+        // So what routes do we want?
+        // /data/
+        // /ctx/
 
         // .route("/idx/*id", post(index_node_connections))
 
@@ -49,23 +54,16 @@ pub async fn run_server(root_path: PathBuf) {
         std::fs::create_dir_all(&storage_dir).expect("Failed to create storage path");
     }
 
-    let graph_agdb = Arc::new(RwLock::new(GraphAgdb::new(
+    let service = Arc::new(RwLock::new(KartaService::new(
         name,
         root_path.clone(),
         storage_dir.clone(),
     )));
-    let context_db = Arc::new(RwLock::new(
-        ContextDb::new(
-            name.to_owned(),
-            root_path.clone(),
-            storage_dir.clone(),
-        )
-    ));
+
     let (tx, _rx) = broadcast::channel(100);
 
     let state = AppState {
-        graph_db: graph_agdb,
-        context_db,
+        service,
         tx
     };
 
@@ -165,8 +163,9 @@ impl Vaults {
         println!("Saving vaults config to: {}", file_path.to_string_lossy());
         println!("");
 
-        let config_file = std::fs::File::create(file_path).unwrap();
-        ron::ser::to_writer_pretty(config_file, &self, Default::default()).unwrap();
+        let mut config_file = std::fs::File::create(file_path).unwrap();
+        let pretty_config = ron::ser::to_string_pretty(&self, Default::default()).unwrap();
+        config_file.write_all(pretty_config.as_bytes());
     }
 }
     

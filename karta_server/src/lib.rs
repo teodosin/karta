@@ -34,5 +34,9 @@ pub mod prelude {
 
     pub use crate::graph_agdb::GraphAgdb;
 
+    pub use crate::context::*;
+
+    pub use crate::layout::*;
+
     pub use crate::server::*;
 }

@@ -25,7 +25,7 @@ impl Plugin for ContextPlugin {
 
             .add_systems(PreUpdate, (
                 change_context,
-                on_context_change.run_if(resource_changed::<CurrentContext>)
+                // on_context_change.run_if(resource_changed::<CurrentContext>)
             ).chain())
 
             .add_systems(Update, (
@@ -92,128 +92,128 @@ impl KartaContext {
 // --------------------------------------------------------------------
 // Systems
 
-fn on_context_change(
-    mut commands: Commands,
-    context: Res<CurrentContext>,
-    mut vault: ResMut<CurrentVault>,
-    open_nodes: Query<Entity, With<DataNode>>,
-    pe_index: Res<PathsToEntitiesIndex>,
-){
-    let graph = match &mut vault.graph {
-        Some(graph) => graph,
-        None => return, // TODO: Better error handling here
-    };
+// fn on_context_change(
+//     mut commands: Commands,
+//     context: Res<CurrentContext>,
+//     mut vault: ResMut<CurrentVault>,
+//     open_nodes: Query<Entity, With<DataNode>>,
+//     pe_index: Res<PathsToEntitiesIndex>,
+// ){
+//     let graph = match &mut vault.graph {
+//         Some(graph) => graph,
+//         None => return, // TODO: Better error handling here
+//     };
 
-    let ctx = match &context.context {
-        Some(ctx) => ctx,
-        None => return, // TODO: Better error handling here
-    };
+//     let ctx = match &context.context {
+//         Some(ctx) => ctx,
+//         None => return, // TODO: Better error handling here
+//     };
     
-    let ctx_root_nodepath = ctx.path.clone();
+//     let ctx_root_nodepath = ctx.path.clone();
 
     
-    let node = graph.open_node(&ctx_root_nodepath);
+//     let node = graph.open_node(&ctx_root_nodepath);
 
 
 
-    let node: karta_server::prelude::Node = match node {
-        Ok(node) => {
-            println!("Node found: {:#?}", node);
-            node
-        },
-        Err(e) => {
-            println!("Node not found: {}", e);
-            return;
-        }
-    };
+//     let node: karta_server::prelude::Node = match node {
+//         Ok(node) => {
+//             println!("Node found: {:#?}", node);
+//             node
+//         },
+//         Err(e) => {
+//             println!("Node not found: {}", e);
+//             return;
+//         }
+//     };
     
-    let nodepath = node.path().clone();
-    let name = node.name().to_string();
-    let ctx_rt_e: Option<Entity>;
+//     let nodepath = node.path().clone();
+//     let name = node.name().to_string();
+//     let ctx_rt_e: Option<Entity>;
     
-    graph.index_node_context(&nodepath);
+//     graph.index_node_context(&nodepath);
 
-    if !pe_index.0.contains_key(&nodepath){
-        ctx_rt_e = Some(commands.spawn(DataNodeBundle{
-            name: Name::new(name),
-            data_node: DataNode {
-                path: nodepath,
-                created_time: node.created_time().clone(),
-                modified_time: node.modified_time().clone(),
-                persistent: false,
-            },
-            data_node_type: node_plugin::DataNodeType(node.ntype_name()),
-            attributes: node_plugin::Attributes(node.attributes().clone()),
-        }).id());
-    } else {
-        ctx_rt_e = match pe_index.get_data(&nodepath) {
-            Some(e) => Some(e),
-            None => None,
-        };
-    }
+//     if !pe_index.0.contains_key(&nodepath){
+//         ctx_rt_e = Some(commands.spawn(DataNodeBundle{
+//             name: Name::new(name),
+//             data_node: DataNode {
+//                 path: nodepath,
+//                 created_time: node.created_time().clone(),
+//                 modified_time: node.modified_time().clone(),
+//                 persistent: false,
+//             },
+//             data_node_type: node_plugin::DataNodeType(node.ntype_name()),
+//             attributes: node_plugin::Attributes(node.attributes().clone()),
+//         }).id());
+//     } else {
+//         ctx_rt_e = match pe_index.get_data(&nodepath) {
+//             Some(e) => Some(e),
+//             None => None,
+//         };
+//     }
 
-    for node in open_nodes.iter(){
-        match ctx_rt_e {
-            Some(rt_e) => {
-                if node == rt_e {
-                    println!("Not deleting new context root: {}", rt_e);
-                    continue;
-                }
-            },
-            None => {}
-        }
+//     for node in open_nodes.iter(){
+//         match ctx_rt_e {
+//             Some(rt_e) => {
+//                 if node == rt_e {
+//                     println!("Not deleting new context root: {}", rt_e);
+//                     continue;
+//                 }
+//             },
+//             None => {}
+//         }
 
-        commands.entity(node).insert(ToBeDespawned);
-    }
+//         commands.entity(node).insert(ToBeDespawned);
+//     }
 
 
-    let connections: Vec<(karta_server::prelude::Node, Edge)> = graph.open_node_connections(&ctx_root_nodepath);
+//     let connections: Vec<(karta_server::prelude::Node, Edge)> = graph.open_node_connections(&ctx_root_nodepath);
 
-    for node in connections.iter() {
-        println!("Node: {:#?}", node);
-        let (node, edge) = node;
-        let node_path = node.path().clone();
-        let name = node.name().to_string();
+//     for node in connections.iter() {
+//         println!("Node: {:#?}", node);
+//         let (node, edge) = node;
+//         let node_path = node.path().clone();
+//         let name = node.name().to_string();
 
-        if pe_index.0.contains_key(&node_path) {
-            let rt_e = pe_index.get_data(&node_path);
-            match rt_e {
-                Some(rt_e) => {
-                    match commands.get_entity(rt_e) {
-                        Some(mut entity) => {
-                            entity.remove::<ToBeDespawned>();
-                        },
-                        None => {}
-                    }
-                },
-                None => {}
-            }
-            continue;
-        }
+//         if pe_index.0.contains_key(&node_path) {
+//             let rt_e = pe_index.get_data(&node_path);
+//             match rt_e {
+//                 Some(rt_e) => {
+//                     match commands.get_entity(rt_e) {
+//                         Some(mut entity) => {
+//                             entity.remove::<ToBeDespawned>();
+//                         },
+//                         None => {}
+//                     }
+//                 },
+//                 None => {}
+//             }
+//             continue;
+//         }
 
-        commands.spawn(DataNodeBundle{
-            name: Name::new(name),
-            data_node: DataNode {
-                path: node_path,
-                created_time: node.created_time().clone(),
-                modified_time: node.modified_time().clone(),
-                persistent: false,
-            },
-            data_node_type: node_plugin::DataNodeType(node.ntype_name()),
-            attributes: node_plugin::Attributes(node.attributes().clone()),
-        });
+//         commands.spawn(DataNodeBundle{
+//             name: Name::new(name),
+//             data_node: DataNode {
+//                 path: node_path,
+//                 created_time: node.created_time().clone(),
+//                 modified_time: node.modified_time().clone(),
+//                 persistent: false,
+//             },
+//             data_node_type: node_plugin::DataNodeType(node.ntype_name()),
+//             attributes: node_plugin::Attributes(node.attributes().clone()),
+//         });
 
-        commands.spawn(DataEdgeBundle {
-            data_edge: DataEdge {
-                source: edge.source().clone(),
-                target: edge.target().clone(),
-                created_time: edge.created_time().clone(),
-                modified_time: edge.modified_time().clone(),
-            },
-            attributes: node_plugin::Attributes(edge.attributes().clone()),
-        });
-    }
-}
+//         commands.spawn(DataEdgeBundle {
+//             data_edge: DataEdge {
+//                 source: edge.source().clone(),
+//                 target: edge.target().clone(),
+//                 created_time: edge.created_time().clone(),
+//                 modified_time: edge.modified_time().clone(),
+//             },
+//             attributes: node_plugin::Attributes(edge.attributes().clone()),
+//         });
+//     }
+// }
 
 fn change_context(
     mut event: EventReader<ChangeContextEvent>,
