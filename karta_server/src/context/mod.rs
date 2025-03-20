@@ -1,4 +1,4 @@
-use std::{error::Error, path::PathBuf};
+use std::{error::Error, io::Write, path::PathBuf};
 
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -41,8 +41,9 @@ impl ContextDb {
         file_name.push_str(".ctx");
         let full_path = self.get_contexts_dir().join(file_name);
 
-        let context_file = std::fs::File::create(full_path)?;
-        ron::ser::to_writer(context_file, context)?;
+        let mut context_file = std::fs::File::create(full_path)?;
+        let pretty_config = ron::ser::to_string_pretty(&context, Default::default()).unwrap();
+        context_file.write_all(pretty_config.as_bytes()).unwrap();
         Ok(())
     }
 }

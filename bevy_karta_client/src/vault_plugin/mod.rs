@@ -5,6 +5,7 @@ use std::io::{self, BufRead, Write};
 
 use bevy::prelude::*;
 use directories::ProjectDirs;
+use karta_server::prelude::karta_service::KartaService;
 use karta_server::prelude::*;
 use native_dialog::FileDialog;
 
@@ -126,7 +127,7 @@ impl VaultOfVaults {
 #[derive(Resource)]
 pub struct CurrentVault {
     pub vault: Option<KartaVault>,
-    pub graph: Option<GraphCommands>,
+    pub graph: Option<KartaService>,
 }
 
 impl CurrentVault {
@@ -144,10 +145,10 @@ impl CurrentVault {
             Some(name) => name.to_str().unwrap(),
             None => return,
         };
-        self.graph = Some(GraphCommands::new(
+        self.graph = Some(KartaService::new(
             name,
             vault.path.clone(),
-            Some(vault.path.clone()),
+            vault.path.clone(),
         ));
         self.vault = Some(vault);
     }
