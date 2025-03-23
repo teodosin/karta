@@ -17,14 +17,7 @@ impl Plugin for VaultPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(VaultOfVaults::new())
             .insert_resource(CurrentVault::new())
-            .add_systems(PreStartup, load_vaults)
             .add_systems(PostUpdate, set_context_on_vault_change.run_if(resource_changed::<CurrentVault>));
-    }
-}
-
-fn load_vaults(mut vaults: ResMut<VaultOfVaults>) {
-    if let Err(err) = vaults.load_vaults_from_config() {
-        error!("Failed to load vaults from config: {}", err);
     }
 }
 
@@ -32,33 +25,29 @@ fn load_vaults(mut vaults: ResMut<VaultOfVaults>) {
 #[derive(Resource)]
 pub struct VaultOfVaults {
     pub search_input: String,
-    project_dir: ProjectDirs,
-    vaults: Vec<KartaVault>,
+    vaults: Vaults,
 }
 
 impl VaultOfVaults {
     fn new() -> Self {
         VaultOfVaults {
             search_input: String::new(),
-            project_dir: ProjectDirs::from("com", "Teodosin", "Karta").unwrap(),
-            vaults: vec![],
+            vaults: get_vaults_config(),
         }
     }
 
-    pub fn config_dir(&self) -> PathBuf {
-        self.project_dir.config_dir().to_path_buf()
-    }
 
     pub fn create_vault(&mut self, cur: &mut CurrentVault) -> io::Result<()> {
         let search_path = PathBuf::from(self.search_input.clone());
 
-        if self.vaults.contains(&KartaVault::new(search_path.clone())) {
+        if self.vaults.get().contains(&search_path) {
             return Ok(());
         }
 
         if search_path.exists() && search_path.is_dir() {
-            let vault = KartaVault::new(search_path);
-            self.vaults.push(vault);
+            let vault_path = search_path;
+            self.vaults.add_vault(&vault_path);
+            
         } else {
             let folder = FileDialog::new()
                 .set_title("Select Karta Vault location")
@@ -73,6 +62,7 @@ impl VaultOfVaults {
                     }
 
                     let vault = KartaVault::new(folder);
+                    self.vaults.add_vault(&vault.path);
                     cur.set_vault(vault);
                 }
                 None => {
@@ -81,44 +71,11 @@ impl VaultOfVaults {
                 }
             }
         }
-        self.save_vaults_to_config()?;
+        self.vaults.save();
         Ok(())
     }
 
-    fn config_file_path(&self) -> PathBuf {
-        self.config_dir().join("vaults.txt")
-    }
-
-    pub fn save_vaults_to_config(&self) -> io::Result<()> {
-        fs::create_dir_all(self.config_dir())?;
-        let mut file = File::create(self.config_file_path())?;
-
-        for vault in &self.vaults {
-            writeln!(file, "{}", vault.path.display())?;
-        }
-        Ok(())
-    }
-
-    pub fn load_vaults_from_config(&mut self) -> io::Result<()> {
-        let path = self.config_file_path();
-        if !path.exists() {
-            return Ok(());
-        }
-
-        let file = File::open(path)?;
-        let reader = io::BufReader::new(file);
-
-        self.vaults.clear();
-        for line in reader.lines() {
-            let path = PathBuf::from(line?);
-            if path.exists() && path.is_dir() {
-                self.vaults.push(KartaVault::new(path));
-            }
-        }
-        Ok(())
-    }
-
-    pub fn get_vaults(&self) -> &Vec<KartaVault> {
+    pub fn config(&self) -> &Vaults {
         &self.vaults
     }
 }

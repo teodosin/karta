@@ -146,7 +146,7 @@ pub struct Vaults {
 }
 
 impl Vaults {
-    pub fn vaults(&self) -> &Vec<PathBuf> {
+    pub fn get(&self) -> &Vec<PathBuf> {
         &self.vaults
     }
 
