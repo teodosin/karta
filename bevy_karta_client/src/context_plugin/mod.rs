@@ -66,6 +66,10 @@ impl CurrentContext {
             path: ctx_path,
         });
     }
+
+    pub fn get(&self) -> Option<&KartaContext> {
+        self.context.as_ref()
+    }
 }
 
 
@@ -76,6 +80,10 @@ pub struct KartaContext {
 }
 
 impl KartaContext {
+    pub fn path(&self) -> &NodePath {
+        &self.path
+    }
+
     pub fn root() -> Self{
         KartaContext {
             path: NodePath::root(),
