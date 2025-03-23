@@ -146,6 +146,9 @@ pub struct Vaults {
 }
 
 impl Vaults {
+    pub fn vaults(&self) -> &Vec<PathBuf> {
+        &self.vaults
+    }
 
     pub fn add_vault(&mut self, vault_path: &PathBuf) {
         self.default = vault_path.clone();
