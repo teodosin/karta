@@ -127,8 +127,11 @@
                 currentNode = node;
                 node.classList.add("ring-2", "ring-yellow-400");
 
-                // Calculate offset from node's top-left corner
+                // Calculate offset from node's top-left corner in canvas coordinates
                 const rect = node.getBoundingClientRect();
+                const canvasRect = canvasContainer.getBoundingClientRect();
+
+                // Convert screen coordinates to canvas coordinates
                 nodeOffsetX = e.clientX - rect.left;
                 nodeOffsetY = e.clientY - rect.top;
             } else if (currentMode === "connect") {
@@ -325,13 +328,13 @@
             // Calculate position in canvas space
             const canvasRect = canvasContainer.getBoundingClientRect();
 
-            // Apply inverse transformation to get true position
-            const x =
-                (e.clientX - canvasRect.left - nodeOffsetX * scale) / scale -
-                posX / scale;
-            const y =
-                (e.clientY - canvasRect.top - nodeOffsetY * scale) / scale -
-                posY / scale;
+            // Calculate the mouse position in the original (unscaled) canvas coordinate system
+            const mouseXInCanvas = (e.clientX - canvasRect.left - posX) / scale;
+            const mouseYInCanvas = (e.clientY - canvasRect.top - posY) / scale;
+
+            // Apply the original offset, also scaled appropriately
+            const x = mouseXInCanvas - nodeOffsetX / scale;
+            const y = mouseYInCanvas - nodeOffsetY / scale;
 
             updateNodePosition(currentNode, x, y);
         } else if (currentMode === "connect" && sourceNode) {
