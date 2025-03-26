@@ -146,7 +146,9 @@ pub struct Vaults {
 }
 
 impl Vaults {
-    pub fn get(&self) -> &Vec<PathBuf> {
+    pub fn get(&mut self) -> &Vec<PathBuf> {
+        self.clean_vaults();
+
         &self.vaults
     }
 
@@ -155,10 +157,15 @@ impl Vaults {
 
         // Check if the vault already exists in the vaults list
         if self.vaults.contains(&vault_path) { return };
+
+        let karta_dir = vault_path.join(".karta");
+        if !karta_dir.exists() {
+            std::fs::create_dir_all(&karta_dir).unwrap();
+        }
         self.vaults.push(vault_path.to_path_buf());
     }
     
-    // Save the current vaults config to the file.
+    /// Save the current vaults config to the file.
     pub fn save(&self) {
         let file_path = vaults_config_path();
 
@@ -169,6 +176,14 @@ impl Vaults {
         let mut config_file = std::fs::File::create(file_path).unwrap();
         let pretty_config = ron::ser::to_string_pretty(&self, Default::default()).unwrap();
         config_file.write_all(pretty_config.as_bytes());
+    }
+
+    /// Iterates over the vault paths and removes the ones without a .karta directory.
+    fn clean_vaults(&mut self) {
+        self.vaults.retain(|vault_path| {
+            let karta_dir = vault_path.join(".karta");
+            karta_dir.exists()
+        });
     }
 }
     
