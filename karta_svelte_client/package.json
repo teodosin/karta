@@ -22,5 +22,8 @@
 		"tailwindcss": "^4.0.0",
 		"typescript": "^5.0.0",
 		"vite": "^6.0.0"
+	},
+	"dependencies": {
+		"@panzoom/panzoom": "^4.6.0"
 	}
 }
