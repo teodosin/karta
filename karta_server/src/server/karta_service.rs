@@ -23,6 +23,15 @@ impl KartaService {
         storage_dir: PathBuf,
     ) -> Self {
 
+        // Check if the storage dir is called .karta.
+        // If not, create it.
+        // This might be a bit crude, but it will do for now.
+        let mut storage_dir = storage_dir;
+        if storage_dir.file_name().unwrap() != ".karta" {
+            storage_dir = storage_dir.join(".karta");
+            std::fs::create_dir_all(&storage_dir).unwrap();
+        }
+
         let data = GraphAgdb::new(
             name,
             root_path.clone(),
