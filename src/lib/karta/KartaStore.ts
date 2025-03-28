@@ -1,6 +1,8 @@
 import { writable, get } from 'svelte/store';
 import { tweened } from 'svelte/motion';
 import { cubicOut } from 'svelte/easing';
+import { localAdapter } from '../util/LocalAdapter';
+import type { KartaNode, KartaEdge } from '../types/types';
 
 // --- Types ---
 
@@ -10,16 +12,13 @@ export interface ViewNodeLayout {
 	// scale, rotation etc. later
 }
 
-export interface DataNode {
-	id: string; // Using simple string ID for now, will be UUID later
-	label: string; // Example property
-	// ntype, other attributes later
+// Extend KartaNode from types.ts
+export interface DataNode extends KartaNode {
+	label: string; // Example property, remove later
 }
 
-export interface Edge {
-	id: string;
-	source: string; // Source Node ID
-	target: string; // Target Node ID
+export interface Edge extends KartaEdge {
+	// no extra properties for now - it should extend KartaEdge, not implement it
 }
 
 // Use string for ContextID for simplicity initially
@@ -53,11 +52,14 @@ export const tempLineTargetPosition = writable<{ x: number; y: number } | null>(
 let nodeCounter = 0; // Simple ID generation for offline mode
 let edgeCounter = 0; // Simple ID generation
 
-export function createNodeAtPosition(canvasX: number, canvasY: number, labelPrefix = 'Node') {
+export async function createNodeAtPosition(canvasX: number, canvasY: number, labelPrefix = 'Node') {
 	const newNodeId: NodeId = `node-${nodeCounter++}`;
 	const newNode: DataNode = {
 		id: newNodeId,
+		ntype: 'text', // Default node type for now
 		label: `${labelPrefix} ${nodeCounter}`,
+		x: canvasX,
+		y: canvasY,
 	};
 	const newLayout: ViewNodeLayout = {
 		x: canvasX,
@@ -68,10 +70,14 @@ export function createNodeAtPosition(canvasX: number, canvasY: number, labelPref
 	layout.update(l => l.set(newNodeId, newLayout));
 
 	console.log(`Created node ${newNodeId} at (${canvasX}, ${canvasY})`);
-    // TODO: Trigger persistence later
+    if (localAdapter) {
+        await localAdapter?.saveNode(newNode);
+    } else {
+        console.warn("LocalAdapter not initialized, persistence disabled in SSR.");
+    }
 }
 
-export function updateNodeLayout(nodeId: NodeId, newX: number, newY: number) {
+export async function updateNodeLayout(nodeId: NodeId, newX: number, newY: number) {
     layout.update(l => {
         const nodeLayout = l.get(nodeId);
         if (nodeLayout) {
@@ -82,11 +88,14 @@ export function updateNodeLayout(nodeId: NodeId, newX: number, newY: number) {
         }
         return new Map(l); // Return a new map to ensure reactivity
     });
-    // TODO: Trigger batched persistence later
+    const node = get(nodes).get(nodeId);
+    if (node && localAdapter) {
+        await localAdapter.saveNode({...node, x: newX, y: newY}); // Update node position in persistence
+    }
 }
 
 
-export function createEdge(sourceId: NodeId, targetId: NodeId) {
+export async function createEdge(sourceId: NodeId, targetId: NodeId) {
     if (sourceId === targetId) {
         console.warn("Cannot connect node to itself.");
         return;
@@ -109,7 +118,11 @@ export function createEdge(sourceId: NodeId, targetId: NodeId) {
 
 	edges.update(e => e.set(newEdgeId, newEdge));
 	console.log(`Created edge ${newEdgeId} between ${sourceId} and ${targetId}`);
-    // TODO: Trigger persistence later
+    if (localAdapter && newEdge) { // Added check for newEdge
+        await localAdapter.saveEdge(newEdge);
+    } else {
+        console.warn("LocalAdapter not initialized, persistence disabled in SSR.");
+    }
 }
 
 
@@ -164,25 +177,58 @@ export function screenToCanvasCoordinates(
 
 
 // --- Initialization ---
+
+async function loadNodesFromPersistence() {
+    if (localAdapter) {
+        try {
+            const persistedNodes = await localAdapter.getNodes();
+            if (persistedNodes && persistedNodes.length > 0) {
+                persistedNodes.forEach((node: KartaNode) => {
+                    nodes.update(n => n.set(node.id, node as DataNode));
+                    layout.update(l => l.set(node.id, { x: node.x, y: node.y }));
+                });
+                nodeCounter = persistedNodes.length;
+                console.log(`Loaded ${persistedNodes.length} nodes from persistence.`);
+            } else {
+                console.log("No nodes found in persistence, creating initial nodes.");
+                createInitialNodes();
+            }
+
+            const persistedEdges = await localAdapter.loadEdges();
+            if (persistedEdges && persistedEdges.length > 0) {
+                persistedEdges.forEach((edge: Edge) => {
+                    edges.update(e => e.set(edge.id, edge));
+                });
+                edgeCounter = persistedEdges.length;
+                console.log(`Loaded ${persistedEdges.length} edges from persistence.`);
+            } else {
+                console.log("No edges found in persistence.");
+            }
+
+
+        } catch (error) {
+            console.error("Error loading data from persistence:", error);
+            console.log("Creating initial nodes and edges instead.");
+            createInitialNodes();
+        }
+    } else {
+        console.log("localAdapter not initialized, skipping load from persistence in SSR.");
+        createInitialNodes();
+    }
+}
+
+
 function createInitialNodes() {
-	const gridSize = 3;
-	const spacing = 150;
-	const startX = 100;
-	const startY = 100;
-
-	for (let i = 0; i < gridSize; i++) {
-		for (let j = 0; j < gridSize; j++) {
-			const x = startX + j * spacing;
-			const y = startY + i * spacing;
-            // Use internal counter logic, rely on createNodeAtPosition
-            createNodeAtPosition(x, y, `Node`);
-		}
-	}
-     // Reset counter after initial setup
-    nodeCounter = get(nodes).size;
+	// No initial nodes needed now, loading from persistence or creating on demand
 }
 
-// Run initialization only if nodes map is empty
-if (typeof window !== 'undefined' && get(nodes).size === 0) { // Check for browser environment
-    createInitialNodes();
+
+// Run initialization only in browser environment
+if (typeof window !== 'undefined' ) {
+    loadNodesFromPersistence();
 }
+
+
+// --- Persistence Loading (Initial attempt, refine later) ---
+// TODO: Load nodes, edges, layouts from LocalAdapter on store init
+// For now, just creating initial nodes if store is empty on load.
