@@ -21,25 +21,43 @@
 	let panStartY = 0;
 
 	function handleWheel(e: WheelEvent) {
-		e.preventDefault();
-		if (!canvasContainer) return;
+    e.preventDefault();
+    if (!canvasContainer) return;
 
-		const rect = canvasContainer.getBoundingClientRect();
-		const mouseX = e.clientX - rect.left;
-		const mouseY = e.clientY - rect.top;
+    const rect = canvasContainer.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
 
-		const currentTransform = get(viewTransform);
-		const beforeZoomX = (mouseX - currentTransform.posX) / currentTransform.scale;
-		const beforeZoomY = (mouseY - currentTransform.posY) / currentTransform.scale;
+    const currentTransform = get(viewTransform);
+    const beforeZoomX = (mouseX - currentTransform.posX) / currentTransform.scale;
+    const beforeZoomY = (mouseY - currentTransform.posY) / currentTransform.scale;
 
-		let newScale = currentTransform.scale * (e.deltaY < 0 ? 1.1 : 1 / 1.1);
-		newScale = Math.max(0.1, Math.min(newScale, 5));
+    let newScale = currentTransform.scale;
+    let newPosX = currentTransform.posX;
+    let newPosY = currentTransform.posY;
+    const zoomSensitivityFactor = 2.0; // Slightly slower zoom
+    const panSensitivityFactor = 4.5;  // Slightly faster pan
 
-		const newPosX = mouseX - beforeZoomX * newScale;
-		const newPosY = mouseY - beforeZoomY * newScale;
+    if (e.ctrlKey) {
+        // Pinch-to-zoom (Ctrl + Wheel)
+        newScale = currentTransform.scale * (e.deltaY < 0 ? 1 + 0.1 * zoomSensitivityFactor : 1 / (1 + 0.1 * zoomSensitivityFactor)); // Slower zoom factor
+        newScale = Math.max(0.1, Math.min(newScale, 5));
+        newPosX = mouseX - beforeZoomX * newScale;
+        newPosY = mouseY - beforeZoomY * newScale;
+    } else if (e.deltaMode === 0) {
+        // Touchpad panning (Pixel deltaMode)
+        newPosX = currentTransform.posX - e.deltaX * panSensitivityFactor; // Faster panning speed
+        newPosY = currentTransform.posY - e.deltaY * panSensitivityFactor; // Faster panning speed
+    } else {
+        // Mouse wheel zoom (Line or Page deltaMode)
+        newScale = currentTransform.scale * (e.deltaY < 0 ? 1.1 : 1 / 1.1);
+        newScale = Math.max(0.1, Math.min(newScale, 5));
+        newPosX = mouseX - beforeZoomX * newScale;
+        newPosY = mouseY - beforeZoomY * newScale;
+    }
 
-		viewTransform.set({ scale: newScale, posX: newPosX, posY: newPosY });
-	}
+    viewTransform.set({ scale: newScale, posX: newPosX, posY: newPosY });
+}
 
 	function handleMouseDown(e: MouseEvent) {
 		if (e.button === 1) { // Middle mouse
