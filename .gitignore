@@ -1,4 +1,6 @@
 .vscode
+.clinerules
+cline_docs
 slika
 karta_svelte
 bevy_gaussian_splatting
