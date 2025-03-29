@@ -59,8 +59,9 @@ export async function createNodeAtPosition(canvasX: number, canvasY: number, nty
 		ntype: ntype,
         createdAt: now,
         modifiedAt: now,
+        path: `/node_${newNodeId}`, // Added: Simple default path
 		attributes: {
-            name: `${ntype.charAt(0).toUpperCase() + ntype.slice(1)} Node`, // Default name
+            name: ntype, // Changed: Default name is now just the ntype
             ...attributes // Merge provided attributes
         },
 	};

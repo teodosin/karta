@@ -9,6 +9,7 @@ export interface DataNode {
   ntype: string; // e.g., 'text', 'image', 'context'
   createdAt: number; // Unix timestamp (ms)
   modifiedAt: number; // Unix timestamp (ms)
+  path: string; // Added: Represents the node's path (simplified for client)
   attributes: Record<string, any>; // Holds name, content, src, etc.
 }
 
