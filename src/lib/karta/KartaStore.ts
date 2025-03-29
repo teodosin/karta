@@ -2,7 +2,10 @@ import { writable, get } from 'svelte/store';
 import { tweened } from 'svelte/motion';
 import { cubicOut } from 'svelte/easing';
 import { localAdapter } from '../util/LocalAdapter';
-import type { KartaNode, KartaEdge } from '../types/types';
+import type { KartaNode, KartaEdge, Tool } from '../types/types';
+import { MoveTool } from '../tools/MoveTool';
+import { ConnectTool } from '../tools/ConnectTool';
+import { ContextTool } from '../tools/ContextTool';
 
 // --- Types ---
 
@@ -41,7 +44,7 @@ export const layout = writable<Map<NodeId, ViewNodeLayout>>(new Map());
 export const currentContextId = writable<ContextId>('global_context');
 
 // Interaction State
-export const currentMode = writable<'move' | 'connect'>('move');
+export const currentTool = writable<Tool>(new MoveTool()); // Default to MoveTool
 export const isConnecting = writable<boolean>(false);
 export const connectionSourceNodeId = writable<NodeId | null>(null);
 export const tempLineTargetPosition = writable<{ x: number; y: number } | null>(null);
@@ -51,6 +54,24 @@ export const tempLineTargetPosition = writable<{ x: number; y: number } | null>(
 
 let nodeCounter = 0; // Simple ID generation for offline mode
 let edgeCounter = 0; // Simple ID generation
+
+// Tool Management
+const toolInstances = {
+    move: new MoveTool(),
+    connect: new ConnectTool(),
+    context: new ContextTool()
+};
+
+export function setTool(toolName: 'move' | 'connect' | 'context') {
+    const current = get(currentTool);
+    const next = toolInstances[toolName];
+    if (current !== next) {
+        current?.deactivate(); // Deactivate previous tool
+        next?.activate(); // Activate new tool
+        currentTool.set(next);
+        console.log(`Switched tool to: ${toolName}`);
+    }
+}
 
 export async function createNodeAtPosition(canvasX: number, canvasY: number, labelPrefix = 'Node') {
 	const newNodeId: NodeId = `node-${nodeCounter++}`;
@@ -127,7 +148,8 @@ export async function createEdge(sourceId: NodeId, targetId: NodeId) {
 
 
 export function startConnectionProcess(nodeId: NodeId) {
-    if (get(currentMode) !== 'connect') return;
+    if (!(get(currentTool) instanceof ConnectTool)) return;
+    if (get(isConnecting)) return;
     isConnecting.set(true);
     connectionSourceNodeId.set(nodeId);
     const sourceLayout = get(layout).get(nodeId);
@@ -179,6 +201,9 @@ export function screenToCanvasCoordinates(
 // --- Initialization ---
 
 async function loadNodesFromPersistence() {
+    // Activate the default tool initially
+    get(currentTool)?.activate();
+
     if (localAdapter) {
         try {
             const persistedNodes = await localAdapter.getNodes();

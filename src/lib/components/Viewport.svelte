@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { get } from 'svelte/store';
-	import {
+    import {
         viewTransform,
         screenToCanvasCoordinates,
         createNodeAtPosition,
         nodes,
         layout,
-        currentMode, // Need this if checking mode here later
+        currentTool, // Need this if checking mode here later
         cancelConnectionProcess // Import cancel function
     } from '$lib/karta/KartaStore';
 	import NodeWrapper from './NodeWrapper.svelte';
@@ -60,35 +60,65 @@
 }
 
 	function handleMouseDown(e: MouseEvent) {
-		if (e.button === 1) { // Middle mouse
+		// Middle mouse panning (keep this local for now, could be a tool later)
+		if (e.button === 1) {
 			e.preventDefault();
 			isPanning = true;
 			const currentTransform = get(viewTransform);
 			panStartX = e.clientX - currentTransform.posX;
 			panStartY = e.clientY - currentTransform.posY;
 			if(canvasContainer) canvasContainer.style.cursor = 'grabbing';
+			// Add window listeners for middle-mouse panning
+			window.addEventListener('mousemove', handleMiddleMouseMove);
+			window.addEventListener('mouseup', handleMiddleMouseUp, { once: true });
+			return; // Don't delegate middle mouse to tool
 		}
-        // If left click is on background (not a node), cancel connection
-        if (e.button === 0 && e.target === canvas) {
-            cancelConnectionProcess();
+
+		// Delegate left/right clicks on canvas to the active tool
+        if (e.target === canvas) { // Ensure click is on canvas background
+             get(currentTool).onCanvasMouseDown(e);
+             // The tool's onCanvasMouseDown might add window listeners if needed
         }
 	}
 
-	function handleMouseMove(e: MouseEvent) {
+	// Renamed from handleMouseMove to avoid conflict
+	function handleMiddleMouseMove(e: MouseEvent) {
 		if (isPanning) {
 			const newPosX = e.clientX - panStartX;
 			const newPosY = e.clientY - panStartY;
              viewTransform.set({ scale: $viewTransform.scale, posX: newPosX, posY: newPosY }, { duration: 0 });
 		}
-		// Node dragging/connecting mousemove handled via window listener in NodeWrapper
 	}
 
-	function handleMouseUp(e: MouseEvent) {
+	// Renamed from handleMouseUp to avoid conflict
+	function handleMiddleMouseUp(e: MouseEvent) {
 		if (isPanning && e.button === 1) {
 			isPanning = false;
 			if(canvasContainer) canvasContainer.style.cursor = 'grab'; // Reset cursor
+			// Remove window listeners for middle-mouse panning
+			window.removeEventListener('mousemove', handleMiddleMouseMove);
+			// mouseup listener removed by 'once: true'
 		}
-        // Node dragging/connecting mouseup handled via window listener in NodeWrapper
+	}
+
+	// General mouse move on viewport (not specific to middle mouse pan)
+	// This might be useful for tools needing hover effects on the canvas itself
+	function handleViewportMouseMove(e: MouseEvent) {
+		// Delegate to tool? Maybe not needed yet.
+		// get(currentTool).onViewportMouseMove(e);
+	}
+
+	// General mouse up on viewport
+	function handleViewportMouseUp(e: MouseEvent) {
+		// Delegate to tool? Maybe not needed yet.
+		// get(currentTool).onViewportMouseUp(e);
+	}
+
+	// Handle canvas click (distinct from mousedown)
+	function handleCanvasClick(e: MouseEvent) {
+		if (e.target === canvas && e.button === 0) { // Only left clicks on background
+			get(currentTool).onCanvasClick(e);
+		}
 	}
 
     function handleKeyDown(e: KeyboardEvent) {
@@ -121,8 +151,9 @@
 	class="w-full h-screen overflow-hidden relative bg-gray-100 cursor-grab"
 	bind:this={canvasContainer}
 	on:mousedown={handleMouseDown}
-	on:mousemove={handleMouseMove}
-	on:mouseup={handleMouseUp}
+	on:mousemove={handleViewportMouseMove}
+	on:mouseup={handleViewportMouseUp}
+	on:click={handleCanvasClick}
 	on:wheel={handleWheel}
 	on:contextmenu={handleContextMenu}
     tabindex="0"
