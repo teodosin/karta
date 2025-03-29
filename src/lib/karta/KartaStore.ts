@@ -97,17 +97,27 @@ export async function createNodeAtPosition(canvasX: number, canvasY: number, nty
 
 	console.log(`Created node ${newNodeId} (${newNodeData.attributes.name}) in context ${contextId}`);
 
-    // Persist the DataNode
+    // Persist the DataNode and the updated Context
     if (localAdapter) {
         try {
-            await localAdapter.saveNode(newNodeData);
+            await localAdapter.saveNode(newNodeData); // Save DataNode
+
+            // Get the updated context to save its ViewNode layout
+            const updatedCtx = get(contexts).get(contextId);
+            if (updatedCtx) {
+                await localAdapter.saveContext(updatedCtx); // Save Context
+                console.log(`Persisted context ${contextId} after node creation.`);
+            } else {
+                 console.error(`Could not find context ${contextId} to persist after node creation.`);
+            }
+
         } catch (error) {
-            console.error("Error saving node:", error);
+            console.error("Error saving node or context after creation:", error);
         }
     } else {
         console.warn("LocalAdapter not initialized, persistence disabled in SSR.");
     }
-    // TODO: Add persistence for Context/ViewNode updates later
+    // TODO: Add persistence for Context/ViewNode updates later // <-- Still relevant for other context changes
 }
 
 export function updateNodeLayout(nodeId: NodeId, newX: number, newY: number) {

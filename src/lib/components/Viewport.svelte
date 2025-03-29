@@ -24,6 +24,10 @@
 	let panStartX = 0;
 	let panStartY = 0;
 
+    // State for last known cursor position
+    let lastScreenX = 0;
+    let lastScreenY = 0;
+
 	function handleWheel(e: WheelEvent) {
     e.preventDefault();
     if (!canvasContainer) return;
@@ -108,6 +112,10 @@
 
 	// General pointer move on viewport
 	function handleViewportPointerMove(e: PointerEvent) { // Changed to PointerEvent
+        // Update last known cursor position
+        lastScreenX = e.clientX;
+        lastScreenY = e.clientY;
+
 		// Delegate to the active tool
         get(currentTool)?.onPointerMove?.(e);
 	}
@@ -124,11 +132,22 @@
         if (e.key === 'Tab') {
             e.preventDefault();
             if (!canvasContainer) return;
-            // Create at view center for now
+
             const rect = canvasContainer.getBoundingClientRect();
-            const screenX = rect.left + rect.width / 2;
-            const screenY = rect.top + rect.height / 2;
+            let screenX = lastScreenX;
+            let screenY = lastScreenY;
+
+            // Fallback to center if cursor hasn't moved over viewport yet
+            if (screenX === 0 && screenY === 0) {
+                screenX = rect.left + rect.width / 2;
+                screenY = rect.top + rect.height / 2;
+                console.log("Tab create: Cursor position unknown, using viewport center.");
+            } else {
+                 console.log(`Tab create: Using cursor position (${screenX}, ${screenY})`);
+            }
+
             const {x, y} = screenToCanvasCoordinates(screenX, screenY, rect);
+            console.log(`Tab create: Calculated canvas coordinates (${x}, ${y})`);
             createNodeAtPosition(x, y, 'text'); // Use lowercase ntype
         }
         // Delegate keydown events to the active tool
