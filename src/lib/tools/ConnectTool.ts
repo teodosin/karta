@@ -10,53 +10,68 @@ import {
 } from '$lib/karta/KartaStore';
 
 export class ConnectTool implements Tool {
+    readonly name = 'connect';
 
-    // Bound methods for event listeners
-    private boundHandleWindowMouseMove: (event: MouseEvent) => void;
-    private boundHandleWindowMouseUp: (event: MouseEvent) => void;
+    // Bound methods for event listeners - Use PointerEvent
+    private boundHandlePointerMove: (event: PointerEvent) => void;
+    private boundHandlePointerUp: (event: PointerEvent) => void;
 
     constructor() {
-        this.boundHandleWindowMouseMove = this.handleWindowMouseMove.bind(this);
-        this.boundHandleWindowMouseUp = this.handleWindowMouseUp.bind(this);
+        this.boundHandlePointerMove = this.handlePointerMove.bind(this);
+        this.boundHandlePointerUp = this.handlePointerUp.bind(this);
     }
 
     activate() {
-        console.log('ConnectTool activated');
+        // console.log('ConnectTool activated');
+        document.body.style.cursor = 'crosshair'; // Set cursor on activate
     }
 
     deactivate() {
-        console.log('ConnectTool deactivated');
+        // console.log('ConnectTool deactivated');
         if (get(isConnecting)) {
-            cancelConnectionProcess();
+            cancelConnectionProcess(); // Cancel if connection was in progress
         }
         this.removeWindowListeners();
+        document.body.style.cursor = 'default'; // Reset cursor on deactivate
     }
 
-    onNodeMouseDown(nodeId: NodeId, event: MouseEvent, nodeElement: HTMLElement): void {
-        if (event.button !== 0) return;
-        console.log('ConnectTool onNodeMouseDown', nodeId);
+    // Replaces onNodeMouseDown
+    onPointerDown(event: PointerEvent, targetElement: EventTarget | null): void {
+        if (event.button !== 0 || !(targetElement instanceof HTMLElement)) return;
+
+        // Check if the target is a node element
+        const nodeEl = targetElement.closest('.node') as HTMLElement | null;
+        if (!nodeEl || !nodeEl.dataset.id) return; // Exit if not a node
+
+        const nodeId = nodeEl.dataset.id;
+        // console.log('ConnectTool onPointerDown on node', nodeId); // Keep this one?
         startConnectionProcess(nodeId); // KartaStore handles the state
-        this.addWindowListeners();
+        this.addWindowListeners(); // Add listeners to track pointer movement and release
     }
 
-    // --- Window Event Handlers (Bound) ---
-    private handleWindowMouseMove(event: MouseEvent): void {
+    // Replaces handleWindowMouseMove - Use PointerEvent
+    private handlePointerMove(event: PointerEvent): void {
         if (!get(isConnecting)) return;
-        console.log('ConnectTool handleWindowMouseMove');
+        // console.log('ConnectTool handlePointerMove'); // Reduce noise
 
         // Need container rect for coordinate conversion
-        const containerEl = document.querySelector('.cursor-grab') as HTMLElement; // Assuming Viewport has this class
-        if (!containerEl) return;
+        const containerEl = document.querySelector('.w-full.h-screen.overflow-hidden') as HTMLElement; // Adjust selector if needed
+        if (!containerEl) {
+             console.error("Viewport container not found for coordinate conversion.");
+             return;
+        }
         const containerRect = containerEl.getBoundingClientRect();
         const { x: mouseCanvasX, y: mouseCanvasY } = screenToCanvasCoordinates(event.clientX, event.clientY, containerRect);
         updateTempLinePosition(mouseCanvasX, mouseCanvasY);
     }
 
-    private handleWindowMouseUp(event: MouseEvent): void {
+    // Replaces handleWindowMouseUp - Use PointerEvent
+    private handlePointerUp(event: PointerEvent): void {
         if (!get(isConnecting) || event.button !== 0) return;
-        console.log('ConnectTool handleWindowMouseUp');
+        // console.log('ConnectTool handlePointerUp'); // Keep this one?
 
         let targetNodeId: NodeId | null = null;
+        // Use event.target for pointerup, as it reflects the element where the pointer was released
         let currentElement: HTMLElement | null = event.target as HTMLElement;
 
         // Traverse up DOM to find a node element with data-id
@@ -66,54 +81,36 @@ export class ConnectTool implements Tool {
                 break; // Found it
             }
             // Stop if we hit the canvas container or body
-            if (currentElement === document.body || currentElement.classList.contains('cursor-grab')) {
+            const viewportContainer = document.querySelector('.w-full.h-screen.overflow-hidden');
+            if (currentElement === document.body || currentElement === viewportContainer) {
                 break;
             }
             currentElement = currentElement.parentElement;
         }
 
-        finishConnectionProcess(targetNodeId); // KartaStore handles state reset
+        finishConnectionProcess(targetNodeId); // KartaStore handles state reset and edge creation
         this.removeWindowListeners();
     }
 
-    onCanvasClick(event: MouseEvent): void {
-        console.log('ConnectTool onCanvasClick', event);
-        if (get(isConnecting)) {
-            cancelConnectionProcess();
-        }
+    // --- Removed Obsolete Methods ---
+    // onCanvasClick, onCanvasMouseDown, getNodeCursorStyle, getCanvasCursorStyle
+    // onWindowMouseMove, onWindowMouseUp
+
+    // Optional: Implement updateCursor if needed
+    updateCursor(): void {
+        document.body.style.cursor = 'crosshair'; // Ensure cursor stays correct
     }
 
-    onCanvasMouseDown(event: MouseEvent): void {
-        console.log('ConnectTool onCanvasMouseDown', event);
-        // Don't start connection on canvas click for this tool
-    }
-
-    getNodeCursorStyle(nodeId: NodeId): string {
-        return 'crosshair';
-    }
-
-    getCanvasCursorStyle(): string {
-        return 'crosshair'; // Indicate connection possibility
-    }
-
-    // --- Interface Methods ---
-    onWindowMouseMove(event: MouseEvent): void {
-        // Handled by bound handleWindowMouseMove
-    }
-    onWindowMouseUp(event: MouseEvent): void {
-        // Handled by bound handleWindowMouseUp
-    }
-
-    // --- Helper methods for listeners ---
+    // --- Helper methods for listeners - Use Pointer Events ---
     private addWindowListeners() {
-        console.log("Adding window listeners for ConnectTool");
-        window.addEventListener('mousemove', this.boundHandleWindowMouseMove);
-        window.addEventListener('mouseup', this.boundHandleWindowMouseUp, { once: true });
+        // console.log("Adding window pointer listeners for ConnectTool");
+        window.addEventListener('pointermove', this.boundHandlePointerMove);
+        window.addEventListener('pointerup', this.boundHandlePointerUp, { once: true });
     }
 
     private removeWindowListeners() {
-        console.log("Removing window listeners for ConnectTool");
-        window.removeEventListener('mousemove', this.boundHandleWindowMouseMove);
-        window.removeEventListener('mouseup', this.boundHandleWindowMouseUp);
+        // console.log("Removing window pointer listeners for ConnectTool");
+        window.removeEventListener('pointermove', this.boundHandlePointerMove);
+        window.removeEventListener('pointerup', this.boundHandlePointerUp);
     }
 }

@@ -4,16 +4,20 @@
         viewTransform,
         screenToCanvasCoordinates,
         createNodeAtPosition,
-        nodes,
-        layout,
-        currentTool, // Need this if checking mode here later
-        cancelConnectionProcess // Import cancel function
+        nodes, // Still need nodes for DataNode info if NodeWrapper needs it
+        contexts, // Import contexts store
+        currentContextId, // Import current context ID store
+        currentTool,
+        cancelConnectionProcess
     } from '$lib/karta/KartaStore';
 	import NodeWrapper from './NodeWrapper.svelte';
     import EdgeLayer from './EdgeLayer.svelte';
 
 	let canvasContainer: HTMLElement;
 	let canvas: HTMLElement;
+
+    // Reactive definition for the current context object
+    $: currentCtx = $contexts.get($currentContextId);
 
 	// State for panning
 	let isPanning = false;
@@ -57,9 +61,12 @@
     }
 
     viewTransform.set({ scale: newScale, posX: newPosX, posY: newPosY });
+
+    // Call tool's wheel handler
+    get(currentTool)?.onWheel?.(e);
 }
 
-	function handleMouseDown(e: MouseEvent) {
+	function handlePointerDown(e: PointerEvent) { // Changed to PointerEvent
 		// Middle mouse panning (keep this local for now, could be a tool later)
 		if (e.button === 1) {
 			e.preventDefault();
@@ -70,19 +77,17 @@
 			if(canvasContainer) canvasContainer.style.cursor = 'grabbing';
 			// Add window listeners for middle-mouse panning
 			window.addEventListener('mousemove', handleMiddleMouseMove);
-			window.addEventListener('mouseup', handleMiddleMouseUp, { once: true });
+			window.addEventListener('pointerup', handleMiddleMouseUp, { once: true }); // Changed to pointerup
 			return; // Don't delegate middle mouse to tool
 		}
 
-		// Delegate left/right clicks on canvas to the active tool
-        if (e.target === canvas) { // Ensure click is on canvas background
-             get(currentTool).onCanvasMouseDown(e);
-             // The tool's onCanvasMouseDown might add window listeners if needed
-        }
+		// Delegate pointer down events to the active tool
+        // Pass the event and the direct target element
+        get(currentTool)?.onPointerDown?.(e, e.target as EventTarget | null);
 	}
 
 	// Renamed from handleMouseMove to avoid conflict
-	function handleMiddleMouseMove(e: MouseEvent) {
+	function handleMiddleMouseMove(e: MouseEvent) { // Changed back to MouseEvent for window listener
 		if (isPanning) {
 			const newPosX = e.clientX - panStartX;
 			const newPosY = e.clientY - panStartY;
@@ -91,35 +96,29 @@
 	}
 
 	// Renamed from handleMouseUp to avoid conflict
-	function handleMiddleMouseUp(e: MouseEvent) {
+	function handleMiddleMouseUp(e: PointerEvent) { // Changed to PointerEvent
 		if (isPanning && e.button === 1) {
 			isPanning = false;
-			if(canvasContainer) canvasContainer.style.cursor = 'grab'; // Reset cursor
+			// Cursor is now handled reactively by the tool
 			// Remove window listeners for middle-mouse panning
-			window.removeEventListener('mousemove', handleMiddleMouseMove);
-			// mouseup listener removed by 'once: true'
+			window.removeEventListener('pointermove', handleMiddleMouseMove); // Changed to pointermove
+			// pointerup listener removed by 'once: true'
 		}
 	}
 
-	// General mouse move on viewport (not specific to middle mouse pan)
-	// This might be useful for tools needing hover effects on the canvas itself
-	function handleViewportMouseMove(e: MouseEvent) {
-		// Delegate to tool? Maybe not needed yet.
-		// get(currentTool).onViewportMouseMove(e);
+	// General pointer move on viewport
+	function handleViewportPointerMove(e: PointerEvent) { // Changed to PointerEvent
+		// Delegate to the active tool
+        get(currentTool)?.onPointerMove?.(e);
 	}
 
-	// General mouse up on viewport
-	function handleViewportMouseUp(e: MouseEvent) {
-		// Delegate to tool? Maybe not needed yet.
-		// get(currentTool).onViewportMouseUp(e);
+	// General pointer up on viewport
+	function handleViewportPointerUp(e: PointerEvent) { // Changed to PointerEvent
+		// Delegate to the active tool
+        get(currentTool)?.onPointerUp?.(e);
 	}
 
-	// Handle canvas click (distinct from mousedown)
-	function handleCanvasClick(e: MouseEvent) {
-		if (e.target === canvas && e.button === 0) { // Only left clicks on background
-			get(currentTool).onCanvasClick(e);
-		}
-	}
+    // Removed handleCanvasClick - click logic should be within tool's onPointerUp
 
     function handleKeyDown(e: KeyboardEvent) {
         if (e.key === 'Tab') {
@@ -130,11 +129,21 @@
             const screenX = rect.left + rect.width / 2;
             const screenY = rect.top + rect.height / 2;
             const {x, y} = screenToCanvasCoordinates(screenX, screenY, rect);
-            createNodeAtPosition(x, y, 'Text');
+            createNodeAtPosition(x, y, 'text'); // Use lowercase ntype
         }
-         if (e.key === 'Escape') { // Allow cancelling connection with Escape
+        // Delegate keydown events to the active tool
+        get(currentTool)?.onKeyDown?.(e);
+
+        // Keep Escape key handling here for global cancel? Or move to tool?
+        // Let's keep it global for now.
+        if (e.key === 'Escape') {
             cancelConnectionProcess();
         }
+    }
+
+    function handleKeyUp(e: KeyboardEvent) {
+        // Delegate keyup events to the active tool
+        get(currentTool)?.onKeyUp?.(e);
     }
 
 	function handleContextMenu(e: MouseEvent) {
@@ -148,16 +157,16 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <div
-	class="w-full h-screen overflow-hidden relative bg-gray-100 cursor-grab"
+	class="w-full h-screen overflow-hidden relative bg-gray-100 cursor-default" 
 	bind:this={canvasContainer}
-	on:mousedown={handleMouseDown}
-	on:mousemove={handleViewportMouseMove}
-	on:mouseup={handleViewportMouseUp}
-	on:click={handleCanvasClick}
+	on:pointerdown={handlePointerDown}
+	on:pointermove={handleViewportPointerMove}
+	on:pointerup={handleViewportPointerUp}
 	on:wheel={handleWheel}
 	on:contextmenu={handleContextMenu}
     tabindex="0"
     on:keydown={handleKeyDown}
+    on:keyup={handleKeyUp}
 >
 	<div
 		class="w-full h-full relative origin-top-left"
@@ -167,12 +176,14 @@
 		<!-- Edge Rendering Layer -->
         <EdgeLayer />
 
-		<!-- Node Rendering Layer -->
-		{#each [...$nodes.values()] as node (node.id)}
-			{@const nodeLayout = $layout.get(node.id)}
-			{#if nodeLayout}
-				<NodeWrapper nodeId={node.id} initialLayout={nodeLayout} />
-			{/if}
-		{/each}
+		<!-- Node Rendering Layer - Iterate over ViewNodes in the current context -->
+        {#if currentCtx}
+            {#each [...currentCtx.viewNodes.values()] as viewNode (viewNode.id)}
+                {@const dataNode = $nodes.get(viewNode.id)}
+                {#if dataNode} <!-- Ensure corresponding DataNode exists -->
+                    <NodeWrapper {viewNode} {dataNode} /> <!-- Removed nodeId prop -->
+                {/if}
+            {/each}
+        {/if}
 	</div>
 </div>

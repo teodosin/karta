@@ -1,16 +1,28 @@
 import * as idb from 'idb';
-import type { KartaNode, KartaEdge } from '../types/types'; // Import both types from types.ts
+// Import Context, ViewNode, NodeId as well
+import type { DataNode, KartaEdge, Context, ViewNode, NodeId } from '../types/types';
+
+// Interface for the storable version of Context (Map converted to Array)
+interface StorableContext {
+    id: NodeId;
+    viewNodes: [NodeId, ViewNode][]; // Store as array of [key, value] tuples
+}
 
 interface PersistenceService {
-    saveNode(node: KartaNode): Promise<void>;
-    getNode(nodeId: string): Promise<KartaNode | undefined>;
+    saveNode(node: DataNode): Promise<void>;
+    getNode(nodeId: string): Promise<DataNode | undefined>; // Use DataNode
     deleteNode(nodeId: string): Promise<void>;
+    getNodes(): Promise<DataNode[]>; // Add getNodes signature using DataNode
 
     saveEdge(edge: KartaEdge): Promise<void>;
     getEdge(edgeId: string): Promise<KartaEdge | undefined>;
     getEdges(): Promise<KartaEdge[]>;
     deleteEdge(edgeId: string): Promise<void>;
-    // ... similar methods for layouts will be added later
+
+    // Add Context methods
+    saveContext(context: Context): Promise<void>;
+    getContext(contextId: NodeId): Promise<Context | undefined>;
+    getContexts(): Promise<Context[]>;
 }
 
 class LocalAdapter implements PersistenceService {
@@ -18,15 +30,46 @@ class LocalAdapter implements PersistenceService {
 
     constructor() {
         this.dbPromise = idb.openDB<KartaDB>('karta-db', 1, {
-            upgrade(db) {
-                db.createObjectStore('nodes', { keyPath: 'id' });
-                db.createObjectStore('edges', { keyPath: 'id' });
-                // db.createObjectStore('layouts', { keyPath: 'nodeId' }); // Layouts will be added later
+            upgrade(db, oldVersion) { // Add oldVersion parameter
+                if (oldVersion < 1) { // Check oldVersion before creating stores
+                    if (!db.objectStoreNames.contains('nodes')) {
+                        db.createObjectStore('nodes', { keyPath: 'id' });
+                    }
+                    if (!db.objectStoreNames.contains('edges')) {
+                        db.createObjectStore('edges', { keyPath: 'id' });
+                    }
+                }
+                 // Add contexts store in version 2 (or adjust version number as needed)
+                 // Assuming current version is 1, upgrade to 2
+                 if (oldVersion < 2) {
+                    if (!db.objectStoreNames.contains('contexts')) {
+                         db.createObjectStore('contexts', { keyPath: 'id' });
+                    }
+                 }
             },
         });
+        // Update DB version number
+        this.dbPromise = idb.openDB<KartaDB>('karta-db', 2, { // Increment version to 2
+            upgrade(db, oldVersion) {
+                if (oldVersion < 1) {
+                    if (!db.objectStoreNames.contains('nodes')) {
+                        db.createObjectStore('nodes', { keyPath: 'id' });
+                    }
+                    if (!db.objectStoreNames.contains('edges')) {
+                        db.createObjectStore('edges', { keyPath: 'id' });
+                    }
+                }
+                 if (oldVersion < 2) {
+                    if (!db.objectStoreNames.contains('contexts')) {
+                         db.createObjectStore('contexts', { keyPath: 'id' });
+                    }
+                 }
+            },
+        });
+
     }
 
-    async saveNode(node: KartaNode): Promise<void> {
+    async saveNode(node: DataNode): Promise<void> { // Use DataNode
         const db = await this.dbPromise;
         const tx = db.transaction('nodes', 'readwrite');
         const store = tx.objectStore('nodes');
@@ -34,9 +77,9 @@ class LocalAdapter implements PersistenceService {
         await tx.done;
     }
 
-    async getNode(nodeId: string): Promise<KartaNode | undefined> {
+    async getNode(nodeId: string): Promise<DataNode | undefined> { // Use DataNode
         const db = await this.dbPromise;
-        return db.get('nodes', nodeId) as Promise<KartaNode | undefined>;
+        return db.get('nodes', nodeId) as Promise<DataNode | undefined>; // Use DataNode
     }
 
     async deleteNode(nodeId: string): Promise<void> {
@@ -47,9 +90,9 @@ class LocalAdapter implements PersistenceService {
         await tx.done;
     }
 
-    async getNodes(): Promise<KartaNode[]> {
+    async getNodes(): Promise<DataNode[]> { // Use DataNode
         const db = await this.dbPromise;
-        return db.getAll('nodes') as Promise<KartaNode[]>;
+        return db.getAll('nodes') as Promise<DataNode[]>; // Use DataNode
     }
 
     async saveEdge(edge: KartaEdge): Promise<void> {
@@ -83,22 +126,60 @@ class LocalAdapter implements PersistenceService {
         return db.getAll('edges') as Promise<KartaEdge[]>;
     }
 
-} // Closing brace for LocalAdapter class was missing
+    // --- Context Methods ---
+
+    async saveContext(context: Context): Promise<void> {
+        const db = await this.dbPromise;
+        const tx = db.transaction('contexts', 'readwrite');
+        const store = tx.objectStore('contexts');
+        // Convert Map to Array for storage
+        const storableContext: StorableContext = {
+            ...context,
+            viewNodes: Array.from(context.viewNodes.entries()),
+        };
+        await store.put(storableContext);
+        await tx.done;
+    }
+
+    async getContext(contextId: NodeId): Promise<Context | undefined> {
+        const db = await this.dbPromise;
+        const storableContext = await db.get('contexts', contextId) as StorableContext | undefined;
+        if (storableContext) {
+            // Convert Array back to Map
+            return {
+                ...storableContext,
+                viewNodes: new Map(storableContext.viewNodes),
+            };
+        }
+        return undefined;
+    }
+
+    async getContexts(): Promise<Context[]> {
+        const db = await this.dbPromise;
+        const storableContexts = await db.getAll('contexts') as StorableContext[];
+        // Convert Array back to Map for each context
+        return storableContexts.map(storable => ({
+            ...storable,
+            viewNodes: new Map(storable.viewNodes),
+        }));
+    }
+
+}
 
 // Define database schema (for TypeScript type checking)
 interface KartaDB extends idb.DBSchema {
     nodes: {
         key: string;
-        value: KartaNode;
+        value: DataNode; // Use DataNode
     };
     edges: {
         key: string;
-        value: KartaEdge; // Use KartaEdge type here
+        value: KartaEdge;
     };
-    // layouts: {
-    //     key: string;
-    //     value: any;
-    // };
+    contexts: { // Add contexts store definition
+        key: NodeId;
+        value: StorableContext; // Store the array version
+    };
 }
 
 
