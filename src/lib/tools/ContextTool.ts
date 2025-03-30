@@ -1,4 +1,5 @@
 import type { Tool, NodeId } from '$lib/types/types';
+import { switchContext } from '$lib/karta/KartaStore'; // Import the action
 
 export class ContextTool implements Tool {
     readonly name = 'context';
@@ -19,11 +20,10 @@ export class ContextTool implements Tool {
         if (!nodeEl || !nodeEl.dataset.id) return; // Exit if not a node
 
         const nodeId = nodeEl.dataset.id;
-        console.log('ContextTool onPointerDown on node', nodeId);
+        console.log('ContextTool attempting switch to node', nodeId);
 
-        // TODO: Implement context switching logic here
-        // Example: currentContextId.set(nodeId);
-        alert(`Context switch to node ${nodeId} (not implemented yet)`);
+        // Call the KartaStore action to handle the switch
+        switchContext(nodeId);
     }
 
     // --- Removed Obsolete Methods ---

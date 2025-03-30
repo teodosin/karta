@@ -57,12 +57,8 @@
 	class="absolute top-0 left-0 w-full h-full pointer-events-none"
 	style="overflow: visible;"
 >
-	<!-- Removed viewBox and preserveAspectRatio -->
 
-    <!-- Permanent edges -->
     {#each edgePaths as pathData (pathData.id)}
-        <!-- DEBUG: Log permanent edge path data -->
-        {console.log('Rendering edge:', pathData.id, pathData.d)}
         <path
             id={pathData.id}
             class="edge"
@@ -72,8 +68,6 @@
 
 	<!-- Temporary connection line -->
     {#if tempLinePath}
-        <!-- DEBUG: Log temporary edge path data -->
-        {console.log('Rendering temp edge:', tempLinePath)}
         <path
             class="temp-edge"
             d={tempLinePath}

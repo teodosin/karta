@@ -24,6 +24,14 @@ export interface ViewNode {
   rotation: number; // Degrees (default 0)
 }
 
+// Represents an absolute transform in the canvas coordinate space
+export interface AbsoluteTransform {
+    x: number;
+    y: number;
+    scale: number;
+    rotation: number;
+}
+
 // Represents a specific view/layout of nodes, associated with a focal node
 export interface Context {
   id: NodeId; // UUID of the focal DataNode this context represents
