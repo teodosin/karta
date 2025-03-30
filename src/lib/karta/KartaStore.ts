@@ -257,20 +257,17 @@ export function screenToCanvasCoordinates(
 // --- Context Switching ---
 
 export async function switchContext(newContextId: NodeId) {
+
     const oldContextId = get(currentContextId);
     if (newContextId === oldContextId) {
-        console.log("Already in context:", newContextId);
         return; // Already in the target context
     }
-
-    console.log(`Switching context from ${oldContextId} to ${newContextId}`);
 
     // 1. Save the old context (converting absolute to relative)
     const oldContext = get(contexts).get(oldContextId);
     if (oldContext && localAdapter) {
         try {
             await localAdapter.saveContext(oldContext);
-            console.log(`Saved old context ${oldContextId}`);
         } catch (error) {
             console.error(`Error saving old context ${oldContextId}:`, error);
             // Decide if we should abort the switch here? For now, continue.
@@ -289,6 +286,8 @@ export async function switchContext(newContextId: NodeId) {
                  // Create new context if it doesn't exist
                  newContext = { id: newContextId, viewNodes: new Map() };
                  // TODO: Implement default population logic here
+                 // If new focal exists in previous context, it is used as the new focal viewnode
+                 const newFocal = 0
                  // Find nodes connected to newContextId in oldContext, add their ViewNodes.
                  // Save the newly created context immediately
                  await localAdapter.saveContext(newContext);
