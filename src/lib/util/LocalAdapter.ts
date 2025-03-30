@@ -158,10 +158,13 @@ class LocalAdapter implements PersistenceService {
      * Saves a context, converting absolute ViewNode transforms to relative for storage.
      * Requires the absolute transform of the context's focal node.
      */
-    async saveContext(context: Context, focalAbsTransform: AbsoluteTransform = ROOT_TRANSFORM): Promise<void> {
+    async saveContext(context: Context): Promise<void> {
         const db = await this.dbPromise;
         const tx = db.transaction('contexts', 'readwrite');
         const store = tx.objectStore('contexts');
+
+        const focalNode = context.viewNodes.get(context.id);
+        if (!focalNode) throw new Error("Focal node not found in context");
 
         // Convert absolute ViewNodes to relative StorableViewNodes
         const storableViewNodes: [NodeId, StorableViewNode][] = [];
@@ -180,10 +183,10 @@ class LocalAdapter implements PersistenceService {
                 };
             } else {
                 // Calculate relative transform for child nodes
-                const relScale = viewNode.scale / focalAbsTransform.scale;
-                const relRotation = viewNode.rotation - focalAbsTransform.rotation;
-                const relX = viewNode.x - focalAbsTransform.x;
-                const relY = viewNode.y - focalAbsTransform.y;
+                const relScale = viewNode.scale / focalNode.scale;
+                const relRotation = viewNode.rotation - focalNode.rotation;
+                const relX = viewNode.x - focalNode.x;
+                const relY = viewNode.y - focalNode.y;
 
                 storableNode = {
                     id: viewNode.id,

@@ -112,11 +112,10 @@ export async function createNodeAtPosition(canvasX: number, canvasY: number, nty
             // Get the focal transform for the current context
             // TODO: This assumes the focal transform is readily available.
             // For root context, it's ROOT_TRANSFORM. For others, it needs calculation.
-            // Using ROOT_TRANSFORM as a placeholder for now.
-            const focalTransform = { x: 0, y: 0, scale: 1, rotation: 0 }; // Placeholder
+
             if (updatedCtx) {
                  console.log(`[KartaStore] createNodeAtPosition: Attempting to save context ${contextId}...`);
-                await localAdapter.saveContext(updatedCtx, focalTransform); // Pass focal transform
+                await localAdapter.saveContext(updatedCtx); // Pass focal transform
                 console.log(`[KartaStore] createNodeAtPosition: Context ${contextId} saved after node creation.`);
             } else {
                  console.error(`[KartaStore] createNodeAtPosition: Could not find context ${contextId} to persist after node creation.`);
@@ -145,12 +144,7 @@ export function updateNodeLayout(nodeId: NodeId, newX: number, newY: number) {
 
                 // Persist the updated context - Re-enabled, will be configurable later
                 if (localAdapter) {
-                    // ContextID and FocalID are the same
-                    const focalNode = currentCtx.viewNodes.get(contextId);
-                    if (focalNode == undefined) throw new Error("Focal node not found in context"); 
-                    // TODO: Make sure the focal node can't be deleted in its own context
-                    const focalTransform = { x: focalNode.x, y: focalNode.y, scale: 1, rotation: 0 }; // Placeholder
-                    localAdapter.saveContext(currentCtx, focalTransform).catch(err => {
+                    localAdapter.saveContext(currentCtx).catch(err => {
                         console.error(`Error saving context ${contextId} after layout update:`, err);
                     });
                 }
@@ -273,11 +267,9 @@ export async function switchContext(newContextId: NodeId) {
 
     // 1. Save the old context (converting absolute to relative)
     const oldContext = get(contexts).get(oldContextId);
-    // TODO: Calculate correct oldFocalTransform
-    const oldFocalTransform: AbsoluteTransform = { x: 0, y: 0, scale: 1, rotation: 0 }; // Placeholder
     if (oldContext && localAdapter) {
         try {
-            await localAdapter.saveContext(oldContext, oldFocalTransform);
+            await localAdapter.saveContext(oldContext);
             console.log(`Saved old context ${oldContextId}`);
         } catch (error) {
             console.error(`Error saving old context ${oldContextId}:`, error);
@@ -286,12 +278,10 @@ export async function switchContext(newContextId: NodeId) {
     }
 
     // 2. Load the new context (converting relative to absolute)
-    // TODO: Calculate correct newFocalTransform
-    const newFocalTransform: AbsoluteTransform = { x: 0, y: 0, scale: 1, rotation: 0 }; // Placeholder
     let newContext: Context | undefined;
     if (localAdapter) {
         try {
-            newContext = await localAdapter.getContext(newContextId, newFocalTransform);
+            newContext = await localAdapter.getContext(newContextId);
             if (newContext) {
                 console.log(`Loaded context ${newContextId} from storage.`);
             } else {
@@ -301,7 +291,7 @@ export async function switchContext(newContextId: NodeId) {
                  // TODO: Implement default population logic here
                  // Find nodes connected to newContextId in oldContext, add their ViewNodes.
                  // Save the newly created context immediately
-                 await localAdapter.saveContext(newContext, newFocalTransform);
+                 await localAdapter.saveContext(newContext);
             }
         } catch (error) {
              console.error(`Error loading or creating context ${newContextId}:`, error);
@@ -409,7 +399,7 @@ async function loadDataFromPersistence() {
                  contextsMap.set(rootCtxId, newRootCtx);
                  // Persist the newly created empty root context
                  // Use default ROOT_TRANSFORM as its own focal transform is (0,0)
-                 await localAdapter.saveContext(newRootCtx, { x: 0, y: 0, scale: 1, rotation: 0 });
+                 await localAdapter.saveContext(newRootCtx);
             }
 
             // Populate Root context with ViewNodes for loaded DataNodes if they don't exist yet
@@ -459,7 +449,7 @@ async function loadDataFromPersistence() {
             if (rootContextWasModified) {
                 console.log(`Root context ${rootCtxId} was modified with defaults, saving...`);
                 // Use default ROOT_TRANSFORM as its own focal transform is (0,0)
-                await localAdapter.saveContext(rootCtx, { x: 0, y: 0, scale: 1, rotation: 0 });
+                await localAdapter.saveContext(rootCtx);
             }
 
             // Set the contexts store with loaded and potentially created/updated root context
