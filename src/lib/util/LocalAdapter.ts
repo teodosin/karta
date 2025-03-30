@@ -23,11 +23,14 @@ interface StorableContext {
 const ROOT_TRANSFORM: AbsoluteTransform = { x: 0, y: 0, scale: 1, rotation: 0 };
 
 interface PersistenceService {
+    // Node methods
     saveNode(node: DataNode): Promise<void>;
     getNode(nodeId: string): Promise<DataNode | undefined>; // Use DataNode
     deleteNode(nodeId: string): Promise<void>;
-    getNodes(): Promise<DataNode[]>; // Add getNodes signature using DataNode
+    getNodes(): Promise<DataNode[]>;
+    checkNameExists(name: string): Promise<boolean>; // Add checkNameExists signature
 
+    // Edge methods
     saveEdge(edge: KartaEdge): Promise<void>;
     getEdge(edgeId: string): Promise<KartaEdge | undefined>;
     getEdges(): Promise<KartaEdge[]>;
@@ -46,16 +49,20 @@ class LocalAdapter implements PersistenceService {
         console.log('[LocalAdapter] Constructor: Initializing DB connection...');
         const startTime = performance.now();
 
-        // Directly open the latest DB version (2)
+        // Increment DB version to 3 to trigger the upgrade for the new index
         // The upgrade callback handles creation for all versions sequentially.
-        this.dbPromise = idb.openDB<KartaDB>('karta-db', 2, {
-            upgrade(db, oldVersion, newVersion, tx) {
+        this.dbPromise = idb.openDB<KartaDB>('karta-db', 3, {
+            upgrade(db, oldVersion, newVersion, tx, event) { // Added event param to access transaction in later upgrade steps
                 console.log(`[LocalAdapter] Upgrading DB from v${oldVersion} to v${newVersion}...`);
+                // Create initial stores if upgrading from v0
                 // Create initial stores if upgrading from v0
                 if (oldVersion < 1) {
                     if (!db.objectStoreNames.contains('nodes')) {
                         console.log('[LocalAdapter] Creating "nodes" object store.');
-                        db.createObjectStore('nodes', { keyPath: 'id' });
+                        const nodeStore = db.createObjectStore('nodes', { keyPath: 'id' });
+                        // Add index for name checking (non-unique)
+                        console.log('[LocalAdapter] Creating "name_idx" index on "nodes" store.');
+                        nodeStore.createIndex('name_idx', 'attributes.name', { unique: false });
                     }
                     if (!db.objectStoreNames.contains('edges')) {
                         console.log('[LocalAdapter] Creating "edges" object store.');
@@ -69,6 +76,24 @@ class LocalAdapter implements PersistenceService {
                         db.createObjectStore('contexts', { keyPath: 'id' });
                     }
                 }
+                 // Add name index if upgrading from v1 or v2 (where it didn't exist)
+                 // Note: Accessing transaction directly via 'tx' might be unreliable across versions/libraries.
+                 // It's safer to check within the upgrade logic if the index needs creation.
+                 // However, the idb library handles this well: if createIndex is called and it exists, it's a no-op.
+                 // Add name index if upgrading from v1 or v2 (where it didn't exist)
+                 if (oldVersion >= 1 && oldVersion < 3) {
+                    // Ensure the nodes store exists before trying to add an index
+                    if (db.objectStoreNames.contains('nodes')) {
+                        // The transaction is automatically available on the db object within the upgrade callback
+                        const nodeStore = tx.objectStore('nodes');
+                        if (!nodeStore.indexNames.contains('name_idx')) {
+                            console.log('[LocalAdapter] Creating "name_idx" index on existing "nodes" store.');
+                            nodeStore.createIndex('name_idx', 'attributes.name', { unique: false });
+                        }
+                    } else {
+                         console.warn('[LocalAdapter] Cannot add name_idx: "nodes" store does not exist.');
+                    }
+                 }
                 console.log('[LocalAdapter] DB upgrade complete.');
             },
             blocked() {
@@ -118,8 +143,45 @@ class LocalAdapter implements PersistenceService {
 
     async getNodes(): Promise<DataNode[]> { // Use DataNode
         const db = await this.dbPromise;
-        return db.getAll('nodes') as Promise<DataNode[]>; // Use DataNode
+        return db.getAll('nodes') as Promise<DataNode[]>;
     }
+
+    /**
+     * Checks if a node with the given name exists using the name index.
+     */
+    async checkNameExists(name: string): Promise<boolean> {
+        const db = await this.dbPromise;
+        const tx = db.transaction('nodes', 'readonly');
+        const store = tx.objectStore('nodes');
+        const index = store.index('name_idx');
+        const count = await index.count(name); // Count items matching the name
+        await tx.done;
+        return count > 0;
+    }
+
+     /**
+     * Gets multiple DataNodes by their IDs.
+     */
+    async getDataNodesByIds(nodeIds: NodeId[]): Promise<Map<NodeId, DataNode>> {
+        const db = await this.dbPromise;
+        const tx = db.transaction('nodes', 'readonly');
+        const store = tx.objectStore('nodes');
+        const nodesMap = new Map<NodeId, DataNode>();
+
+        // Fetch nodes concurrently
+        await Promise.all(nodeIds.map(async (id) => {
+            const node = await store.get(id);
+            if (node) {
+                nodesMap.set(id, node);
+            }
+        }));
+
+        await tx.done;
+        return nodesMap;
+    }
+
+
+    // --- Edge Methods ---
 
     async saveEdge(edge: KartaEdge): Promise<void> {
         const db = await this.dbPromise;
@@ -151,6 +213,29 @@ class LocalAdapter implements PersistenceService {
         const db = await this.dbPromise;
         return db.getAll('edges') as Promise<KartaEdge[]>;
     }
+
+    /**
+     * Gets all edges connected to a given set of node IDs.
+     */
+    async getEdgesByNodeIds(nodeIds: NodeId[]): Promise<Map<string, KartaEdge>> {
+        const db = await this.dbPromise;
+        const tx = db.transaction('edges', 'readonly');
+        const store = tx.objectStore('edges');
+        const allEdges = await store.getAll(); // Fetch all edges
+        await tx.done;
+
+        const relevantEdges = new Map<string, KartaEdge>();
+        const nodeIdsSet = new Set(nodeIds); // Use a Set for efficient lookup
+
+        for (const edge of allEdges) {
+            if (nodeIdsSet.has(edge.source) || nodeIdsSet.has(edge.target)) {
+                relevantEdges.set(edge.id, edge);
+            }
+        }
+
+        return relevantEdges;
+    }
+
 
     // --- Context Methods ---
 
@@ -333,7 +418,8 @@ class LocalAdapter implements PersistenceService {
 interface KartaDB extends idb.DBSchema {
     nodes: {
         key: string;
-        value: DataNode; // Use DataNode
+        value: DataNode;
+        indexes: { 'name_idx': string }; // Define the index
     };
     edges: {
         key: string;
