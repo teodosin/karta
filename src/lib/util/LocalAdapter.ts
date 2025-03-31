@@ -49,10 +49,10 @@ class LocalAdapter implements PersistenceService {
         console.log('[LocalAdapter] Constructor: Initializing DB connection...');
         const startTime = performance.now();
 
-        // Increment DB version to 3 to trigger the upgrade for the new index
+        // Increment DB version to 4 to trigger the upgrade for the new edge indexes
         // The upgrade callback handles creation for all versions sequentially.
-        this.dbPromise = idb.openDB<KartaDB>('karta-db', 3, {
-            upgrade(db, oldVersion, newVersion, tx, event) { // Added event param to access transaction in later upgrade steps
+        this.dbPromise = idb.openDB<KartaDB>('karta-db', 4, {
+            upgrade(db, oldVersion, newVersion, tx, event) {
                 console.log(`[LocalAdapter] Upgrading DB from v${oldVersion} to v${newVersion}...`);
                 // Create initial stores if upgrading from v0
                 // Create initial stores if upgrading from v0
@@ -66,7 +66,11 @@ class LocalAdapter implements PersistenceService {
                     }
                     if (!db.objectStoreNames.contains('edges')) {
                         console.log('[LocalAdapter] Creating "edges" object store.');
-                        db.createObjectStore('edges', { keyPath: 'id' });
+                        const edgeStore = db.createObjectStore('edges', { keyPath: 'id' });
+                        // Add indexes for source and target
+                        console.log('[LocalAdapter] Creating "source_idx" and "target_idx" indexes on "edges" store.');
+                        edgeStore.createIndex('source_idx', 'source', { unique: false });
+                        edgeStore.createIndex('target_idx', 'target', { unique: false });
                     }
                 }
                 // Create contexts store if upgrading from v0 or v1
@@ -92,6 +96,22 @@ class LocalAdapter implements PersistenceService {
                         }
                     } else {
                          console.warn('[LocalAdapter] Cannot add name_idx: "nodes" store does not exist.');
+                    }
+                 }
+                 // Add edge indexes if upgrading from v1, v2, or v3
+                 if (oldVersion >= 1 && oldVersion < 4) {
+                    if (db.objectStoreNames.contains('edges')) {
+                        const edgeStore = tx.objectStore('edges');
+                        if (!edgeStore.indexNames.contains('source_idx')) {
+                            console.log('[LocalAdapter] Creating "source_idx" index on existing "edges" store.');
+                            edgeStore.createIndex('source_idx', 'source', { unique: false });
+                        }
+                        if (!edgeStore.indexNames.contains('target_idx')) {
+                            console.log('[LocalAdapter] Creating "target_idx" index on existing "edges" store.');
+                            edgeStore.createIndex('target_idx', 'target', { unique: false });
+                        }
+                    } else {
+                        console.warn('[LocalAdapter] Cannot add edge indexes: "edges" store does not exist.');
                     }
                  }
                 console.log('[LocalAdapter] DB upgrade complete.');
@@ -215,24 +235,35 @@ class LocalAdapter implements PersistenceService {
     }
 
     /**
-     * Gets all edges connected to a given set of node IDs.
+     * Gets all edges connected to a given set of node IDs using source and target indexes.
      */
     async getEdgesByNodeIds(nodeIds: NodeId[]): Promise<Map<string, KartaEdge>> {
+        if (nodeIds.length === 0) {
+            return new Map();
+        }
         const db = await this.dbPromise;
         const tx = db.transaction('edges', 'readonly');
         const store = tx.objectStore('edges');
-        const allEdges = await store.getAll(); // Fetch all edges
-        await tx.done;
-
+        const sourceIndex = store.index('source_idx');
+        const targetIndex = store.index('target_idx');
         const relevantEdges = new Map<string, KartaEdge>();
-        const nodeIdsSet = new Set(nodeIds); // Use a Set for efficient lookup
 
-        for (const edge of allEdges) {
-            if (nodeIdsSet.has(edge.source) || nodeIdsSet.has(edge.target)) {
-                relevantEdges.set(edge.id, edge);
-            }
-        }
+        // Fetch edges where source matches any nodeId
+        const sourcePromises = nodeIds.map(id => sourceIndex.getAll(id));
+        // Fetch edges where target matches any nodeId
+        const targetPromises = nodeIds.map(id => targetIndex.getAll(id));
 
+        // Wait for all queries to complete
+        const [sourceResults, targetResults] = await Promise.all([
+            Promise.all(sourcePromises),
+            Promise.all(targetPromises)
+        ]);
+
+        // Combine results, using Map to automatically handle duplicates
+        sourceResults.flat().forEach(edge => relevantEdges.set(edge.id, edge));
+        targetResults.flat().forEach(edge => relevantEdges.set(edge.id, edge));
+
+        await tx.done;
         return relevantEdges;
     }
 
@@ -424,6 +455,7 @@ interface KartaDB extends idb.DBSchema {
     edges: {
         key: string;
         value: KartaEdge;
+        indexes: { 'source_idx': string; 'target_idx': string }; // Define edge indexes
     };
     contexts: { // Add contexts store definition
         key: NodeId;

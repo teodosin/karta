@@ -7,17 +7,15 @@
     // Reactively determine the path to display
     $: {
         const ctxId = $currentContextId;
-        if (ctxId === 'global_context') {
-            displayPath = '/'; // Special case for the root/global context
+        // Removed special case for 'global_context', rely on node path attribute
+        const contextNode: DataNode | undefined = $nodes.get(ctxId);
+        if (contextNode && contextNode.path) {
+            displayPath = contextNode.path;
         } else {
-            const contextNode: DataNode | undefined = $nodes.get(ctxId);
-            if (contextNode && contextNode.path) {
-                displayPath = contextNode.path;
-            } else {
-                // Fallback if node or path is somehow missing
-                displayPath = '/?';
-                console.warn(`Context node or path not found for ID: ${ctxId}`);
-            }
+            // Fallback if node or path is somehow missing
+            displayPath = '/?';
+            console.warn(`Context node or path not found for ID: ${ctxId}`);
+            // Removed duplicated else block
         }
     }
 </script>
