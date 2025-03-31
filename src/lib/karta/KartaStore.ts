@@ -2,7 +2,7 @@ import { writable, get } from 'svelte/store';
 import { tweened } from 'svelte/motion';
 import { cubicOut } from 'svelte/easing';
 import { localAdapter } from '../util/LocalAdapter';
-import type { DataNode, KartaEdge, ViewNode, Context, Tool, NodeId, EdgeId, AbsoluteTransform } from '../types/types';
+import type { DataNode, KartaEdge, ViewNode, Context, Tool, NodeId, EdgeId, AbsoluteTransform, ViewportSettings } from '../types/types'; // Import ViewportSettings
 import { MoveTool } from '../tools/MoveTool';
 import { ConnectTool } from '../tools/ConnectTool';
 import { ContextTool } from '../tools/ContextTool';
@@ -13,11 +13,12 @@ export const ROOT_NODE_ID = '00000000-0000-0000-0000-000000000000';
 
 // Define default transform for root context or when focal node isn't visible
 const DEFAULT_FOCAL_TRANSFORM: AbsoluteTransform = { x: 0, y: 0, scale: 1, rotation: 0 };
+const DEFAULT_VIEWPORT_SETTINGS: ViewportSettings = { scale: 1, posX: 0, posY: 0 }; // Default viewport state
 
 // --- Store Definition ---
-export const viewTransform = tweened(
-	{ scale: 1, posX: 0, posY: 0 },
-	{ duration: 200, easing: cubicOut }
+export const viewTransform = tweened<ViewportSettings>( // Use ViewportSettings type
+	{ ...DEFAULT_VIEWPORT_SETTINGS }, // Initialize with default
+	{ duration: 500, easing: cubicOut } // Default tween settings
 );
 export const nodes = writable<Map<NodeId, DataNode>>(new Map());
 export const edges = writable<Map<EdgeId, KartaEdge>>(new Map());
@@ -73,7 +74,7 @@ async function _loadAndUpdateContextWithDefaults(
             id: contextId, x: focalAbsTransform.x, y: focalAbsTransform.y,
             width: 100, height: 100, scale: focalAbsTransform.scale, rotation: focalAbsTransform.rotation,
         };
-        loadedContext = { id: contextId, viewNodes: new Map([[contextId, focalViewNode]]) };
+        loadedContext = { id: contextId, viewNodes: new Map([[contextId, focalViewNode]]) }; // viewportSettings will be undefined initially
         contextModified = true; // Mark for saving as it was created
     } else {
          console.log(`[_loadAndUpdateContextWithDefaults] Context ${contextId} loaded from DB.`);
@@ -102,9 +103,8 @@ async function _loadAndUpdateContextWithDefaults(
             let defaultViewNode: ViewNode;
 
             if (existingViewNodeInOldContext) {
-                 // Preserve existing position if node was visible before switch
                  console.log(`[_loadAndUpdateContextWithDefaults] Preserving position for node ${connectedId}`);
-                 defaultViewNode = { ...existingViewNodeInOldContext }; // Copy existing data
+                 defaultViewNode = { ...existingViewNodeInOldContext };
             } else {
                 // Calculate default position (simplified - no rotation applied)
                 const angleRad = (currentAngle * Math.PI) / 180;
@@ -117,14 +117,12 @@ async function _loadAndUpdateContextWithDefaults(
 
                 defaultViewNode = {
                     id: connectedId, x: defaultAbsX, y: defaultAbsY,
-                    width: 100, height: 100, // Default size
-                    scale: focalAbsTransform.scale, // Inherit scale
-                    rotation: 0, // Default rotation
+                    width: 100, height: 100, scale: focalAbsTransform.scale, rotation: 0,
                 };
                 currentAngle += angleIncrement;
             }
             loadedContext.viewNodes.set(connectedId, defaultViewNode);
-            contextModified = true; // Mark context as modified because defaults were added
+            contextModified = true;
         }
     } else {
         console.log(`[_loadAndUpdateContextWithDefaults] No default connected nodes to add.`);
@@ -133,10 +131,14 @@ async function _loadAndUpdateContextWithDefaults(
     // Save the context immediately if it was newly created or defaults were added
     if (contextModified) {
         console.log(`[_loadAndUpdateContextWithDefaults] Saving context ${contextId} (created or defaults added)...`);
+        // Ensure viewportSettings are included if saving for the first time
+        if (!loadedContext.viewportSettings) {
+            loadedContext.viewportSettings = { ...DEFAULT_VIEWPORT_SETTINGS };
+        }
         await localAdapter.saveContext(loadedContext);
     }
 
-    return { loadedContext, contextModified }; // Return modified flag if needed elsewhere
+    return { loadedContext, contextModified };
 }
 
 /**
@@ -260,7 +262,11 @@ export async function createNodeAtPosition(canvasX: number, canvasY: number, nty
         try {
             await localAdapter.saveNode(newNodeData);
             const updatedCtx = get(contexts).get(contextId);
-            if (updatedCtx) { await localAdapter.saveContext(updatedCtx); } // Save context with new viewnode
+            if (updatedCtx) {
+                // Capture current viewport settings when saving context after node creation
+                updatedCtx.viewportSettings = get(viewTransform);
+                await localAdapter.saveContext(updatedCtx);
+            }
             console.log(`[KartaStore] Node ${newNodeId} and Context ${contextId} saved.`);
         } catch (error) { console.error("Error saving node or context after creation:", error); }
     } else { console.warn("LocalAdapter not initialized, persistence disabled."); }
@@ -277,7 +283,8 @@ export function updateNodeLayout(nodeId: NodeId, newX: number, newY: number) {
             currentCtx.viewNodes.set(nodeId, updatedViewNode);
             ctxMap.set(contextId, currentCtx);
             if (localAdapter) {
-                // Save context asynchronously on layout update
+                // Capture current viewport settings when saving context after layout update
+                currentCtx.viewportSettings = get(viewTransform);
                 localAdapter.saveContext(currentCtx).catch(err => console.error(`Error saving context ${contextId} after layout update:`, err));
             }
         } else { console.warn(`ViewNode ${nodeId} not found in context ${contextId} for layout update`); }
@@ -304,7 +311,7 @@ export async function createEdge(sourceId: NodeId, targetId: NodeId) {
     } else { console.warn("LocalAdapter not initialized, persistence disabled."); }
 }
 
-// Connection Process Helpers (Simplified for brevity in refactoring)
+// Connection Process Helpers
 export function startConnectionProcess(nodeId: NodeId) {
     if (get(currentTool)?.name !== 'connect' || get(isConnecting)) return;
     const contextId = get(currentContextId);
@@ -350,10 +357,14 @@ export async function switchContext(newContextId: NodeId) {
         console.error("[switchContext] LocalAdapter not available."); return;
     }
 
+    // Capture current viewport settings BEFORE saving old context
+    const currentViewportSettings = get(viewTransform);
+
     // Save Old Context (Async)
     const oldContext = get(contexts).get(oldContextId);
     if (oldContext) {
-        console.log(`[switchContext] Saving old context: ${oldContextId} (async)`);
+        console.log(`[switchContext] Saving old context: ${oldContextId} with viewport:`, currentViewportSettings);
+        oldContext.viewportSettings = currentViewportSettings; // Update settings before saving
         localAdapter.saveContext(oldContext)
             .then(() => console.log(`[switchContext] Old context ${oldContextId} saved successfully (async).`))
             .catch(error => console.error(`[switchContext] Error saving old context ${oldContextId} (async):`, error));
@@ -380,12 +391,18 @@ export async function switchContext(newContextId: NodeId) {
         // Apply Mark-and-Sweep Update to Stores
         _applyStoresUpdate(newContextId, loadedContext, loadedDataNodes, loadedEdges);
 
-        // TODO: Update viewport transform to center on the new focal node (Phase 6 refinement)
+        // Apply Viewport Tween
+        const newSettings = loadedContext.viewportSettings;
+        if (newSettings) {
+            console.log(`[switchContext] Tweening viewport to saved settings for ${newContextId}:`, newSettings);
+            viewTransform.set(newSettings, { duration: 500 }); // Use tween
+        } else {
+            console.log(`[switchContext] No saved viewport settings for ${newContextId}. Tweening to default.`);
+            viewTransform.set({ ...DEFAULT_VIEWPORT_SETTINGS }, { duration: 500 }); // Use tween to default
+        }
 
     } catch (error) {
         console.error(`[switchContext] Error switching context to ${newContextId}:`, error);
-        // Optionally revert to old context ID if switch fails?
-        // currentContextId.set(oldContextId);
     }
 }
 
@@ -471,6 +488,12 @@ async function _loadInitialRootContext(rootDataNode: DataNode): Promise<Context>
          }
      }
 
+     // Ensure viewportSettings exist before saving
+     if (!finalRootContext.viewportSettings) {
+         finalRootContext.viewportSettings = { ...DEFAULT_VIEWPORT_SETTINGS };
+         rootContextModified = true; // Need to save if we added default settings
+     }
+
      if (rootContextModified) {
          console.log("Saving created/modified Root context to DB...");
          await localAdapter.saveContext(finalRootContext);
@@ -520,6 +543,12 @@ async function initializeStores() {
             contexts.set(new Map([[ROOT_NODE_ID, finalRootContext]]));
             currentContextId.set(ROOT_NODE_ID);
 
+            // Set initial viewport state (no tween)
+            const initialSettings = finalRootContext.viewportSettings || DEFAULT_VIEWPORT_SETTINGS;
+            console.log("Setting initial viewport state:", initialSettings);
+            viewTransform.set(initialSettings, { duration: 0 });
+
+
             console.log(`Initialization complete. Context: ${ROOT_NODE_ID}, Nodes: ${get(nodes).size}, Edges: ${get(edges).size}`);
 
         } catch (error) {
@@ -529,6 +558,7 @@ async function initializeStores() {
             edges.set(new Map());
             contexts.set(new Map());
             currentContextId.set(ROOT_NODE_ID);
+            viewTransform.set({ ...DEFAULT_VIEWPORT_SETTINGS }, { duration: 0 }); // Reset viewport on error
         }
     } else {
         console.warn("LocalAdapter not initialized, skipping initialization in SSR.");
@@ -537,6 +567,7 @@ async function initializeStores() {
         edges.set(new Map());
         contexts.set(new Map());
         currentContextId.set(ROOT_NODE_ID);
+        viewTransform.set({ ...DEFAULT_VIEWPORT_SETTINGS }, { duration: 0 }); // Set default viewport for SSR
     }
 }
 

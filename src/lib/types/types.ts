@@ -36,7 +36,17 @@ export interface AbsoluteTransform {
 export interface Context {
   id: NodeId; // UUID of the focal DataNode this context represents
   viewNodes: Map<NodeId, ViewNode>; // Map of NodeIDs to their layout in this context
+  viewportSettings?: ViewportSettings; // Optional saved viewport state for this context
   // TODO: Add context-specific settings like background, grid, etc. later
+}
+
+// --- Viewport ---
+// NOTE: posX/posY here represent ABSOLUTE canvas coordinates for the top-left of the viewport.
+// These are converted to/from relative coordinates for storage.
+export interface ViewportSettings {
+    scale: number;
+    posX: number; // Absolute X
+    posY: number; // Absolute Y
 }
 
 // Represents connections between DataNodes (context-independent)
