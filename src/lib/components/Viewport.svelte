@@ -23,12 +23,14 @@
 	let isPanning = false;
 	let panStartX = 0;
 	let panStartY = 0;
+    let lastInputWasTouchpad = false; // State for heuristic
 
     // State for last known cursor position
     let lastScreenX = 0;
     let lastScreenY = 0;
 
 	function handleWheel(e: WheelEvent) {
+    // console.log(`handleWheel: deltaY=${e.deltaY}, deltaX=${e.deltaX}, deltaMode=${e.deltaMode}, ctrlKey=${e.ctrlKey}`); // DEBUG LOG removed
     e.preventDefault();
     if (!canvasContainer) return;
 
@@ -45,20 +47,32 @@
     let newPosY = currentTransform.posY;
     const zoomSensitivityFactor = 2.0; // Slightly slower zoom
     const panSensitivityFactor = 4.5;  // Slightly faster pan
+    const wheelZoomFactor = 1.75; // Increased Standard wheel zoom factor
+    const pinchZoomSensitivity = 0.6; // Touchpad pinch zoom sensitivity
+
+    // --- Heuristic Update ---
+    // Detect if input is likely touchpad pan (both X and Y deltas present)
+    const deltaThreshold = 0.1; // Use a small threshold
+    if (Math.abs(e.deltaX) > deltaThreshold && Math.abs(e.deltaY) > deltaThreshold) {
+        lastInputWasTouchpad = true;
+    }
 
     if (e.ctrlKey) {
-        // Pinch-to-zoom (Ctrl + Wheel)
-        newScale = currentTransform.scale * (e.deltaY < 0 ? 1 + 0.1 * zoomSensitivityFactor : 1 / (1 + 0.1 * zoomSensitivityFactor)); // Slower zoom factor
+        // Pinch-to-zoom (Ctrl key pressed) - Always zoom
+        const pinchFactor = 1 + pinchZoomSensitivity * zoomSensitivityFactor;
+        newScale = currentTransform.scale * (e.deltaY < 0 ? pinchFactor : 1 / pinchFactor);
         newScale = Math.max(0.1, Math.min(newScale, 5));
         newPosX = mouseX - beforeZoomX * newScale;
         newPosY = mouseY - beforeZoomY * newScale;
-    } else if (e.deltaMode === 0) {
-        // Touchpad panning (Pixel deltaMode)
-        newPosX = currentTransform.posX - e.deltaX * panSensitivityFactor; // Faster panning speed
-        newPosY = currentTransform.posY - e.deltaY * panSensitivityFactor; // Faster panning speed
+    } else if (lastInputWasTouchpad) {
+        // Touchpad panning (heuristic detected touchpad)
+        newPosX = currentTransform.posX - e.deltaX * panSensitivityFactor;
+        newPosY = currentTransform.posY - e.deltaY * panSensitivityFactor;
+        // Keep scale the same when panning
+        newScale = currentTransform.scale;
     } else {
-        // Mouse wheel zoom (Line or Page deltaMode)
-        newScale = currentTransform.scale * (e.deltaY < 0 ? 1.1 : 1 / 1.1);
+        // Standard mouse wheel zoom (heuristic assumes mouse)
+        newScale = currentTransform.scale * (e.deltaY < 0 ? wheelZoomFactor : 1 / wheelZoomFactor);
         newScale = Math.max(0.1, Math.min(newScale, 5));
         newPosX = mouseX - beforeZoomX * newScale;
         newPosY = mouseY - beforeZoomY * newScale;
@@ -73,44 +87,56 @@
 	function handlePointerDown(e: PointerEvent) { // Changed to PointerEvent
 		// Middle mouse panning (keep this local for now, could be a tool later)
 		if (e.button === 1) {
+            lastInputWasTouchpad = false; // Middle mouse click means it's definitely a mouse
 			e.preventDefault();
 			isPanning = true;
 			const currentTransform = get(viewTransform);
 			panStartX = e.clientX - currentTransform.posX;
 			panStartY = e.clientY - currentTransform.posY;
-			if(canvasContainer) canvasContainer.style.cursor = 'grabbing';
-			// Add window listeners for middle-mouse panning
-			window.addEventListener('mousemove', handleMiddleMouseMove);
-			window.addEventListener('pointerup', handleMiddleMouseUp, { once: true }); // Changed to pointerup
+			if(canvasContainer) {
+                canvasContainer.style.cursor = 'grabbing';
+                // Capture the pointer for this drag sequence
+                canvasContainer.setPointerCapture(e.pointerId);
+                // Add listeners directly to the element that captured the pointer
+                canvasContainer.addEventListener('pointermove', handleElementPointerMove);
+                canvasContainer.addEventListener('pointerup', handleElementPointerUp);
+            }
 			return; // Don't delegate middle mouse to tool
 		}
 
-		// Delegate pointer down events to the active tool
+		// Delegate pointer down events to the active tool (for non-middle mouse)
         // Pass the event and the direct target element
         get(currentTool)?.onPointerDown?.(e, e.target as EventTarget | null);
 	}
 
-	// Renamed from handleMouseMove to avoid conflict
-	function handleMiddleMouseMove(e: MouseEvent) { // Changed back to MouseEvent for window listener
-		if (isPanning) {
-			const newPosX = e.clientX - panStartX;
+    // New handler for pointer move on the element during middle-mouse pan
+    function handleElementPointerMove(e: PointerEvent) {
+        // Check if we are still panning (redundant check if listeners are removed correctly, but safe)
+        // Also check if the moving pointer is the one we captured
+        if (isPanning && canvasContainer?.hasPointerCapture(e.pointerId)) {
+            const newPosX = e.clientX - panStartX;
 			const newPosY = e.clientY - panStartY;
-             viewTransform.set({ scale: $viewTransform.scale, posX: newPosX, posY: newPosY }, { duration: 0 });
-		}
-	}
+            viewTransform.set({ scale: $viewTransform.scale, posX: newPosX, posY: newPosY }, { duration: 0 });
+        }
+    }
 
-	// Renamed from handleMouseUp to avoid conflict
-	function handleMiddleMouseUp(e: PointerEvent) { // Changed to PointerEvent
-		if (isPanning && e.button === 1) {
-			isPanning = false;
-			// Cursor is now handled reactively by the tool
-			// Remove window listeners for middle-mouse panning
-			window.removeEventListener('pointermove', handleMiddleMouseMove); // Changed to pointermove
-			// pointerup listener removed by 'once: true'
-		}
-	}
+    // New handler for pointer up on the element during middle-mouse pan
+    function handleElementPointerUp(e: PointerEvent) {
+        // Check if this is the up event for the pointer we captured and the middle button
+        if (isPanning && e.button === 1 && canvasContainer?.hasPointerCapture(e.pointerId)) {
+            isPanning = false;
+            if(canvasContainer) {
+                canvasContainer.style.cursor = 'default'; // Reset cursor
+                // Remove listeners from the element
+                canvasContainer.removeEventListener('pointermove', handleElementPointerMove);
+                canvasContainer.removeEventListener('pointerup', handleElementPointerUp);
+                // Release the pointer capture
+                canvasContainer.releasePointerCapture(e.pointerId);
+            }
+        }
+    }
 
-	// General pointer move on viewport
+	// General pointer move on viewport (for non-panning moves, delegate to tool)
 	function handleViewportPointerMove(e: PointerEvent) { // Changed to PointerEvent
         // Update last known cursor position
         lastScreenX = e.clientX;
@@ -163,12 +189,11 @@
     function handleKeyUp(e: KeyboardEvent) {
         // Delegate keyup events to the active tool
         get(currentTool)?.onKeyUp?.(e);
-    }
+	}
 
 	function handleContextMenu(e: MouseEvent) {
-		if (e.button === 1) {
-			e.preventDefault();
-		}
+		// Allow default context menu for right-click (button 2)
+        // Middle mouse (button 1) default is prevented by handlePointerDown if needed
 	}
 
 </script>

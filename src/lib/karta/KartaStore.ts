@@ -237,11 +237,10 @@ export async function createNodeAtPosition(canvasX: number, canvasY: number, nty
             finalName = `${baseName}${counter}`; counter++;
         }
     } else { console.warn("LocalAdapter not ready, cannot check for duplicate names."); }
-    console.log(`[KartaStore] Determined final node name: ${finalName}`);
 
 	const newNodeData: DataNode = {
 		id: newNodeId, ntype: ntype, createdAt: now, modifiedAt: now,
-        path: `/node_${newNodeId}`, // TODO: Path generation needs refinement
+        path: `/${finalName}`,
 		attributes: { ...attributes, name: finalName },
 	};
     const newViewNode: ViewNode = {
@@ -257,7 +256,6 @@ export async function createNodeAtPosition(canvasX: number, canvasY: number, nty
         ctxMap.set(contextId, currentCtx);
         return ctxMap;
     });
-	console.log(`[KartaStore] createNodeAtPosition: Creating node ${newNodeId} (${finalName}) in context ${contextId}`);
     if (localAdapter) {
         try {
             await localAdapter.saveNode(newNodeData);
