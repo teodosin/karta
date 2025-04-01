@@ -48,7 +48,7 @@
     const zoomSensitivityFactor = 2.0; // Slightly slower zoom
     const panSensitivityFactor = 4.5;  // Slightly faster pan
     const wheelZoomFactor = 1.75; // Increased Standard wheel zoom factor
-    const pinchZoomSensitivity = 0.6; // Touchpad pinch zoom sensitivity
+    const pinchZoomSensitivity = 0.2; // Touchpad pinch zoom sensitivity
 
     // --- Heuristic Update ---
     // Detect if input is likely touchpad pan (both X and Y deltas present)
