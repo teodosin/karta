@@ -14,7 +14,7 @@ export const ROOT_NODE_ID = '00000000-0000-0000-0000-000000000000';
 // Define default transform for root context or when focal node isn't visible
 const DEFAULT_FOCAL_TRANSFORM: AbsoluteTransform = { x: 0, y: 0, scale: 1, rotation: 0 };
 const DEFAULT_VIEWPORT_SETTINGS: ViewportSettings = { scale: 1, posX: 0, posY: 0 }; // Default viewport state
-const VIEWPORT_TWEEN_DURATION = 500;
+const VIEWPORT_TWEEN_DURATION = 5000;
 
 // --- Store Definition ---
 export const viewTransform = new Tween<ViewportSettings>( // Use ViewportSettings type
@@ -195,16 +195,12 @@ function _applyStoresUpdate(
         }
     }
 
-    console.log(`[_applyStoresUpdate] Mark-and-Sweep: Nodes to remove: ${nodesToRemove.size}, Edges to remove: ${edgesToRemove.size}`);
-
     // Set the new state
     nodes.set(newNodes);
     edges.set(newEdges);
     contexts.update(map => map.set(newContextId, loadedContext)); // Update the specific context's view data
     currentContextId.set(newContextId);
 
-    console.log(`[_applyStoresUpdate] Switched current context ID to ${newContextId}`);
-    console.log(`[_applyStoresUpdate] Stores updated. Nodes: ${get(nodes).size}, Edges: ${get(edges).size}, Contexts: ${get(contexts).size}`);
 }
 
 
@@ -339,12 +335,9 @@ export function screenToCanvasCoordinates(screenX: number, screenY: number, cont
 }
 
 
-// --- Context Switching (Refactored) ---
 export async function switchContext(newContextId: NodeId) {
-    console.log(`[switchContext] Attempting to switch to context: ${newContextId}`);
     const oldContextId = get(currentContextId);
     if (newContextId === oldContextId) {
-        console.log(`[switchContext] Already in context ${newContextId}. Aborting.`);
         return;
     }
     if (!localAdapter) {
@@ -363,7 +356,6 @@ export async function switchContext(newContextId: NodeId) {
     if (oldContext) {
         oldContext.viewportSettings = currentViewportSettings; // Update settings before saving
         localAdapter.saveContext(oldContext)
-            .then(() => console.log(`[switchContext] Old context ${oldContextId} saved successfully (async).`))
             .catch(error => console.error(`[switchContext] Error saving old context ${oldContextId} (async):`, error));
     } else { console.warn(`[switchContext] Old context ${oldContextId} not found in memory store.`); }
 
@@ -391,7 +383,6 @@ export async function switchContext(newContextId: NodeId) {
         // Apply Viewport Tween
         let newSettings = loadedContext.viewportSettings;
         if (newSettings) {
-            console.log(`[switchContext] Tweening viewport to saved settings for ${newContextId}:`, newSettings);
             newSettings.posX += newFocalAbsTransform.x;
             newSettings.posY += newFocalAbsTransform.y;
             viewTransform.set(newSettings, { duration: VIEWPORT_TWEEN_DURATION }); // Use tween
