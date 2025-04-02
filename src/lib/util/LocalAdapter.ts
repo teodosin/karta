@@ -248,8 +248,6 @@ class LocalAdapter implements PersistenceService {
                 const relY = (dx * sinAngle + dy * cosAngle) / focalNode.scale;
                 storableNode = { id: viewNode.id, relX, relY, width: viewNode.width, height: viewNode.height, relScale, relRotation };
             }
-            // DEBUG: Log conversion for saveContext
-            console.log(`[DEBUG saveContext ${context.id}] Node ${nodeId} | AbsIn: ${JSON.stringify({x: viewNode.x, y: viewNode.y, scale: viewNode.scale, rotation: viewNode.rotation})} | RelOut: ${JSON.stringify(storableNode)} | Focal: ${JSON.stringify(focalNode)}`);
             storableViewNodes.push([nodeId, storableNode]);
         }
 
@@ -314,8 +312,6 @@ class LocalAdapter implements PersistenceService {
                         scale: absScale, rotation: absRotation
                     };
                 }
-                // DEBUG: Log conversion for getContext
-                console.log(`[DEBUG getContext ${contextId}] Node ${nodeId} | RelIn: ${JSON.stringify(storableViewNode)} | Focal: ${JSON.stringify(focalAbsTransform)} | AbsOut: ${JSON.stringify(absoluteNode)}`);
                 absoluteViewNodes.set(nodeId, absoluteNode);
             }
 

@@ -1,19 +1,18 @@
 <script lang="ts">
 	import { get } from 'svelte/store';
-	   import { localAdapter } from '$lib/util/LocalAdapter'; // Import adapter
-	   import {
-	       viewTransform,
-	       screenToCanvasCoordinates,
-	       createNodeAtPosition,
-	       nodes, // Still need nodes for DataNode info if NodeWrapper needs it
-	       contexts, // Import contexts store
-	       currentContextId, // Import current context ID store
-	       currentTool,
-	       cancelConnectionProcess
-	   } from '$lib/karta/KartaStore';
+    import {
+        viewTransform,
+        screenToCanvasCoordinates,
+        createNodeAtPosition,
+        nodes, // Still need nodes for DataNode info if NodeWrapper needs it
+        contexts, // Import contexts store
+        currentContextId, // Import current context ID store
+        currentTool,
+        cancelConnectionProcess
+    } from '$lib/karta/KartaStore';
 	import NodeWrapper from './NodeWrapper.svelte';
-	   import EdgeLayer from './EdgeLayer.svelte';
-	   import type { Context } from '$lib/types/types'; // Import Context type if needed
+    import EdgeLayer from './EdgeLayer.svelte';
+
 	let canvasContainer: HTMLElement;
 	let canvas: HTMLElement;
 
@@ -30,33 +29,7 @@
     let lastScreenX = 0;
     let lastScreenY = 0;
 
-    // --- Viewport State Saving ---
-    async function saveCurrentViewportState() {
-        if (!localAdapter) {
-            console.warn("[Viewport] LocalAdapter not available, cannot save viewport state.");
-            return;
-        }
-        const ctxId = get(currentContextId);
-        const ctxMap = get(contexts);
-        const currentCtx = ctxMap.get(ctxId);
-        const currentViewport = get(viewTransform); // Get latest value
-
-        if (currentCtx) {
-            // Create a copy with updated settings to pass to saveContext
-            const updatedCtx: Context = { ...currentCtx, viewportSettings: currentViewport };
-            try {
-                // console.log(`[DEBUG Viewport] Saving viewport state for context ${ctxId}:`, JSON.stringify(currentViewport)); // Optional: Can be noisy
-                await localAdapter.saveContext(updatedCtx);
-            } catch (error) {
-                console.error(`[Viewport] Error saving context ${ctxId} after viewport change:`, error);
-            }
-        } else {
-            console.warn(`[Viewport] Cannot save viewport state: Context ${ctxId} not found.`);
-        }
-    }
-    // --- End Viewport State Saving ---
-
- function handleWheel(e: WheelEvent) {
+	function handleWheel(e: WheelEvent) {
     // console.log(`handleWheel: deltaY=${e.deltaY}, deltaX=${e.deltaX}, deltaMode=${e.deltaMode}, ctrlKey=${e.ctrlKey}`); // DEBUG LOG removed
     e.preventDefault();
     if (!canvasContainer) return;
@@ -106,7 +79,6 @@
     }
 
     viewTransform.set({ scale: newScale, posX: newPosX, posY: newPosY });
-    saveCurrentViewportState(); // Save viewport state after update
 
     // Call tool's wheel handler
     get(currentTool)?.onWheel?.(e);
@@ -145,7 +117,6 @@
             const newPosX = e.clientX - panStartX;
 			const newPosY = e.clientY - panStartY;
             viewTransform.set({ scale: $viewTransform.scale, posX: newPosX, posY: newPosY }, { duration: 0 });
-            saveCurrentViewportState(); // Save viewport state after update
         }
     }
 
