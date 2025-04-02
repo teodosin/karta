@@ -347,14 +347,14 @@ export async function switchContext(newContextId: NodeId) {
     const oldContext = get(contexts).get(oldContextId);
     const oldFocalTransform = _getFocalTransform(oldContextId, oldContextId);
 
-    // Capture current viewport settings before saving old context
-    // Convert absolute to relative coordinates
-    let currentViewportSettings = viewTransform.target;
-    currentViewportSettings.posX -= oldFocalTransform.x;
-    currentViewportSettings.posY -= oldFocalTransform.y;
+  // Capture current viewport settings before saving old context
+  // Create a COPY and convert absolute to relative coordinates for saving
+  let viewportSettingsToSave = { ...viewTransform.target }; // Create a shallow copy
+  viewportSettingsToSave.posX -= oldFocalTransform.x;
+  viewportSettingsToSave.posY -= oldFocalTransform.y;
 
     if (oldContext) {
-        oldContext.viewportSettings = currentViewportSettings; // Update settings before saving
+    oldContext.viewportSettings = viewportSettingsToSave; // Save the modified copy
         localAdapter.saveContext(oldContext)
             .catch(error => console.error(`[switchContext] Error saving old context ${oldContextId} (async):`, error));
     } else { console.warn(`[switchContext] Old context ${oldContextId} not found in memory store.`); }
