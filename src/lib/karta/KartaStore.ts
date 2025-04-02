@@ -14,11 +14,12 @@ export const ROOT_NODE_ID = '00000000-0000-0000-0000-000000000000';
 // Define default transform for root context or when focal node isn't visible
 const DEFAULT_FOCAL_TRANSFORM: AbsoluteTransform = { x: 0, y: 0, scale: 1, rotation: 0 };
 const DEFAULT_VIEWPORT_SETTINGS: ViewportSettings = { scale: 1, posX: 0, posY: 0 }; // Default viewport state
+const VIEWPORT_TWEEN_DURATION = 500;
 
 // --- Store Definition ---
 export const viewTransform = new Tween<ViewportSettings>( // Use ViewportSettings type
 	{ ...DEFAULT_VIEWPORT_SETTINGS }, // Initialize with default
-	{ duration: 500, easing: cubicOut } // Default tween settings
+	{ duration: VIEWPORT_TWEEN_DURATION, easing: cubicOut } // Default tween settings
 );
 export const nodes = writable<Map<NodeId, DataNode>>(new Map());
 export const edges = writable<Map<EdgeId, KartaEdge>>(new Map());
@@ -130,11 +131,6 @@ async function _loadAndUpdateContextWithDefaults(
 
     // Save the context immediately if it was newly created or defaults were added
     if (contextModified) {
-        console.log(`[_loadAndUpdateContextWithDefaults] Saving context ${contextId} (created or defaults added)...`);
-        // Ensure viewportSettings are included if saving for the first time
-        if (!loadedContext.viewportSettings) {
-            loadedContext.viewportSettings = { ...DEFAULT_VIEWPORT_SETTINGS };
-        }
         await localAdapter.saveContext(loadedContext);
     }
 
@@ -354,14 +350,17 @@ export async function switchContext(newContextId: NodeId) {
     if (!localAdapter) {
         console.error("[switchContext] LocalAdapter not available."); return;
     }
-
-    // Capture current viewport settings BEFORE saving old context
-    const currentViewportSettings = viewTransform.target;
-
     // Save Old Context (Async)
     const oldContext = get(contexts).get(oldContextId);
+    const oldFocalTransform = _getFocalTransform(oldContextId, oldContextId);
+
+    // Capture current viewport settings before saving old context
+    // Convert absolute to relative coordinates
+    let currentViewportSettings = viewTransform.target;
+    currentViewportSettings.posX -= oldFocalTransform.x;
+    currentViewportSettings.posY -= oldFocalTransform.y;
+
     if (oldContext) {
-        console.log(`[switchContext] Saving old context: ${oldContextId} with viewport:`, currentViewportSettings);
         oldContext.viewportSettings = currentViewportSettings; // Update settings before saving
         localAdapter.saveContext(oldContext)
             .then(() => console.log(`[switchContext] Old context ${oldContextId} saved successfully (async).`))
@@ -390,13 +389,12 @@ export async function switchContext(newContextId: NodeId) {
         _applyStoresUpdate(newContextId, loadedContext, loadedDataNodes, loadedEdges);
 
         // Apply Viewport Tween
-        const newSettings = loadedContext.viewportSettings;
+        let newSettings = loadedContext.viewportSettings;
         if (newSettings) {
             console.log(`[switchContext] Tweening viewport to saved settings for ${newContextId}:`, newSettings);
-            viewTransform.set(newSettings, { duration: 500 }); // Use tween
-        } else {
-            console.log(`[switchContext] No saved viewport settings for ${newContextId}. Tweening to default.`);
-            viewTransform.set({ ...DEFAULT_VIEWPORT_SETTINGS }, { duration: 500 }); // Use tween to default
+            newSettings.posX += newFocalAbsTransform.x;
+            newSettings.posY += newFocalAbsTransform.y;
+            viewTransform.set(newSettings, { duration: VIEWPORT_TWEEN_DURATION }); // Use tween
         }
 
     } catch (error) {

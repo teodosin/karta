@@ -78,7 +78,7 @@
         newPosY = mouseY - beforeZoomY * newScale;
     }
 
-    viewTransform.set({ scale: newScale, posX: newPosX, posY: newPosY });
+    viewTransform.set({ scale: newScale, posX: newPosX, posY: newPosY }, {duration: 140});
 
     // Call tool's wheel handler
     get(currentTool)?.onWheel?.(e);
