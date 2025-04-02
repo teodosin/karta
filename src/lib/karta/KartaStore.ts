@@ -1,5 +1,5 @@
 import { writable, get } from 'svelte/store';
-import { tweened } from 'svelte/motion';
+import { Tween, tweened } from 'svelte/motion';
 import { cubicOut } from 'svelte/easing';
 import { localAdapter } from '../util/LocalAdapter';
 import type { DataNode, KartaEdge, ViewNode, Context, Tool, NodeId, EdgeId, AbsoluteTransform, ViewportSettings } from '../types/types'; // Import ViewportSettings
@@ -16,7 +16,7 @@ const DEFAULT_FOCAL_TRANSFORM: AbsoluteTransform = { x: 0, y: 0, scale: 1, rotat
 const DEFAULT_VIEWPORT_SETTINGS: ViewportSettings = { scale: 1, posX: 0, posY: 0 }; // Default viewport state
 
 // --- Store Definition ---
-export const viewTransform = tweened<ViewportSettings>( // Use ViewportSettings type
+export const viewTransform = new Tween<ViewportSettings>( // Use ViewportSettings type
 	{ ...DEFAULT_VIEWPORT_SETTINGS }, // Initialize with default
 	{ duration: 500, easing: cubicOut } // Default tween settings
 );
@@ -262,7 +262,7 @@ export async function createNodeAtPosition(canvasX: number, canvasY: number, nty
             const updatedCtx = get(contexts).get(contextId);
             if (updatedCtx) {
                 // Capture current viewport settings when saving context after node creation
-                updatedCtx.viewportSettings = get(viewTransform);
+                updatedCtx.viewportSettings = viewTransform.target;
                 await localAdapter.saveContext(updatedCtx);
             }
             console.log(`[KartaStore] Node ${newNodeId} and Context ${contextId} saved.`);
@@ -282,7 +282,7 @@ export function updateNodeLayout(nodeId: NodeId, newX: number, newY: number) {
             ctxMap.set(contextId, currentCtx);
             if (localAdapter) {
                 // Capture current viewport settings when saving context after layout update
-                currentCtx.viewportSettings = get(viewTransform);
+                currentCtx.viewportSettings = viewTransform.target;
                 localAdapter.saveContext(currentCtx).catch(err => console.error(`Error saving context ${contextId} after layout update:`, err));
             }
         } else { console.warn(`ViewNode ${nodeId} not found in context ${contextId} for layout update`); }
@@ -336,7 +336,7 @@ export function cancelConnectionProcess() { finishConnectionProcess(null); }
 
 // Screen Coordinates Helper
 export function screenToCanvasCoordinates(screenX: number, screenY: number, containerRect: DOMRect): { x: number; y: number } {
-    const currentTransform = get(viewTransform);
+    const currentTransform = viewTransform.target;
 	const canvasX = (screenX - containerRect.left - currentTransform.posX) / currentTransform.scale;
     const canvasY = (screenY - containerRect.top - currentTransform.posY) / currentTransform.scale;
 	return { x: canvasX, y: canvasY };
@@ -356,7 +356,7 @@ export async function switchContext(newContextId: NodeId) {
     }
 
     // Capture current viewport settings BEFORE saving old context
-    const currentViewportSettings = get(viewTransform);
+    const currentViewportSettings = viewTransform.target;
 
     // Save Old Context (Async)
     const oldContext = get(contexts).get(oldContextId);

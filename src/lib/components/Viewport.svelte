@@ -38,17 +38,17 @@
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
 
-    const currentTransform = get(viewTransform);
+    const currentTransform = viewTransform.target;
     const beforeZoomX = (mouseX - currentTransform.posX) / currentTransform.scale;
     const beforeZoomY = (mouseY - currentTransform.posY) / currentTransform.scale;
 
     let newScale = currentTransform.scale;
     let newPosX = currentTransform.posX;
     let newPosY = currentTransform.posY;
-    const zoomSensitivityFactor = 2.0; // Slightly slower zoom
-    const panSensitivityFactor = 4.5;  // Slightly faster pan
+    const zoomSensitivityFactor = 0.5; // Slightly slower zoom
+    const panSensitivityFactor = 1.6;  // Slightly faster pan
     const wheelZoomFactor = 1.75; // Increased Standard wheel zoom factor
-    const pinchZoomSensitivity = 0.2; // Touchpad pinch zoom sensitivity
+    const pinchZoomSensitivity = 0.09; // Touchpad pinch zoom sensitivity
 
     // --- Heuristic Update ---
     // Detect if input is likely touchpad pan (both X and Y deltas present)
@@ -90,7 +90,7 @@
             lastInputWasTouchpad = false; // Middle mouse click means it's definitely a mouse
 			e.preventDefault();
 			isPanning = true;
-			const currentTransform = get(viewTransform);
+			const currentTransform = viewTransform.target;
 			panStartX = e.clientX - currentTransform.posX;
 			panStartY = e.clientY - currentTransform.posY;
 			if(canvasContainer) {
@@ -116,7 +116,7 @@
         if (isPanning && canvasContainer?.hasPointerCapture(e.pointerId)) {
             const newPosX = e.clientX - panStartX;
 			const newPosY = e.clientY - panStartY;
-            viewTransform.set({ scale: $viewTransform.scale, posX: newPosX, posY: newPosY }, { duration: 0 });
+            viewTransform.set({ scale: viewTransform.target.scale, posX: newPosX, posY: newPosY }, { duration: 0 });
         }
     }
 
@@ -215,7 +215,7 @@
 	<div
 		class="w-full h-full relative origin-top-left"
 		bind:this={canvas}
-		style:transform="translate({$viewTransform.posX}px, {$viewTransform.posY}px) scale({$viewTransform.scale})"
+		style:transform="translate({viewTransform.current.posX}px, {viewTransform.current.posY}px) scale({viewTransform.current.scale})"
 	>
 		<!-- Edge Rendering Layer -->
         <EdgeLayer />

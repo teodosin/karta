@@ -56,7 +56,7 @@ export class MoveTool implements Tool {
         this.nodeElement = nodeEl; // Store reference
 
         const nodeRect = nodeEl.getBoundingClientRect();
-        const currentTransform = get(viewTransform);
+        const currentTransform = viewTransform.target;
         this.dragOffsetX = (event.clientX - nodeRect.left) / currentTransform.scale;
         this.dragOffsetY = (event.clientY - nodeRect.top) / currentTransform.scale;
 
