@@ -54,25 +54,29 @@ function _getFocalTransform(targetNodeId: NodeId, oldContextId: NodeId): Absolut
 
 /**
  * Loads a context from DB or creates it, adds default connected nodes (preserving existing positions), saves if modified.
+ * The absolute positioning of the loaded context is now determined solely by localAdapter.getContext based on its own saved state or defaults.
  */
 async function _loadAndUpdateContextWithDefaults(
     contextId: NodeId,
-    focalAbsTransform: AbsoluteTransform,
-    oldContextViewNodes: Map<NodeId, ViewNode> | undefined
+    // focalAbsTransform: AbsoluteTransform, // REMOVED
+    oldContextViewNodes: Map<NodeId, ViewNode> | undefined // Still needed for default node placement heuristic
 ): Promise<{ loadedContext: Context | undefined, contextModified: boolean }> {
 
     if (!localAdapter) return { loadedContext: undefined, contextModified: false };
 
-    let loadedContext = await localAdapter.getContext(contextId, focalAbsTransform);
+    // Load context - getContext will now determine the correct absolute positions based on its own data
+    let loadedContext = await localAdapter.getContext(contextId); // REMOVED focalAbsTransform argument
     let contextModified = false;
 
     if (!loadedContext) {
         console.log(`[_loadAndUpdateContextWithDefaults] Context ${contextId} not found in DB, creating new.`);
         const focalDataNode = await localAdapter.getNode(contextId);
         if (!focalDataNode) throw new Error(`Cannot create context for non-existent node: ${contextId}`);
+        // If creating new context in memory, use default transform for the focal node initially.
+        // getContext should handle loading the actual saved state if it exists.
         const focalViewNode: ViewNode = {
-            id: contextId, x: focalAbsTransform.x, y: focalAbsTransform.y,
-            width: 100, height: 100, scale: focalAbsTransform.scale, rotation: focalAbsTransform.rotation,
+            id: contextId, x: DEFAULT_FOCAL_TRANSFORM.x, y: DEFAULT_FOCAL_TRANSFORM.y,
+            width: 100, height: 100, scale: DEFAULT_FOCAL_TRANSFORM.scale, rotation: DEFAULT_FOCAL_TRANSFORM.rotation,
         };
         loadedContext = { id: contextId, viewNodes: new Map([[contextId, focalViewNode]]) }; // viewportSettings will be undefined initially
         contextModified = true; // Mark for saving as it was created
@@ -106,18 +110,41 @@ async function _loadAndUpdateContextWithDefaults(
                  console.log(`[_loadAndUpdateContextWithDefaults] Preserving position for node ${connectedId}`);
                  defaultViewNode = { ...existingViewNodeInOldContext };
             } else {
-                // Calculate default position (simplified - no rotation applied)
-                const angleRad = (currentAngle * Math.PI) / 180;
-                const defaultRelX = defaultOffset * Math.cos(angleRad);
-                const defaultRelY = defaultOffset * Math.sin(angleRad);
-                const scaledRelX = defaultRelX * focalAbsTransform.scale;
-                const scaledRelY = defaultRelY * focalAbsTransform.scale;
-                const defaultAbsX = focalAbsTransform.x + scaledRelX;
-                const defaultAbsY = focalAbsTransform.y + scaledRelY;
+                // Calculate default position
+                // Need the *actual* focal transform of the loaded context to calculate defaults correctly
+                let actualFocalTransform: ViewNode | AbsoluteTransform | undefined = loadedContext.viewNodes.get(contextId); // Use let
+
+                if (!actualFocalTransform) {
+                     console.error(`[_loadAndUpdateContextWithDefaults] CRITICAL: Focal node ${contextId} not found in loaded context after getContext! Using default transform as fallback.`);
+                     // Fallback or throw error? Let's use default for now to avoid crashing.
+                     actualFocalTransform = { ...DEFAULT_FOCAL_TRANSFORM }; // Assign fallback
+                }
+
+                // Now actualFocalTransform is guaranteed to be assigned
+                const focalTransformToUse = actualFocalTransform; // Use a new const for clarity and type safety
+
+                // Calculate position offset angle
+                const placementAngleRad = (currentAngle * Math.PI) / 180;
+                const defaultRelX = defaultOffset * Math.cos(placementAngleRad);
+                const defaultRelY = defaultOffset * Math.sin(placementAngleRad);
+
+                // Apply focal transform (scale, rotate, translate)
+                const scaledRelX = defaultRelX * focalTransformToUse.scale;
+                const scaledRelY = defaultRelY * focalTransformToUse.scale;
+
+                const focalAngleRad = (focalTransformToUse.rotation * Math.PI) / 180; // Use renamed var
+                const cosFocalAngle = Math.cos(focalAngleRad);
+                const sinFocalAngle = Math.sin(focalAngleRad);
+
+                const rotatedScaledRelX = scaledRelX * cosFocalAngle - scaledRelY * sinFocalAngle;
+                const rotatedScaledRelY = scaledRelX * sinFocalAngle + scaledRelY * cosFocalAngle;
+
+                const defaultAbsX = focalTransformToUse.x + rotatedScaledRelX;
+                const defaultAbsY = focalTransformToUse.y + rotatedScaledRelY;
 
                 defaultViewNode = {
                     id: connectedId, x: defaultAbsX, y: defaultAbsY,
-                    width: 100, height: 100, scale: focalAbsTransform.scale, rotation: 0,
+                    width: 100, height: 100, scale: focalTransformToUse.scale, rotation: 0, // Default rotation 0 for new nodes
                 };
                 currentAngle += angleIncrement;
             }
@@ -131,11 +158,11 @@ async function _loadAndUpdateContextWithDefaults(
     // Save the context immediately if it was newly created or defaults were added
     if (contextModified) {
         console.log(`[_loadAndUpdateContextWithDefaults] Saving context ${contextId} (created or defaults added)...`);
-        // Ensure viewportSettings are included if saving for the first time
-        if (!loadedContext.viewportSettings) {
-            loadedContext.viewportSettings = { ...DEFAULT_VIEWPORT_SETTINGS };
-        }
+        // Only save if modified (newly created or defaults added)
+        // Do NOT automatically add default viewport settings here.
+        // They should only be saved if explicitly set by user interaction later.
         await localAdapter.saveContext(loadedContext);
+        console.log(`[_loadAndUpdateContextWithDefaults] Context ${contextId} saved.`);
     }
 
     return { loadedContext, contextModified };
@@ -206,6 +233,14 @@ function _applyStoresUpdate(
     edges.set(newEdges);
     contexts.update(map => map.set(newContextId, loadedContext)); // Update the specific context's view data
     currentContextId.set(newContextId);
+    if (typeof window !== 'undefined') {
+        try {
+            localStorage.setItem('kartaLastContextId', newContextId);
+            console.log(`[_applyStoresUpdate] Saved lastContextId to localStorage: ${newContextId}`);
+        } catch (e) {
+            console.error("Failed to save lastContextId to localStorage:", e);
+        }
+    }
 
     console.log(`[_applyStoresUpdate] Switched current context ID to ${newContextId}`);
     console.log(`[_applyStoresUpdate] Stores updated. Nodes: ${get(nodes).size}, Edges: ${get(edges).size}, Contexts: ${get(contexts).size}`);
@@ -362,43 +397,48 @@ export async function switchContext(newContextId: NodeId) {
     const oldContext = get(contexts).get(oldContextId);
     if (oldContext) {
         console.log(`[switchContext] Saving old context: ${oldContextId} with viewport:`, currentViewportSettings);
-        oldContext.viewportSettings = currentViewportSettings; // Update settings before saving
+        console.log(`[DEBUG] Absolute viewport settings being saved for ${oldContextId}:`, JSON.stringify(currentViewportSettings)); // DEBUG LOG
+    oldContext.viewportSettings = currentViewportSettings; // Update settings before saving
         localAdapter.saveContext(oldContext)
             .then(() => console.log(`[switchContext] Old context ${oldContextId} saved successfully (async).`))
             .catch(error => console.error(`[switchContext] Error saving old context ${oldContextId} (async):`, error));
     } else { console.warn(`[switchContext] Old context ${oldContextId} not found in memory store.`); }
 
     try {
-        // Determine Focal Transform
-        const newFocalAbsTransform = _getFocalTransform(newContextId, oldContextId);
+        // Determine Focal Transform - REMOVED - Logic moved to getContext/loadAndUpdate
+        // const newFocalAbsTransform = _getFocalTransform(newContextId, oldContextId);
 
         // Load/Create Context, Add Defaults, Save if needed
+        // Context loading is now independent of the previous context's focal transform
         const { loadedContext } = await _loadAndUpdateContextWithDefaults(
             newContextId,
-            newFocalAbsTransform,
-            oldContext?.viewNodes // Pass previous view nodes for position preservation
+            // newFocalAbsTransform, // REMOVED
+            oldContext?.viewNodes // Pass previous view nodes for position preservation of *defaults*
         );
 
         if (!loadedContext) {
             throw new Error("Failed to load or create the new context object.");
         }
+        console.log(`[DEBUG] Loaded context ${newContextId} viewNodes (absolute, after defaults):`, JSON.stringify(Array.from(loadedContext.viewNodes.entries()))); // DEBUG LOG
+        console.log(`[DEBUG] Loaded context ${newContextId} viewportSettings (absolute):`, JSON.stringify(loadedContext.viewportSettings)); // DEBUG LOG
 
         // Load required DataNodes and Edges
         const { loadedDataNodes, loadedEdges } = await _loadContextData(loadedContext);
 
         // Apply Mark-and-Sweep Update to Stores
+        console.log(`[DEBUG] Final viewNodes for context ${newContextId} before store update:`, JSON.stringify(Array.from(loadedContext.viewNodes.entries()))); // DEBUG LOG
         _applyStoresUpdate(newContextId, loadedContext, loadedDataNodes, loadedEdges);
 
-        // Apply Viewport Tween
+        // Apply Viewport Tween (only if settings exist)
         const newSettings = loadedContext.viewportSettings;
         if (newSettings) {
-            console.log(`[switchContext] Tweening viewport to saved settings for ${newContextId}:`, newSettings);
+            console.log(`[switchContext] Found saved viewport settings for ${newContextId}. Tweening viewport:`, newSettings);
+            console.log(`[DEBUG] Target viewport settings for tween (saved, absolute):`, JSON.stringify(newSettings)); // DEBUG LOG
             viewTransform.set(newSettings, { duration: 500 }); // Use tween
         } else {
-            console.log(`[switchContext] No saved viewport settings for ${newContextId}. Tweening to default.`);
-            viewTransform.set({ ...DEFAULT_VIEWPORT_SETTINGS }, { duration: 500 }); // Use tween to default
+            console.log(`[switchContext] No saved viewport settings found for ${newContextId}. Viewport will not be moved.`);
+            console.log(`[DEBUG] No viewport tween initiated.`); // DEBUG LOG
         }
-
     } catch (error) {
         console.error(`[switchContext] Error switching context to ${newContextId}:`, error);
     }
@@ -499,10 +539,10 @@ async function _loadInitialRootContext(rootDataNode: DataNode): Promise<Context>
      return finalRootContext;
 }
 
-/** Loads initial DataNodes and Edges for the Root Context. */
+/** Loads DataNodes and Edges for the initial context. */
 async function _loadInitialRootData(rootContext: Context, rootDataNode: DataNode): Promise<{ dataNodesForRoot: Map<NodeId, DataNode>, edgesForRoot: Map<EdgeId, KartaEdge> }> {
-    if (!localAdapter) return { dataNodesForRoot: new Map(), edgesForRoot: new Map() };
-
+    if (!localAdapter) throw new Error("LocalAdapter not available for initialization.");
+    console.log("Loading initial data for Root context...");
     const viewNodeIds = Array.from(rootContext.viewNodes.keys());
     let dataNodesForRoot = new Map<NodeId, DataNode>();
     let edgesForRoot = new Map<EdgeId, KartaEdge>();
@@ -530,24 +570,105 @@ async function initializeStores() {
     get(currentTool)?.activate(); // Activate default tool
 
     if (localAdapter) {
+        let initialContextId: NodeId = ROOT_NODE_ID; // Default to Root
+
+        // Attempt to load last context ID from localStorage
+        if (typeof window !== 'undefined') {
+            try {
+                const savedId = localStorage.getItem('kartaLastContextId');
+                if (savedId) {
+                    console.log(`[initializeStores] Found saved lastContextId in localStorage: ${savedId}`);
+                    // Validate the saved ID by checking if the node exists
+                    const nodeExists = await localAdapter.getNode(savedId);
+                    if (nodeExists) {
+                        initialContextId = savedId;
+                        console.log(`[initializeStores] Using saved context ID: ${initialContextId}`);
+                    } else {
+                        console.warn(`[initializeStores] Saved context ID ${savedId} is invalid (node not found). Falling back to Root.`);
+                        localStorage.removeItem('kartaLastContextId'); // Clean up invalid ID
+                    }
+                } else {
+                     console.log(`[initializeStores] No lastContextId found in localStorage. Defaulting to Root.`);
+                }
+            } catch (e) {
+                console.error("Failed to read or validate lastContextId from localStorage:", e);
+            }
+        }
+
         try {
+            // 1. Ensure Root DataNode exists (still needed regardless of initial context)
             const rootDataNode = await _ensureRootDataNode();
-            const finalRootContext = await _loadInitialRootContext(rootDataNode);
-            const { dataNodesForRoot, edgesForRoot } = await _loadInitialRootData(finalRootContext, rootDataNode);
 
-            // Set initial store state
-            nodes.set(dataNodesForRoot);
-            edges.set(edgesForRoot);
-            contexts.set(new Map([[ROOT_NODE_ID, finalRootContext]]));
-            currentContextId.set(ROOT_NODE_ID);
+            // 2. Load or Create Initial Context (using initialContextId)
+            console.log(`[initializeStores] Attempting to load initial context: ${initialContextId}`);
+            let initialContext: Context | undefined;
+            let initialFocalNode: DataNode | undefined;
 
-            // Set initial viewport state (no tween)
-            const initialSettings = finalRootContext.viewportSettings || DEFAULT_VIEWPORT_SETTINGS;
-            console.log("Setting initial viewport state:", initialSettings);
-            viewTransform.set(initialSettings, { duration: 0 });
+            if (initialContextId === ROOT_NODE_ID) {
+                initialContext = await _loadInitialRootContext(rootDataNode); // Use specialized root loader
+                initialFocalNode = rootDataNode;
+            } else {
+                // For non-root contexts, we need the focal node's data first to get its transform
+                initialFocalNode = await localAdapter.getNode(initialContextId);
+                if (initialFocalNode) {
+                     // Use default transform for initial load if not root? Or try loading context first?
+                     // Let's try loading context with default transform, adapter should handle it.
+                     initialContext = await localAdapter.getContext(initialContextId, DEFAULT_FOCAL_TRANSFORM);
+                     if (!initialContext) {
+                         console.warn(`[initializeStores] Failed to load initial context ${initialContextId} even though node exists. Falling back to Root.`);
+                         initialContextId = ROOT_NODE_ID; // Fallback ID
+                         initialContext = await _loadInitialRootContext(rootDataNode); // Load Root instead
+                         initialFocalNode = rootDataNode;
+                     } else {
+                         console.log(`[initializeStores] Successfully loaded initial context: ${initialContextId}`);
+                         // Ensure the focal node is actually in the loaded context's viewNodes
+                         if (!initialContext.viewNodes.has(initialContextId)) {
+                             console.warn(`[initializeStores] Focal node ${initialContextId} missing from its own loaded context. Adding default.`);
+                             const focalViewNode: ViewNode = {
+                                 id: initialContextId, x: DEFAULT_FOCAL_TRANSFORM.x, y: DEFAULT_FOCAL_TRANSFORM.y,
+                                 width: 100, height: 100, scale: DEFAULT_FOCAL_TRANSFORM.scale, rotation: DEFAULT_FOCAL_TRANSFORM.rotation,
+                             };
+                             initialContext.viewNodes.set(initialContextId, focalViewNode);
+                             // Consider saving the context here if modified? Maybe not needed on init.
+                         }
+                     }
+                } else {
+                     console.error(`[initializeStores] Failed to load DataNode for initial context ID ${initialContextId}. Critical error, cannot proceed.`);
+                     // Perhaps fallback to root here too?
+                     initialContextId = ROOT_NODE_ID;
+                     initialContext = await _loadInitialRootContext(rootDataNode);
+                     initialFocalNode = rootDataNode;
+                     console.warn(`[initializeStores] Falling back to Root context due to missing initial focal node data.`);
+                }
+            }
+
+            if (!initialContext || !initialFocalNode) {
+                 throw new Error("[initializeStores] Failed to load or determine initial context or focal node.");
+            }
+
+            // We also need the Root context loaded in the contexts map, even if not initially viewed
+            if (initialContextId !== ROOT_NODE_ID) {
+                const rootContext = await _loadInitialRootContext(rootDataNode);
+                contexts.update(map => map.set(ROOT_NODE_ID, rootContext));
+                console.log("[initializeStores] Ensured Root context is loaded into the contexts map.");
+            }
+
+            // 3. Load DataNodes and Edges for the Initial Context
+            const { loadedDataNodes, loadedEdges } = await _loadContextData(initialContext);
+
+            // 4. Initialize Stores
+            nodes.set(loadedDataNodes);
+            edges.set(loadedEdges);
+            contexts.update(map => map.set(initialContextId, initialContext)); // Add the loaded initial context
+            currentContextId.set(initialContextId); // Set the correct initial context ID
+
+            // 5. Set Initial Viewport Transform (using initial context's saved settings or default)
+            const initialSettings = initialContext.viewportSettings ?? DEFAULT_VIEWPORT_SETTINGS;
+            console.log(`[initializeStores] Setting initial viewport transform:`, initialSettings);
+            viewTransform.set(initialSettings, { duration: 0 }); // Set initial state without tweening
 
 
-            console.log(`Initialization complete. Context: ${ROOT_NODE_ID}, Nodes: ${get(nodes).size}, Edges: ${get(edges).size}`);
+            console.log(`Initialization complete. Context: ${initialContextId}, Nodes: ${get(nodes).size}, Edges: ${get(edges).size}`);
 
         } catch (error) {
             console.error("Error during store initialization:", error);
