@@ -14,8 +14,7 @@
         } else {
             // Fallback if node or path is somehow missing
             displayPath = '/?';
-            console.warn(`Context node or path not found for ID: ${ctxId}`);
-            // Removed duplicated else block
+            //console.warn(`Context node or path not found for ID: ${ctxId}`);
         }
     }
 </script>

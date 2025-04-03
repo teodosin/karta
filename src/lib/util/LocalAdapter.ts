@@ -228,6 +228,7 @@ class LocalAdapter implements PersistenceService {
         const tx = db.transaction('contexts', 'readwrite');
         const store = tx.objectStore('contexts');
         const focalNode = context.viewNodes.get(context.id);
+        console.log("focalNode position", focalNode?.x, focalNode?.y);
         if (!focalNode) throw new Error(`Focal node ${context.id} not found in context being saved`);
 
         // Convert ViewNodes to StorableViewNodes (relative positions)
@@ -255,17 +256,17 @@ class LocalAdapter implements PersistenceService {
         let storableViewportSettings: StorableViewportSettings | undefined = undefined;
         if (context.viewportSettings) {
             const absSettings = context.viewportSettings;
-            const dx = absSettings.posX - focalNode.x;
-            const dy = absSettings.posY - focalNode.y;
-            const angleRad = (-focalNode.rotation * Math.PI) / 180; // Inverse rotation
-            const cosAngle = Math.cos(angleRad);
-            const sinAngle = Math.sin(angleRad);
-            const relPosX = (dx * cosAngle - dy * sinAngle) / focalNode.scale; // Rotate and scale back
-            const relPosY = (dx * sinAngle + dy * cosAngle) / focalNode.scale;
+            //const dx = absSettings.posX - focalNode.x;
+            //const dy = absSettings.posY - focalNode.y;
+            const dx = absSettings.posX;
+            const dy = absSettings.posY;
+            console.log("absSettings", absSettings);
+            console.log("dx and dy", dx, " ", dy);
+
             storableViewportSettings = {
                 scale: absSettings.scale, // Scale is absolute
-                relPosX: relPosX,
-                relPosY: relPosY
+                relPosX: dx,
+                relPosY: dy
             };
         }
 
@@ -320,19 +321,12 @@ class LocalAdapter implements PersistenceService {
             if (storableContext.viewportSettings) {
                 const relSettings = storableContext.viewportSettings;
                 // Calculate absolute position correctly
-                const scaledRelX = relSettings.relPosX * focalAbsTransform.scale; // Scale first
-                const scaledRelY = relSettings.relPosY * focalAbsTransform.scale;
-                const angleRad = (focalAbsTransform.rotation * Math.PI) / 180; // Then rotate
-                const cosAngle = Math.cos(angleRad);
-                const sinAngle = Math.sin(angleRad);
-                const rotatedScaledRelX = scaledRelX * cosAngle - scaledRelY * sinAngle;
-                const rotatedScaledRelY = scaledRelX * sinAngle + scaledRelY * cosAngle;
-                const absPosX = focalAbsTransform.x + rotatedScaledRelX; // Then translate
-                const absPosY = focalAbsTransform.y + rotatedScaledRelY;
+                const relX = relSettings.relPosX;
+                const relY = relSettings.relPosY;
                 absoluteViewportSettings = {
                     scale: relSettings.scale, // Scale is absolute
-                    posX: absPosX,
-                    posY: absPosY
+                    posX: relX,
+                    posY: relY
                 };
             }
 

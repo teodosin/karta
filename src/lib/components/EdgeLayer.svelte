@@ -57,8 +57,12 @@
 	class="absolute top-0 left-0 w-full h-full pointer-events-none"
 	style="overflow: visible;"
 >
+	<!-- Origin Axes -->
+	<line x1="0" y1="-1000000" x2="0" y2="1000000" class="axis-line" /> <!-- Y Axis -->
+	<line x1="-1000000" y1="0" x2="1000000" y2="0" class="axis-line" /> <!-- X Axis -->
 
-    {#each edgePaths as pathData (pathData.id)}
+	<!-- Edges -->
+	   {#each edgePaths as pathData (pathData.id)}
         <path
             id={pathData.id}
             class="edge"
@@ -76,6 +80,12 @@
 </svg>
 
 <style>
+	:global(.axis-line) {
+		stroke: rgba(0, 0, 0, 0.15); /* Darker gray, semi-transparent */
+		stroke-width: 1;
+		vector-effect: non-scaling-stroke; /* Keep width constant on zoom */
+		fill: none;
+	}
 	:global(.edge) {
 		stroke: #9ca3af; /* gray-400 */
 		stroke-width: 2;
