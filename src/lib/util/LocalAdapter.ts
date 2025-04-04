@@ -11,7 +11,7 @@ interface StorableViewNode {
     width: number;
     height: number;
     relScale: number;
-    relRotation: number;
+    rotation: number;
 }
 
 // Interface for storing relative viewport settings
@@ -236,18 +236,15 @@ class LocalAdapter implements PersistenceService {
         for (const [nodeId, viewNode] of context.viewNodes.entries()) {
             let storableNode: StorableViewNode;
             if (nodeId === context.id) {
-                storableNode = { id: viewNode.id, relX: 0, relY: 0, width: viewNode.width, height: viewNode.height, relScale: 1, relRotation: 0 };
+                storableNode = { id: viewNode.id, relX: 0, relY: 0, width: viewNode.width, height: viewNode.height, relScale: 1, rotation: viewNode.rotation };
             } else {
                 const relScale = viewNode.scale / focalNode.scale;
-                const relRotation = viewNode.rotation - focalNode.rotation;
                 const dx = viewNode.x - focalNode.x;
                 const dy = viewNode.y - focalNode.y;
-                const angleRad = (-focalNode.rotation * Math.PI) / 180; // Inverse rotation
-                const cosAngle = Math.cos(angleRad);
-                const sinAngle = Math.sin(angleRad);
-                const relX = (dx * cosAngle - dy * sinAngle) / focalNode.scale; // Rotate and scale back
-                const relY = (dx * sinAngle + dy * cosAngle) / focalNode.scale;
-                storableNode = { id: viewNode.id, relX, relY, width: viewNode.width, height: viewNode.height, relScale, relRotation };
+                // Simplified relative position calculation (no rotation)
+                const relX = dx / focalNode.scale;
+                const relY = dy / focalNode.scale;
+                storableNode = { id: viewNode.id, relX, relY, width: viewNode.width, height: viewNode.height, relScale, rotation: viewNode.rotation };
             }
             storableViewNodes.push([nodeId, storableNode]);
         }
@@ -296,21 +293,15 @@ class LocalAdapter implements PersistenceService {
                     };
                 } else {
                     const absScale = focalAbsTransform.scale * storableViewNode.relScale;
-                    const absRotation = focalAbsTransform.rotation + storableViewNode.relRotation;
-                    // Calculate absolute position correctly
-                    const scaledRelX = storableViewNode.relX * focalAbsTransform.scale; // Scale first
+                    // Simplified absolute position calculation (no rotation)
+                    const scaledRelX = storableViewNode.relX * focalAbsTransform.scale;
                     const scaledRelY = storableViewNode.relY * focalAbsTransform.scale;
-                    const angleRad = (focalAbsTransform.rotation * Math.PI) / 180; // Then rotate
-                    const cosAngle = Math.cos(angleRad);
-                    const sinAngle = Math.sin(angleRad);
-                    const rotatedScaledRelX = scaledRelX * cosAngle - scaledRelY * sinAngle;
-                    const rotatedScaledRelY = scaledRelX * sinAngle + scaledRelY * cosAngle;
-                    const absX = focalAbsTransform.x + rotatedScaledRelX; // Then translate
-                    const absY = focalAbsTransform.y + rotatedScaledRelY;
+                    const absX = focalAbsTransform.x + scaledRelX;
+                    const absY = focalAbsTransform.y + scaledRelY;
                     absoluteNode = {
                         id: storableViewNode.id, x: absX, y: absY,
                         width: storableViewNode.width, height: storableViewNode.height,
-                        scale: absScale, rotation: absRotation
+                        scale: absScale, rotation: storableViewNode.rotation // Use absolute rotation from storage
                     };
                 }
                 absoluteViewNodes.set(nodeId, absoluteNode);
