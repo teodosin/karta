@@ -340,15 +340,14 @@ export async function switchContext(newContextId: NodeId) {
 
     // Capture current viewport settings before saving old context
     // Create a COPY and convert absolute to relative coordinates for saving
-    let viewportSettingsToSave = { ...viewTransform.target }; // Create a shallow copy
-    viewportSettingsToSave.posX = (viewportSettingsToSave.posX + oldFocalTransform.x);
-    viewportSettingsToSave.posY = (viewportSettingsToSave.posY + oldFocalTransform.y);
+    // Prepare the absolute viewport settings to be saved with the context
+    let viewportSettingsToSave = { ...viewTransform.target }; // Use absolute settings directly
 
     console.log("--------------NEW CYCLE----------------")
 
     console.log("Old focal transform", oldFocalTransform);
     console.log("Absolute viewport position", viewTransform.target);
-    console.log("OLD RELATIVE Viewport settings to save", viewportSettingsToSave);
+    console.log("Absolute Viewport settings to save", viewportSettingsToSave);
 
     if (oldContext) {
         oldContext.viewportSettings = viewportSettingsToSave; // Save the modified copy
@@ -381,11 +380,8 @@ export async function switchContext(newContextId: NodeId) {
         let newSettings = loadedContext.viewportSettings;
         if (newSettings) {
             console.log("new focal transform", newFocalAbsTransform);
-            console.log("LOADED RELATIVE: ", newSettings);
-            newSettings.posX = newSettings.posX - newFocalAbsTransform.x;
-            newSettings.posY = newSettings.posY - newFocalAbsTransform.y;
-
-            console.log("NEW ABSOLUTE", newSettings);
+            // Use the absolute settings loaded directly from the adapter
+            console.log("LOADED ABSOLUTE: ", newSettings);
 
             viewTransform.set(newSettings, { duration: VIEWPORT_TWEEN_DURATION }); // Use tween
         }
@@ -555,3 +551,4 @@ async function initializeStores() {
 if (typeof window !== 'undefined' ) {
     initializeStores();
 }
+
