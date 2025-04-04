@@ -48,7 +48,7 @@ interface PersistenceService {
     // Context methods (no longer pass focalAbsTransform to saveContext)
     saveContext(context: Context): Promise<void>;
     getContext(contextId: NodeId, focalAbsTransform?: AbsoluteTransform): Promise<Context | undefined>;
-    getContexts(focalAbsTransforms: Map<NodeId, AbsoluteTransform>): Promise<Context[]>; // Needs transforms for all contexts
+    // getContexts(focalAbsTransforms: Map<NodeId, AbsoluteTransform>): Promise<Context[]>; // Removed unused function
 }
 
 class LocalAdapter implements PersistenceService {
@@ -258,8 +258,8 @@ class LocalAdapter implements PersistenceService {
             const absSettings = context.viewportSettings;
             //const dx = absSettings.posX - focalNode.x;
             //const dy = absSettings.posY - focalNode.y;
-            const dx = absSettings.posX;
-            const dy = absSettings.posY;
+            const dx = absSettings.posX * absSettings.scale;
+            const dy = absSettings.posY * absSettings.scale;
             console.log("absSettings", absSettings);
             console.log("dx and dy", dx, " ", dy);
 
@@ -321,8 +321,9 @@ class LocalAdapter implements PersistenceService {
             if (storableContext.viewportSettings) {
                 const relSettings = storableContext.viewportSettings;
                 // Calculate absolute position correctly
-                const relX = relSettings.relPosX;
-                const relY = relSettings.relPosY;
+                const relX = relSettings.relPosX / relSettings.scale;
+                const relY = relSettings.relPosY / relSettings.scale;
+                console.log('relX', relX, 'relY', relY);
                 absoluteViewportSettings = {
                     scale: relSettings.scale, // Scale is absolute
                     posX: relX,
@@ -340,69 +341,7 @@ class LocalAdapter implements PersistenceService {
     }
 
     // getContexts needs similar conversion logic for viewportSettings
-    async getContexts(focalAbsTransforms: Map<NodeId, AbsoluteTransform>): Promise<Context[]> {
-        const db = await this.dbPromise;
-        const storableContexts = await db.getAll('contexts') as StorableContext[];
-        return storableContexts.map(storable => {
-            const focalAbsTransform = focalAbsTransforms.get(storable.id) ?? ROOT_TRANSFORM;
-            const absoluteViewNodes = new Map<NodeId, ViewNode>();
-            // Convert ViewNodes
-            for (const [nodeId, storableViewNode] of storable.viewNodes) {
-                let absoluteNode: ViewNode;
-                 if (nodeId === storable.id) {
-                    absoluteNode = {
-                        id: storableViewNode.id, x: focalAbsTransform.x, y: focalAbsTransform.y,
-                        width: storableViewNode.width, height: storableViewNode.height,
-                        scale: focalAbsTransform.scale, rotation: focalAbsTransform.rotation
-                    };
-                 } else {
-                    const absScale = focalAbsTransform.scale * storableViewNode.relScale;
-                    const absRotation = focalAbsTransform.rotation + storableViewNode.relRotation;
-                    const scaledRelX = storableViewNode.relX * focalAbsTransform.scale;
-                    const scaledRelY = storableViewNode.relY * focalAbsTransform.scale;
-                    const angleRad = (focalAbsTransform.rotation * Math.PI) / 180;
-                    const cosAngle = Math.cos(angleRad);
-                    const sinAngle = Math.sin(angleRad);
-                    const rotatedScaledRelX = scaledRelX * cosAngle - scaledRelY * sinAngle;
-                    const rotatedScaledRelY = scaledRelX * sinAngle + scaledRelY * cosAngle;
-                    const absX = focalAbsTransform.x + rotatedScaledRelX;
-                    const absY = focalAbsTransform.y + rotatedScaledRelY;
-                    absoluteNode = {
-                        id: storableViewNode.id, x: absX, y: absY,
-                        width: storableViewNode.width, height: storableViewNode.height,
-                        scale: absScale, rotation: absRotation
-                    };
-                 }
-                absoluteViewNodes.set(nodeId, absoluteNode);
-            }
-
-            // Convert ViewportSettings
-            let absoluteViewportSettings: ViewportSettings | undefined = undefined;
-            if (storable.viewportSettings) {
-                const relSettings = storable.viewportSettings;
-                const scaledRelX = relSettings.relPosX * focalAbsTransform.scale;
-                const scaledRelY = relSettings.relPosY * focalAbsTransform.scale;
-                const angleRad = (focalAbsTransform.rotation * Math.PI) / 180;
-                const cosAngle = Math.cos(angleRad);
-                const sinAngle = Math.sin(angleRad);
-                const rotatedScaledRelX = scaledRelX * cosAngle - scaledRelY * sinAngle;
-                const rotatedScaledRelY = scaledRelX * sinAngle + scaledRelY * cosAngle;
-                const absPosX = focalAbsTransform.x + rotatedScaledRelX;
-                const absPosY = focalAbsTransform.y + rotatedScaledRelY;
-                absoluteViewportSettings = {
-                    scale: relSettings.scale,
-                    posX: absPosX,
-                    posY: absPosY
-                };
-            }
-
-            return {
-                id: storable.id,
-                viewNodes: absoluteViewNodes,
-                viewportSettings: absoluteViewportSettings
-            };
-        });
-    }
+    // Removed unused getContexts function
 }
 
 // Define database schema (for TypeScript type checking)
