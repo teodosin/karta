@@ -253,12 +253,10 @@ class LocalAdapter implements PersistenceService {
         let storableViewportSettings: StorableViewportSettings | undefined = undefined;
         if (context.viewportSettings) {
             const absSettings = context.viewportSettings;
-            let dx = absSettings.posX + focalNode.x;
-            let dy = absSettings.posY + focalNode.y;
-            dx = absSettings.posX * absSettings.scale;
-            dy = absSettings.posY * absSettings.scale;
+            let dx = (focalNode.x * absSettings.scale) + absSettings.posX;
+            let dy = (focalNode.y * absSettings.scale) + absSettings.posY;
             console.log("absSettings", absSettings);
-            console.log("dx and dy", dx, " ", dy);
+            console.log("Relative viewport position dx and dy", dx, " ", dy);
 
             storableViewportSettings = {
                 scale: absSettings.scale, // Scale is absolute
@@ -312,15 +310,17 @@ class LocalAdapter implements PersistenceService {
                 console.error("Focal not found, should be impossible:", contextId);
                 return undefined;
             }
-            console.log("NEWWY FOCALY", newFocal);
+            console.log("NEWWY FOCALY", newFocal.x, " ", newFocal.y);
 
             // Convert StorableViewportSettings to ViewportSettings (absolute positions)
             let absoluteViewportSettings: ViewportSettings | undefined = undefined;
             if (storableContext.viewportSettings) {
                 const relSettings = storableContext.viewportSettings;
                 // Calculate absolute position correctly
-                const relX = newFocal.x / relSettings.scale - relSettings.relPosX / relSettings.scale// - newFocal.x / newFocal.scale;
-                const relY = newFocal.y / relSettings.scale - relSettings.relPosY / relSettings.scale// - newFocal.y / newFocal.scale;
+                const relX = relSettings.relPosX - (newFocal.x * relSettings.scale); 
+                const relY = relSettings.relPosY - (newFocal.y * relSettings.scale); 
+                //relX = relX * relSettings.scale;
+                //relY = relY * relSettings.scale;
                 console.log('relX', relX, 'relY', relY);
                 absoluteViewportSettings = {
                     scale: relSettings.scale,
