@@ -1,8 +1,9 @@
 <script lang="ts">
 	import {
         edges,
-        contexts, // Use contexts store
-        currentContextId, // Need current context ID
+        // contexts, // No longer needed directly for edge paths
+        // currentContextId, // No longer needed directly for edge paths
+        currentTransformTweens, // Import the tween store
         isConnecting,
         connectionSourceNodeId,
         tempLineTargetPosition
@@ -10,42 +11,21 @@
     import type { NodeId } from '../types/types'; // Import from types.ts
     import { get } from 'svelte/store';
 
-	// Reactive calculation for permanent edges based on current context
-    $: currentCtx = $contexts.get($currentContextId);
-    // Removed temporary debug log
-
-    $: edgePaths = [...$edges.values()].map(edge => {
-        // Check if BOTH source and target nodes exist in the current context's viewNodes
-        const sourceViewNode = currentCtx?.viewNodes.get(edge.source);
-        const targetViewNode = currentCtx?.viewNodes.get(edge.target);
-
-        // Only proceed if both ViewNodes are found in the current context
-        if (sourceViewNode && targetViewNode) {
-			// Calculate center based on ViewNode dimensions
-			const sourceX = sourceViewNode.x + sourceViewNode.width / 2;
-			const sourceY = sourceViewNode.y + sourceViewNode.height / 2;
-			const targetX = targetViewNode.x + targetViewNode.width / 2;
-			const targetY = targetViewNode.y + targetViewNode.height / 2;
-            return {
-                id: edge.id,
-                d: `M ${sourceX} ${sourceY} L ${targetX} ${targetY}`
-            };
-        }
-        return null;
-    }).filter((p): p is { id: string; d: string } => p !== null); // Type guard for filtering nulls
+	// Removed pre-calculated edgePaths. Path calculation moved into the #each loop for reactivity.
 
     // Reactive calculation for the temporary line based on current context
     $: tempLinePath = (() => {
         if (!$isConnecting) return null;
 
         const sourceId = $connectionSourceNodeId;
-        const sourceViewNode = sourceId ? currentCtx?.viewNodes.get(sourceId) : null;
+        const sourceTween = sourceId ? $currentTransformTweens.get(sourceId) : null;
         const targetPos = $tempLineTargetPosition;
 
-        if (sourceViewNode && targetPos) {
-            // Calculate center based on ViewNode dimensions
-            const sourceX = sourceViewNode.x + sourceViewNode.width / 2;
-            const sourceY = sourceViewNode.y + sourceViewNode.height / 2;
+        if (sourceTween && targetPos) {
+            // Calculate center based on the tween's current dimensions and position
+            const sourceState = sourceTween.current;
+            const sourceX = sourceState.x + sourceState.width / 2;
+            const sourceY = sourceState.y + sourceState.height / 2;
             return `M ${sourceX} ${sourceY} L ${targetPos.x} ${targetPos.y}`;
         }
         return null;
@@ -62,12 +42,23 @@
 	<line x1="-1000000" y1="0" x2="1000000" y2="0" class="axis-line" /> <!-- X Axis -->
 
 	<!-- Edges -->
-	   {#each edgePaths as pathData (pathData.id)}
-        <path
-            id={pathData.id}
-            class="edge"
-            d={pathData.d}
-        />
+	   {#each [...$edges.values()] as edge (edge.id)}
+	           {@const sourceTween = $currentTransformTweens.get(edge.source)}
+	           {@const targetTween = $currentTransformTweens.get(edge.target)}
+
+	           {#if sourceTween && targetTween}
+	               {@const sourceState = sourceTween.current}
+	               {@const targetState = targetTween.current}
+	               {@const sourceX = sourceState.x + sourceState.width / 2}
+	               {@const sourceY = sourceState.y + sourceState.height / 2}
+	               {@const targetX = targetState.x + targetState.width / 2}
+	               {@const targetY = targetState.y + targetState.height / 2}
+	               <path
+	                   id={edge.id}
+	                   class="edge"
+	                   d={`M ${sourceX} ${sourceY} L ${targetX} ${targetY}`}
+	               />
+	           {/if}
     {/each}
 
 	<!-- Temporary connection line -->

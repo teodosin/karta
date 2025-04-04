@@ -1,6 +1,8 @@
 <script lang="ts">
-	// Removed imports for KartaStore data, keeping only types if needed elsewhere
-	import type { DataNode, ViewNode } from '$lib/types/types'; // Import new types
+    // Removed internal Tween imports, they are managed in KartaStore now
+	import type { DataNode, ViewNode, TweenableNodeState } from '$lib/types/types'; // Use TweenableNodeState if needed, ViewNode is primary prop
+    import { currentTransformTweens } from '$lib/karta/KartaStore'; // Import the central tween store
+    import type { Tween } from 'svelte/motion'; // Still need Tween type for the variable
 
 	// Accept DataNode and ViewNode as props
 	export let dataNode: DataNode;
@@ -11,6 +13,16 @@
 	// Removed handleNodeMouseDown - event bubbles up to Viewport which delegates to the tool
 	// Removed reactive data access - props are already reactive
     // Removed cursor style logic - handled by Viewport/Tool
+
+    // Get the specific tween for this node from the central store
+    let transformTween: Tween<TweenableNodeState> | undefined;
+    $: transformTween = $currentTransformTweens.get(viewNode.id);
+
+    // Fallback state if tween doesn't exist immediately (should be rare)
+    const fallbackState: TweenableNodeState = {
+        x: viewNode.x, y: viewNode.y, scale: viewNode.scale, rotation: viewNode.rotation,
+        width: viewNode.width, height: viewNode.height
+    };
 </script>
 
 {#if dataNode && viewNode}
@@ -18,14 +30,14 @@
 	<div
         bind:this={nodeElementRef}
         data-id={dataNode.id}
-		class="node w-[100px] h-[100px] bg-indigo-600 text-white flex items-center justify-center font-bold rounded absolute select-none shadow-md transition-shadow"
-		style:transform="translate({viewNode.x}px, {viewNode.y}px) scale({viewNode.scale}) rotate({viewNode.rotation}deg)" 
-		on:mouseenter={(e) => nodeElementRef?.classList.add('shadow-lg')}
-		on:mouseleave={(e) => nodeElementRef?.classList.remove('shadow-lg')}
+		class="node w-[100px] h-[100px] bg-indigo-600 text-white flex items-center justify-center font-bold rounded absolute select-none shadow-md"
+		style:transform="translate({transformTween?.current.x ?? fallbackState.x}px, {transformTween?.current.y ?? fallbackState.y}px) scale({transformTween?.current.scale ?? fallbackState.scale}) rotate({transformTween?.current.rotation ?? fallbackState.rotation}deg)"
+		on:mouseenter={(e: MouseEvent) => nodeElementRef?.classList.add('shadow-lg')}
+		on:mouseleave={(e: MouseEvent) => nodeElementRef?.classList.remove('shadow-lg')}
 	>
 		<!-- Basic Node Content - Access name from attributes -->
 		{dataNode.attributes?.name ?? dataNode.ntype}
-        ({Math.round(viewNode.x)}, {Math.round(viewNode.y)})
+        ({Math.round(transformTween?.current.x ?? fallbackState.x)}, {Math.round(transformTween?.current.y ?? fallbackState.y)})
 	</div>
 {/if}
 

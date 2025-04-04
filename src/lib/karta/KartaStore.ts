@@ -2,7 +2,7 @@ import { writable, get } from 'svelte/store';
 import { Tween, tweened } from 'svelte/motion';
 import { cubicOut } from 'svelte/easing';
 import { localAdapter } from '../util/LocalAdapter';
-import type { DataNode, KartaEdge, ViewNode, Context, Tool, NodeId, EdgeId, AbsoluteTransform, ViewportSettings } from '../types/types'; // Import ViewportSettings
+import type { DataNode, KartaEdge, ViewNode, Context, Tool, NodeId, EdgeId, AbsoluteTransform, ViewportSettings, TweenableNodeState } from '../types/types'; // Import TweenableNodeState
 import { MoveTool } from '../tools/MoveTool';
 import { ConnectTool } from '../tools/ConnectTool';
 import { ContextTool } from '../tools/ContextTool';
@@ -15,6 +15,8 @@ export const ROOT_NODE_ID = '00000000-0000-0000-0000-000000000000';
 const DEFAULT_FOCAL_TRANSFORM: AbsoluteTransform = { x: 0, y: 0, scale: 1, rotation: 0 };
 const DEFAULT_VIEWPORT_SETTINGS: ViewportSettings = { scale: 1, posX: 0, posY: 0 }; // Default viewport state
 const VIEWPORT_TWEEN_DURATION = 500;
+const NODE_TWEEN_DURATION = 250; // Duration for node transitions
+const NODE_TWEEN_OPTIONS = { duration: NODE_TWEEN_DURATION, easing: cubicOut };
 
 // --- Store Definition ---
 export const viewTransform = new Tween<ViewportSettings>( // Use ViewportSettings type
@@ -29,7 +31,8 @@ export const currentTool = writable<Tool>(new MoveTool());
 export const isConnecting = writable<boolean>(false);
 export const connectionSourceNodeId = writable<NodeId | null>(null);
 export const tempLineTargetPosition = writable<{ x: number; y: number } | null>(null);
-
+// Store for the currently active node transform tweens
+export const currentTransformTweens = writable<Map<NodeId, Tween<TweenableNodeState>>>(new Map());
 // --- Internal Helper Functions ---
 
 /**
@@ -163,35 +166,85 @@ function _applyStoresUpdate(
     loadedDataNodes: Map<NodeId, DataNode>,
     loadedEdges: Map<EdgeId, KartaEdge>
 ) {
+    // --- Update nodes and edges stores (Mark-and-Sweep) ---
     const currentNodes = get(nodes);
     const currentEdges = get(edges);
     const nodesToRemove = new Set(currentNodes.keys());
     const edgesToRemove = new Set(currentEdges.keys());
-    const newNodes = new Map<NodeId, DataNode>();
-    const newEdges = new Map<EdgeId, KartaEdge>();
+    const nextNodes = new Map<NodeId, DataNode>();
+    const nextEdges = new Map<EdgeId, KartaEdge>();
 
-    // Process loaded nodes
     for (const [nodeId, dataNode] of loadedDataNodes.entries()) {
-        newNodes.set(nodeId, dataNode);
-        nodesToRemove.delete(nodeId);
+        nextNodes.set(nodeId, dataNode);
+        nodesToRemove.delete(nodeId); // Keep this node
     }
-
-    // Process loaded edges
     for (const [edgeId, edge] of loadedEdges.entries()) {
-        if (newNodes.has(edge.source) && newNodes.has(edge.target)) {
-            newEdges.set(edgeId, edge);
-            edgesToRemove.delete(edgeId);
-        } else {
-            // console.warn(`[_applyStoresUpdate] Edge ${edgeId} skipped: Source or target node not in new context.`);
+        if (nextNodes.has(edge.source) && nextNodes.has(edge.target)) {
+            nextEdges.set(edgeId, edge);
+            edgesToRemove.delete(edgeId); // Keep this edge
         }
     }
+    nodes.set(nextNodes);
+    edges.set(nextEdges);
 
-    // Set the new state
-    nodes.set(newNodes);
-    edges.set(newEdges);
-    contexts.update(map => map.set(newContextId, loadedContext)); // Update the specific context's view data
+    // --- Update contexts store (Careful Merge) ---
+    // This ensures the underlying ViewNode data is correct, even if rendering uses the tween store
+    const currentContextsMap = get(contexts);
+    let existingContext = currentContextsMap.get(newContextId);
+    if (existingContext) {
+        const loadedViewNodesMap = loadedContext.viewNodes;
+        const existingViewNodesMap = existingContext.viewNodes;
+        const viewNodesToRemove = new Set(existingViewNodesMap.keys());
+
+        for (const [nodeId, loadedViewNode] of loadedViewNodesMap.entries()) {
+            const existingViewNode = existingViewNodesMap.get(nodeId);
+            if (existingViewNode) {
+                existingViewNode.x = loadedViewNode.x;
+                existingViewNode.y = loadedViewNode.y;
+                existingViewNode.scale = loadedViewNode.scale;
+                existingViewNode.rotation = loadedViewNode.rotation;
+                existingViewNode.width = loadedViewNode.width;
+                existingViewNode.height = loadedViewNode.height;
+                viewNodesToRemove.delete(nodeId);
+            } else {
+                existingViewNodesMap.set(nodeId, loadedViewNode);
+            }
+        }
+        for (const nodeIdToRemove of viewNodesToRemove) {
+            existingViewNodesMap.delete(nodeIdToRemove);
+        }
+        existingContext.viewportSettings = loadedContext.viewportSettings;
+        contexts.set(currentContextsMap); // Trigger update
+    } else {
+        currentContextsMap.set(newContextId, loadedContext);
+        contexts.set(currentContextsMap); // Trigger update
+    }
+
+    // --- Update currentTransformTweens store ---
+    const currentTweens = get(currentTransformTweens);
+    const nextTweens = new Map<NodeId, Tween<TweenableNodeState>>();
+    const nodesInNewContext = new Set(loadedContext.viewNodes.keys());
+
+    for (const [nodeId, viewNode] of loadedContext.viewNodes.entries()) {
+        const tweenState: TweenableNodeState = {
+            x: viewNode.x, y: viewNode.y,
+            scale: viewNode.scale, rotation: viewNode.rotation,
+            width: viewNode.width, height: viewNode.height
+        };
+        const existingTween = currentTweens.get(nodeId);
+        if (existingTween) {
+            existingTween.set(tweenState, NODE_TWEEN_OPTIONS); // Update existing tween
+            nextTweens.set(nodeId, existingTween); // Keep existing tween reference
+        } else {
+            // Create new tween for node entering the context
+            const newTween = new Tween(tweenState, NODE_TWEEN_OPTIONS);
+            nextTweens.set(nodeId, newTween);
+        }
+    }
+    currentTransformTweens.set(nextTweens); // Set the new map of active tweens
+
+    // --- Update current context ID ---
     currentContextId.set(newContextId);
-
 }
 
 
@@ -239,6 +292,17 @@ export async function createNodeAtPosition(canvasX: number, canvasY: number, nty
         ctxMap.set(contextId, currentCtx);
         return ctxMap;
     });
+
+    // Also add a tween for the new node to the tween store
+    const tweenState: TweenableNodeState = {
+        x: newViewNode.x, y: newViewNode.y,
+        scale: newViewNode.scale, rotation: newViewNode.rotation,
+        width: newViewNode.width, height: newViewNode.height
+    };
+    const newTween = new Tween(tweenState, { duration: 0 }); // Initialize instantly
+    currentTransformTweens.update(map => map.set(newNodeId, newTween));
+
+
     if (localAdapter) {
         try {
             await localAdapter.saveNode(newNodeData);
@@ -256,21 +320,54 @@ export async function createNodeAtPosition(canvasX: number, canvasY: number, nty
 // Node Layout Update
 export function updateNodeLayout(nodeId: NodeId, newX: number, newY: number) {
     const contextId = get(currentContextId);
+    let viewNode: ViewNode | undefined;
+
+    // Update the main contexts store (target state)
     contexts.update(ctxMap => {
         const currentCtx = ctxMap.get(contextId);
         if (currentCtx?.viewNodes.has(nodeId)) {
-            const viewNode = currentCtx.viewNodes.get(nodeId)!;
-            const updatedViewNode = { ...viewNode, x: newX, y: newY };
-            currentCtx.viewNodes.set(nodeId, updatedViewNode);
-            ctxMap.set(contextId, currentCtx);
+            viewNode = currentCtx.viewNodes.get(nodeId)!;
+            // Update the ViewNode object directly
+            viewNode.x = newX;
+            viewNode.y = newY;
+            // Note: We might need to update scale/rotation here too if dragging modifies them
+            ctxMap.set(contextId, currentCtx); // Ensure map reference is updated if needed by Svelte
+
+            // Persist the change
             if (localAdapter) {
-                // Capture current viewport settings when saving context after layout update
-                currentCtx.viewportSettings = viewTransform.target;
+                currentCtx.viewportSettings = viewTransform.target; // Capture viewport
                 localAdapter.saveContext(currentCtx).catch(err => console.error(`Error saving context ${contextId} after layout update:`, err));
             }
-        } else { console.warn(`ViewNode ${nodeId} not found in context ${contextId} for layout update`); }
+        } else {
+            console.warn(`ViewNode ${nodeId} not found in context ${contextId} for layout update`);
+        }
         return ctxMap;
     });
+
+    // Update the tween store instantly (duration 0)
+    if (viewNode) { // Ensure viewNode was found and updated
+        const tweenMap = get(currentTransformTweens);
+        const tween = tweenMap.get(nodeId);
+        if (tween) {
+            const tweenState: TweenableNodeState = {
+                x: newX, y: newY,
+                scale: viewNode.scale, // Use current scale/rotation
+                rotation: viewNode.rotation,
+                width: viewNode.width, height: viewNode.height
+            };
+            tween.set(tweenState, { duration: 0 }); // Instant update
+        } else {
+            console.warn(`Tween for node ${nodeId} not found during layout update.`);
+            // Optionally create it here if it should exist
+             const tweenState: TweenableNodeState = {
+                 x: newX, y: newY,
+                 scale: viewNode.scale, rotation: viewNode.rotation,
+                 width: viewNode.width, height: viewNode.height
+             };
+             const newTween = new Tween(tweenState, { duration: 0 });
+             currentTransformTweens.update(map => map.set(nodeId, newTween));
+        }
+    }
 }
 
 // Edge Creation

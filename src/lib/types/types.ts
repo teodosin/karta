@@ -1,3 +1,5 @@
+import type { Tween } from 'svelte/motion'; // Import Tween type
+
 // Basic ID types (UUIDs represented as strings)
 export type NodeId = string;
 export type EdgeId = string;
@@ -30,6 +32,16 @@ export interface AbsoluteTransform {
     y: number;
     scale: number;
     rotation: number;
+}
+
+// Represents the state needed for rendering and tweening a node's visual representation
+export interface TweenableNodeState {
+    x: number;
+    y: number;
+    scale: number;
+    rotation: number;
+    width: number;  // Include dimensions needed by EdgeLayer
+    height: number; // Include dimensions needed by EdgeLayer
 }
 
 // Represents a specific view/layout of nodes, associated with a focal node
