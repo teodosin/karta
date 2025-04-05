@@ -39,9 +39,6 @@
 	class="absolute top-0 left-0 w-full h-full pointer-events-none"
 	style="overflow: visible;"
 >
-	<!-- Origin Axes -->
-	<line x1="0" y1="-1000000" x2="0" y2="1000000" class="axis-line" /> <!-- Y Axis -->
-	<line x1="-1000000" y1="0" x2="1000000" y2="0" class="axis-line" /> <!-- X Axis -->
 
 	<!-- Edges -->
 	   {#each [...$edges.values()] as edge (edge.id)}
