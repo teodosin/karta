@@ -90,17 +90,20 @@
             lastInputWasTouchpad = false; // Middle mouse click means it's definitely a mouse
 			e.preventDefault();
 			isPanning = true;
-			const currentTransform = viewTransform.target;
+			const currentTransform = viewTransform.target; // Use target for initial calculation
 			panStartX = e.clientX - currentTransform.posX;
 			panStartY = e.clientY - currentTransform.posY;
-			if(canvasContainer) {
-                canvasContainer.style.cursor = 'grabbing';
-                // Capture the pointer for this drag sequence
-                canvasContainer.setPointerCapture(e.pointerId);
-                // Add listeners directly to the element that captured the pointer
-                canvasContainer.addEventListener('pointermove', handleElementPointerMove);
-                canvasContainer.addEventListener('pointerup', handleElementPointerUp);
-            }
+			// Ensure canvasContainer is bound before manipulating style/listeners
+			if (canvasContainer) {
+			             canvasContainer.style.cursor = 'grabbing';
+			             // Capture the pointer for this drag sequence
+			             canvasContainer.setPointerCapture(e.pointerId);
+			             // Add listeners directly to the element that captured the pointer
+			             canvasContainer.addEventListener('pointermove', handleElementPointerMove);
+			             canvasContainer.addEventListener('pointerup', handleElementPointerUp);
+			         } else {
+			              console.error("handlePointerDown: canvasContainer not bound yet!");
+			         }
 			return; // Don't delegate middle mouse to tool
 		}
 
@@ -113,7 +116,8 @@
     function handleElementPointerMove(e: PointerEvent) {
         // Check if we are still panning (redundant check if listeners are removed correctly, but safe)
         // Also check if the moving pointer is the one we captured
-        if (isPanning && canvasContainer?.hasPointerCapture(e.pointerId)) {
+        // Add null check for canvasContainer
+        if (isPanning && canvasContainer && canvasContainer.hasPointerCapture(e.pointerId)) {
             const newPosX = e.clientX - panStartX;
 			const newPosY = e.clientY - panStartY;
             viewTransform.set({ scale: viewTransform.target.scale, posX: newPosX, posY: newPosY }, { duration: 0 });
@@ -123,16 +127,16 @@
     // New handler for pointer up on the element during middle-mouse pan
     function handleElementPointerUp(e: PointerEvent) {
         // Check if this is the up event for the pointer we captured and the middle button
-        if (isPanning && e.button === 1 && canvasContainer?.hasPointerCapture(e.pointerId)) {
+        // Add null check for canvasContainer
+        if (isPanning && e.button === 1 && canvasContainer && canvasContainer.hasPointerCapture(e.pointerId)) {
             isPanning = false;
-            if(canvasContainer) {
-                canvasContainer.style.cursor = 'default'; // Reset cursor
-                // Remove listeners from the element
-                canvasContainer.removeEventListener('pointermove', handleElementPointerMove);
-                canvasContainer.removeEventListener('pointerup', handleElementPointerUp);
-                // Release the pointer capture
-                canvasContainer.releasePointerCapture(e.pointerId);
-            }
+            // No need for inner null check now, already checked above
+            canvasContainer.style.cursor = 'default'; // Reset cursor
+            // Remove listeners from the element
+            canvasContainer.removeEventListener('pointermove', handleElementPointerMove);
+            canvasContainer.removeEventListener('pointerup', handleElementPointerUp);
+            // Release the pointer capture
+            canvasContainer.releasePointerCapture(e.pointerId);
         }
     }
 
@@ -201,7 +205,7 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <div
-	class="w-full h-screen overflow-hidden relative bg-gray-100 cursor-default" 
+	class="w-full h-screen overflow-hidden relative bg-gray-800 cursor-default"
 	bind:this={canvasContainer}
 	on:pointerdown={handlePointerDown}
 	on:pointermove={handleViewportPointerMove}
