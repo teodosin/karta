@@ -1,8 +1,6 @@
 <script lang="ts">
-    // Removed internal Tween imports, they are managed in KartaStore now
-	import type { DataNode, ViewNode, TweenableNodeState } from '$lib/types/types'; // Use TweenableNodeState if needed, ViewNode is primary prop
-    import { currentTransformTweens } from '$lib/karta/KartaStore'; // Import the central tween store
-    import type { Tween } from 'svelte/motion'; // Still need Tween type for the variable
+ import type { DataNode, ViewNode } from '$lib/types/types'; // ViewNode now contains the state tween
+    // Removed imports for currentTransformTweens and internal Tween logic
 
 	// Accept DataNode and ViewNode as props
 	export let dataNode: DataNode;
@@ -14,15 +12,9 @@
 	// Removed reactive data access - props are already reactive
     // Removed cursor style logic - handled by Viewport/Tool
 
-    // Get the specific tween for this node from the central store
-    let transformTween: Tween<TweenableNodeState> | undefined;
-    $: transformTween = $currentTransformTweens.get(viewNode.id);
-
-    // Fallback state if tween doesn't exist immediately (should be rare)
-    const fallbackState: TweenableNodeState = {
-        x: viewNode.x, y: viewNode.y, scale: viewNode.scale, rotation: viewNode.rotation,
-        width: viewNode.width, height: viewNode.height
-    };
+    // The viewNode prop now contains the state tween: viewNode.state
+    // No need for separate tween lookup or fallback state here,
+    // assuming KartaStore correctly provides a ViewNode with a valid state Tween.
 </script>
 
 {#if dataNode && viewNode}
@@ -31,13 +23,13 @@
         bind:this={nodeElementRef}
         data-id={dataNode.id}
 		class="node w-[100px] h-[100px] bg-indigo-600 text-white flex items-center justify-center font-bold rounded absolute select-none shadow-md"
-		style:transform="translate({transformTween?.current.x ?? fallbackState.x}px, {transformTween?.current.y ?? fallbackState.y}px) scale({transformTween?.current.scale ?? fallbackState.scale}) rotate({transformTween?.current.rotation ?? fallbackState.rotation}deg)"
+		style:transform="translate({viewNode.state.current.x}px, {viewNode.state.current.y}px) scale({viewNode.state.current.scale}) rotate({viewNode.state.current.rotation}deg)"
 		on:mouseenter={(e: MouseEvent) => nodeElementRef?.classList.add('shadow-lg')}
 		on:mouseleave={(e: MouseEvent) => nodeElementRef?.classList.remove('shadow-lg')}
 	>
 		<!-- Basic Node Content - Access name from attributes -->
 		{dataNode.attributes?.name ?? dataNode.ntype}
-        ({Math.round(transformTween?.current.x ?? fallbackState.x)}, {Math.round(transformTween?.current.y ?? fallbackState.y)})
+        ({Math.round(viewNode.state.current.x)}, {Math.round(viewNode.state.current.y)})
 	</div>
 {/if}
 

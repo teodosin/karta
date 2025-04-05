@@ -1,35 +1,13 @@
 import * as idb from 'idb';
 // Import Context, ViewNode, NodeId, and AbsoluteTransform
 // Also import ViewportSettings
-import type { DataNode, KartaEdge, Context, ViewNode, NodeId, AbsoluteTransform, ViewportSettings } from '../types/types';
+import type { DataNode, KartaEdge, Context, ViewNode, NodeId, AbsoluteTransform, ViewportSettings, StorableContext, StorableViewNode, StorableViewportSettings } from '../types/types'; // Import Storable types
 
-// Interface for the ViewNode structure as stored (relative coordinates)
-interface StorableViewNode {
-    id: NodeId;
-    relX: number;
-    relY: number;
-    width: number;
-    height: number;
-    relScale: number;
-    rotation: number;
-}
-
-// Interface for storing relative viewport settings
-interface StorableViewportSettings {
-    scale: number;
-    relPosX: number; // Relative X
-    relPosY: number; // Relative Y
-}
-
-// Interface for the storable version of Context (using StorableViewNode)
-interface StorableContext {
-    id: NodeId;
-    viewNodes: [NodeId, StorableViewNode][]; // Store relative ViewNodes
-    viewportSettings?: StorableViewportSettings; // Store relative viewport settings
-}
+// Removed local definitions for StorableViewNode, StorableViewportSettings, StorableContext
+// They are now imported from types.ts
 
 // Define default transform for root context
-const ROOT_TRANSFORM: AbsoluteTransform = { x: 0, y: 0, scale: 1, rotation: 0 };
+const ROOT_TRANSFORM: AbsoluteTransform = { x: 0, y: 0, scale: 1 }; // Rotation removed
 
 interface PersistenceService {
     // Node methods
@@ -46,8 +24,10 @@ interface PersistenceService {
     deleteEdge(edgeId: string): Promise<void>;
 
     // Context methods (no longer pass focalAbsTransform to saveContext)
+    // saveContext still takes the in-memory Context (with Tweens)
     saveContext(context: Context): Promise<void>;
-    getContext(contextId: NodeId, focalAbsTransform?: AbsoluteTransform): Promise<Context | undefined>;
+    // getContext returns the StorableContext read from DB
+    getContext(contextId: NodeId): Promise<StorableContext | undefined>;
     // getContexts(focalAbsTransforms: Map<NodeId, AbsoluteTransform>): Promise<Context[]>; // Removed unused function
 }
 
@@ -228,23 +208,28 @@ class LocalAdapter implements PersistenceService {
         const tx = db.transaction('contexts', 'readwrite');
         const store = tx.objectStore('contexts');
         const focalNode = context.viewNodes.get(context.id);
-        console.log("focalNode position", focalNode?.x, focalNode?.y);
-        if (!focalNode) throw new Error(`Focal node ${context.id} not found in context being saved`);
+        // Access focal node state via the tween
+        const focalNodeState = focalNode?.state.current;
+        console.log("focalNode position", focalNodeState?.x, focalNodeState?.y);
+        if (!focalNodeState) throw new Error(`Focal node ${context.id} state not found in context being saved`);
 
-        // Convert ViewNodes to StorableViewNodes (relative positions)
+        // Convert ViewNodes (containing Tweens) to StorableViewNodes (relative positions)
         const storableViewNodes: [NodeId, StorableViewNode][] = [];
         for (const [nodeId, viewNode] of context.viewNodes.entries()) {
+            const nodeState = viewNode.state.current; // Get current state from tween
             let storableNode: StorableViewNode;
             if (nodeId === context.id) {
-                storableNode = { id: viewNode.id, relX: 0, relY: 0, width: viewNode.width, height: viewNode.height, relScale: 1, rotation: viewNode.rotation };
+                // Focal node is always relative origin
+                storableNode = { id: viewNode.id, relX: 0, relY: 0, width: nodeState.width, height: nodeState.height, relScale: 1, rotation: nodeState.rotation };
             } else {
-                const relScale = viewNode.scale / focalNode.scale;
-                const dx = viewNode.x - focalNode.x;
-                const dy = viewNode.y - focalNode.y;
-                // Simplified relative position calculation (no rotation)
-                const relX = dx / focalNode.scale;
-                const relY = dy / focalNode.scale;
-                storableNode = { id: viewNode.id, relX, relY, width: viewNode.width, height: viewNode.height, relScale, rotation: viewNode.rotation };
+                // Calculate relative properties based on focal node's current state
+                const relScale = nodeState.scale / focalNodeState.scale;
+                const dx = nodeState.x - focalNodeState.x;
+                const dy = nodeState.y - focalNodeState.y;
+                // Simplified relative position calculation (no rotation considered for offset)
+                const relX = dx / focalNodeState.scale;
+                const relY = dy / focalNodeState.scale;
+                storableNode = { id: viewNode.id, relX, relY, width: nodeState.width, height: nodeState.height, relScale, rotation: nodeState.rotation };
             }
             storableViewNodes.push([nodeId, storableNode]);
         }
@@ -253,8 +238,9 @@ class LocalAdapter implements PersistenceService {
         let storableViewportSettings: StorableViewportSettings | undefined = undefined;
         if (context.viewportSettings) {
             const absSettings = context.viewportSettings;
-            let dx = (focalNode.x * absSettings.scale) + absSettings.posX;
-            let dy = (focalNode.y * absSettings.scale) + absSettings.posY;
+            // Use focal node's current state for calculation
+            let dx = (focalNodeState.x * absSettings.scale) + absSettings.posX;
+            let dy = (focalNodeState.y * absSettings.scale) + absSettings.posY;
             console.log("absSettings", absSettings);
             console.log("Relative viewport position dx and dy", dx, " ", dy);
 
@@ -274,68 +260,12 @@ class LocalAdapter implements PersistenceService {
         await tx.done;
     }
 
-    async getContext(contextId: NodeId, focalAbsTransform: AbsoluteTransform = ROOT_TRANSFORM): Promise<Context | undefined> {
+    // getContext now returns the raw StorableContext
+    // Conversion to in-memory Context (with Tweens) happens in KartaStore
+    async getContext(contextId: NodeId): Promise<StorableContext | undefined> {
         const db = await this.dbPromise;
         const storableContext = await db.get('contexts', contextId) as StorableContext | undefined;
-
-        if (storableContext) {
-            // Convert StorableViewNodes to ViewNodes (absolute positions)
-            const absoluteViewNodes = new Map<NodeId, ViewNode>();
-            for (const [nodeId, storableViewNode] of storableContext.viewNodes) {
-                let absoluteNode: ViewNode;
-                if (nodeId === contextId) {
-                    absoluteNode = {
-                        id: storableViewNode.id, x: focalAbsTransform.x, y: focalAbsTransform.y,
-                        width: storableViewNode.width, height: storableViewNode.height,
-                        scale: focalAbsTransform.scale, rotation: focalAbsTransform.rotation
-                    };
-                } else {
-                    const absScale = focalAbsTransform.scale * storableViewNode.relScale;
-                    // Simplified absolute position calculation (no rotation)
-                    const scaledRelX = storableViewNode.relX * focalAbsTransform.scale;
-                    const scaledRelY = storableViewNode.relY * focalAbsTransform.scale;
-                    const absX = focalAbsTransform.x + scaledRelX;
-                    const absY = focalAbsTransform.y + scaledRelY;
-                    absoluteNode = {
-                        id: storableViewNode.id, x: absX, y: absY,
-                        width: storableViewNode.width, height: storableViewNode.height,
-                        scale: absScale, rotation: storableViewNode.rotation // Use absolute rotation from storage
-                    };
-                }
-                absoluteViewNodes.set(nodeId, absoluteNode);
-            }
-
-            const newFocal = absoluteViewNodes.get(contextId);
-            if (newFocal === undefined) {
-                console.error("Focal not found, should be impossible:", contextId);
-                return undefined;
-            }
-            console.log("NEWWY FOCALY", newFocal.x, " ", newFocal.y);
-
-            // Convert StorableViewportSettings to ViewportSettings (absolute positions)
-            let absoluteViewportSettings: ViewportSettings | undefined = undefined;
-            if (storableContext.viewportSettings) {
-                const relSettings = storableContext.viewportSettings;
-                // Calculate absolute position correctly
-                const relX = relSettings.relPosX - (newFocal.x * relSettings.scale); 
-                const relY = relSettings.relPosY - (newFocal.y * relSettings.scale); 
-                //relX = relX * relSettings.scale;
-                //relY = relY * relSettings.scale;
-                console.log('relX', relX, 'relY', relY);
-                absoluteViewportSettings = {
-                    scale: relSettings.scale,
-                    posX: relX,
-                    posY: relY
-                };
-            }
-
-            return {
-                id: storableContext.id,
-                viewNodes: absoluteViewNodes,
-                viewportSettings: absoluteViewportSettings // Load absolute viewport settings
-            };
-        }
-        return undefined;
+        return storableContext;
     }
 
     // getContexts needs similar conversion logic for viewportSettings

@@ -1,3 +1,5 @@
+// import type { Tween } from 'svelte/motion'; // Removed duplicate import
+
 import type { Tween } from 'svelte/motion'; // Import Tween type
 
 // Basic ID types (UUIDs represented as strings)
@@ -15,15 +17,20 @@ export interface DataNode {
   attributes: Record<string, any>; // Holds name, content, src, etc.
 }
 
-// Layout information for a DataNode within a specific Context
+// Represents the complete state needed for rendering and tweening a node's visual representation
+export interface TweenableNodeState {
+    x: number;
+    y: number;
+    scale: number;
+    rotation: number;
+    width: number;
+    height: number;
+}
+
+// In-memory representation of a node's view state within a context
 export interface ViewNode {
   id: NodeId; // Same UUID as the corresponding DataNode
-  x: number;
-  y: number;
-  width: number; // Base width
-  height: number; // Base height
-  scale: number; // Uniform scaling factor (default 1)
-  rotation: number; // Degrees (default 0)
+  state: Tween<TweenableNodeState>; // Tween manages all visual properties
 }
 
 // Represents an absolute transform in the canvas coordinate space
@@ -31,7 +38,7 @@ export interface AbsoluteTransform {
     x: number;
     y: number;
     scale: number;
-    rotation: number;
+    // Rotation removed - determined later from StorableViewNode
 }
 
 // Represents the state needed for rendering and tweening a node's visual representation
@@ -47,7 +54,7 @@ export interface TweenableNodeState {
 // Represents a specific view/layout of nodes, associated with a focal node
 export interface Context {
   id: NodeId; // UUID of the focal DataNode this context represents
-  viewNodes: Map<NodeId, ViewNode>; // Map of NodeIDs to their layout in this context
+  viewNodes: Map<NodeId, ViewNode>; // Map holds the new ViewNode objects containing state tweens
   viewportSettings?: ViewportSettings; // Optional saved viewport state for this context
   // TODO: Add context-specific settings like background, grid, etc. later
 }
@@ -60,6 +67,38 @@ export interface ViewportSettings {
     posX: number; // Absolute X
     posY: number; // Absolute Y
 }
+
+
+// --- Storage-Specific Types ---
+// These represent how data is structured for persistence (e.g., in IndexedDB)
+
+// Represents ViewNode data as stored (relative coordinates)
+export interface StorableViewNode {
+    id: NodeId;
+    relX: number;
+    relY: number;
+    width: number;
+    height: number;
+    relScale: number;
+    rotation: number;
+}
+
+// Represents ViewportSettings as stored (relative coordinates where applicable)
+// Note: In current screen-relative approach, relPosX/Y store screen coords. Scale is absolute.
+export interface StorableViewportSettings {
+    scale: number;
+    relPosX: number; // Stores target screen X
+    relPosY: number; // Stores target screen Y
+}
+
+// Represents Context as stored (using StorableViewNode and StorableViewportSettings)
+export interface StorableContext {
+    id: NodeId;
+    viewNodes: [NodeId, StorableViewNode][]; // Store as array of pairs for IndexedDB compatibility
+    viewportSettings?: StorableViewportSettings;
+}
+
+// --- End Storage-Specific Types ---
 
 // Represents connections between DataNodes (context-independent)
 export interface KartaEdge {

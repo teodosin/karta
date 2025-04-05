@@ -1,9 +1,9 @@
 <script lang="ts">
 	import {
         edges,
-        // contexts, // No longer needed directly for edge paths
-        // currentContextId, // No longer needed directly for edge paths
-        currentTransformTweens, // Import the tween store
+        contexts, // Need contexts store again
+        currentContextId, // Need current context ID again
+        // Removed currentTransformTweens import
         isConnecting,
         connectionSourceNodeId,
         tempLineTargetPosition
@@ -11,19 +11,21 @@
     import type { NodeId } from '../types/types'; // Import from types.ts
     import { get } from 'svelte/store';
 
-	// Removed pre-calculated edgePaths. Path calculation moved into the #each loop for reactivity.
+	// Get the current context object reactively
+	   $: currentCtx = $contexts.get($currentContextId);
 
-    // Reactive calculation for the temporary line based on current context
+    // Reactive calculation for the temporary line
     $: tempLinePath = (() => {
         if (!$isConnecting) return null;
 
         const sourceId = $connectionSourceNodeId;
-        const sourceTween = sourceId ? $currentTransformTweens.get(sourceId) : null;
+        // Get ViewNode from the current context
+        const sourceViewNode = sourceId ? currentCtx?.viewNodes.get(sourceId) : null;
         const targetPos = $tempLineTargetPosition;
 
-        if (sourceTween && targetPos) {
-            // Calculate center based on the tween's current dimensions and position
-            const sourceState = sourceTween.current;
+        if (sourceViewNode && targetPos) {
+            // Calculate center based on the ViewNode's state tween
+            const sourceState = sourceViewNode.state.current;
             const sourceX = sourceState.x + sourceState.width / 2;
             const sourceY = sourceState.y + sourceState.height / 2;
             return `M ${sourceX} ${sourceY} L ${targetPos.x} ${targetPos.y}`;
@@ -43,12 +45,12 @@
 
 	<!-- Edges -->
 	   {#each [...$edges.values()] as edge (edge.id)}
-	           {@const sourceTween = $currentTransformTweens.get(edge.source)}
-	           {@const targetTween = $currentTransformTweens.get(edge.target)}
+	           {@const sourceViewNode = currentCtx?.viewNodes.get(edge.source)}
+	           {@const targetViewNode = currentCtx?.viewNodes.get(edge.target)}
 
-	           {#if sourceTween && targetTween}
-	               {@const sourceState = sourceTween.current}
-	               {@const targetState = targetTween.current}
+	           {#if sourceViewNode && targetViewNode}
+	               {@const sourceState = sourceViewNode.state.current}
+	               {@const targetState = targetViewNode.state.current}
 	               {@const sourceX = sourceState.x + sourceState.width / 2}
 	               {@const sourceY = sourceState.y + sourceState.height / 2}
 	               {@const targetX = targetState.x + targetState.width / 2}
