@@ -205,7 +205,7 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <div
-	class="w-full h-screen overflow-hidden relative bg-gray-800 cursor-default"
+	class="w-full h-screen overflow-hidden relative cursor-default bg-gray-800"
 	bind:this={canvasContainer}
 	on:pointerdown={handlePointerDown}
 	on:pointermove={handleViewportPointerMove}

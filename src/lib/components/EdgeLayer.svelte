@@ -74,7 +74,7 @@
 
 <style>
 	:global(.axis-line) {
-		stroke: rgba(0, 0, 0, 0.15); /* Darker gray, semi-transparent */
+		stroke: rgba(156, 163, 175, 0.3); /* gray-400 at 30% opacity */
 		stroke-width: 1;
 		vector-effect: non-scaling-stroke; /* Keep width constant on zoom */
 		fill: none;
@@ -85,7 +85,7 @@
 		fill: none;
 	}
     :global(.temp-edge) {
-        stroke: #3b82f6; /* blue-500 */
+        stroke: #86198f; /* pink-900 */
         stroke-width: 2;
         stroke-dasharray: 5, 5;
         fill: none;

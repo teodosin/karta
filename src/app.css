@@ -1,17 +1,21 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,200..1000;1,6..12,200..1000&display=swap');
 @import 'tailwindcss';
 @plugin '@tailwindcss/typography';
 
 @tailwind utilities;
 
+/* Removed :root block */
 html, body {
   margin: 0;
   padding: 0;
   overflow: hidden;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-  /* Apply dark background by default */
-  @apply bg-gray-900;
+  /* Explicitly set font and use CSS variables */
+  /* Apply base font, background, and text color using Tailwind utilities */
+  @apply font-sans bg-gray-900 text-gray-100; /* Use default Tailwind classes */
 }
 
 * {
   box-sizing: border-box;
+  /* Ensure borders don't conflict with dark theme */
+  border-color: theme('colors.gray.700'); /* Keep default border for now */
 }

@@ -22,7 +22,7 @@
 	<div
         bind:this={nodeElementRef}
         data-id={dataNode.id}
-		class="node w-[100px] h-[100px] bg-indigo-500 text-white flex items-center justify-center font-bold rounded absolute select-none shadow-md"
+		class="node w-[100px] h-[100px] flex items-center justify-center font-bold rounded absolute select-none shadow-md bg-pink-900 text-gray-100"
 		style:transform="translate({viewNode.state.current.x}px, {viewNode.state.current.y}px) scale({viewNode.state.current.scale}) rotate({viewNode.state.current.rotation}deg)"
 		on:mouseenter={(e: MouseEvent) => nodeElementRef?.classList.add('shadow-lg')}
 		on:mouseleave={(e: MouseEvent) => nodeElementRef?.classList.remove('shadow-lg')}

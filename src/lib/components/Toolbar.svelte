@@ -11,7 +11,7 @@
 </script>
 
 <!-- Position left, vertical layout, dark theme styles -->
-<div class="absolute top-1/2 left-2 transform -translate-y-1/2 z-50 flex flex-col gap-2 p-2 bg-gray-700/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-lg shadow-lg">
+<div class="absolute top-1/2 left-2 transform -translate-y-1/2 z-50 flex flex-col gap-2 p-2 backdrop-blur-sm rounded-lg shadow-lg bg-gray-800/80">
     <!-- Tool Button Structure -->
     {#each [
         { tool: 'move', label: 'Move Tool', icon: MousePointer2, instance: MoveTool },
@@ -21,10 +21,10 @@
         <div class="relative group"> <!-- Container for tooltip positioning -->
             <button
                 type="button"
-                class="p-2 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400
+                class="toolbar-button p-2 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-pink-700
                        { $currentTool instanceof item.instance
-                           ? 'bg-indigo-600 text-white'
-                           : 'text-gray-300 hover:bg-gray-600 hover:text-white'}"
+                           ? 'bg-pink-900 text-white'
+                           : 'text-gray-300 hover:bg-gray-700 hover:text-white'}"
                 on:click={() => setTool(item.tool as 'move' | 'connect' | 'context')}
                 aria-label={item.label}
             >
@@ -35,7 +35,7 @@
                     size={20}
                 />
                  <!-- Tooltip shown on hover -->
-                 <span class="absolute left-full top-1/2 transform -translate-y-1/2 ml-3 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                 <span class="absolute left-full top-1/2 transform -translate-y-1/2 ml-3 px-2 py-1 text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none bg-gray-900 text-white">
                     {item.label}
                 </span>
             </button>

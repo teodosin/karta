@@ -19,6 +19,6 @@
     }
 </script>
 
-<div class="absolute bottom-2 left-2 p-2 bg-gray-800 bg-opacity-75 text-white text-xs rounded shadow">
+<div class="absolute bottom-2 left-2 p-2 text-sm rounded shadow bg-gray-800 text-gray-300"> <!-- Reverted to default Tailwind classes -->
     Context: {displayPath}
 </div>
