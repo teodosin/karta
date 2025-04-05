@@ -107,7 +107,9 @@ async function _loadAndProcessContext(
             width: 100, height: 100 // Default size - TODO: Get from DataNode attributes?
         };
         finalViewNodes.set(contextId, { id: contextId, state: new Tween(focalInitialState, { duration: 0 }) });
-        finalViewportSettings = { ...DEFAULT_VIEWPORT_SETTINGS };
+        // For newly created contexts, don't set viewport settings yet.
+        // Let the viewport remain where it is. Settings will be saved on first interaction/switch away.
+        finalViewportSettings = undefined;
     }
 
     // --- Add Default Connected Nodes (if context didn't just load them) ---
@@ -160,7 +162,7 @@ async function _loadAndProcessContext(
     const finalContext: Context = {
         id: contextId,
         viewNodes: finalViewNodes,
-        viewportSettings: finalViewportSettings ?? { ...DEFAULT_VIEWPORT_SETTINGS } // Ensure settings exist
+        viewportSettings: finalViewportSettings // Allow undefined if context was new/had no settings
     };
 
     // Save immediately if it was newly created or defaults were added
@@ -493,12 +495,14 @@ export async function switchContext(newContextId: NodeId) {
         _applyStoresUpdate(newContextId, processedContext, loadedDataNodes, loadedEdges);
 
         // --- Phase 4: Update Viewport ---
+        // --- Phase 4: Update Viewport ---
         const newViewportSettings = processedContext.viewportSettings;
-        if (newViewportSettings) {
+        // Only tween the viewport if settings were loaded for the context.
+        // If undefined (meaning context was newly created), keep viewport as is.
+        if (newViewportSettings !== undefined) {
             viewTransform.set(newViewportSettings, { duration: VIEWPORT_TWEEN_DURATION });
         } else {
-             viewTransform.set({ ...DEFAULT_VIEWPORT_SETTINGS }, { duration: VIEWPORT_TWEEN_DURATION });
-             console.warn(`[switchContext] No viewport settings found for context ${newContextId}, resetting.`);
+            console.log(`[switchContext] Context ${newContextId} was newly created or had no saved viewport; viewport position maintained.`);
         }
         console.log(`[switchContext] Successfully switched to context ${newContextId}`);
 
