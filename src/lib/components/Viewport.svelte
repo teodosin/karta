@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { get } from 'svelte/store';
     import {
         viewTransform,
@@ -8,7 +9,8 @@
         contexts, // Import contexts store
         currentContextId, // Import current context ID store
         currentTool,
-        cancelConnectionProcess
+        cancelConnectionProcess,
+        ROOT_NODE_ID // Import ROOT_NODE_ID
     } from '$lib/karta/KartaStore';
 	import NodeWrapper from './NodeWrapper.svelte';
     import EdgeLayer from './EdgeLayer.svelte';
@@ -200,12 +202,33 @@
         // Middle mouse (button 1) default is prevented by handlePointerDown if needed
 	}
 
+	onMount(() => {
+		// Check if root context exists and lacks viewport settings (initial load)
+		// We assume KartaStore.initializeStores() has already run and potentially loaded contexts
+		const rootCtx = get(contexts).get(ROOT_NODE_ID);
+		// Also check if the current transform is still the default, as another safety measure
+		const currentTransform = viewTransform.current; // Access the tween's current value directly
+		const isDefaultTransform = currentTransform.posX === 0 && currentTransform.posY === 0 && currentTransform.scale === 1;
+
+		if (rootCtx && rootCtx.viewportSettings === undefined && canvasContainer && isDefaultTransform) {
+			console.log("Initial load detected: Centering root node.");
+			const viewportWidth = canvasContainer.clientWidth;
+			const viewportHeight = canvasContainer.clientHeight;
+			const initialPosX = viewportWidth / 2;
+			const initialPosY = viewportHeight / 2;
+
+			// Set viewport instantly to center the origin (where root node center is)
+			viewTransform.set({ scale: 1, posX: initialPosX, posY: initialPosY }, { duration: 0 });
+
+            // Let the first interaction/context switch save the centered state naturally.
+		}
+	});
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <div
-	class="w-full h-screen overflow-hidden relative cursor-default bg-gray-800"
+	class="karta-viewport-container w-full h-screen overflow-hidden relative cursor-default bg-gray-800"
 	bind:this={canvasContainer}
 	on:pointerdown={handlePointerDown}
 	on:pointermove={handleViewportPointerMove}

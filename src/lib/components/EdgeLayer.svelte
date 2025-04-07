@@ -26,8 +26,8 @@
         if (sourceViewNode && targetPos) {
             // Calculate center based on the ViewNode's state tween
             const sourceState = sourceViewNode.state.current;
-            const sourceX = sourceState.x + sourceState.width / 2;
-            const sourceY = sourceState.y + sourceState.height / 2;
+            const sourceX = sourceState.x; // Use center X directly
+            const sourceY = sourceState.y; // Use center Y directly
             return `M ${sourceX} ${sourceY} L ${targetPos.x} ${targetPos.y}`;
         }
         return null;
@@ -48,10 +48,10 @@
 	           {#if sourceViewNode && targetViewNode}
 	               {@const sourceState = sourceViewNode.state.current}
 	               {@const targetState = targetViewNode.state.current}
-	               {@const sourceX = sourceState.x + sourceState.width / 2}
-	               {@const sourceY = sourceState.y + sourceState.height / 2}
-	               {@const targetX = targetState.x + targetState.width / 2}
-	               {@const targetY = targetState.y + targetState.height / 2}
+	               {@const sourceX = sourceState.x} // Use center X directly
+	               {@const sourceY = sourceState.y} // Use center Y directly
+	               {@const targetX = targetState.x} // Use center X directly
+	               {@const targetY = targetState.y} // Use center Y directly
 	               <path
 	                   id={edge.id}
 	                   class="edge"

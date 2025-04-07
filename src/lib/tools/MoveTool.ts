@@ -1,6 +1,6 @@
 import type { Tool, NodeId } from '$lib/types/types';
 import { get } from 'svelte/store';
-import { viewTransform, updateNodeLayout, screenToCanvasCoordinates } from '$lib/karta/KartaStore';
+import { viewTransform, updateNodeLayout, screenToCanvasCoordinates, contexts, currentContextId } from '$lib/karta/KartaStore';
 
 export class MoveTool implements Tool {
     readonly name = 'move'; // Add the required name property
@@ -55,10 +55,32 @@ export class MoveTool implements Tool {
         this.draggingNodeId = nodeId;
         this.nodeElement = nodeEl; // Store reference
 
-        const nodeRect = nodeEl.getBoundingClientRect();
-        const currentTransform = viewTransform.target;
-        this.dragOffsetX = (event.clientX - nodeRect.left) / currentTransform.scale;
-        this.dragOffsetY = (event.clientY - nodeRect.top) / currentTransform.scale;
+        // Get node's current center position from the store
+        const ctxId = get(currentContextId);
+        const ctxMap = get(contexts);
+        const viewNode = ctxMap.get(ctxId)?.viewNodes.get(nodeId);
+
+        if (!viewNode) {
+            console.error(`ViewNode ${nodeId} not found in context ${ctxId} during drag start.`);
+            this.isDragging = false; // Prevent dragging if node data is missing
+            return;
+        }
+        const nodeCenterX = viewNode.state.current.x;
+        const nodeCenterY = viewNode.state.current.y;
+
+        // Get mouse position in canvas coordinates
+        const containerEl = nodeEl.closest('.karta-viewport-container') as HTMLElement; // Assume viewport has this class
+        if (!containerEl) {
+             console.error("Viewport container not found for coordinate conversion during drag start.");
+             this.isDragging = false;
+             return;
+        }
+        const containerRect = containerEl.getBoundingClientRect();
+        const { x: mouseCanvasX, y: mouseCanvasY } = screenToCanvasCoordinates(event.clientX, event.clientY, containerRect);
+
+        // Calculate offset relative to the node's center
+        this.dragOffsetX = mouseCanvasX - nodeCenterX;
+        this.dragOffsetY = mouseCanvasY - nodeCenterY;
 
         // Add visual feedback
         nodeEl.classList.add('ring-2', 'ring-yellow-400', 'z-10');
