@@ -147,8 +147,6 @@ async function _loadAndProcessContext(
             };
 
             if (existingViewNodeInOldContext) {
-                // Reuse old ViewNode/Tween but set to default state
-                existingViewNodeInOldContext.state.set(defaultState, NODE_TWEEN_OPTIONS);
                 finalViewNodes.set(connectedId, existingViewNodeInOldContext);
             } else {
                 // Create new ViewNode/Tween

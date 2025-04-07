@@ -5,7 +5,7 @@
     import { ConnectTool } from '$lib/tools/ConnectTool';
     import { ContextTool } from '$lib/tools/ContextTool';
     // Import Lucide icons
-    import { MousePointer2, Share2, Focus, type Icon as LucideIcon } from 'lucide-svelte';
+    import { MousePointer2, Workflow, Focus, type Icon as LucideIcon } from 'lucide-svelte';
 
     // No local setMode function needed anymore
 </script>
@@ -15,7 +15,7 @@
     <!-- Tool Button Structure -->
     {#each [
         { tool: 'move', label: 'Move Tool', icon: MousePointer2, instance: MoveTool },
-        { tool: 'connect', label: 'Connect Tool', icon: Share2, instance: ConnectTool },
+        { tool: 'connect', label: 'Connect Tool', icon: Workflow, instance: ConnectTool },
         { tool: 'context', label: 'Context Tool', icon: Focus, instance: ContextTool }
       ] as item (item.tool)}
         <div class="relative group"> <!-- Container for tooltip positioning -->
