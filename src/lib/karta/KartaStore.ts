@@ -109,7 +109,11 @@ async function _loadAndProcessContext(
         finalViewNodes.set(contextId, { id: contextId, state: new Tween(focalInitialState, { duration: 0 }) });
         // For newly created contexts, don't set viewport settings yet.
         // Let the viewport remain where it is. Settings will be saved on first interaction/switch away.
-        finalViewportSettings = undefined;
+        finalViewportSettings = {
+            scale: 1,
+            posX: window.innerWidth / 2,
+            posY: window.innerHeight / 2
+        };
     }
 
     // --- Add Default Connected Nodes (if context didn't just load them) ---
