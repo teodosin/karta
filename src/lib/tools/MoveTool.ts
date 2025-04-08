@@ -83,7 +83,7 @@ export class MoveTool implements Tool {
         this.dragOffsetY = mouseCanvasY - nodeCenterY;
 
         // Add visual feedback
-        nodeEl.classList.add('ring-2', 'ring-yellow-400', 'z-10');
+        nodeEl.classList.add('z-10');
         document.body.style.cursor = 'grabbing'; // Set global cursor
 
         this.addWindowListeners();
@@ -118,7 +118,7 @@ export class MoveTool implements Tool {
 
         // Remove visual feedback
         if (this.nodeElement) {
-            this.nodeElement.classList.remove('ring-2', 'ring-yellow-400', 'z-10');
+            this.nodeElement.classList.remove('z-10');
         }
         document.body.style.cursor = 'default'; // Reset global cursor
 
