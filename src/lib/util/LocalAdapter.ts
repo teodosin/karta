@@ -268,6 +268,22 @@ class LocalAdapter implements PersistenceService {
         return storableContext;
     }
 
+    // New method to get all context IDs
+    async getAllContextIds(): Promise<NodeId[]> {
+        try {
+            const db = await this.dbPromise;
+            const tx = db.transaction('contexts', 'readonly');
+            const store = tx.objectStore('contexts');
+            const allKeys = await store.getAllKeys();
+            await tx.done;
+            // Ensure keys are returned as NodeId[] (string[])
+            return allKeys as NodeId[];
+        } catch (error) {
+            console.error("[LocalAdapter] Error getting all context IDs:", error);
+            return []; // Return empty array on error
+        }
+    }
+
     // getContexts needs similar conversion logic for viewportSettings
     // Removed unused getContexts function
 }

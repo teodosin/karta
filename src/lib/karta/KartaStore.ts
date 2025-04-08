@@ -596,6 +596,35 @@ async function _ensureDataNodeExists(nodeId: NodeId): Promise<DataNode | null> {
     }
 }
 
+// --- Context List Fetching ---
+export async function fetchAvailableContextDetails(): Promise<{ id: NodeId, name: string, path: string }[]> {
+    if (!localAdapter) {
+        console.error("[fetchAvailableContextDetails] LocalAdapter not available.");
+        return [];
+    }
+    try {
+        const contextIds = await localAdapter.getAllContextIds();
+        if (contextIds.length === 0) {
+            return [];
+        }
+
+        const dataNodesMap = await localAdapter.getDataNodesByIds(contextIds);
+        const contextDetails = Array.from(dataNodesMap.values())
+            .map(node => ({
+                id: node.id,
+                name: node.attributes?.name ?? `Node ${node.id.substring(0, 8)}`, // Fallback name
+                path: node.path ?? `/${node.attributes?.name ?? node.id.substring(0, 8)}` // Fallback path
+            }))
+            .sort((a, b) => a.path.localeCompare(b.path)); // Sort alphabetically by path
+
+        return contextDetails;
+
+    } catch (error) {
+        console.error("[fetchAvailableContextDetails] Error fetching context details:", error);
+        return [];
+    }
+}
+
 // Removed _loadAndProcessInitialRootContext and _loadInitialRootData as they are replaced by the generalized functions
 
 async function initializeStores() {
