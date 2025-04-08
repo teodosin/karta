@@ -1,17 +1,24 @@
 <script lang="ts">
 	import { get } from 'svelte/store';
+	import { onMount } from 'svelte';
     import {
-        viewTransform,
-        screenToCanvasCoordinates,
-        createNodeAtPosition,
-        nodes, // Still need nodes for DataNode info if NodeWrapper needs it
-        contexts, // Import contexts store
-        currentContextId, // Import current context ID store
-        currentTool,
-        cancelConnectionProcess,
-    } from '$lib/karta/KartaStore';
-	import NodeWrapper from './NodeWrapper.svelte';
-    import EdgeLayer from './EdgeLayer.svelte';
+  viewTransform,
+  screenToCanvasCoordinates,
+  // createNodeAtPosition, // No longer called directly from here
+  nodes, // Still need nodes for DataNode info if NodeWrapper needs it
+  contexts, // Import contexts store
+  currentContextId, // Import current context ID store
+  currentTool,
+  cancelConnectionProcess,
+  // Imports for Create Node Menu
+  isCreateNodeMenuOpen,
+  createNodeMenuPosition,
+  openCreateNodeMenu,
+  closeCreateNodeMenu // Import action to close menu
+ } from '$lib/karta/KartaStore';
+ import NodeWrapper from './NodeWrapper.svelte';
+ import EdgeLayer from './EdgeLayer.svelte';
+ import CreateNodeMenu from './CreateNodeMenu.svelte'; // Import the menu component
 
 	let canvasContainer: HTMLElement;
 	let canvas: HTMLElement;
@@ -157,38 +164,43 @@
 	}
 
     // Removed handleCanvasClick - click logic should be within tool's onPointerUp
+function handleKeyDown(e: KeyboardEvent) {
+	if (e.key === 'Tab') {
+		e.preventDefault();
+		if (!canvasContainer) return;
 
-    function handleKeyDown(e: KeyboardEvent) {
-        if (e.key === 'Tab') {
-            e.preventDefault();
-            if (!canvasContainer) return;
+		const rect = canvasContainer.getBoundingClientRect();
+		let screenX = lastScreenX;
+		let screenY = lastScreenY;
 
-            const rect = canvasContainer.getBoundingClientRect();
-            let screenX = lastScreenX;
-            let screenY = lastScreenY;
+		// Fallback to center if cursor hasn't moved over viewport yet
+		if (screenX === 0 && screenY === 0) {
+			screenX = rect.left + rect.width / 2;
+			screenY = rect.top + rect.height / 2;
+			console.log('Tab pressed: Cursor position unknown, using viewport center.');
+		} else {
+			console.log(`Tab pressed: Using cursor position (${screenX}, ${screenY})`);
+		}
 
-            // Fallback to center if cursor hasn't moved over viewport yet
-            if (screenX === 0 && screenY === 0) {
-                screenX = rect.left + rect.width / 2;
-                screenY = rect.top + rect.height / 2;
-                console.log("Tab create: Cursor position unknown, using viewport center.");
-            } else {
-                 console.log(`Tab create: Using cursor position (${screenX}, ${screenY})`);
-            }
+		// Calculate canvas coordinates
+		const { x: canvasX, y: canvasY } = screenToCanvasCoordinates(screenX, screenY, rect);
+		console.log(`Tab pressed: Calculated canvas coordinates (${canvasX}, ${canvasY})`);
 
-            const {x, y} = screenToCanvasCoordinates(screenX, screenY, rect);
-            console.log(`Tab create: Calculated canvas coordinates (${x}, ${y})`);
-            createNodeAtPosition(x, y, 'text'); // Use lowercase ntype
-        }
-        // Delegate keydown events to the active tool
-        get(currentTool)?.onKeyDown?.(e);
+		// Open the menu, passing both screen and canvas coordinates
+		openCreateNodeMenu(screenX, screenY, canvasX, canvasY);
+	}
+
+	// Delegate keydown events to the active tool
+	get(currentTool)?.onKeyDown?.(e);
+
 
         // Keep Escape key handling here for global cancel? Or move to tool?
         // Let's keep it global for now.
         if (e.key === 'Escape') {
             cancelConnectionProcess();
-        }
-    }
+            closeCreateNodeMenu(); // Also close create menu on Escape
+           }
+          }
 
     function handleKeyUp(e: KeyboardEvent) {
         // Delegate keyup events to the active tool
@@ -199,21 +211,30 @@
 		// Allow default context menu for right-click (button 2)
         // Middle mouse (button 1) default is prevented by handlePointerDown if needed
 	}
+
+	// Removed handleDoubleClick
+
+    onMount(() => {
+        // Focus the viewport container when the component mounts
+        // This helps ensure keyboard events are captured correctly.
+        canvasContainer?.focus();
+    });
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <div
-	class="karta-viewport-container w-full h-screen overflow-hidden relative cursor-default bg-gray-800"
+id="viewport"
+class="karta-viewport-container w-full h-screen overflow-hidden relative cursor-default bg-gray-800"
 	bind:this={canvasContainer}
 	on:pointerdown={handlePointerDown}
 	on:pointermove={handleViewportPointerMove}
 	on:pointerup={handleViewportPointerUp}
 	on:wheel={handleWheel}
 	on:contextmenu={handleContextMenu}
-    tabindex="0"
-    on:keydown={handleKeyDown}
-    on:keyup={handleKeyUp}
+	tabindex="0"
+	on:keydown={handleKeyDown}
+	on:keyup={handleKeyUp}
 >
 	<div
 		class="w-full h-full relative origin-top-left"
@@ -233,4 +254,22 @@
             {/each}
         {/if}
 	</div>
+
+	<!-- Create Node Menu (conditionally rendered) -->
+	{#if $isCreateNodeMenuOpen && $createNodeMenuPosition}
+		{@const transform = viewTransform.current} <!-- Access tween value directly -->
+		{@const markerScreenX = $createNodeMenuPosition.canvasX * transform.scale + transform.posX}
+		{@const markerScreenY = $createNodeMenuPosition.canvasY * transform.scale + transform.posY}
+
+		<!-- Position Marker (positioned using transformed canvas coords) -->
+		<div
+			class="absolute w-3 h-3 border-2 border-blue-400 rounded-full bg-blue-400 bg-opacity-30 pointer-events-none z-40"
+			style:left="{markerScreenX - 6}px"
+			style:top="{markerScreenY - 6}px"
+			aria-hidden="true"
+		></div>
+
+		<!-- The Menu Component (positioned using screen coords) -->
+		<CreateNodeMenu x={$createNodeMenuPosition.screenX + 10} y={$createNodeMenuPosition.screenY + 10} />
+	{/if}
 </div>

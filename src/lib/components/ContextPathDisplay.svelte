@@ -10,7 +10,7 @@
 		switchContext // Import switchContext for list items
 	} from '$lib/karta/KartaStore';
 	import type { NodeId, DataNode } from '$lib/types/types';
-	import { onMount } from 'svelte'; // Import onMount for click outside listener
+	import { onMount, onDestroy } from 'svelte'; // Import onMount and onDestroy
 
  let displayPath: string = '/'; // Default path
  let showContextList = false;
@@ -51,11 +51,11 @@
   showContextList = false; // Close list after selection
  }
 
- // Click outside handling
+ // Close dropdown if clicked outside the main component element
  function handleClickOutside(event: MouseEvent) {
-  if (showContextList && componentElement && !componentElement.contains(event.target as Node)) {
-   showContextList = false;
-  }
+ 	if (showContextList && componentElement && !componentElement.contains(event.target as Node)) {
+ 		showContextList = false;
+ 	}
  }
 
  onMount(() => {
@@ -64,7 +64,16 @@
    window.removeEventListener('click', handleClickOutside, true);
   };
  });
+
+ // Handle Escape key to close the list
+ function handleKeyDown(event: KeyboardEvent) {
+     if (showContextList && event.key === 'Escape') {
+         showContextList = false;
+     }
+ }
 </script>
+
+<svelte:window on:keydown={handleKeyDown} />
 
 <!-- Bind the component's root element -->
 <div
@@ -108,7 +117,7 @@
 			<div
 				class="absolute bottom-full left-0 mb-1 w-64 max-h-48 overflow-y-auto rounded border border-gray-600 bg-gray-700 shadow-lg z-30"
 				role="listbox"
-			>
+				> <!-- Removed bind:this -->
 				{#if isLoadingList}
 					<div class="px-2 py-1 text-gray-400">Loading...</div>
 				{:else if availableContexts.length === 0}

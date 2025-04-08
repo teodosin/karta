@@ -7,7 +7,7 @@ import { MoveTool } from '../tools/MoveTool';
 import { ConnectTool } from '../tools/ConnectTool';
 import { ContextTool } from '../tools/ContextTool';
 import { v4 as uuidv4 } from 'uuid';
-import { getDefaultViewNodeStateForType } from '$lib/node_types/registry'; // Import the new helper
+import { getDefaultViewNodeStateForType, getDefaultAttributesForType } from '$lib/node_types/registry'; // Import the new helpers
 
 // Define the Root Node ID
 export const ROOT_NODE_ID = '00000000-0000-0000-0000-000000000000';
@@ -33,6 +33,10 @@ export const isConnecting = writable<boolean>(false);
 export const connectionSourceNodeId = writable<NodeId | null>(null);
 export const tempLineTargetPosition = writable<{ x: number; y: number } | null>(null);
 // Removed currentTransformTweens store
+
+// --- Create Node Menu Stores ---
+export const isCreateNodeMenuOpen = writable<boolean>(false);
+export const createNodeMenuPosition = writable<{ screenX: number; screenY: number; canvasX: number; canvasY: number } | null>(null);
 
 // --- History Stores ---
 export const historyStack = writable<NodeId[]>([]);
@@ -311,6 +315,41 @@ function _applyStoresUpdate(
 
 
 // --- Public Store Actions ---
+
+// Create Node Menu Actions
+export function openCreateNodeMenu(screenX: number, screenY: number, canvasX: number, canvasY: number) {
+    createNodeMenuPosition.set({ screenX, screenY, canvasX, canvasY });
+    isCreateNodeMenuOpen.set(true);
+    console.log(`[KartaStore] Opening create node menu at (${screenX}, ${screenY})`);
+}
+
+export function closeCreateNodeMenu() {
+    isCreateNodeMenuOpen.set(false);
+    createNodeMenuPosition.set(null);
+    console.log(`[KartaStore] Closing create node menu`);
+}
+
+export async function createNodeFromMenu(ntype: string) {
+    const position = get(createNodeMenuPosition);
+    const viewportEl = document.getElementById('viewport'); // Assuming viewport has this ID
+
+    // Use the canvas coordinates directly from the stored position
+    if (position) {
+        // Get default attributes from registry for the selected type
+        const defaultAttributes = getDefaultAttributesForType(ntype);
+        // Use stored canvasX, canvasY
+        await createNodeAtPosition(position.canvasX, position.canvasY, ntype, defaultAttributes);
+    } else if (viewportEl) { // Added check for viewportEl for error message context
+        console.error('[KartaStore] Cannot create node from menu: Position not found in store.');
+
+        closeCreateNodeMenu(); // Close menu after creation
+    } else {
+        console.error('[KartaStore] Cannot create node from menu: Viewport element not found.');
+        closeCreateNodeMenu(); // Close menu even if creation failed
+    }
+}
+
+
 
 // Tool Management
 const toolInstances = { move: new MoveTool(), connect: new ConnectTool(), context: new ContextTool() };
