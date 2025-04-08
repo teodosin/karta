@@ -16,7 +16,7 @@ export class ContextTool implements Tool {
         if (event.button !== 0 || !(targetElement instanceof HTMLElement)) return;
 
         // Check if the target is a node element
-        const nodeEl = targetElement.closest('.node') as HTMLElement | null;
+        const nodeEl = targetElement.closest('.node-wrapper') as HTMLElement | null; // Use the new wrapper class
         if (!nodeEl || !nodeEl.dataset.id) return; // Exit if not a node
 
         const nodeId = nodeEl.dataset.id;

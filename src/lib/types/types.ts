@@ -18,15 +18,7 @@ export interface DataNode {
 }
 
 // Represents the complete state needed for rendering and tweening a node's visual representation
-export interface TweenableNodeState {
-    x: number;
-    y: number;
-    scale: number;
-    rotation: number;
-    width: number;
-    height: number;
-}
-
+// Note: Duplicate removed below, keeping the one with width/height
 // In-memory representation of a node's view state within a context
 export interface ViewNode {
   id: NodeId; // Same UUID as the corresponding DataNode
@@ -41,16 +33,14 @@ export interface AbsoluteTransform {
     // Rotation removed - determined later from StorableViewNode
 }
 
-// Represents the state needed for rendering and tweening a node's visual representation
 export interface TweenableNodeState {
     x: number;
     y: number;
-    scale: number;
+    scale: number; // Note: This might be deprecated if we stick to width/height resizing
     rotation: number;
     width: number;  // Include dimensions needed by EdgeLayer
     height: number; // Include dimensions needed by EdgeLayer
 }
-
 // Represents a specific view/layout of nodes, associated with a focal node
 export interface Context {
   id: NodeId; // UUID of the focal DataNode this context represents

@@ -1,0 +1,51 @@
+<script context="module" lang="ts">
+	// MODULE SCRIPT
+	import type { TweenableNodeState } from '$lib/types/types';
+	import type { NodeTypeDefinition, IconComponent } from './types';
+	// Optional: import icon like Circle from 'lucide-svelte';
+
+	function getDefaultAttributes(baseName = 'Node'): Record<string, any> {
+		return { name: baseName };
+	}
+
+	function getDefaultViewNodeState(): Omit<TweenableNodeState, 'x' | 'y'> {
+		return { width: 100, height: 100, scale: 1, rotation: 0 };
+	}
+
+	export const nodeTypeDef: Omit<NodeTypeDefinition, 'component'> = {
+		ntype: 'generic',
+		getDefaultAttributes,
+		getDefaultViewNodeState,
+		displayName: 'Generic'
+		// icon: Circle as IconComponent // Example
+	};
+</script>
+
+<script lang="ts">
+	// INSTANCE SCRIPT
+	import type { DataNode, ViewNode } from '$lib/types/types';
+	import { currentContextId } from '$lib/karta/KartaStore';
+
+	export let dataNode: DataNode;
+	export let viewNode: ViewNode;
+
+	// Instance logic...
+</script>
+<!-- Generic Node Appearance: Simple Circle - Apply focus ring here -->
+<div
+	class={`
+		w-full h-full rounded-full bg-gradient-to-br from-blue-500 to-purple-600
+		shadow-inner flex items-center justify-center pointer-events-auto
+		${dataNode.id === $currentContextId ? 'ring-4 ring-offset-2 ring-offset-gray-900 ring-orange-500' : ''}
+	`}
+	title={`Generic Node: ${dataNode?.attributes?.name ?? dataNode.id}`}
+>
+	<!-- Optional: Could add a subtle icon or pattern -->
+	<!-- <span class="text-white opacity-50 text-xs">G</span> -->
+</div>
+
+<style>
+	div {
+		box-sizing: border-box;
+	}
+</style>

@@ -1,12 +1,13 @@
 import { writable, get } from 'svelte/store';
-import { Tween, tweened } from 'svelte/motion';
+import { Tween } from 'svelte/motion'; // Removed 'tweened' as it's not used directly here
 import { cubicOut } from 'svelte/easing';
 import { localAdapter } from '../util/LocalAdapter';
-import type { DataNode, KartaEdge, ViewNode, Context, Tool, NodeId, EdgeId, AbsoluteTransform, ViewportSettings, TweenableNodeState, StorableContext, StorableViewNode, StorableViewportSettings } from '../types/types'; // Added StorableViewportSettings
+import type { DataNode, KartaEdge, ViewNode, Context, Tool, NodeId, EdgeId, AbsoluteTransform, ViewportSettings, TweenableNodeState, StorableContext, StorableViewNode, StorableViewportSettings } from '../types/types';
 import { MoveTool } from '../tools/MoveTool';
 import { ConnectTool } from '../tools/ConnectTool';
 import { ContextTool } from '../tools/ContextTool';
 import { v4 as uuidv4 } from 'uuid';
+import { getDefaultViewNodeStateForType } from '$lib/node_types/registry'; // Import the new helper
 
 // Define the Root Node ID
 export const ROOT_NODE_ID = '00000000-0000-0000-0000-000000000000';
@@ -103,14 +104,35 @@ async function _loadAndProcessContext(
         contextWasCreated = true;
         const focalDataNode = await localAdapter.getNode(contextId);
         if (!focalDataNode) throw new Error(`Cannot create context for non-existent node: ${contextId}`);
+        if (contextId === ROOT_NODE_ID) {
+             console.log(`[_loadAndProcessContext] Root context creation: Loaded focalDataNode ntype: ${focalDataNode.ntype}`);
+        }
 
         // Create initial state and ViewNode for the focal node
+        // Use type-specific defaults for size/scale/rotation
+        if (contextId === ROOT_NODE_ID) {
+             console.log(`[_loadAndProcessContext] Root context creation: Getting default view state for ntype: ${focalDataNode.ntype}`);
+        }
+        const defaultViewState = getDefaultViewNodeStateForType(focalDataNode.ntype);
         const focalInitialState: TweenableNodeState = {
             x: focalTargetPlacement.x, y: focalTargetPlacement.y,
-            scale: focalTargetPlacement.scale, rotation: 0, // Default rotation
-            width: 100, height: 100 // Default size - TODO: Get from DataNode attributes?
+            // Use defaults from registry, but override scale with placement scale if needed?
+            // For now, let's prioritize the type default scale.
+            ...defaultViewState, // Includes width, height, scale, rotation
+            scale: defaultViewState.scale * focalTargetPlacement.scale // Apply placement scale relative to default? Or just use placement scale? Let's use placement scale directly for consistency.
+            // Re-evaluate scale logic if needed. Let's use placement scale directly.
+            // scale: focalTargetPlacement.scale, // Use placement scale
+            // rotation: defaultViewState.rotation // Use default rotation
         };
-        finalViewNodes.set(contextId, { id: contextId, state: new Tween(focalInitialState, { duration: 0 }) });
+        // Corrected state using placement scale directly:
+        const correctedFocalInitialState: TweenableNodeState = {
+             x: focalTargetPlacement.x, y: focalTargetPlacement.y,
+             scale: focalTargetPlacement.scale, // Use placement scale
+             rotation: defaultViewState.rotation, // Use default rotation from type
+             width: defaultViewState.width, // Use default width from type
+             height: defaultViewState.height // Use default height from type
+        };
+        finalViewNodes.set(contextId, { id: contextId, state: new Tween(correctedFocalInitialState, { duration: 0 }) });
         // For newly created contexts, don't set viewport settings yet.
         // Let the viewport remain where it is. Settings will be saved on first interaction/switch away.
         finalViewportSettings = {
@@ -322,11 +344,11 @@ export async function createNodeAtPosition(canvasX: number, canvasY: number, nty
 		attributes: { ...attributes, name: finalName },
 	};
 
-    // 2. Create initial state for the ViewNode's tween
+    // 2. Get default view state based on ntype and create initial state for the ViewNode's tween
+    const defaultViewState = getDefaultViewNodeStateForType(ntype);
     const initialState: TweenableNodeState = {
         x: canvasX, y: canvasY,
-        width: 100, height: 100, // TODO: Get default size based on ntype?
-        scale: 1, rotation: 0
+        ...defaultViewState // Use width, height, scale, rotation from registry helper
     };
 
     // 3. Create the new ViewNode containing the Tween
@@ -401,6 +423,62 @@ export function updateNodeLayout(nodeId: NodeId, newX: number, newY: number) {
         console.warn(`ViewNode ${nodeId} not found in context ${contextId} for layout update`);
     }
 }
+// Node Attribute Update
+export async function updateNodeAttributes(nodeId: NodeId, newAttributes: Record<string, any>) {
+    const currentNodes = get(nodes);
+    const dataNode = currentNodes.get(nodeId);
+
+    if (!dataNode) {
+        console.warn(`[updateNodeAttributes] DataNode ${nodeId} not found in store.`);
+        return;
+    }
+
+    const oldName = dataNode.attributes?.name;
+    const newName = newAttributes?.name;
+    let attributesToSave = { ...dataNode.attributes, ...newAttributes }; // Merge old and new
+
+    // Check for name change and uniqueness
+    if (newName && newName !== oldName) {
+        if (localAdapter) {
+            const nameExists = await localAdapter.checkNameExists(newName);
+            if (nameExists) {
+                console.warn(`[updateNodeAttributes] Attempted to rename node ${nodeId} to "${newName}", but this name already exists. Proceeding anyway.`);
+                // TODO: Implement proper user feedback or prevent saving duplicate names later.
+                // For now, we allow it but log a warning. If uniqueness is strict, we might revert:
+                // attributesToSave.name = oldName; // Revert name change
+                // Or simply return here without saving.
+            }
+        } else {
+            console.warn("[updateNodeAttributes] LocalAdapter not ready, cannot check for duplicate names.");
+        }
+    }
+
+    // Create updated node data
+    const updatedNodeData: DataNode = {
+        ...dataNode,
+        attributes: attributesToSave,
+        modifiedAt: Date.now(),
+        // Potentially update path if name changed? For now, keep path separate.
+        // path: `/${attributesToSave.name}` // Example if path should sync
+    };
+
+    // Update the store
+    nodes.update(n => n.set(nodeId, updatedNodeData));
+    console.log(`[updateNodeAttributes] Updated attributes for node ${nodeId}:`, attributesToSave);
+
+    // Persist changes
+    if (localAdapter) {
+        try {
+            await localAdapter.saveNode(updatedNodeData);
+        } catch (error) {
+            console.error(`[updateNodeAttributes] Error saving node ${nodeId} after attribute update:`, error);
+            // Optionally revert store update on save failure?
+        }
+    } else {
+        console.warn("[updateNodeAttributes] LocalAdapter not initialized, persistence disabled.");
+    }
+}
+
 
 // Edge Creation
 export async function createEdge(sourceId: NodeId, targetId: NodeId) {
@@ -574,17 +652,28 @@ async function _ensureDataNodeExists(nodeId: NodeId): Promise<DataNode | null> {
     }
     try {
         let dataNode = await localAdapter.getNode(nodeId);
+        if (nodeId === ROOT_NODE_ID) {
+            console.log(`[_ensureDataNodeExists] Root node check: Found in DB?`, !!dataNode, dataNode ? `Existing ntype: ${dataNode.ntype}` : '');
+        }
         if (!dataNode) {
             console.warn(`[_ensureDataNodeExists] DataNode ${nodeId} not found. Creating default.`);
             const now = Date.now();
-            const defaultName = `node-${nodeId.substring(0, 8)}`; // Simple default name
+            // Determine default properties based on whether it's the root node
+            const isRoot = nodeId === ROOT_NODE_ID;
+            const defaultName = isRoot ? 'root' : `node-${nodeId.substring(0, 8)}`;
+            const defaultPath = isRoot ? '/root' : `/${defaultName}`;
+            const defaultNtype = isRoot ? 'root' : 'generic';
+            if (isRoot) {
+                console.log(`[_ensureDataNodeExists] Root node creation: Assigning ntype: ${defaultNtype}`);
+            }
+
             dataNode = {
                 id: nodeId,
-                ntype: 'generic', // Default type
+                ntype: defaultNtype, // Set type correctly
                 createdAt: now,
                 modifiedAt: now,
-                path: `/${defaultName}`, // Simple default path
-                attributes: { name: defaultName },
+                path: defaultPath, // Set path correctly
+                attributes: { name: defaultName }, // Set name correctly
             };
             await localAdapter.saveNode(dataNode);
             console.log(`[_ensureDataNodeExists] Default DataNode ${nodeId} created and saved.`);
@@ -650,18 +739,20 @@ async function initializeStores() {
     let loadedEdges = new Map<EdgeId, KartaEdge>();
 
     try {
-        // 1. Determine Initial Context ID from localStorage
-        if (typeof window !== 'undefined' && window.localStorage) {
-            const savedId = localStorage.getItem('karta-last-context-id');
-            if (savedId) {
-                targetInitialContextId = savedId;
-                console.log(`[initializeStores] Found last context ID in localStorage: ${targetInitialContextId}`);
-            } else {
-                console.log(`[initializeStores] No last context ID found, defaulting to ROOT: ${ROOT_NODE_ID}`);
-            }
-        } else {
-            console.log(`[initializeStores] localStorage not available, defaulting to ROOT: ${ROOT_NODE_ID}`);
-        }
+        // 1. Determine Initial Context ID - FORCING ROOT FOR NOW
+        // if (typeof window !== 'undefined' && window.localStorage) {
+        //     const savedId = localStorage.getItem('karta-last-context-id');
+        //     if (savedId) {
+        //         targetInitialContextId = savedId;
+        //         console.log(`[initializeStores] Found last context ID in localStorage: ${targetInitialContextId}`);
+        //     } else {
+        //         console.log(`[initializeStores] No last context ID found, defaulting to ROOT: ${ROOT_NODE_ID}`);
+        //     }
+        // } else {
+        //     console.log(`[initializeStores] localStorage not available, defaulting to ROOT: ${ROOT_NODE_ID}`);
+        // }
+        targetInitialContextId = ROOT_NODE_ID; // FORCE START WITH ROOT
+        console.log(`[initializeStores] Forcing start with ROOT_NODE_ID: ${targetInitialContextId}`);
 
         // 2. Ensure Initial DataNode Exists (Attempt target ID first)
         initialDataNode = await _ensureDataNodeExists(targetInitialContextId);
