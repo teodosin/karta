@@ -101,23 +101,26 @@
 		→
 	</button>
 
-	<!-- Context Path Trigger Button -->
-	<button
-		type="button"
-		on:click={toggleContextList}
-		class="flex items-center hover:bg-gray-700 p-1 rounded ml-1 relative"
-		aria-haspopup="true"
-		aria-expanded={showContextList}
-	>
-		<span class="bg-pink-900 p-1 px-2 rounded">Context</span>
-		<span class="ml-2">{displayPath}</span>
+	<!-- Container for Context Path Trigger and Dropdown -->
+	<div class="relative ml-1">
+		<!-- Context Path Trigger Button -->
+		<button
+			type="button"
+			on:click={toggleContextList}
+			class="flex items-center hover:bg-gray-700 p-1 rounded"
+			aria-haspopup="true"
+			aria-expanded={showContextList}
+		>
+			<span class="bg-pink-900 p-1 px-2 rounded">Context</span>
+			<span class="ml-2">{displayPath}</span>
+		</button>
 
-		<!-- Drop-up Context List -->
+		<!-- Drop-up Context List (Now a sibling, positioned relative to the container) -->
 		{#if showContextList}
 			<div
 				class="absolute bottom-full left-0 mb-1 w-64 max-h-48 overflow-y-auto rounded border border-gray-600 bg-gray-700 shadow-lg z-30"
 				role="listbox"
-				> <!-- Removed bind:this -->
+			>
 				{#if isLoadingList}
 					<div class="px-2 py-1 text-gray-400">Loading...</div>
 				{:else if availableContexts.length === 0}
@@ -136,5 +139,5 @@
 				{/if}
 			</div>
 		{/if}
-	</button>
+	</div>
 </div>
