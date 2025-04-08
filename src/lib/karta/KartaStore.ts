@@ -33,6 +33,10 @@ export const connectionSourceNodeId = writable<NodeId | null>(null);
 export const tempLineTargetPosition = writable<{ x: number; y: number } | null>(null);
 // Removed currentTransformTweens store
 
+// --- History Stores ---
+export const historyStack = writable<NodeId[]>([]);
+export const futureStack = writable<NodeId[]>([]);
+
 // --- Internal Helper Functions ---
 
 /**
@@ -455,9 +459,19 @@ export function screenToCanvasCoordinates(screenX: number, screenY: number, cont
 }
 
 
-export async function switchContext(newContextId: NodeId) {
+export async function switchContext(newContextId: NodeId, isUndoRedo: boolean = false) { // Added isUndoRedo flag
     const oldContextId = get(currentContextId);
     if (newContextId === oldContextId) return; // No change
+
+    // --- History Management ---
+    if (!isUndoRedo) {
+        historyStack.update(stack => [...stack, oldContextId]);
+        futureStack.set([]); // Clear future stack on new action
+        console.log(`[switchContext] Pushed ${oldContextId} to history.`);
+    }
+    // --- End History Management ---
+
+
     if (!localAdapter) {
         console.error("[switchContext] LocalAdapter not available."); return;
     }
@@ -514,121 +528,175 @@ export async function switchContext(newContextId: NodeId) {
     }
 }
 
+// --- History Actions ---
+export function undoContextSwitch() {
+    const history = get(historyStack);
+    if (history.length === 0) {
+        console.log("[undoContextSwitch] History stack is empty.");
+        return;
+    }
+
+    const previousId = history[history.length - 1]; // Get last element
+    const currentId = get(currentContextId);
+
+    historyStack.update(stack => stack.slice(0, -1)); // Remove last element
+    futureStack.update(stack => [...stack, currentId]); // Add current to future
+
+    console.log(`[undoContextSwitch] Undoing to: ${previousId}`);
+    switchContext(previousId, true); // Call switchContext with isUndoRedo flag
+}
+
+export function redoContextSwitch() {
+    const future = get(futureStack);
+    if (future.length === 0) {
+        console.log("[redoContextSwitch] Future stack is empty.");
+        return;
+    }
+
+    const nextId = future[future.length - 1]; // Get last element
+    const currentId = get(currentContextId);
+
+    futureStack.update(stack => stack.slice(0, -1)); // Remove last element
+    historyStack.update(stack => [...stack, currentId]); // Add current to history
+
+    console.log(`[redoContextSwitch] Redoing to: ${nextId}`);
+    switchContext(nextId, true); // Call switchContext with isUndoRedo flag
+}
+
 
 // --- Initialization (Refactored) ---
 
-/** Ensures the Root DataNode exists in the database. */
-async function _ensureRootDataNode(): Promise<DataNode> {
-    if (!localAdapter) throw new Error("LocalAdapter not available for initialization.");
-    let rootDataNode = await localAdapter.getNode(ROOT_NODE_ID);
-    if (!rootDataNode) {
-        console.log("Root DataNode not found in DB, creating...");
-        const now = Date.now();
-        rootDataNode = {
-            id: ROOT_NODE_ID, ntype: 'root', createdAt: now, modifiedAt: now,
-            path: '/', attributes: { name: 'Root' },
-        };
-        await localAdapter.saveNode(rootDataNode);
-    } else {
-        console.log("Root DataNode found in DB.");
+/** Generalized function to ensure a DataNode exists */
+async function _ensureDataNodeExists(nodeId: NodeId): Promise<DataNode | null> {
+    if (!localAdapter) {
+        console.error(`[_ensureDataNodeExists] LocalAdapter not available while checking for ${nodeId}`);
+        return null;
     }
-    return rootDataNode;
+    try {
+        let dataNode = await localAdapter.getNode(nodeId);
+        if (!dataNode) {
+            console.warn(`[_ensureDataNodeExists] DataNode ${nodeId} not found. Creating default.`);
+            const now = Date.now();
+            const defaultName = `node-${nodeId.substring(0, 8)}`; // Simple default name
+            dataNode = {
+                id: nodeId,
+                ntype: 'generic', // Default type
+                createdAt: now,
+                modifiedAt: now,
+                path: `/${defaultName}`, // Simple default path
+                attributes: { name: defaultName },
+            };
+            await localAdapter.saveNode(dataNode);
+            console.log(`[_ensureDataNodeExists] Default DataNode ${nodeId} created and saved.`);
+        }
+        return dataNode;
+    } catch (error) {
+        console.error(`[_ensureDataNodeExists] Error ensuring DataNode ${nodeId} exists:`, error);
+        return null;
+    }
 }
 
-/** Loads or creates the initial Root Context. */
-// Renamed from _loadInitialRootContext to reflect it returns the processed Context
-async function _loadAndProcessInitialRootContext(rootDataNode: DataNode): Promise<Context> {
-    if (!localAdapter) throw new Error("LocalAdapter not available for initialization.");
-    const rootContextId = ROOT_NODE_ID;
-
-    // Use the main context processing function, passing undefined for oldContext
-    const { finalContext, wasCreated } = await _loadAndProcessContext(
-        rootContextId,
-        DEFAULT_FOCAL_TRANSFORM, // Root's target placement is the default
-        undefined // No old context during initialization
-    );
-
-    if (!finalContext) {
-        throw new Error("Failed to load or create the initial root context.");
-    }
-
-    // Ensure viewport settings exist (might be redundant if _loadAndProcessContext handles it)
-     if (!finalContext.viewportSettings) {
-         finalContext.viewportSettings = { ...DEFAULT_VIEWPORT_SETTINGS };
-         // If settings were missing, we should probably save
-         if (!wasCreated) { // Avoid double save if context was just created
-             await localAdapter.saveContext(finalContext);
-         }
-     }
-
-
-    return finalContext;
-}
-
-/** Loads initial DataNodes and Edges for the Root Context. */
-async function _loadInitialRootData(rootContext: Context, rootDataNode: DataNode): Promise<{ dataNodesForRoot: Map<NodeId, DataNode>, edgesForRoot: Map<EdgeId, KartaEdge> }> {
-    if (!localAdapter) return { dataNodesForRoot: new Map(), edgesForRoot: new Map() };
-
-    const viewNodeIds = Array.from(rootContext.viewNodes.keys());
-    let dataNodesForRoot = new Map<NodeId, DataNode>();
-    let edgesForRoot = new Map<EdgeId, KartaEdge>();
-
-    if (viewNodeIds.length > 0) {
-        dataNodesForRoot = await localAdapter.getDataNodesByIds(viewNodeIds);
-
-        edgesForRoot = await localAdapter.getEdgesByNodeIds(viewNodeIds);
-    }
-
-    // Ensure Root DataNode is included
-    if (!dataNodesForRoot.has(ROOT_NODE_ID)) {
-         console.warn("Root DataNode was missing from loaded nodes, adding it back.");
-         dataNodesForRoot.set(ROOT_NODE_ID, rootDataNode);
-    }
-    return { dataNodesForRoot, edgesForRoot };
-}
-
+// Removed _loadAndProcessInitialRootContext and _loadInitialRootData as they are replaced by the generalized functions
 
 async function initializeStores() {
+    console.log("[initializeStores] Initializing Karta stores...");
     get(currentTool)?.activate(); // Activate default tool
 
-    if (localAdapter) {
-        try {
-            const rootDataNode = await _ensureRootDataNode();
-            const finalRootContext = await _loadAndProcessInitialRootContext(rootDataNode);
-            const { dataNodesForRoot, edgesForRoot } = await _loadInitialRootData(finalRootContext, rootDataNode);
-
-            // Set initial store state
-            nodes.set(dataNodesForRoot);
-            edges.set(edgesForRoot);
-            contexts.set(new Map([[ROOT_NODE_ID, finalRootContext]]));
-            currentContextId.set(ROOT_NODE_ID);
-
-            // Set initial viewport state (no tween)
-            const initialSettings = finalRootContext.viewportSettings || DEFAULT_VIEWPORT_SETTINGS;
-            viewTransform.set(initialSettings, { duration: 0 });
-
-        } catch (error) {
-            console.error("Error during store initialization:", error);
-            // Set default empty state on error
-            nodes.set(new Map());
-            edges.set(new Map());
-            contexts.set(new Map());
-            currentContextId.set(ROOT_NODE_ID);
-            viewTransform.set({ ...DEFAULT_VIEWPORT_SETTINGS }, { duration: 0 }); // Reset viewport on error
-        }
-    } else {
-        console.warn("LocalAdapter not initialized, skipping initialization in SSR.");
-        // Set default empty state for SSR
+    if (!localAdapter) {
+        console.error("[initializeStores] LocalAdapter not initialized. Cannot proceed.");
+        // Set default empty state on critical error
         nodes.set(new Map());
         edges.set(new Map());
         contexts.set(new Map());
-        currentContextId.set(ROOT_NODE_ID);
-        viewTransform.set({ ...DEFAULT_VIEWPORT_SETTINGS }, { duration: 0 }); // Set default viewport for SSR
+        currentContextId.set(ROOT_NODE_ID); // Default to root ID even on error
+        viewTransform.set(DEFAULT_VIEWPORT_SETTINGS, { duration: 0 });
+        setTool('move');
+        return;
     }
+
+    let targetInitialContextId = ROOT_NODE_ID; // Default
+    let initialDataNode: DataNode | null = null;
+    let initialProcessedContext: Context | undefined = undefined;
+    let loadedDataNodes = new Map<NodeId, DataNode>();
+    let loadedEdges = new Map<EdgeId, KartaEdge>();
+
+    try {
+        // 1. Determine Initial Context ID from localStorage
+        if (typeof window !== 'undefined' && window.localStorage) {
+            const savedId = localStorage.getItem('karta-last-context-id');
+            if (savedId) {
+                targetInitialContextId = savedId;
+                console.log(`[initializeStores] Found last context ID in localStorage: ${targetInitialContextId}`);
+            } else {
+                console.log(`[initializeStores] No last context ID found, defaulting to ROOT: ${ROOT_NODE_ID}`);
+            }
+        } else {
+            console.log(`[initializeStores] localStorage not available, defaulting to ROOT: ${ROOT_NODE_ID}`);
+        }
+
+        // 2. Ensure Initial DataNode Exists (Attempt target ID first)
+        initialDataNode = await _ensureDataNodeExists(targetInitialContextId);
+
+        // 3. Fallback to Root if target ID failed
+        if (!initialDataNode) {
+            console.warn(`[initializeStores] Failed to ensure target node ${targetInitialContextId} exists. Falling back to ROOT.`);
+            targetInitialContextId = ROOT_NODE_ID; // Reset target ID to root
+            initialDataNode = await _ensureDataNodeExists(ROOT_NODE_ID);
+            if (!initialDataNode) {
+                // If even the root fails, throw a critical error
+                throw new Error("CRITICAL: Failed to ensure even the Root DataNode exists during initialization.");
+            }
+        }
+
+        // 4. Load Initial Context & Data (Generalized)
+        const { finalContext } = await _loadAndProcessContext(
+            initialDataNode.id, // Use the validated ID
+            DEFAULT_FOCAL_TRANSFORM,
+            undefined // No old context on init
+        );
+        initialProcessedContext = finalContext;
+
+        if (!initialProcessedContext) {
+            throw new Error(`Failed to load or process initial context for node: ${initialDataNode.id}`);
+        }
+
+        const loadedData = await _loadContextData(initialProcessedContext);
+        loadedDataNodes = loadedData.loadedDataNodes;
+        loadedEdges = loadedData.loadedEdges;
+
+        // 5. Apply Initial State
+        _applyStoresUpdate(initialDataNode.id, initialProcessedContext, loadedDataNodes, loadedEdges);
+
+        // 6. Set Initial Viewport
+        const initialViewportSettings = initialProcessedContext.viewportSettings || DEFAULT_VIEWPORT_SETTINGS;
+        viewTransform.set(initialViewportSettings, { duration: 0 }); // Set instantly
+
+        console.log(`[initializeStores] Stores initialized successfully, starting context: ${initialDataNode.id}`);
+
+    } catch (error) {
+        console.error("[initializeStores] Error during store initialization:", error);
+        // Set default empty state on error
+        nodes.set(new Map());
+        edges.set(new Map());
+        contexts.set(new Map());
+        currentContextId.set(ROOT_NODE_ID); // Default to root ID on error
+        viewTransform.set(DEFAULT_VIEWPORT_SETTINGS, { duration: 0 });
+    }
+
+    // 7. Set Initial Tool (runs even if init fails partially)
+    setTool('move');
 }
 
 // Run initialization only in browser environment
 if (typeof window !== 'undefined' ) {
     initializeStores();
+    
+    // Subscribe to save last context ID
+    currentContextId.subscribe(id => {
+        if (typeof window !== 'undefined' && window.localStorage) { // Check if localStorage is available
+            localStorage.setItem('karta-last-context-id', id);
+            console.log(`[KartaStore] Saved last context ID to localStorage: ${id}`);
+        }
+    });
 }
 
