@@ -49,8 +49,9 @@
 	       data-id={dataNode.id}
 		class={`
 			node-wrapper absolute select-none cursor-grab pointer-events-none
-			w-[100px] h-[100px]
 		`}
+		style:width="{viewNode.state.current.width}px"
+		style:height="{viewNode.state.current.height}px"
 		style:transform="translate({viewNode.state.current.x}px, {viewNode.state.current.y}px) scale({viewNode.state.current.scale}) rotate({viewNode.state.current.rotation}deg) translateX(-50%) translateY(-50%)"
 		on:mouseenter={(e: MouseEvent) => nodeWrapperRef?.classList.add('node-hover')}
 		on:mouseleave={(e: MouseEvent) => nodeWrapperRef?.classList.remove('node-hover')}

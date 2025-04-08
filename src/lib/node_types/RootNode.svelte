@@ -40,14 +40,14 @@
 <!-- Root Node Appearance - Apply focus ring here -->
 <div
 	class={`
-		w-full h-full rounded-full border-4 border-dashed border-orange-400 bg-orange-800
+		w-full h-full rounded-full border-2 border-dashed border-orange-400 bg-orange-800
 		flex items-center justify-center p-2 pointer-events-auto
 		${dataNode.id === $currentContextId ? 'ring-4 ring-offset-2 ring-offset-gray-900 ring-orange-500' : ''}
 	`}
 	title={`Root Node: ${dataNode?.attributes?.name ?? dataNode.id}`}
 >
 	<!-- Use Lucide BrainCog icon -->
-	<BrainCog class="h-1/2 w-1/2 text-orange-300 opacity-60 select-none pointer-events-none" strokeWidth={1.5} />
+	<BrainCog class="select-none pointer-events-none" strokeWidth={1.5} size={50} color="orange" />
 </div>
 
 <style>
