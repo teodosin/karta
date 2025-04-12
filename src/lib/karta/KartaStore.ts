@@ -33,6 +33,7 @@ export const isConnecting = writable<boolean>(false);
 export const connectionSourceNodeId = writable<NodeId | null>(null);
 export const tempLineTargetPosition = writable<{ x: number; y: number } | null>(null);
 // Removed currentTransformTweens store
+export const selectedNodeIds = writable<Set<NodeId>>(new Set());
 
 // --- Create Node Menu Stores ---
 export const isCreateNodeMenuOpen = writable<boolean>(false);
@@ -360,6 +361,56 @@ export function setTool(toolName: 'move' | 'connect' | 'context') {
         current?.deactivate(); next?.activate(); currentTool.set(next);
         console.log(`Switched tool to: ${toolName}`);
     }
+}
+
+// --- Selection Actions ---
+
+/** Clears the current selection. */
+export function clearSelection() {
+selectedNodeIds.update(currentSelection => {
+    if (currentSelection.size > 0) {
+        console.log('[Selection] Cleared');
+        return new Set<NodeId>(); // Return new Set to trigger update
+    }
+    return currentSelection; // No change if already empty
+});
+}
+
+/**
+* Sets the selection to the provided node IDs.
+* @param nodeIds A single NodeId or an array/Set of NodeIds.
+*/
+export function setSelectedNodes(nodeIds: NodeId | NodeId[] | Set<NodeId>) {
+const idsToSelect = new Set(Array.isArray(nodeIds) ? nodeIds : nodeIds instanceof Set ? Array.from(nodeIds) : [nodeIds]);
+selectedNodeIds.set(idsToSelect);
+console.log('[Selection] Set:', Array.from(idsToSelect));
+}
+
+
+/** Deselects a specific node. */
+export function deselectNode(nodeId: NodeId) {
+selectedNodeIds.update(currentSelection => {
+const deleted = currentSelection.delete(nodeId);
+if (deleted) {
+console.log('[Selection] Deselected:', nodeId, ' New selection:', Array.from(currentSelection));
+return new Set(currentSelection); // Return new Set to trigger update
+}
+return currentSelection; // No change
+});
+}
+
+/** Toggles the selection state of a single node. */
+export function toggleSelection(nodeId: NodeId) {
+selectedNodeIds.update(currentSelection => {
+    if (currentSelection.has(nodeId)) {
+        currentSelection.delete(nodeId);
+        console.log('[Selection] Toggled OFF:', nodeId, ' New selection:', Array.from(currentSelection));
+    } else {
+        currentSelection.add(nodeId);
+        console.log('[Selection] Toggled ON:', nodeId, ' New selection:', Array.from(currentSelection));
+    }
+    return new Set(currentSelection); // Return new Set to trigger update
+});
 }
 
 // Node Creation

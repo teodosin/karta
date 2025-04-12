@@ -21,10 +21,15 @@
   isCreateNodeMenuOpen,
   createNodeMenuPosition,
   openCreateNodeMenu,
-  closeCreateNodeMenu // Import action to close menu
- } from '$lib/karta/KartaStore';
- import NodeWrapper from './NodeWrapper.svelte';
- import EdgeLayer from './EdgeLayer.svelte';
+  closeCreateNodeMenu, // Import action to close menu
+  // Add these imports for selection
+  selectedNodeIds,
+  clearSelection,
+  setSelectedNodes,
+  toggleSelection
+  } from '$lib/karta/KartaStore';
+  import NodeWrapper from './NodeWrapper.svelte';
+  import EdgeLayer from './EdgeLayer.svelte';
  import CreateNodeMenu from './CreateNodeMenu.svelte'; // Import the menu component
 
 	let canvasContainer: HTMLElement;
@@ -42,6 +47,13 @@
     // State for last known cursor position
     let lastScreenX = 0;
     let lastScreenY = 0;
+   
+    // State for marquee selection
+    let isMarqueeSelecting = false;
+    let marqueeStartCoords: { canvasX: number; canvasY: number } | null = null;
+    let marqueeEndCoords: { canvasX: number; canvasY: number } | null = null;
+    let initialSelection: Set<string> | null = null; // Store selection at drag start
+    let marqueeRectElement: HTMLDivElement | null = null; // For the visual element
 
 	function handleWheel(e: WheelEvent) {
     // console.log(`handleWheel: deltaY=${e.deltaY}, deltaX=${e.deltaX}, deltaMode=${e.deltaMode}, ctrlKey=${e.ctrlKey}`); // DEBUG LOG removed
@@ -98,10 +110,10 @@
     get(currentTool)?.onWheel?.(e);
 }
 
-	function handlePointerDown(e: PointerEvent) { // Changed to PointerEvent
-		// Middle mouse panning (keep this local for now, could be a tool later)
+	function handlePointerDown(e: PointerEvent) {
+		// Middle mouse panning takes precedence
 		if (e.button === 1) {
-            lastInputWasTouchpad = false; // Middle mouse click means it's definitely a mouse
+			lastInputWasTouchpad = false; // Middle mouse click means it's definitely a mouse
 			e.preventDefault();
 			isPanning = true;
 			const currentTransform = viewTransform.target; // Use target for initial calculation
@@ -109,21 +121,182 @@
 			panStartY = e.clientY - currentTransform.posY;
 			// Ensure canvasContainer is bound before manipulating style/listeners
 			if (canvasContainer) {
-			             canvasContainer.style.cursor = 'grabbing';
-			             // Capture the pointer for this drag sequence
-			             canvasContainer.setPointerCapture(e.pointerId);
-			             // Add listeners directly to the element that captured the pointer
-			             canvasContainer.addEventListener('pointermove', handleElementPointerMove);
-			             canvasContainer.addEventListener('pointerup', handleElementPointerUp);
-			         } else {
-			              console.error("handlePointerDown: canvasContainer not bound yet!");
-			         }
-			return; // Don't delegate middle mouse to tool
+				canvasContainer.style.cursor = 'grabbing';
+				// Capture the pointer for this drag sequence
+				canvasContainer.setPointerCapture(e.pointerId);
+				// Add listeners directly to the element that captured the pointer
+				canvasContainer.addEventListener('pointermove', handleElementPointerMove);
+				canvasContainer.addEventListener('pointerup', handleElementPointerUp);
+			} else {
+				console.error("handlePointerDown: canvasContainer not bound yet!");
+			}
+			return; // Don't delegate middle mouse
 		}
 
-		// Delegate pointer down events to the active tool (for non-middle mouse)
-        // Pass the event and the direct target element
-        get(currentTool)?.onPointerDown?.(e, e.target as EventTarget | null);
+		// Check if the click target is the background (canvas or container)
+		const targetElement = e.target as HTMLElement;
+		const clickedOnNode = targetElement.closest('.node-wrapper');
+		const clickedOnBackground = targetElement === canvasContainer || targetElement === canvas;
+
+		if (clickedOnBackground && e.button === 0) { // Left click on background
+			e.preventDefault(); // Prevent default text selection/drag behavior
+			isMarqueeSelecting = true;
+			lastInputWasTouchpad = false; // Assume mouse interaction for marquee
+
+			// Calculate start coords
+			const rect = canvasContainer.getBoundingClientRect();
+			const { x: canvasX, y: canvasY } = screenToCanvasCoordinates(e.clientX, e.clientY, rect);
+			marqueeStartCoords = { canvasX, canvasY };
+			marqueeEndCoords = { canvasX, canvasY }; // Initialize end coords
+			initialSelection = new Set(get(selectedNodeIds)); // Store initial selection
+
+			// Capture pointer on the container
+			canvasContainer.setPointerCapture(e.pointerId);
+			// Add move/up listeners specifically for marquee drag
+			canvasContainer.addEventListener('pointermove', handleMarqueePointerMove);
+			canvasContainer.addEventListener('pointerup', handleMarqueePointerUp);
+
+			// Do NOT delegate to tool if starting marquee
+			return;
+		}
+	
+		// Need new handlers for marquee move/up, separate from general viewport move/up
+		function handleMarqueePointerMove(e: PointerEvent) {
+			if (!isMarqueeSelecting || !marqueeStartCoords || !canvasContainer) return;
+	
+			const rect = canvasContainer.getBoundingClientRect();
+			const { x: currentCanvasX, y: currentCanvasY } = screenToCanvasCoordinates(e.clientX, e.clientY, rect);
+			marqueeEndCoords = { canvasX: currentCanvasX, canvasY: currentCanvasY };
+	
+			// --- Update Selection Logic ---
+			updateSelectionFromMarquee(e.shiftKey, e.ctrlKey || e.metaKey);
+	
+			// --- Update Visual Marquee ---
+			updateMarqueeVisual(); // We'll define this helper later
+		}
+	
+		function handleMarqueePointerUp(e: PointerEvent) {
+			if (!isMarqueeSelecting || !canvasContainer) return;
+	
+			// Check if it was a click (minimal movement) vs a drag
+			const dx = marqueeEndCoords ? Math.abs(marqueeEndCoords.canvasX - marqueeStartCoords!.canvasX) : 0;
+			const dy = marqueeEndCoords ? Math.abs(marqueeEndCoords.canvasY - marqueeStartCoords!.canvasY) : 0;
+			const dragThreshold = 5 / viewTransform.current.scale; // Adjust threshold based on zoom
+	
+			if (dx < dragThreshold && dy < dragThreshold) {
+				// Treat as a click on the background
+				clearSelection();
+			} else {
+				// Final selection was already set during move, just cleanup
+			}
+	
+			// Cleanup
+			canvasContainer.releasePointerCapture(e.pointerId);
+			canvasContainer.removeEventListener('pointermove', handleMarqueePointerMove);
+			canvasContainer.removeEventListener('pointerup', handleMarqueePointerUp);
+	
+			isMarqueeSelecting = false;
+			marqueeStartCoords = null;
+			marqueeEndCoords = null;
+			initialSelection = null;
+			if (marqueeRectElement) {
+				marqueeRectElement.remove(); // Remove visual element
+				marqueeRectElement = null;
+			}
+		}
+	
+		// Helper function to calculate and update selection during marquee
+		function updateSelectionFromMarquee(shiftKey: boolean, ctrlOrMetaKey: boolean) {
+			if (!isMarqueeSelecting || !marqueeStartCoords || !marqueeEndCoords || !canvasContainer || !initialSelection) return;
+	
+			const currentTransform = viewTransform.current;
+	
+			// Calculate marquee bounds in canvas coordinates
+			const marqueeLeft = Math.min(marqueeStartCoords.canvasX, marqueeEndCoords.canvasX);
+			const marqueeRight = Math.max(marqueeStartCoords.canvasX, marqueeEndCoords.canvasX);
+			const marqueeTop = Math.min(marqueeStartCoords.canvasY, marqueeEndCoords.canvasY);
+			const marqueeBottom = Math.max(marqueeStartCoords.canvasY, marqueeEndCoords.canvasY);
+	
+			const currentIntersectingIds = new Set<string>();
+			const nodeElements = canvas?.querySelectorAll<HTMLElement>('.node-wrapper'); // Query within canvas
+	
+			nodeElements?.forEach(nodeEl => {
+				const nodeId = nodeEl.dataset.id;
+				if (!nodeId) return;
+	
+				// Get node bounds (more accurate than viewNode state if possible)
+				// This uses screen coords, needs conversion
+				const nodeRect = nodeEl.getBoundingClientRect();
+				const viewportRect = canvasContainer.getBoundingClientRect();
+	
+				// Convert node screen bounds to canvas bounds
+				const nodeCanvasTopLeft = screenToCanvasCoordinates(nodeRect.left, nodeRect.top, viewportRect);
+				const nodeCanvasBottomRight = screenToCanvasCoordinates(nodeRect.right, nodeRect.bottom, viewportRect);
+	
+				// Simple AABB intersection check
+				if (
+					nodeCanvasTopLeft.x < marqueeRight &&
+					nodeCanvasBottomRight.x > marqueeLeft &&
+					nodeCanvasTopLeft.y < marqueeBottom &&
+					nodeCanvasBottomRight.y > marqueeTop
+				) {
+					currentIntersectingIds.add(nodeId);
+				}
+			});
+	
+			// Determine target selection based on modifiers and initial state
+			let targetSelection: Set<string>;
+			if (shiftKey) {
+				targetSelection = new Set([...initialSelection, ...currentIntersectingIds]);
+			} else if (ctrlOrMetaKey) {
+				targetSelection = new Set([...initialSelection].filter(id => !currentIntersectingIds.has(id)));
+			} else {
+				targetSelection = currentIntersectingIds;
+			}
+	
+			// Update the main store directly
+			selectedNodeIds.set(targetSelection); // Note: This might trigger many updates
+		}
+	
+		// Creates or updates the visual marquee rectangle element
+		function updateMarqueeVisual() {
+			if (!isMarqueeSelecting || !marqueeStartCoords || !marqueeEndCoords || !canvasContainer) return;
+	
+			const transform = viewTransform.current;
+	
+			// Convert canvas coords to screen coords
+			const screenStartX = marqueeStartCoords.canvasX * transform.scale + transform.posX;
+			const screenStartY = marqueeStartCoords.canvasY * transform.scale + transform.posY;
+			const screenEndX = marqueeEndCoords.canvasX * transform.scale + transform.posX;
+			const screenEndY = marqueeEndCoords.canvasY * transform.scale + transform.posY;
+	
+			const left = Math.min(screenStartX, screenEndX);
+			const top = Math.min(screenStartY, screenEndY);
+			const width = Math.abs(screenStartX - screenEndX);
+			const height = Math.abs(screenStartY - screenEndY);
+	
+			if (!marqueeRectElement) {
+				// Create the element if it doesn't exist
+				marqueeRectElement = document.createElement('div');
+				marqueeRectElement.style.position = 'absolute';
+				marqueeRectElement.style.border = '1px dashed #cbd5e1'; // Tailwind slate-300
+				marqueeRectElement.style.backgroundColor = 'rgba(59, 130, 246, 0.1)'; // Tailwind blue-500 with opacity
+				marqueeRectElement.style.pointerEvents = 'none'; // Ignore pointer events
+				marqueeRectElement.style.zIndex = '50'; // Ensure it's above nodes/edges
+				marqueeRectElement.setAttribute('aria-hidden', 'true');
+				canvasContainer.appendChild(marqueeRectElement);
+			}
+	
+			// Update position and size
+			marqueeRectElement.style.left = `${left}px`;
+			marqueeRectElement.style.top = `${top}px`;
+			marqueeRectElement.style.width = `${width}px`;
+			marqueeRectElement.style.height = `${height}px`;
+		}
+
+		// If not middle mouse or marquee start, delegate to the active tool
+		// Pass the event and the direct target element
+		get(currentTool)?.onPointerDown?.(e, e.target as EventTarget | null);
 	}
 
     // New handler for pointer move on the element during middle-mouse pan

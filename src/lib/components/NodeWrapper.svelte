@@ -7,7 +7,7 @@
 -->
 <script lang="ts">
 	import type { DataNode, ViewNode } from '$lib/types/types';
-	import { currentContextId, updateNodeAttributes } from '$lib/karta/KartaStore'; // Assume updateNodeAttributes exists
+	import { currentContextId, updateNodeAttributes, selectedNodeIds } from '$lib/karta/KartaStore'; // Import selectedNodeIds
 	import { getNodeComponent } from '$lib/node_types/registry';
 	import { tick } from 'svelte';
 
@@ -23,6 +23,7 @@
 	// Dynamically get the component based on ntype
 	$: NodeComponent = dataNode ? getNodeComponent(dataNode.ntype) : null;
 	$: nodeName = dataNode?.attributes?.name ?? dataNode?.ntype ?? 'Unnamed Node'; // Robust fallback
+	$: isSelected = dataNode ? $selectedNodeIds.has(dataNode.id) : false; // Check if this node is selected
 
 	async function startEditing() {
 		editedName = nodeName;
@@ -57,6 +58,7 @@
 		class={`
 			node-wrapper absolute select-none cursor-grab pointer-events-none
 		`}
+		class:selected={isSelected}
 		style:width="{viewNode.state.current.width}px"
 		style:height="{viewNode.state.current.height}px"
 		style:transform="translate({viewNode.state.current.x}px, {viewNode.state.current.y}px) scale({viewNode.state.current.scale}) rotate({viewNode.state.current.rotation}deg) translateX(-50%) translateY(-50%)"
@@ -101,6 +103,15 @@
         touch-action: none;
 		/* Add transition for potential hover effects */
 		transition: filter 0.15s ease-in-out;
+	}
+
+	.node-wrapper.selected {
+		/* Add a distinct visual style for selected nodes */
+		/* Example: Blue outline */
+		outline: 2px solid #3b82f6; /* Tailwind's blue-500 */
+		outline-offset: 3px;
+		/* Ensure it doesn't conflict with hover or other outlines */
+		z-index: 10; /* Bring selected nodes slightly forward if needed */
 	}
 	.node-wrapper.node-hover .node-content {
 		/* Example hover effect: slightly brighter */
