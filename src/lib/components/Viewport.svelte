@@ -1,3 +1,10 @@
+<!--
+// --- Karta Runtime Component ---
+// This file is planned for inclusion in the MIT-licensed `karta_runtime` package.
+// It should focus on displaying the graph and handling interactions in "Play Mode".
+// Avoid adding editor-specific logic or dependencies here.
+// Interaction logic should read configuration from node attributes.
+-->
 <script lang="ts">
 	import { get } from 'svelte/store';
 	import { onMount } from 'svelte';

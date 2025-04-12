@@ -1,3 +1,9 @@
+<!--
+// --- Karta Runtime Component ---
+// This file is planned for inclusion in the MIT-licensed `karta_runtime` package.
+// It is responsible for rendering edges between nodes.
+// Keep this focused on display logic; avoid editor-specific features.
+-->
 <script lang="ts">
 	import {
         edges,

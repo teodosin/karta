@@ -1,3 +1,9 @@
+// --- Karta Runtime Component ---
+// This file is planned for inclusion in the MIT-licensed `karta_runtime` package.
+// It defines core data structures (DataNode, ViewNode, Edge, Context, etc.).
+// Essential for both editor and runtime.
+// Needs to include definitions for storing "Play Mode" interaction configurations.
+
 // import type { Tween } from 'svelte/motion'; // Removed duplicate import
 
 import type { Tween } from 'svelte/motion'; // Import Tween type

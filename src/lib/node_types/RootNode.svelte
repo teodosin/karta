@@ -1,3 +1,9 @@
+<!--
+// --- Karta Runtime Component ---
+// This file is planned for inclusion in the MIT-licensed `karta_runtime` package.
+// It defines the rendering and behavior for the 'root' node type.
+// Play Mode interactions should be handled based on node attributes.
+-->
 <script context="module" lang="ts">
 	// MODULE SCRIPT (runs once)
 	import type { SvelteComponent } from 'svelte';

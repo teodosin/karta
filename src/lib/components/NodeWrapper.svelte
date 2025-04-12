@@ -1,3 +1,10 @@
+<!--
+// --- Karta Runtime Component ---
+// This file is planned for inclusion in the MIT-licensed `karta_runtime` package.
+// It handles node positioning and dynamic component loading.
+// It needs to support "Play Mode" interactions based on node attributes.
+// Avoid adding editor-specific UI logic here.
+-->
 <script lang="ts">
 	import type { DataNode, ViewNode } from '$lib/types/types';
 	import { currentContextId, updateNodeAttributes } from '$lib/karta/KartaStore'; // Assume updateNodeAttributes exists

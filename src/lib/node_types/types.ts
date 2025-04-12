@@ -1,3 +1,8 @@
+// --- Karta Runtime Component ---
+// This file is planned for inclusion in the MIT-licensed `karta_runtime` package.
+// It defines types related to node type definitions and their static properties.
+// Essential for both editor and runtime.
+
 import type { SvelteComponent } from 'svelte';
 import type { DataNode, ViewNode, TweenableNodeState } from '$lib/types/types'; // Import base types
 
