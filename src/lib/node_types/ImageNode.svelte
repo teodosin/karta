@@ -61,7 +61,7 @@
 		<img
 			src={imgSrc}
 			alt={altText}
-			class="object-contain w-full h-full"
+			class="object-contain w-full h-full pointer-events-none"
 			loading="lazy"
 			on:error={(e) => {
 				// Prevent infinite loop if placeholder also fails
@@ -72,7 +72,7 @@
 		/>
 	{:else}
 		<!-- Display placeholder SVG directly -->
-		{@html placeholderSvg}
+		<div class="pointer-events-none w-full h-full flex items-center justify-center">{@html placeholderSvg}</div>
 	{/if}
 </div>
 
