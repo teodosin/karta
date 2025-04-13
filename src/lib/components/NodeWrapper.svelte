@@ -24,29 +24,48 @@
 	$: NodeComponent = dataNode ? getNodeComponent(dataNode.ntype) : null;
 	$: nodeName = dataNode?.attributes?.name ?? dataNode?.ntype ?? 'Unnamed Node'; // Robust fallback
 	$: isSelected = dataNode ? $selectedNodeIds.has(dataNode.id) : false; // Check if this node is selected
+	$: isRenamable = !dataNode?.attributes?.isSystemNode; // Check the attribute
 
 	async function startEditing() {
+		if (!isRenamable) return; // Prevent editing if not renamable
 		editedName = nodeName;
 		isEditingName = true;
 		await tick(); // Wait for input to render
 		inputElementRef?.focus();
 		inputElementRef?.select();
+		// Add listener to handle clicks outside
+		window.addEventListener('pointerdown', handleClickOutside, { capture: true });
 	}
 
 	function handleNameSubmit() {
-		if (isEditingName && editedName.trim() && editedName !== nodeName) {
-			// Call store action to update attributes (includes name uniqueness check implicitly or explicitly)
+		// Only submit if renamable and editing
+		if (isRenamable && isEditingName && editedName.trim() && editedName !== nodeName) {
+			// Store action now handles uniqueness and system node checks
 			updateNodeAttributes(dataNode.id, { ...dataNode.attributes, name: editedName.trim() });
 		}
 		isEditingName = false;
+		// Clean up listener after successful submit
+		window.removeEventListener('pointerdown', handleClickOutside, { capture: true });
 	}
 
 	function handleKeyDown(event: KeyboardEvent) {
 		if (event.key === 'Enter') {
 			handleNameSubmit();
 		} else if (event.key === 'Escape') {
-			isEditingName = false; // Cancel editing
+			cancelEditing(); // Use cancel function for Escape
 		}
+	}
+
+	function handleClickOutside(event: PointerEvent) {
+		if (inputElementRef && event.target !== inputElementRef) {
+			cancelEditing();
+		}
+	}
+
+	function cancelEditing() {
+		if (!isEditingName) return; // Avoid removing listener multiple times
+		isEditingName = false;
+		window.removeEventListener('pointerdown', handleClickOutside, { capture: true });
 	}
 </script>
 
@@ -77,21 +96,27 @@
 
 		<!-- External Label & Input - Positioned below the wrapper -->
 		<div
-			class="node-label absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full mt-1 px-1.5 py-0.5 bg-gray-700 bg-opacity-80 text-white text-xs rounded whitespace-nowrap cursor-text"
+			class="node-label absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full mt-1 px-1.5 py-0.5 bg-gray-700 bg-opacity-80 text-white text-xs rounded whitespace-nowrap pointer-events-auto"
+			class:cursor-text={isRenamable}
+			title={isRenamable ? 'Double-click to rename' : 'System node (cannot be renamed)'}
 		>
-			{#if isEditingName}
-				<input
-					bind:this={inputElementRef}
-					type="text"
-					bind:value={editedName}
-					on:blur={handleNameSubmit}
-					on:keydown={handleKeyDown}
-					class="bg-gray-900 text-white text-xs p-0 border border-blue-500 rounded outline-none focus:ring-1 focus:ring-blue-400"
-					style:width="{Math.max(60, nodeName.length * 7 + 10)}px"
-					spellcheck="false"
-				/>
+			{#if isRenamable}
+				{#if isEditingName}
+					<input
+						bind:this={inputElementRef}
+						type="text"
+						bind:value={editedName}
+						on:keydown={handleKeyDown}
+						class="bg-gray-900 text-white text-xs p-0 border border-blue-500 rounded outline-none focus:ring-1 focus:ring-blue-400"
+						style:width="{Math.max(60, nodeName.length * 7 + 10)}px"
+						spellcheck="false"
+					/>
+				{:else}
+					<span on:dblclick={startEditing}>{nodeName}</span>
+				{/if}
 			{:else}
-				<span on:dblclick={startEditing} title="Double-click to rename">{nodeName}</span>
+				<!-- Display name for non-renamable nodes, no interaction -->
+				<span>{nodeName}</span>
 			{/if}
 		</div>
 	</div>

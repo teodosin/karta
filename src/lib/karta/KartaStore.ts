@@ -523,49 +523,70 @@ export async function updateNodeAttributes(nodeId: NodeId, newAttributes: Record
         return;
     }
 
+    // Prevent renaming system nodes
+    if (dataNode.attributes?.isSystemNode) {
+        console.warn(`[updateNodeAttributes] Attempted to modify attributes of system node ${nodeId}. Operation cancelled.`);
+        return;
+    }
+
     const oldName = dataNode.attributes?.name;
     const newName = newAttributes?.name;
     let attributesToSave = { ...dataNode.attributes, ...newAttributes }; // Merge old and new
 
     // Check for name change and uniqueness
-    if (newName && newName !== oldName) {
+    if (newName && newName.trim() && newName !== oldName) {
+        const finalNewName = newName.trim();
         if (localAdapter) {
-            const nameExists = await localAdapter.checkNameExists(newName);
+            const nameExists = await localAdapter.checkNameExists(finalNewName);
             if (nameExists) {
-                console.warn(`[updateNodeAttributes] Attempted to rename node ${nodeId} to "${newName}", but this name already exists. Proceeding anyway.`);
-                // TODO: Implement proper user feedback or prevent saving duplicate names later.
-                // For now, we allow it but log a warning. If uniqueness is strict, we might revert:
-                // attributesToSave.name = oldName; // Revert name change
-                // Or simply return here without saving.
+                console.error(`[updateNodeAttributes] Cannot rename node ${nodeId} to "${finalNewName}". Name already exists.`);
+                // TODO: Add user feedback (e.g., toast notification)
+                return; // Prevent update if name exists
             }
+            // Update attributesToSave only if name is valid and unique
+            attributesToSave.name = finalNewName;
         } else {
             console.warn("[updateNodeAttributes] LocalAdapter not ready, cannot check for duplicate names.");
+            // Proceed with name change but without uniqueness check? Or prevent? Let's prevent for safety.
+            console.error("[updateNodeAttributes] Cannot verify name uniqueness. Rename cancelled.");
+            return;
         }
+    } else if (newName !== undefined && !newName.trim()) {
+        console.warn(`[updateNodeAttributes] Attempted to rename node ${nodeId} to an empty name. Operation cancelled.`);
+        return; // Prevent empty names
     }
 
     // Create updated node data
+    // Create updated node data
     const updatedNodeData: DataNode = {
         ...dataNode,
-        attributes: attributesToSave,
+        attributes: attributesToSave, // Use potentially updated attributesToSave
         modifiedAt: Date.now(),
         // Potentially update path if name changed? For now, keep path separate.
         // path: `/${attributesToSave.name}` // Example if path should sync
     };
 
     // Update the store
-    nodes.update(n => n.set(nodeId, updatedNodeData));
-    console.log(`[updateNodeAttributes] Updated attributes for node ${nodeId}:`, attributesToSave);
+    // Update the store only if changes were actually made (or if it's not just a name change)
+    // This prevents unnecessary updates if only whitespace was trimmed from name
+    if (JSON.stringify(updatedNodeData.attributes) !== JSON.stringify(dataNode.attributes)) {
+        nodes.update(n => n.set(nodeId, updatedNodeData));
+        console.log(`[updateNodeAttributes] Updated attributes for node ${nodeId}:`, attributesToSave);
 
-    // Persist changes
-    if (localAdapter) {
-        try {
-            await localAdapter.saveNode(updatedNodeData);
-        } catch (error) {
-            console.error(`[updateNodeAttributes] Error saving node ${nodeId} after attribute update:`, error);
-            // Optionally revert store update on save failure?
+        // Persist changes
+        if (localAdapter) {
+            try {
+                await localAdapter.saveNode(updatedNodeData);
+            } catch (error) {
+                console.error(`[updateNodeAttributes] Error saving node ${nodeId} after attribute update:`, error);
+                // Optionally revert store update on save failure?
+                // nodes.update(n => n.set(nodeId, dataNode)); // Example revert
+            }
+        } else {
+            console.warn("[updateNodeAttributes] LocalAdapter not initialized, persistence disabled.");
         }
     } else {
-        console.warn("[updateNodeAttributes] LocalAdapter not initialized, persistence disabled.");
+        console.log(`[updateNodeAttributes] No effective attribute changes for node ${nodeId}.`);
     }
 }
 
@@ -763,7 +784,7 @@ async function _ensureDataNodeExists(nodeId: NodeId): Promise<DataNode | null> {
                 createdAt: now,
                 modifiedAt: now,
                 path: defaultPath, // Set path correctly
-                attributes: { name: defaultName }, // Set name correctly
+                attributes: { name: defaultName, ...(isRoot && { isSystemNode: true }) }, // Set name and system flag for root
             };
             await localAdapter.saveNode(dataNode);
             console.log(`[_ensureDataNodeExists] Default DataNode ${nodeId} created and saved.`);
@@ -857,6 +878,20 @@ async function initializeStores() {
                 throw new Error("CRITICAL: Failed to ensure even the Root DataNode exists during initialization.");
             }
         }
+        // 3.5 Ensure Root Node has isSystemNode flag (for backward compatibility)
+        if (initialDataNode.id === ROOT_NODE_ID && !initialDataNode.attributes?.isSystemNode) {
+            console.warn(`[initializeStores] Root node ${ROOT_NODE_ID} is missing the isSystemNode flag. Adding and saving...`);
+            initialDataNode.attributes = { ...initialDataNode.attributes, isSystemNode: true };
+            initialDataNode.modifiedAt = Date.now();
+            try {
+                await localAdapter.saveNode(initialDataNode);
+                console.log(`[initializeStores] Successfully added isSystemNode flag to root node.`);
+            } catch (saveError) {
+                console.error(`[initializeStores] CRITICAL: Failed to save isSystemNode flag to root node:`, saveError);
+                // Continue initialization, but the root might remain unprotected if saving failed.
+            }
+        }
+
 
         // 4. Load Initial Context & Data (Generalized)
         const { finalContext } = await _loadAndProcessContext(
