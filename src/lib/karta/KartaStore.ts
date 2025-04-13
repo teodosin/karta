@@ -537,18 +537,27 @@ export async function updateNodeAttributes(nodeId: NodeId, newAttributes: Record
     if (newName && newName.trim() && newName !== oldName) {
         const finalNewName = newName.trim();
         if (localAdapter) {
-            const nameExists = await localAdapter.checkNameExists(finalNewName);
+            let nameToSet = finalNewName; // Start with the user's desired name
+            let nameExists = await localAdapter.checkNameExists(nameToSet);
+
             if (nameExists) {
-                console.error(`[updateNodeAttributes] Cannot rename node ${nodeId} to "${finalNewName}". Name already exists.`);
-                // TODO: Add user feedback (e.g., toast notification)
-                return; // Prevent update if name exists
+                console.warn(`[updateNodeAttributes] Name "${nameToSet}" already exists. Finding next available name...`);
+                const baseName = nameToSet; // Store the original desired name
+                let counter = 2;
+                // Loop until a unique name is found
+                while (nameExists) {
+                    nameToSet = `${baseName}${counter}`;
+                    nameExists = await localAdapter.checkNameExists(nameToSet);
+                    counter++;
+                }
+                console.log(`[updateNodeAttributes] Unique name found: "${nameToSet}"`);
             }
-            // Update attributesToSave only if name is valid and unique
-            attributesToSave.name = finalNewName;
+            // Update attributesToSave with the final unique name
+            attributesToSave.name = nameToSet;
         } else {
             console.warn("[updateNodeAttributes] LocalAdapter not ready, cannot check for duplicate names.");
-            // Proceed with name change but without uniqueness check? Or prevent? Let's prevent for safety.
-            console.error("[updateNodeAttributes] Cannot verify name uniqueness. Rename cancelled.");
+            // If adapter isn't ready, we cannot guarantee uniqueness. Cancel the rename.
+            console.error("[updateNodeAttributes] LocalAdapter not available. Cannot verify name uniqueness. Rename cancelled.");
             return;
         }
     } else if (newName !== undefined && !newName.trim()) {
@@ -560,16 +569,16 @@ export async function updateNodeAttributes(nodeId: NodeId, newAttributes: Record
     // Create updated node data
     const updatedNodeData: DataNode = {
         ...dataNode,
-        attributes: attributesToSave, // Use potentially updated attributesToSave
+        attributes: attributesToSave, // Use the final attributes map (name might have been incremented)
         modifiedAt: Date.now(),
         // Potentially update path if name changed? For now, keep path separate.
         // path: `/${attributesToSave.name}` // Example if path should sync
     };
 
     // Update the store
-    // Update the store only if changes were actually made (or if it's not just a name change)
-    // This prevents unnecessary updates if only whitespace was trimmed from name
-    if (JSON.stringify(updatedNodeData.attributes) !== JSON.stringify(dataNode.attributes)) {
+    // Update the store only if changes were actually made
+    // Compare the final attributesToSave with the original dataNode attributes
+    if (JSON.stringify(attributesToSave) !== JSON.stringify(dataNode.attributes)) {
         nodes.update(n => n.set(nodeId, updatedNodeData));
         console.log(`[updateNodeAttributes] Updated attributes for node ${nodeId}:`, attributesToSave);
 
