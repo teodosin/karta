@@ -114,6 +114,11 @@
         newPosY = mouseY - beforeZoomY * newScale;
     }
 
+    // Close menus if transform changes
+    if (newScale !== currentTransform.scale || newPosX !== currentTransform.posX || newPosY !== currentTransform.posY) {
+        closeContextMenu();
+        closeCreateNodeMenu();
+    }
     viewTransform.set({ scale: newScale, posX: newPosX, posY: newPosY }, {duration: 140});
 
     // Call tool's wheel handler
@@ -317,6 +322,11 @@
         if (isPanning && canvasContainer && canvasContainer.hasPointerCapture(e.pointerId)) {
             const newPosX = e.clientX - panStartX;
 			const newPosY = e.clientY - panStartY;
+            // Close menus if transform changes
+            if (newPosX !== viewTransform.target.posX || newPosY !== viewTransform.target.posY) {
+                closeContextMenu();
+                closeCreateNodeMenu();
+            }
             viewTransform.set({ scale: viewTransform.target.scale, posX: newPosX, posY: newPosY }, { duration: 0 });
         }
     }
