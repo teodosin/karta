@@ -19,7 +19,7 @@
 	}
 
 	const textNodePropertySchema: PropertyDefinition[] = [
-		{ key: 'text', label: 'Content', type: 'textarea' },
+		// { key: 'text', label: 'Content', type: 'textarea' }, // Removed - edit directly on node
 		{ key: 'fontSize', label: 'Font Size', type: 'number' } // Assuming number input is desired
 	];
 

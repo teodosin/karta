@@ -32,6 +32,8 @@
 	$: nodeData = $propertiesPanelNodeId ? $nodes.get($propertiesPanelNodeId) : null;
 	$: nodeTypeDef = nodeData ? getNodeTypeDef(nodeData.ntype) : null;
 	$: propertySchema = nodeTypeDef?.propertySchema ?? [];
+	// Create a set of keys defined in the type-specific schema for quick lookup
+	$: typeSpecificKeys = new Set(propertySchema.map(p => p.key));
 
 	// --- Dragging Logic ---
 	function handleDragStart(event: PointerEvent) {
@@ -154,20 +156,29 @@
 					</h3>
 					<div class="space-y-2">
 						{#each Object.entries(nodeData.attributes) as [key, value]}
-							{#if key !== 'isSystemNode'} <!-- Don't show internal flags -->
+							<!-- Only show attributes NOT defined in the type-specific schema, and not internal flags -->
+							{#if key !== 'isSystemNode' && !typeSpecificKeys.has(key)}
 								<div class="flex items-center justify-between gap-2">
 									<label for="attr-{key}" class="text-sm capitalize truncate">{key}</label>
 									{#if key === 'name'}
-										<input
-											type="text"
-											id="attr-{key}"
-											value={value}
-											on:change={(e) => handleAttributeChange(key, (e.target as HTMLInputElement).value)}
-											class="w-full px-2 py-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
-										/>
+										{#if nodeData.attributes.isSystemNode}
+											<!-- Read-only display for system node names -->
+											<span class="text-sm text-gray-600 dark:text-gray-300 truncate px-2 py-1">
+												{value}
+											</span>
+										{:else}
+											<!-- Editable input for non-system node names -->
+											<input
+												type="text"
+												id="attr-{key}"
+												value={value}
+												on:change={(e) => handleAttributeChange(key, (e.target as HTMLInputElement).value)}
+												class="w-full px-2 py-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+											/>
+										{/if}
 									{:else}
-										<!-- Basic display for other attributes for now -->
-										<span class="text-sm text-gray-600 dark:text-gray-300 truncate">
+										<!-- Basic read-only display for other generic attributes -->
+										<span class="text-sm text-gray-600 dark:text-gray-300 truncate px-2 py-1">
 											{typeof value === 'object' ? JSON.stringify(value) : value}
 										</span>
 									{/if}
