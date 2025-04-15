@@ -7,30 +7,38 @@
 -->
 <script lang="ts">
 	import { get } from 'svelte/store';
-	import { onMount } from 'svelte';
-    import {
-  viewTransform,
-  screenToCanvasCoordinates,
-  // createNodeAtPosition, // No longer called directly from here
-  nodes, // Still need nodes for DataNode info if NodeWrapper needs it
-  contexts, // Import contexts store
-  currentContextId, // Import current context ID store
-  currentTool,
-  cancelConnectionProcess,
-  // Imports for Create Node Menu
-  isCreateNodeMenuOpen,
-  createNodeMenuPosition,
-  openCreateNodeMenu,
-  closeCreateNodeMenu, // Import action to close menu
-  // Add these imports for selection
-  selectedNodeIds,
-  clearSelection,
-  setSelectedNodes,
-  toggleSelection
-  } from '$lib/karta/KartaStore';
-  import NodeWrapper from './NodeWrapper.svelte';
-  import EdgeLayer from './EdgeLayer.svelte';
- import CreateNodeMenu from './CreateNodeMenu.svelte'; // Import the menu component
+	import { onMount, onDestroy } from 'svelte'; // Added onDestroy
+	   import {
+	 viewTransform,
+	 screenToCanvasCoordinates,
+	 // createNodeAtPosition, // No longer called directly from here
+	 nodes, // Still need nodes for DataNode info if NodeWrapper needs it
+	 contexts, // Import contexts store
+	 currentContextId, // Import current context ID store
+	 currentTool,
+	 cancelConnectionProcess,
+	 // Imports for Create Node Menu
+	 isCreateNodeMenuOpen,
+	 createNodeMenuPosition,
+	 openCreateNodeMenu,
+	 closeCreateNodeMenu, // Import action to close menu
+	 // Imports for Context Menu
+	 isContextMenuOpen,
+	 contextMenuPosition,
+	 contextMenuContext,
+	 openContextMenu,
+	 closeContextMenu,
+	 type ContextMenuContextType, // Import the type
+	 // Add these imports for selection
+	 selectedNodeIds,
+	 clearSelection,
+	 setSelectedNodes,
+	 toggleSelection
+	 } from '$lib/karta/KartaStore';
+	 import NodeWrapper from './NodeWrapper.svelte';
+	 import EdgeLayer from './EdgeLayer.svelte';
+	import CreateNodeMenu from './CreateNodeMenu.svelte'; // Import the menu component
+	import ContextMenu from './ContextMenu.svelte'; // Import the context menu component
 
 	let canvasContainer: HTMLElement;
 	let canvas: HTMLElement;
@@ -54,6 +62,8 @@
     let marqueeEndCoords: { canvasX: number; canvasY: number } | null = null;
     let initialSelection: Set<string> | null = null; // Store selection at drag start
     let marqueeRectElement: HTMLDivElement | null = null; // For the visual element
+
+	let contextMenuElement: HTMLElement | null = null; // Reference to the context menu div
 
 	function handleWheel(e: WheelEvent) {
     // console.log(`handleWheel: deltaY=${e.deltaY}, deltaX=${e.deltaX}, deltaMode=${e.deltaMode}, ctrlKey=${e.ctrlKey}`); // DEBUG LOG removed
@@ -379,6 +389,7 @@ function handleKeyDown(e: KeyboardEvent) {
         if (e.key === 'Escape') {
             cancelConnectionProcess();
             closeCreateNodeMenu(); // Also close create menu on Escape
+            closeContextMenu(); // Also close context menu on Escape
            }
           }
 
@@ -388,8 +399,39 @@ function handleKeyDown(e: KeyboardEvent) {
 	}
 
 	function handleContextMenu(e: MouseEvent) {
-		// Allow default context menu for right-click (button 2)
-        // Middle mouse (button 1) default is prevented by handlePointerDown if needed
+		e.preventDefault(); // Prevent default browser context menu
+
+		const targetElement = e.target as HTMLElement;
+		const clickedNodeWrapper = targetElement.closest('.node-wrapper');
+		const clickedEdge = targetElement.closest('svg .edge-path'); // Basic check for edge click
+
+		let context: ContextMenuContextType;
+
+		if (clickedNodeWrapper) {
+			const nodeId = (clickedNodeWrapper as HTMLElement).dataset.id;
+			context = { type: 'node', id: nodeId };
+			console.log('Context menu on node:', nodeId);
+		} else if (clickedEdge) {
+			// TODO: Enhance EdgeLayer to add data-id to paths to identify specific edge
+			const edgeId = (clickedEdge as HTMLElement).dataset.id; // Assuming data-id exists later
+			context = { type: 'edge', id: edgeId || 'unknown' }; // Use unknown if ID not found yet
+			console.log('Context menu on edge:', edgeId || 'unknown');
+		} else {
+			context = { type: 'background' };
+			console.log('Context menu on background');
+		}
+
+		openContextMenu({ x: e.clientX, y: e.clientY }, context);
+	}
+
+	/** Closes the context menu if a click occurs outside of it. */
+	function handleClickOutsideContextMenu(event: PointerEvent) {
+		if ($isContextMenuOpen && contextMenuElement && !contextMenuElement.contains(event.target as Node)) {
+			// Check if the click target is the menu itself or one of its descendants
+			// Also check if the click target is the element that *opened* the menu (prevent immediate close)
+			// For now, a simple check is sufficient. Refine if needed.
+			closeContextMenu();
+		}
 	}
 
 	// Removed handleDoubleClick
@@ -398,6 +440,14 @@ function handleKeyDown(e: KeyboardEvent) {
         // Focus the viewport container when the component mounts
         // This helps ensure keyboard events are captured correctly.
         canvasContainer?.focus();
+
+  // Global listener for closing context menu on outside click
+  window.addEventListener('pointerdown', handleClickOutsideContextMenu);
+
+  // Cleanup listener on component destroy
+  return () => {
+   window.removeEventListener('pointerdown', handleClickOutsideContextMenu);
+  };
     });
 </script>
 
@@ -453,3 +503,17 @@ class="karta-viewport-container w-full h-screen overflow-hidden relative cursor-
 		<CreateNodeMenu x={$createNodeMenuPosition.screenX + 10} y={$createNodeMenuPosition.screenY + 10} />
 	{/if}
 </div>
+
+	<!-- Context Menu (conditionally rendered) -->
+	{#if $isContextMenuOpen && $contextMenuPosition}
+		{@const contextType = $contextMenuContext?.type}
+		{@const contextId = $contextMenuContext?.id}
+		{@const menuItems = contextType === 'node'
+			? [`Node Action (ID: ${contextId})`, 'Delete Node (NYI)']
+			: contextType === 'edge'
+			? [`Edge Action (ID: ${contextId})`, 'Delete Edge (NYI)']
+			: ['Create Node Here (NYI)', 'Paste (NYI)']}
+		<div bind:this={contextMenuElement}>
+			<ContextMenu position={$contextMenuPosition} items={menuItems} />
+		</div>
+	{/if}

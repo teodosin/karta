@@ -39,6 +39,12 @@ export const selectedNodeIds = writable<Set<NodeId>>(new Set());
 export const isCreateNodeMenuOpen = writable<boolean>(false);
 export const createNodeMenuPosition = writable<{ screenX: number; screenY: number; canvasX: number; canvasY: number } | null>(null);
 
+// --- Context Menu Stores ---
+export const isContextMenuOpen = writable<boolean>(false);
+export const contextMenuPosition = writable<{ x: number; y: number } | null>(null); // Screen coordinates
+export type ContextMenuContextType = { type: 'node' | 'edge' | 'background'; id?: string };
+export const contextMenuContext = writable<ContextMenuContextType | null>(null);
+
 // --- History Stores ---
 export const historyStack = writable<NodeId[]>([]);
 export const futureStack = writable<NodeId[]>([]);
@@ -360,6 +366,21 @@ export async function createNodeFromMenu(ntype: string) {
         console.error('[KartaStore] Cannot create node from menu: Viewport element not found.');
         closeCreateNodeMenu(); // Close menu even if creation failed
     }
+}
+
+// --- Context Menu Actions ---
+export function openContextMenu(position: { x: number; y: number }, context: ContextMenuContextType) {
+    contextMenuPosition.set(position);
+    contextMenuContext.set(context);
+    isContextMenuOpen.set(true);
+    console.log(`[KartaStore] Opening context menu at (${position.x}, ${position.y}) for context:`, context);
+}
+
+export function closeContextMenu() {
+    isContextMenuOpen.set(false);
+    contextMenuPosition.set(null);
+    contextMenuContext.set(null);
+    console.log(`[KartaStore] Closing context menu`);
 }
 
 
