@@ -10,6 +10,7 @@
 	import { currentContextId, updateNodeAttributes, selectedNodeIds } from '$lib/karta/KartaStore'; // Import selectedNodeIds
 	import { getNodeComponent } from '$lib/node_types/registry';
 	import { tick } from 'svelte';
+	import { fade } from 'svelte/transition'; // Import fade transition
 
 	export let dataNode: DataNode;
 	export let viewNode: ViewNode;
@@ -73,7 +74,8 @@
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		bind:this={nodeWrapperRef}
-	       data-id={dataNode.id}
+		transition:fade|global
+	    data-id={dataNode.id}
 		class={`
 			node-wrapper absolute select-none cursor-grab pointer-events-none
 		`}
