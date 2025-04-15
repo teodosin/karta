@@ -146,7 +146,19 @@ async function _loadAndProcessContext(
             posY: window.innerHeight / 2
         };
     }
-
+   
+    	// --- Add Previous Focal Node (if context is new and applicable) ---
+    	if (contextWasCreated) {
+    		const currentHistory = get(historyStack);
+    		const previousContextId = currentHistory.length > 0 ? currentHistory[currentHistory.length - 1] : null;
+    		if (previousContextId && previousContextId !== contextId && !finalViewNodes.has(previousContextId)) {
+    			const previousFocalViewNode = oldContext?.viewNodes.get(previousContextId);
+    			if (previousFocalViewNode) {
+    				finalViewNodes.set(previousContextId, previousFocalViewNode);
+    			}
+    		}
+    	}
+   
     // --- Add Default Connected Nodes (if context didn't just load them) ---
     // This ensures nodes connected *after* the context was last saved are still added by default
     const directlyConnectedEdges = await localAdapter.getEdgesByNodeIds([contextId]);
