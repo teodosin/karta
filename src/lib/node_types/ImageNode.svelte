@@ -6,7 +6,7 @@
 -->
 <script context="module" lang="ts">
 	// MODULE SCRIPT
-	import type { TweenableNodeState } from '$lib/types/types';
+	import type { TweenableNodeState, PropertyDefinition } from '$lib/types/types'; // Import PropertyDefinition
 	import type { NodeTypeDefinition, IconComponent } from './types';
 	// Optional: import { Image } from 'lucide-svelte';
 
@@ -18,12 +18,18 @@
 		return { width: 100, height: 100, scale: 1, rotation: 0 };
 	}
 
+	const imageNodePropertySchema: PropertyDefinition[] = [
+		{ key: 'src', label: 'Image URL', type: 'string' },
+		{ key: 'alt', label: 'Alt Text', type: 'string' }
+	];
+
 	export const nodeTypeDef: Omit<NodeTypeDefinition, 'component'> = {
 		ntype: 'image',
 		getDefaultAttributes,
 		getDefaultViewNodeState,
-		displayName: 'Image'
+		displayName: 'Image',
 		// icon: Image as IconComponent // Example
+		propertySchema: imageNodePropertySchema
 	};
 </script>
 

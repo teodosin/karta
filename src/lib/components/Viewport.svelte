@@ -39,6 +39,7 @@
 	 import EdgeLayer from './EdgeLayer.svelte';
 	import CreateNodeMenu from './CreateNodeMenu.svelte'; // Import the menu component
 	import ContextMenu from './ContextMenu.svelte'; // Import the context menu component
+	// Removed Toolbar and ContextPathDisplay imports
 
 	let canvasContainer: HTMLElement;
 	let canvas: HTMLElement;

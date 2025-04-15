@@ -7,7 +7,7 @@
 <script context="module" lang="ts">
 	// MODULE SCRIPT (runs once)
 	import type { SvelteComponent } from 'svelte';
-	import type { TweenableNodeState } from '$lib/types/types';
+	import type { TweenableNodeState, PropertyDefinition } from '$lib/types/types'; // Import PropertyDefinition
 	// Import Omit<NodeTypeDefinition, 'component'> if needed, or just define structure
 	import type { NodeTypeDefinition, IconComponent } from './types';
 	// BrainCog is imported in instance script
@@ -22,12 +22,15 @@
 
 	// Export the static definition from the module script
 	// Note: We omit 'component' here as it's implicitly the default export
+	const rootNodePropertySchema: PropertyDefinition[] = []; // No type-specific properties for Root
+
 	export const nodeTypeDef: Omit<NodeTypeDefinition, 'component'> = {
 		ntype: 'root',
 		getDefaultAttributes,
 		getDefaultViewNodeState,
 		displayName: 'Root',
-		icon: undefined // Icon is imported/used in instance script, registry can access it via component if needed later
+		icon: undefined, // Icon is imported/used in instance script, registry can access it via component if needed later
+		propertySchema: rootNodePropertySchema
 	};
 </script>
 

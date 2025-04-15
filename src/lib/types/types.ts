@@ -94,6 +94,18 @@ export interface StorableContext {
     viewportSettings?: StorableViewportSettings;
 }
 
+// Interface for defining editable properties for nodes in the Properties Panel
+export interface PropertyDefinition {
+  key: string; // Corresponds to a key in DataNode.attributes
+  label: string; // User-friendly display name
+  type: 'string' | 'number' | 'boolean' | 'textarea'; // Input control type
+  // Optional fields can be added later:
+  // placeholder?: string;
+  // min?: number;
+  // max?: number;
+  // step?: number;
+}
+
 // --- End Storage-Specific Types ---
 
 // Represents connections between DataNodes (context-independent)

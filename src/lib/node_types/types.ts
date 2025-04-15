@@ -4,7 +4,7 @@
 // Essential for both editor and runtime.
 
 import type { SvelteComponent } from 'svelte';
-import type { DataNode, ViewNode, TweenableNodeState } from '$lib/types/types'; // Import base types
+import type { DataNode, ViewNode, TweenableNodeState, PropertyDefinition } from '$lib/types/types'; // Import base types and PropertyDefinition
 
 // Define the expected props for any node type component rendered by NodeWrapper
 export interface NodeTypeProps {
@@ -39,4 +39,7 @@ export interface NodeTypeDefinition {
 	// Optional properties for future use (e.g., in menus)
 	displayName?: string; // User-friendly name for UI
 	icon?: IconComponent; // e.g., a Lucide icon component
+
+	// Optional schema defining editable properties for this node type
+	propertySchema?: PropertyDefinition[];
 }

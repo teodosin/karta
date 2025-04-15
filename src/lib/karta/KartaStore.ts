@@ -45,6 +45,13 @@ export const contextMenuPosition = writable<{ x: number; y: number } | null>(nul
 export type ContextMenuContextType = { type: 'node' | 'edge' | 'background'; id?: string };
 export const contextMenuContext = writable<ContextMenuContextType | null>(null);
 
+// --- Properties Panel Stores ---
+export const propertiesPanelVisible = writable<boolean>(false);
+export const propertiesPanelNodeId = writable<NodeId | null>(null);
+export const propertiesPanelPosition = writable<{ x: number; y: number }>({ x: 0, y: 0 }); // Initial safe default
+export const propertiesPanelSize = writable<{ width: number; height: number }>({ width: 300, height: 400 }); // Default size
+export const propertiesPanelCollapsed = writable<boolean>(false);
+
 // --- History Stores ---
 export const historyStack = writable<NodeId[]>([]);
 export const futureStack = writable<NodeId[]>([]);
@@ -381,6 +388,29 @@ export function closeContextMenu() {
     contextMenuPosition.set(null);
     contextMenuContext.set(null);
     console.log(`[KartaStore] Closing context menu`);
+}
+
+// --- Properties Panel Actions ---
+export function setPropertiesPanelVisibility(visible: boolean) {
+    propertiesPanelVisible.set(visible);
+}
+
+export function setPropertiesPanelNode(nodeId: NodeId | null) {
+    propertiesPanelNodeId.set(nodeId);
+    // Automatically show panel when a node is set, hide when null? Or handle in subscription?
+    // Let's handle visibility explicitly via subscription for now.
+}
+
+export function setPropertiesPanelPosition(pos: { x: number; y: number }) {
+    propertiesPanelPosition.set(pos);
+}
+
+export function setPropertiesPanelSize(size: { width: number; height: number }) {
+    propertiesPanelSize.set(size);
+}
+
+export function togglePropertiesPanelCollapsed() {
+    propertiesPanelCollapsed.update(collapsed => !collapsed);
 }
 
 
@@ -970,7 +1000,10 @@ async function initializeStores() {
         viewTransform.set(DEFAULT_VIEWPORT_SETTINGS, { duration: 0 });
     }
 
-    // 7. Set Initial Tool (runs even if init fails partially)
+    // 7. Set Initial Properties Panel Position (calculated only in browser)
+    propertiesPanelPosition.set({ x: window.innerWidth - 320, y: 50 }); // Set browser-dependent default
+   
+    // 8. Set Initial Tool (runs even if init fails partially)
     setTool('move');
 }
 
@@ -986,4 +1019,24 @@ if (typeof window !== 'undefined' ) {
         }
     });
 }
+
+// --- Reactive Logic / Subscriptions ---
+
+// Automatically manage Properties Panel based on selection
+selectedNodeIds.subscribe(selectedIds => {
+	if (selectedIds.size === 1) {
+		const selectedId = selectedIds.values().next().value;
+		setPropertiesPanelNode(selectedId ?? null); // Use nullish coalescing for type safety
+		setPropertiesPanelVisibility(true);
+		console.log(`[Selection Sub] Properties panel shown for node: ${selectedId}`);
+	} else {
+		setPropertiesPanelNode(null);
+		setPropertiesPanelVisibility(false);
+		if (selectedIds.size === 0) {
+			console.log(`[Selection Sub] Properties panel hidden (no selection)`);
+		} else {
+			console.log(`[Selection Sub] Properties panel hidden (${selectedIds.size} nodes selected)`);
+		}
+	}
+});
 

@@ -6,7 +6,7 @@
 -->
 <script context="module" lang="ts">
 	// MODULE SCRIPT
-	import type { TweenableNodeState } from '$lib/types/types';
+	import type { TweenableNodeState, PropertyDefinition } from '$lib/types/types'; // Import PropertyDefinition
 	import type { NodeTypeDefinition, IconComponent } from './types';
 	// Optional: import { Type } from 'lucide-svelte';
 
@@ -18,12 +18,18 @@
 		return { width: 120, height: 80, scale: 1, rotation: 0 };
 	}
 
+	const textNodePropertySchema: PropertyDefinition[] = [
+		{ key: 'text', label: 'Content', type: 'textarea' },
+		{ key: 'fontSize', label: 'Font Size', type: 'number' } // Assuming number input is desired
+	];
+
 	export const nodeTypeDef: Omit<NodeTypeDefinition, 'component'> = {
 		ntype: 'text',
 		getDefaultAttributes,
 		getDefaultViewNodeState,
-		displayName: 'Text'
+		displayName: 'Text',
 		// icon: Type as IconComponent // Example
+		propertySchema: textNodePropertySchema
 	};
 </script>
 

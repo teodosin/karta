@@ -6,7 +6,7 @@
 -->
 <script context="module" lang="ts">
 	// MODULE SCRIPT
-	import type { TweenableNodeState } from '$lib/types/types';
+	import type { TweenableNodeState, PropertyDefinition } from '$lib/types/types'; // Import PropertyDefinition
 	import type { NodeTypeDefinition, IconComponent } from './types';
 	// Optional: import icon like Circle from 'lucide-svelte';
 
@@ -18,12 +18,15 @@
 		return { width: 100, height: 100, scale: 1, rotation: 0 };
 	}
 
+	const genericNodePropertySchema: PropertyDefinition[] = []; // No type-specific properties
+
 	export const nodeTypeDef: Omit<NodeTypeDefinition, 'component'> = {
 		ntype: 'generic',
 		getDefaultAttributes,
 		getDefaultViewNodeState,
-		displayName: 'Generic'
+		displayName: 'Generic',
 		// icon: Circle as IconComponent // Example
+		propertySchema: genericNodePropertySchema
 	};
 </script>
 
