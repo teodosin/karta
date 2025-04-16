@@ -67,25 +67,28 @@ export const currentViewNodes = derived(
 // --- Internal Helper Functions ---
 
 /**
- * Determines the absolute transform for a target context's focal node.
- * Uses the existing position if visible in the old context, otherwise defaults.
+ * Determines the initial state (position, scale, dimensions, rotation) for a target context's focal node.
+ * Uses the existing state if visible in the old context, otherwise calculates defaults.
  */
-function _getFocalPlacement(targetNodeId: NodeId, oldContext: Context | undefined): AbsoluteTransform {
-    // Renamed for clarity: determines target x, y, scale for the focal node
+async function _getFocalNodeInitialState(targetNodeId: NodeId, oldContext: Context | undefined): Promise<TweenableNodeState> {
     const targetViewNodeInOldCtx = oldContext?.viewNodes.get(targetNodeId);
 
     if (targetViewNodeInOldCtx) {
-        // Get the current state from the tween
-        const currentState = targetViewNodeInOldCtx.state.current;
-        // Return only the properties matching AbsoluteTransform
-        return {
-            x: currentState.x,
-            y: currentState.y,
-            scale: currentState.scale
-        };
+        // Use existing state from the previous context
+        return { ...targetViewNodeInOldCtx.state.current }; // Return a copy
     } else {
-        // Return default placement (x, y, scale only)
-        return { ...DEFAULT_FOCAL_TRANSFORM };
+        // Node not visible in old context, calculate defaults
+        console.log(`[_getFocalNodeInitialState] Node ${targetNodeId} not found in old context. Calculating defaults.`);
+        const dataNode = await _ensureDataNodeExists(targetNodeId); // Ensure DataNode exists to get ntype
+        const defaultState: { width: number; height: number; scale: number; rotation: number; } = dataNode ? getDefaultViewNodeStateForType(dataNode.ntype) : getDefaultViewNodeStateForType('generic'); // Fallback to generic
+
+        // Combine default placement with default dimensions/rotation
+        return {
+            ...DEFAULT_FOCAL_TRANSFORM, // Default x, y, scale
+            width: defaultState.width,
+            height: defaultState.height,
+            rotation: defaultState.rotation
+        };
     }
 }
 
@@ -94,7 +97,7 @@ function _getFocalPlacement(targetNodeId: NodeId, oldContext: Context | undefine
  */
 async function _loadAndProcessContext(
     contextId: NodeId,
-    focalTargetPlacement: AbsoluteTransform, // Target x, y, scale for the focal node
+    focalInitialStateFromOldContext: TweenableNodeState, // Full initial state including dimensions
     oldContext: Context | undefined // Previous context for potential tween reuse
 ): Promise<{ finalContext: Context | undefined, wasCreated: boolean }> {
 
@@ -110,7 +113,9 @@ async function _loadAndProcessContext(
         console.log(`[_loadAndProcessContext] Context ${contextId} loaded from DB.`);
         // Convert StorableViewNodes to ViewNodes with Tweens, reusing old tweens if possible
         for (const [nodeId, storableNode] of storableContext.viewNodes) {
-            const targetState = _calculateTargetState(nodeId, contextId, focalTargetPlacement, storableNode);
+            // Extract only the placement part needed by _calculateTargetState
+            const focalPlacement: AbsoluteTransform = { x: focalInitialStateFromOldContext.x, y: focalInitialStateFromOldContext.y, scale: focalInitialStateFromOldContext.scale };
+            const targetState = _calculateTargetState(nodeId, contextId, focalPlacement, storableNode);
             const existingViewNode = oldContext?.viewNodes.get(nodeId);
 
             if (existingViewNode) {
@@ -139,24 +144,14 @@ async function _loadAndProcessContext(
         if (contextId === ROOT_NODE_ID) {
              console.log(`[_loadAndProcessContext] Root context creation: Getting default view state for ntype: ${focalDataNode.ntype}`);
         }
-        const defaultViewState = getDefaultViewNodeStateForType(focalDataNode.ntype);
-        const focalInitialState: TweenableNodeState = {
-            x: focalTargetPlacement.x, y: focalTargetPlacement.y,
-            // Use defaults from registry, but override scale with placement scale if needed?
-            // For now, let's prioritize the type default scale.
-            ...defaultViewState, // Includes width, height, scale, rotation
-            scale: defaultViewState.scale * focalTargetPlacement.scale // Apply placement scale relative to default? Or just use placement scale? Let's use placement scale directly for consistency.
-            // Re-evaluate scale logic if needed. Let's use placement scale directly.
-            // scale: focalTargetPlacement.scale, // Use placement scale
-            // rotation: defaultViewState.rotation // Use default rotation
-        };
-        // Corrected state using placement scale directly:
+        // Use the state passed in, which already contains defaults or state from old context
         const correctedFocalInitialState: TweenableNodeState = {
-             x: focalTargetPlacement.x, y: focalTargetPlacement.y,
-             scale: focalTargetPlacement.scale, // Use placement scale
-             rotation: defaultViewState.rotation, // Use default rotation from type
-             width: defaultViewState.width, // Use default width from type
-             height: defaultViewState.height // Use default height from type
+             x: focalInitialStateFromOldContext.x,
+             y: focalInitialStateFromOldContext.y,
+             scale: focalInitialStateFromOldContext.scale,
+             rotation: focalInitialStateFromOldContext.rotation,
+             width: focalInitialStateFromOldContext.width, // Use width from old context/defaults
+             height: focalInitialStateFromOldContext.height // Use height from old context/defaults
         };
         finalViewNodes.set(contextId, { id: contextId, state: new Tween(correctedFocalInitialState, { duration: 0 }) });
         // For newly created contexts, don't set viewport settings yet.
@@ -760,13 +755,13 @@ export async function switchContext(newContextId: NodeId, isUndoRedo: boolean = 
 
     // --- Phase 2: Load and Process New Context ---
     try {
-        // Determine target placement (x,y,scale) for the new focal node based on old context
-        const focalTargetPlacement = _getFocalPlacement(newContextId, oldContext);
+        // Determine initial state (x,y,scale,width,height,rotation) for the new focal node based on old context
+        const focalInitialState = await _getFocalNodeInitialState(newContextId, oldContext);
 
         // Load StorableContext, convert/merge into in-memory Context with Tweens, add defaults
         const { finalContext: processedContext } = await _loadAndProcessContext(
             newContextId,
-            focalTargetPlacement,
+            focalInitialState, // Pass the full initial state object
             oldContext // Pass old context to reuse tweens
         );
 
@@ -975,9 +970,18 @@ async function initializeStores() {
 
 
         // 4. Load Initial Context & Data (Generalized)
+        // Construct the default initial state for the root node
+        const rootDefaultViewState = getDefaultViewNodeStateForType('root');
+        const rootInitialState: TweenableNodeState = {
+            ...DEFAULT_FOCAL_TRANSFORM, // x, y, scale
+            width: rootDefaultViewState.width,
+            height: rootDefaultViewState.height,
+            rotation: rootDefaultViewState.rotation
+        };
+
         const { finalContext } = await _loadAndProcessContext(
             initialDataNode.id, // Use the validated ID
-            DEFAULT_FOCAL_TRANSFORM,
+            rootInitialState, // Pass the full default state
             undefined // No old context on init
         );
         initialProcessedContext = finalContext;
