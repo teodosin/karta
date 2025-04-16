@@ -7,10 +7,11 @@
 -->
 <script lang="ts">
 	import type { DataNode, ViewNode } from '$lib/types/types';
-	import { currentContextId, updateNodeAttributes, selectedNodeIds } from '$lib/karta/KartaStore'; // Import selectedNodeIds
+	import { currentContextId, updateNodeAttributes, selectedNodeIds, currentViewNodes } from '$lib/karta/KartaStore'; // Import selectedNodeIds and currentViewNodes
 	import { getNodeComponent } from '$lib/node_types/registry';
 	import { tick } from 'svelte';
 	import { fade } from 'svelte/transition'; // Import fade transition
+	import { startResize } from '$lib/interaction/ResizeLogic'; // Import the resize logic
 
 	export let dataNode: DataNode;
 	export let viewNode: ViewNode;
@@ -68,6 +69,32 @@
 		isEditingName = false;
 		window.removeEventListener('pointerdown', handleClickOutside, { capture: true });
 	}
+
+	// --- Resize Handle Logic ---
+	function handleResizePointerDown(event: PointerEvent, handlePosition: 'tl' | 'tr' | 'bl' | 'br') {
+		// Prevent resizing system nodes
+		if (dataNode?.attributes?.isSystemNode) {
+			console.log('[NodeWrapper] Attempted to resize system node. Operation cancelled.');
+			return;
+		}
+		event.stopPropagation(); // Prevent node dragging etc.
+
+		// Gather initial state for all selected nodes
+		const nodesToResize: { id: string; initialViewNode: ViewNode }[] = [];
+		$selectedNodeIds.forEach((id) => {
+			const node = $currentViewNodes.get(id); // Use .get() for Map access
+			if (node) {
+				// Create a deep copy or ensure the store provides immutable data if needed
+				// For now, assuming direct use is okay as updates trigger reactivity
+				nodesToResize.push({ id: id, initialViewNode: node });
+			}
+		});
+
+		if (nodesToResize.length > 0) {
+			startResize(event, handlePosition, nodesToResize);
+		}
+	}
+	// --- End Resize Handle Logic ---
 </script>
 
 {#if dataNode && viewNode}
@@ -95,6 +122,30 @@
 				<div class="w-full h-full bg-red-500 flex items-center justify-center text-white font-bold">?</div>
 			{/if}
 		</div>
+
+		<!-- Resize Handles (only shown when selected) -->
+		{#if isSelected}
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div
+				class="resize-handle top-left"
+				on:pointerdown={(e) => handleResizePointerDown(e, 'tl')}
+			/>
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div
+				class="resize-handle top-right"
+				on:pointerdown={(e) => handleResizePointerDown(e, 'tr')}
+			/>
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div
+				class="resize-handle bottom-left"
+				on:pointerdown={(e) => handleResizePointerDown(e, 'bl')}
+			/>
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div
+				class="resize-handle bottom-right"
+				on:pointerdown={(e) => handleResizePointerDown(e, 'br')}
+			/>
+		{/if}
 
 		<!-- External Label & Input - Positioned below the wrapper -->
 		<div
@@ -154,5 +205,42 @@
 		box-sizing: border-box;
 		height: 1.25rem; /* Match typical text line height */
 		vertical-align: middle;
+	}
+
+	/* Resize Handle Styles */
+	.resize-handle {
+		position: absolute;
+		width: 10px;
+		height: 10px;
+		background-color: #3b82f6; /* Tailwind blue-500 */
+		border: 1px solid white;
+		border-radius: 2px;
+		z-index: 20; /* Ensure handles are above node content */
+		pointer-events: auto; /* Make handles interactive */
+		transform: translate(-50%, -50%); /* Center the handle on the corner */
+	}
+
+	.resize-handle.top-left {
+		top: 0;
+		left: 0;
+		cursor: nwse-resize;
+	}
+
+	.resize-handle.top-right {
+		top: 0;
+		left: 100%;
+		cursor: nesw-resize;
+	}
+
+	.resize-handle.bottom-left {
+		top: 100%;
+		left: 0;
+		cursor: nesw-resize;
+	}
+
+	.resize-handle.bottom-right {
+		top: 100%;
+		left: 100%;
+		cursor: nwse-resize;
 	}
 </style>

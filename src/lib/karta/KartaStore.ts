@@ -1,4 +1,4 @@
-import { writable, get } from 'svelte/store';
+import { writable, get, derived } from 'svelte/store'; // Import derived
 import { Tween } from 'svelte/motion'; // Removed 'tweened' as it's not used directly here
 import { cubicOut } from 'svelte/easing';
 import { localAdapter } from '../util/LocalAdapter';
@@ -55,6 +55,14 @@ export const propertiesPanelCollapsed = writable<boolean>(false);
 // --- History Stores ---
 export const historyStack = writable<NodeId[]>([]);
 export const futureStack = writable<NodeId[]>([]);
+
+// --- Derived Store for Current Context's ViewNodes ---
+export const currentViewNodes = derived(
+	[currentContextId, contexts],
+	([$currentContextId, $contexts]) => {
+		return $contexts.get($currentContextId)?.viewNodes ?? new Map<NodeId, ViewNode>();
+	}
+);
 
 // --- Internal Helper Functions ---
 
