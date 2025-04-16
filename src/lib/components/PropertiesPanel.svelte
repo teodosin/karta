@@ -48,17 +48,21 @@
 
 	// --- Dragging Logic ---
 	function handleDragStart(event: PointerEvent) {
-		if (!headerElement || !panelElement || !(event.target as HTMLElement)?.closest('.panel-header')) return;
+		// This now fires only on the title span
+		const target = event.target as HTMLElement;
+		if (!panelElement || !target) return;
+
 		event.preventDefault(); // Prevent text selection during drag
 		isDragging = true;
 		panelInitialX = $propertiesPanelPosition.x;
 		panelInitialY = $propertiesPanelPosition.y;
 		dragStartX = event.clientX;
 		dragStartY = event.clientY;
-		headerElement.setPointerCapture(event.pointerId);
-		headerElement.addEventListener('pointermove', handleDragMove);
-		headerElement.addEventListener('pointerup', handleDragEnd);
-		headerElement.addEventListener('pointercancel', handleDragEnd); // Handle cancel
+
+		target.setPointerCapture(event.pointerId); // Capture on the span itself
+		document.addEventListener('pointermove', handleDragMove); // Listen on document
+		document.addEventListener('pointerup', handleDragEnd, { once: true });
+		document.addEventListener('pointercancel', handleDragEnd, { once: true });
 		document.body.style.cursor = 'grabbing'; // Indicate dragging
 	}
 
@@ -86,12 +90,15 @@
 	}
 
 	function handleDragEnd(event: PointerEvent) {
-		if (!isDragging || !headerElement) return;
+		if (!isDragging) return;
 		isDragging = false;
-		headerElement.releasePointerCapture(event.pointerId);
-		headerElement.removeEventListener('pointermove', handleDragMove);
-		headerElement.removeEventListener('pointerup', handleDragEnd);
-		headerElement.removeEventListener('pointercancel', handleDragEnd);
+		// Release capture from the element that initiated the drag (the span)
+		try {
+			(event.target as HTMLElement)?.releasePointerCapture?.(event.pointerId);
+		} catch(e) { /* ignore */ }
+
+		document.removeEventListener('pointermove', handleDragMove);
+		// pointerup/cancel listeners were added to document with { once: true }
 		document.body.style.cursor = ''; // Reset cursor
 	}
 
@@ -279,7 +286,6 @@
 		isResizing = false;
 		resizeDirection = null;
 		document.removeEventListener('pointermove', handleResizeMove);
-		// 'pointerup' and 'pointercancel' listeners were added to document with { once: true }, no need to remove manually.
 		document.body.style.cursor = ''; // Reset cursor
 	}
 
@@ -295,8 +301,8 @@
 {#if $propertiesPanelVisible && nodeData}
 	<div
 		bind:this={panelElement}
-		style:height={$propertiesPanelCollapsed ? 'auto' : `${$propertiesPanelSize.height}px`}
 		class="properties-panel absolute flex flex-col bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-xl z-40 text-gray-900 dark:text-gray-100 overflow-hidden"
+		style:height={$propertiesPanelCollapsed ? (headerHeight > 0 ? `${headerHeight}px` : '40px') : `${$propertiesPanelSize.height}px`}
 		style:left="{$propertiesPanelPosition.x}px"
 		style:top="{$propertiesPanelPosition.y}px"
 		style:width="{$propertiesPanelSize.width}px"
@@ -305,30 +311,24 @@
 		<!-- Header -->
 		<div
 			bind:this={headerElement}
-			class="panel-header flex items-center justify-between p-2 border-b border-gray-300 dark:border-gray-600 bg-gray-200 dark:bg-gray-700 rounded-t-lg cursor-grab select-none"
-			on:pointerdown={handleDragStart}
+			class="panel-header flex items-center justify-between p-2 border-b border-gray-300 dark:border-gray-600 bg-gray-200 dark:bg-gray-700 rounded-t-lg select-none"
 			use:measureHeaderHeight
 		>
-			<span class="flex items-center gap-1 font-semibold text-sm truncate" id="properties-panel-title">
-				<Move size={14} class="opacity-50" />
-				Properties: {nodeData.attributes.name ?? nodeData.id} ({nodeData.ntype})
+			<span
+				class="flex-grow flex items-center gap-1 font-semibold text-sm truncate cursor-grab pr-2"
+				id="properties-panel-title"
+				on:pointerdown={handleDragStart}
+			>
+				{nodeData.attributes.name ?? nodeData.id} ({nodeData.ntype})
 			</span>
 			<div class="flex items-center gap-1">
 				<button
-					on:click|stopPropagation={togglePropertiesPanelCollapsed}
+					on:click={() => { console.log('Collapse button clicked!'); togglePropertiesPanelCollapsed(); }}
 					class="p-1 rounded hover:bg-gray-300 dark:hover:bg-gray-600"
 					aria-label={$propertiesPanelCollapsed ? 'Expand Panel' : 'Collapse Panel'}
 					title={$propertiesPanelCollapsed ? 'Expand Panel' : 'Collapse Panel'}
 				>
 					<Minimize2 size={14} />
-				</button>
-				<button
-					on:click|stopPropagation={() => setPropertiesPanelVisibility(false)}
-					class="p-1 rounded hover:bg-gray-300 dark:hover:bg-gray-600"
-					aria-label="Close Panel"
-					title="Close Panel"
-				>
-					<X size={14} />
 				</button>
 			</div>
 		</div>

@@ -410,9 +410,10 @@ export function setPropertiesPanelSize(size: { width: number; height: number }) 
 }
 
 export function togglePropertiesPanelCollapsed() {
+    console.log('PANEL: ', get(propertiesPanelCollapsed));
     propertiesPanelCollapsed.update(collapsed => !collapsed);
+    console.log('PANEL: ', get(propertiesPanelCollapsed));
 }
-
 
 
 // Tool Management
