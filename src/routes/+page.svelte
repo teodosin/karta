@@ -9,7 +9,7 @@
 <div class="w-full min-h-screen bg-gray-100 flex flex-col relative"> <!-- Added relative positioning -->
 	<Toolbar />
 	<Viewport />
-	<ContextPathDisplay /> <!-- Add the component -->
-	<KartaDebugOverlay /> <!-- Add the debug overlay -->
-	<PropertiesPanel /> <!-- Add the properties panel -->
+	<ContextPathDisplay />
+	<!--<KartaDebugOverlay /> -->
+	<PropertiesPanel />
 </div>

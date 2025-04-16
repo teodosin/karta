@@ -25,8 +25,19 @@
 	let dragStartY = 0;
 	let panelInitialX = 0;
 	let panelInitialY = 0;
+	let headerHeight = 0; // State for measured header height
 
-	// TODO: Add state and logic for resizing
+	// --- Resizing State ---
+	let isResizing = false;
+	let resizeStartX = 0;
+	let resizeStartY = 0;
+	let panelInitialWidth = 0;
+	let panelInitialHeight = 0;
+	let panelInitialResizeX = 0; // Store initial panel X for left-side resize
+	let resizeDirection: 'left' | 'right' | 'bottom' | 'bottom-left' | 'bottom-right' | null = null;
+	const MIN_PANEL_WIDTH = 200; // Minimum width
+	const MIN_PANEL_HEIGHT = 100; // Minimum height (allow smaller for just header)
+	const HANDLE_SIZE = 6; // px size of invisible handles
 
 	// --- Reactive Data ---
 	$: nodeData = $propertiesPanelNodeId ? $nodes.get($propertiesPanelNodeId) : null;
@@ -52,10 +63,26 @@
 	}
 
 	function handleDragMove(event: PointerEvent) {
-		if (!isDragging) return;
+		if (!isDragging || !panelElement) return; // Added check for panelElement
+
 		const dx = event.clientX - dragStartX;
 		const dy = event.clientY - dragStartY;
-		setPropertiesPanelPosition({ x: panelInitialX + dx, y: panelInitialY + dy });
+
+		let newX = panelInitialX + dx;
+		let newY = panelInitialY + dy;
+
+		// Get panel dimensions (use clientWidth/Height for actual rendered size)
+		const panelWidth = panelElement.clientWidth;
+		const panelHeight = panelElement.clientHeight;
+
+		// Clamp position within window bounds
+		const maxX = window.innerWidth - panelWidth;
+		const maxY = window.innerHeight - panelHeight;
+
+		newX = Math.max(0, Math.min(newX, maxX));
+		newY = Math.max(0, Math.min(newY, maxY));
+
+		setPropertiesPanelPosition({ x: newX, y: newY });
 	}
 
 	function handleDragEnd(event: PointerEvent) {
@@ -82,38 +109,197 @@
 
 	// --- Lifecycle ---
 	onMount(() => {
-		// Potential setup for resizers
+		// Ensure initial size is set if needed, though store should handle it.
+		// Could add resize observers here if needed later.
 	});
 
 	onDestroy(() => {
 		// Cleanup drag listeners if component is destroyed while dragging
 		if (isDragging && headerElement) {
 			// Manually trigger end to release capture and remove listeners
-			handleDragEnd(new PointerEvent('pointerup')); // Simulate pointer up
+			handleDragEnd(new PointerEvent('pointerup')); // Simulate pointer up for drag
+		}
+		// Cleanup resize listeners if component is destroyed while resizing
+		if (isResizing && panelElement) {
+			handleResizeEnd(new PointerEvent('pointerup')); // Simulate pointer up for resize
 		}
 	});
 
+	// Action to measure header height
+	function measureHeaderHeight(node: HTMLElement) {
+		// Run after mount and updates
+		const updateHeight = () => {
+			if (node) {
+				headerHeight = node.offsetHeight;
+				// console.log('Header height measured:', headerHeight); // Optional debug log
+			}
+		};
+
+		// Initial measurement after mount
+		requestAnimationFrame(updateHeight);
+
+		// Return object with update method if needed for resize observer later
+		return {
+			// update: updateHeight // Could be used with ResizeObserver if header size changes dynamically
+		};
+	}
+
+	// --- Resizing Logic ---
+	function handleResizeStart(event: PointerEvent) {
+		const target = event.target as HTMLElement;
+		const direction = target.dataset.direction as typeof resizeDirection;
+		if (!panelElement || !direction) return;
+
+		event.preventDefault();
+		event.stopPropagation(); // Prevent drag start on header
+		isResizing = true;
+		resizeDirection = direction;
+		panelInitialWidth = panelElement.offsetWidth; // Use offsetWidth for actual rendered size
+		panelInitialHeight = panelElement.offsetHeight;
+		panelInitialResizeX = $propertiesPanelPosition.x; // Store initial X for left resize
+		resizeStartX = event.clientX;
+		resizeStartY = event.clientY;
+
+		const handle = event.target as HTMLElement;
+		target.setPointerCapture(event.pointerId);
+		// Add listeners to the document to capture events outside the handle
+		document.addEventListener('pointermove', handleResizeMove);
+		document.addEventListener('pointerup', handleResizeEnd, { once: true }); // Use once for cleanup
+		document.addEventListener('pointercancel', handleResizeEnd, { once: true });
+
+		// Set cursor based on direction
+		switch (direction) {
+			case 'left':
+			case 'right':
+				document.body.style.cursor = 'ew-resize';
+				break;
+			case 'bottom':
+				document.body.style.cursor = 'ns-resize';
+				break;
+			case 'bottom-left':
+				document.body.style.cursor = 'nesw-resize'; // Note: opposite corner for diagonal
+				break;
+			case 'bottom-right':
+				document.body.style.cursor = 'nwse-resize';
+				break;
+		}
+	}
+
+	function handleResizeMove(event: PointerEvent) {
+		if (!isResizing || !resizeDirection) return;
+
+		const dx = event.clientX - resizeStartX;
+		const dy = event.clientY - resizeStartY;
+
+		let newX = $propertiesPanelPosition.x;
+		let newY = $propertiesPanelPosition.y;
+		let newWidth = panelInitialWidth;
+		let newHeight = panelInitialHeight;
+
+		// Calculate new dimensions and position based on direction
+		if (resizeDirection.includes('left')) {
+			newWidth = panelInitialWidth - dx;
+			if (newWidth >= MIN_PANEL_WIDTH) {
+				newX = panelInitialResizeX + dx;
+			} else {
+				newWidth = MIN_PANEL_WIDTH; // Prevent shrinking beyond min and moving left edge
+				newX = panelInitialResizeX + (panelInitialWidth - MIN_PANEL_WIDTH);
+			}
+		} else if (resizeDirection.includes('right')) {
+			newWidth = panelInitialWidth + dx;
+		}
+
+		if (resizeDirection.includes('bottom')) {
+			newHeight = panelInitialHeight + dy;
+		}
+
+		// Apply minimum size constraints again after potential adjustments
+		newWidth = Math.max(MIN_PANEL_WIDTH, newWidth);
+		newHeight = Math.max(MIN_PANEL_HEIGHT, newHeight);
+
+		// Apply boundary constraints (prevent resizing outside window)
+		const maxX = window.innerWidth;
+		const maxY = window.innerHeight;
+
+		if (newX < 0) {
+			newWidth += newX; // Shrink width if moving left edge past boundary
+			newX = 0;
+		}
+		if (newY < 0) { // Should not happen with current handles, but good practice
+			newHeight += newY;
+			newY = 0;
+		}
+		if (newX + newWidth > maxX) {
+			newWidth = maxX - newX;
+		}
+		if (newY + newHeight > maxY) {
+			newHeight = maxY - newY;
+		}
+
+		// Final check on minimums after boundary adjustments
+		newWidth = Math.max(MIN_PANEL_WIDTH, newWidth);
+		newHeight = Math.max(MIN_PANEL_HEIGHT, newHeight);
+
+		// Update store
+		setPropertiesPanelPosition({ x: newX, y: newY }); // Update position if left edge moved
+		setPropertiesPanelSize({ width: newWidth, height: newHeight });
+	}
+
+	function handleResizeEnd(event: PointerEvent) {
+		if (!isResizing) return;
+
+		// Release pointer capture if it exists on the document or target
+		try {
+			if (document.pointerLockElement) {
+				document.exitPointerLock();
+			}
+			// Attempt to release capture specifically if possible, might error if element removed
+			(event.target as HTMLElement)?.releasePointerCapture?.(event.pointerId);
+		} catch (e) {
+			// Ignore errors, capture might already be released or element gone
+		}
+
+		isResizing = false;
+		resizeDirection = null;
+		document.removeEventListener('pointermove', handleResizeMove);
+		// 'pointerup' and 'pointercancel' listeners were added with { once: true }
+		document.body.style.cursor = ''; // Reset cursor
+		// Check if the pointer capture target exists before trying to release
+		// This handles cases where the element might be removed during the operation
+		if (document.pointerLockElement) {
+			try {
+				document.exitPointerLock(); // General cleanup
+			} catch (e) { /* ignore */ }
+		}
+		// Attempt to release capture specifically if possible, might error if element removed
+		try {
+			(event.target as HTMLElement)?.releasePointerCapture?.(event.pointerId);
+		} catch(e) { /* ignore */ }
+
+		isResizing = false;
+		resizeDirection = null;
+		document.removeEventListener('pointermove', handleResizeMove);
+		// 'pointerup' and 'pointercancel' listeners were added to document with { once: true }, no need to remove manually.
+		document.body.style.cursor = ''; // Reset cursor
+	}
+
 	/*
 	Future Considerations:
-	- Multiple Panels: This component assumes a single panel controlled by global stores.
-	  Refactoring would involve passing panel state (ID, position, size, targetNodeId, locked) as props
-	  and managing a list/map of panel states in a dedicated store.
-	- Locking: Add a lock button/state to prevent the panel from updating when selection changes.
-	- Resizing: Implement resize handles and logic using pointer events.
-	- Input Components: Create dedicated components for different property types (string, number, boolean, textarea)
-	  to handle validation, specific interactions (e.g., number steppers), etc.
-	- Debouncing/Saving Strategy: Refine how attribute changes are saved (e.g., debounce text inputs, save on blur/enter).
+	- Multiple Panels: Refactor to use props and manage state centrally.
+	- Locking: Add lock state.
+	- Input Components: Create dedicated input components.
+	- Debouncing/Saving Strategy: Refine attribute saving.
 	*/
 </script>
 
 {#if $propertiesPanelVisible && nodeData}
 	<div
 		bind:this={panelElement}
-		class="properties-panel absolute flex flex-col bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-xl z-40 text-gray-900 dark:text-gray-100"
+		style:height={$propertiesPanelCollapsed ? 'auto' : `${$propertiesPanelSize.height}px`}
+		class="properties-panel absolute flex flex-col bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-xl z-40 text-gray-900 dark:text-gray-100 overflow-hidden"
 		style:left="{$propertiesPanelPosition.x}px"
 		style:top="{$propertiesPanelPosition.y}px"
 		style:width="{$propertiesPanelSize.width}px"
-		style:height="{$propertiesPanelCollapsed ? 'auto' : $propertiesPanelSize.height + 'px'}"
 		aria-labelledby="properties-panel-title"
 	>
 		<!-- Header -->
@@ -121,6 +307,7 @@
 			bind:this={headerElement}
 			class="panel-header flex items-center justify-between p-2 border-b border-gray-300 dark:border-gray-600 bg-gray-200 dark:bg-gray-700 rounded-t-lg cursor-grab select-none"
 			on:pointerdown={handleDragStart}
+			use:measureHeaderHeight
 		>
 			<span class="flex items-center gap-1 font-semibold text-sm truncate" id="properties-panel-title">
 				<Move size={14} class="opacity-50" />
@@ -147,8 +334,10 @@
 		</div>
 
 		<!-- Content (Scrollable) -->
-		{#if !$propertiesPanelCollapsed}
-			<div class="panel-content flex-grow p-3 overflow-y-auto space-y-4">
+		{#if !$propertiesPanelCollapsed} <!-- Use #if block to conditionally render content -->
+		<div
+			class="panel-content flex-grow p-3 overflow-y-auto space-y-4"
+		>
 				<!-- Attributes Section -->
 				<section>
 					<h3 class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 mb-2">
@@ -237,13 +426,23 @@
 					</section>
 				{/if}
 
-			</div>
-		{/if}
+			</div> <!-- End of panel-content div -->
+		{/if} <!-- End of #if !$propertiesPanelCollapsed -->
+<!-- Invisible Resize Handles -->
+{#if !$propertiesPanelCollapsed}
+	<!-- Left -->
+	<div data-direction="left" class="absolute top-0 left-0 h-full cursor-ew-resize" style="width: {HANDLE_SIZE}px;" on:pointerdown|stopPropagation={handleResizeStart}></div>
+	<!-- Right -->
+	<div data-direction="right" class="absolute top-0 right-0 h-full cursor-ew-resize" style="width: {HANDLE_SIZE}px;" on:pointerdown|stopPropagation={handleResizeStart}></div>
+	<!-- Bottom -->
+	<div data-direction="bottom" class="absolute bottom-0 left-0 w-full cursor-ns-resize" style="height: {HANDLE_SIZE}px;" on:pointerdown|stopPropagation={handleResizeStart}></div>
+	<!-- Bottom-Left Corner -->
+	<div data-direction="bottom-left" class="absolute bottom-0 left-0 cursor-nesw-resize" style="width: {HANDLE_SIZE * 2}px; height: {HANDLE_SIZE * 2}px;" on:pointerdown|stopPropagation={handleResizeStart}></div>
+	<!-- Bottom-Right Corner -->
+	<div data-direction="bottom-right" class="absolute bottom-0 right-0 cursor-nwse-resize" style="width: {HANDLE_SIZE * 2}px; height: {HANDLE_SIZE * 2}px;" on:pointerdown|stopPropagation={handleResizeStart}></div>
+{/if}
 
-		<!-- TODO: Add Resize Handle(s) -->
-		<!-- Example: <div class="resize-handle bottom-right absolute bottom-0 right-0 w-3 h-3 cursor-nwse-resize bg-red-500"></div> -->
-
-	</div>
+</div> <!-- End of main properties-panel div -->
 {/if}
 
 <!-- Style block removed, classes applied directly -->

@@ -37,7 +37,7 @@
 	// INSTANCE SCRIPT
 	import type { DataNode, ViewNode } from '$lib/types/types';
 	import { updateNodeAttributes, currentContextId } from '$lib/karta/KartaStore';
-	import { tick } from 'svelte';
+	import { tick, onDestroy } from 'svelte'; // Import onDestroy
 
 	export let dataNode: DataNode;
 	export let viewNode: ViewNode;
@@ -52,11 +52,14 @@
 	let textAreaElement: HTMLTextAreaElement | null = null;
 
 	async function startEditing() {
+		if (isEditing) return; // Prevent re-entry if already editing
 		editedText = textContent;
 		isEditing = true;
 		await tick(); // Wait for textarea to render
 		textAreaElement?.focus();
 		textAreaElement?.select();
+		// Add listener for clicks outside
+		window.addEventListener('pointerdown', handleClickOutside, { capture: true });
 	}
 
 	function handleTextSubmit() {
@@ -64,6 +67,7 @@
 			updateNodeAttributes(dataNode.id, { ...attributes, text: editedText });
 		}
 		isEditing = false;
+		removeClickListener(); // Remove listener after submit
 	}
 
 	function handleKeyDown(event: KeyboardEvent) {
@@ -72,6 +76,7 @@
 			handleTextSubmit();
 		} else if (event.key === 'Escape') {
 			isEditing = false; // Cancel editing
+			removeClickListener(); // Remove listener on cancel
 		}
 	}
 
@@ -86,6 +91,24 @@
 	$: if (isEditing && textAreaElement) {
 		adjustTextareaHeight(); // Adjust height when editing starts or text changes
 	}
+
+	// --- Click Outside Logic ---
+	function handleClickOutside(event: PointerEvent) {
+		if (textAreaElement && !textAreaElement.contains(event.target as Node)) {
+			handleTextSubmit(); // Submit if click is outside
+		}
+	}
+
+	function removeClickListener() {
+		window.removeEventListener('pointerdown', handleClickOutside, { capture: true });
+	}
+
+	// Ensure listener is removed if component is destroyed while editing
+	onDestroy(() => {
+		if (isEditing) {
+			removeClickListener();
+		}
+	}); // Add missing closing brace for onDestroy
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -99,21 +122,20 @@
 	on:dblclick={startEditing}
 >
 	{#if isEditing}
-		<!-- svelte-ignore element_invalid_self_closing_tag -->
+		<!-- Editing State: Textarea -->
 		<textarea
 			bind:this={textAreaElement}
 			bind:value={editedText}
-			on:blur={handleTextSubmit}
 			on:keydown={handleKeyDown}
 			on:input={adjustTextareaHeight}
-			class="w-full h-auto bg-white border border-blue-400 rounded outline-none resize-none p-1 leading-tight"
+			class="w-full h-auto bg-yellow-100 outline-none resize-none p-1 leading-tight text-gray-900 block"
 			style:font-size="{fontSize}px"
 			spellcheck="false"
-		/>
+		></textarea> <!-- Ensure closing tag -->
 	{:else}
-		<!-- Display Text - Use whitespace-pre-wrap to respect newlines -->
+		<!-- Display State: Div -->
 		<div
-			class="w-full h-full overflow-y-auto whitespace-pre-wrap break-words"
+			class="w-full h-full overflow-y-auto whitespace-pre-wrap break-words p-1 leading-tight"
 			style:font-size="{fontSize}px"
 		>
 			{textContent || ''} {#if !textContent}&nbsp;{/if} <!-- Ensure div has height even if empty -->
@@ -125,7 +147,7 @@
 	div, textarea {
 		box-sizing: border-box;
 		font-family: sans-serif; /* Or choose a specific font */
-		line-height: 1.4; /* Adjust line height for readability */
+		/* line-height: 1.4; */ /* Removed as leading-tight is used */
 	}
 	/* Add scrollbar styling if desired */
 	div::-webkit-scrollbar {
