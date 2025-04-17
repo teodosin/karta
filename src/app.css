@@ -9,6 +9,7 @@ html, body {
   margin: 0;
   padding: 0;
   overflow: hidden;
+  overscroll-behavior-x: none; /* Prevent browser back/forward on horizontal swipe */
   /* Explicitly set font and use CSS variables */
   /* Apply base font, background, and text color using Tailwind utilities */
   @apply font-sans bg-gray-900 text-gray-100; /* Use default Tailwind classes */
