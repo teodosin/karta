@@ -1,4 +1,4 @@
-import { writable, get, derived } from 'svelte/store'; // Import derived
+import { writable, get, derived, readable } from 'svelte/store';
 import { Tween } from 'svelte/motion'; // Removed 'tweened' as it's not used directly here
 import { cubicOut } from 'svelte/easing';
 import { localAdapter } from '../util/LocalAdapter';
@@ -24,7 +24,16 @@ export const viewTransform = new Tween<ViewportSettings>( // Use ViewportSetting
 	{ ...DEFAULT_VIEWPORT_SETTINGS }, // Initialize with default
 	{ duration: VIEWPORT_TWEEN_DURATION, easing: cubicOut } // Default tween settings
 );
-export const nodes = writable<Map<NodeId, DataNode>>(new Map());
+
+// Svelte 4 compatible readable store derived from the tween's value
+export const currentViewTransform = readable<ViewportSettings>(viewTransform.current, set => { // Use tween.current for initial value
+	const unsubscribe = viewTransform.subscribe((value: ViewportSettings) => {
+		set(value);
+	});
+	return unsubscribe; // Return the unsubscribe function for cleanup
+});
+
+export const nodes = writable<Map<NodeId, DataNode>>(new Map()); // Keep writable for now, consider $state later
 export const edges = writable<Map<EdgeId, KartaEdge>>(new Map());
 export const contexts = writable<Map<NodeId, Context>>(new Map());
 export const currentContextId = writable<NodeId>(ROOT_NODE_ID);

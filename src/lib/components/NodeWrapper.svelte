@@ -125,7 +125,7 @@
 		</div>
 
 		<!-- Resize Handles (only shown when selected) -->
-		{#if isSelected}
+		{#if isSelected && $selectedNodeIds.size === 1}
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div
 				class="resize-handle top-left"

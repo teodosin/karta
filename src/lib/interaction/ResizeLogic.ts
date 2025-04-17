@@ -1,5 +1,5 @@
 import type { ViewNode, NodeId, TweenableNodeState } from '$lib/types/types';
-import { contexts, currentContextId, viewTransform, screenToCanvasCoordinates } from '$lib/karta/KartaStore';
+import { nodes, contexts, currentContextId, viewTransform, screenToCanvasCoordinates } from '$lib/karta/KartaStore'; // Import nodes store
 import { get } from 'svelte/store';
 
 const MIN_NODE_DIMENSION = 20;
@@ -123,9 +123,12 @@ function handlePointerMove(event: PointerEvent) {
 		const finalCenterX = newBoundsAnchorX + initialRelX * scaleX;
 		const finalCenterY = newBoundsAnchorY + initialRelY * scaleY;
 
-		// 5c. Calculate final dimensions by scaling initial dimensions
-		const finalWidth = initialState.width * scaleX;
-		const finalHeight = initialState.height * scaleY;
+		// 5c. Calculate final dimensions, preserving system node size
+		const dataNode = get(nodes).get(id); // Get DataNode to check system status
+		const isSystem = dataNode?.attributes?.isSystemNode ?? false;
+
+		const finalWidth = isSystem ? initialState.width : initialState.width * scaleX;
+		const finalHeight = isSystem ? initialState.height : initialState.height * scaleY;
 
 		const finalTargetState: TweenableNodeState = {
 			...initialState, // Preserve original rotation etc.

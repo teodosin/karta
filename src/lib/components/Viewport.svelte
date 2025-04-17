@@ -39,6 +39,7 @@
 	 import EdgeLayer from './EdgeLayer.svelte';
 	import CreateNodeMenu from './CreateNodeMenu.svelte'; // Import the menu component
 	import ContextMenu from './ContextMenu.svelte'; // Import the context menu component
+	import SelectionBox from './SelectionBox.svelte'; // Import the selection box component
 	// Removed Toolbar and ContextPathDisplay imports
 
 	let canvasContainer: HTMLElement;
@@ -46,6 +47,9 @@
 
     // Reactive definition for the current context object
     $: currentCtx = $contexts.get($currentContextId);
+
+    // Debug log for selection size
+    $: console.log('[Viewport] Selected nodes count:', $selectedNodeIds.size);
 
 	// State for panning
 	let isPanning = false;
@@ -494,10 +498,15 @@ class="karta-viewport-container w-full h-screen overflow-hidden relative cursor-
                 {/if}
             {/each}
         {/if}
+		<!-- Selection Box (conditionally rendered for multi-select) - Moved INSIDE transformed canvas -->
+		{#if $selectedNodeIds.size > 1}
+			<SelectionBox />
+		{/if}
 	</div>
 
 	<!-- Create Node Menu (conditionally rendered) -->
 	{#if $isCreateNodeMenuOpen && $createNodeMenuPosition}
+		<!-- Create Node Menu related elements -->
 		{@const transform = viewTransform.current} <!-- Access tween value directly -->
 		{@const markerScreenX = $createNodeMenuPosition.canvasX * transform.scale + transform.posX}
 		{@const markerScreenY = $createNodeMenuPosition.canvasY * transform.scale + transform.posY}
@@ -513,6 +522,8 @@ class="karta-viewport-container w-full h-screen overflow-hidden relative cursor-
 		<!-- The Menu Component (positioned using screen coords) -->
 		<CreateNodeMenu x={$createNodeMenuPosition.screenX + 10} y={$createNodeMenuPosition.screenY + 10} />
 	{/if}
+
+	<!-- Create Node Menu elements remain outside the transformed canvas, positioned relative to viewport -->
 </div>
 
 	<!-- Context Menu (conditionally rendered) -->
