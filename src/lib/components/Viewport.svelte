@@ -73,6 +73,37 @@
 
 	let contextMenuElement: HTMLElement | null = null; // Reference to the context menu div
 
+	// --- Helper Functions ---
+
+	// Helper function to read file as Data URL using Promise
+	function readFileAsDataURL(file: File): Promise<string> {
+		return new Promise((resolve, reject) => {
+			const reader = new FileReader();
+			reader.onload = () => resolve(reader.result as string);
+			reader.onerror = (error) => reject(error);
+			reader.readAsDataURL(file);
+		});
+	}
+
+	// Helper function to get image dimensions from a Data URL
+	function getImageDimensions(dataUrl: string): Promise<{ width: number; height: number }> {
+		return new Promise((resolve, reject) => {
+			const img = new Image();
+			img.onload = () => {
+				resolve({ width: img.naturalWidth, height: img.naturalHeight });
+			};
+			img.onerror = (error) => {
+				console.error('[Viewport] Error loading image to get dimensions:', error);
+				// Fallback to default dimensions if loading fails
+				resolve({ width: 100, height: 100 }); // Or use registry defaults?
+			};
+			img.src = dataUrl;
+		});
+	}
+
+	// --- Event Handlers ---
+
+// --- Event Handlers ---
 	function handleWheel(e: WheelEvent) {
     // console.log(`handleWheel: deltaY=${e.deltaY}, deltaX=${e.deltaX}, deltaMode=${e.deltaMode}, ctrlKey=${e.ctrlKey}`); // DEBUG LOG removed
     e.preventDefault();
@@ -491,10 +522,12 @@ async function handleDrop(e: DragEvent) {
    if (file) {
     console.log(`[Viewport] Dropped image file: ${file.name}`);
     try {
-    	const dataUrl = await readFileAsDataURL(file);
-    	const { x: canvasX, y: canvasY } = screenToCanvasCoordinates(e.clientX, e.clientY, rect);
-    	console.log(`[Viewport] Creating image node at canvas coords: (${canvasX}, ${canvasY})`);
-    	createImageNodeFromDataUrl({ x: canvasX, y: canvasY }, dataUrl);
+    		const dataUrl = await readFileAsDataURL(file);
+    		const dimensions = await getImageDimensions(dataUrl);
+    		const { x: canvasX, y: canvasY } = screenToCanvasCoordinates(e.clientX, e.clientY, rect);
+    		console.log(`[Viewport] Creating image node at canvas coords: (${canvasX}, ${canvasY}) with dimensions ${dimensions.width}x${dimensions.height}`);
+    		// Pass dimensions to the store action
+    		createImageNodeFromDataUrl({ x: canvasX, y: canvasY }, dataUrl, dimensions.width, dimensions.height);
     } catch (error) {
     	console.error('[Viewport] Error reading dropped file:', error);
     }
@@ -542,10 +575,12 @@ async function handlePaste(e: ClipboardEvent) {
    const file = item.getAsFile();
    if (file) {
     console.log(`[Viewport] Pasted image file: ${file.name}`);
-    try {
-    	const dataUrl = await readFileAsDataURL(file);
-    	console.log(`[Viewport] Creating image node from paste at canvas coords: (${pasteCanvasX}, ${pasteCanvasY})`);
-    	createImageNodeFromDataUrl({ x: pasteCanvasX, y: pasteCanvasY }, dataUrl);
+   try {
+    const dataUrl = await readFileAsDataURL(file);
+    const dimensions = await getImageDimensions(dataUrl);
+    console.log(`[Viewport] Creating image node from paste at canvas coords: (${pasteCanvasX}, ${pasteCanvasY}) with dimensions ${dimensions.width}x${dimensions.height}`);
+    // Pass dimensions to the store action
+    createImageNodeFromDataUrl({ x: pasteCanvasX, y: pasteCanvasY }, dataUrl, dimensions.width, dimensions.height);
     	return; // Handle first image found
     } catch (error) {
     	console.error('[Viewport] Error reading pasted file:', error);
@@ -559,20 +594,12 @@ async function handlePaste(e: ClipboardEvent) {
     	createTextNodeFromPaste({ x: pasteCanvasX, y: pasteCanvasY }, text);
     	return; // Handle first text found
     }
-   });
-  }
- }
-}
+  });
+ } // End of for loop
+ } // End of handlePaste function
+} // End of handlePaste function
 
-// Helper function to read file as Data URL using Promise
-function readFileAsDataURL(file: File): Promise<string> {
- return new Promise((resolve, reject) => {
-  const reader = new FileReader();
-  reader.onload = () => resolve(reader.result as string);
-  reader.onerror = (error) => reject(error);
-  reader.readAsDataURL(file);
- });
-}
+// Removed duplicate helper function readFileAsDataURL
 
 </script>
 

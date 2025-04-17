@@ -491,7 +491,14 @@ selectedNodeIds.update(currentSelection => {
 }
 
 // Node Creation
-export async function createNodeAtPosition(canvasX: number, canvasY: number, ntype: string = 'text', attributes: Record<string, any> = {}): Promise<NodeId | null> {
+export async function createNodeAtPosition(
+	canvasX: number,
+	canvasY: number,
+	ntype: string = 'text',
+	attributes: Record<string, any> = {},
+	initialWidth?: number, // Optional initial width
+	initialHeight?: number // Optional initial height
+): Promise<NodeId | null> {
 	const newNodeId: NodeId = uuidv4();
     const now = Date.now();
     let baseName = attributes.name || ntype;
@@ -512,10 +519,14 @@ export async function createNodeAtPosition(canvasX: number, canvasY: number, nty
 	};
 
     // 2. Get default view state based on ntype and create initial state for the ViewNode's tween
-    const defaultViewState = getDefaultViewNodeStateForType(ntype);
+    const defaultViewState = getDefaultViewNodeStateForType(ntype); // Gets { width, height, scale, rotation }
     const initialState: TweenableNodeState = {
-        x: canvasX, y: canvasY,
-        ...defaultViewState // Use width, height, scale, rotation from registry helper
+        x: canvasX,
+        y: canvasY,
+        width: initialWidth ?? defaultViewState.width, // Use provided width or default
+        height: initialHeight ?? defaultViewState.height, // Use provided height or default
+        scale: defaultViewState.scale, // Keep default scale
+        rotation: defaultViewState.rotation // Keep default rotation
     };
 
     // 3. Create the new ViewNode containing the Tween
@@ -568,10 +579,11 @@ export async function createNodeAtPosition(canvasX: number, canvasY: number, nty
 /**
  * Creates an ImageNode at the specified position using a Data URL.
  */
-export async function createImageNodeFromDataUrl(position: { x: number, y: number }, dataUrl: string) {
+export async function createImageNodeFromDataUrl(position: { x: number, y: number }, dataUrl: string, width?: number, height?: number) {
 	try {
 		// Create the basic node structure first
-		const newNodeId = await createNodeAtPosition(position.x, position.y, 'image');
+		// Pass optional width and height to createNodeAtPosition
+		const newNodeId = await createNodeAtPosition(position.x, position.y, 'image', {}, width, height);
 		if (!newNodeId) {
 			console.error("[KartaStore] Failed to create base node for image paste.");
 			return;
