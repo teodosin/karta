@@ -127,21 +127,25 @@
 		<!-- Resize Handles (only shown when selected) -->
 		{#if isSelected && $selectedNodeIds.size === 1}
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<!-- svelte-ignore element_invalid_self_closing_tag -->
 			<div
 				class="resize-handle top-left"
 				on:pointerdown={(e) => handleResizePointerDown(e, 'tl')}
 			/>
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<!-- svelte-ignore element_invalid_self_closing_tag -->
 			<div
 				class="resize-handle top-right"
 				on:pointerdown={(e) => handleResizePointerDown(e, 'tr')}
 			/>
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<!-- svelte-ignore element_invalid_self_closing_tag -->
 			<div
 				class="resize-handle bottom-left"
 				on:pointerdown={(e) => handleResizePointerDown(e, 'bl')}
 			/>
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<!-- svelte-ignore element_invalid_self_closing_tag -->
 			<div
 				class="resize-handle bottom-right"
 				on:pointerdown={(e) => handleResizePointerDown(e, 'br')}
@@ -188,7 +192,6 @@
 		/* Add a distinct visual style for selected nodes */
 		/* Example: Blue outline */
 		outline: 2px solid #3b82f6; /* Tailwind's blue-500 */
-		outline-offset: 3px;
 		/* Ensure it doesn't conflict with hover or other outlines */
 		z-index: 10; /* Bring selected nodes slightly forward if needed */
 	}
