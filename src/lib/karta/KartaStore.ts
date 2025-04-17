@@ -25,13 +25,7 @@ export const viewTransform = new Tween<ViewportSettings>( // Use ViewportSetting
 	{ duration: VIEWPORT_TWEEN_DURATION, easing: cubicOut } // Default tween settings
 );
 
-// Svelte 4 compatible readable store derived from the tween's value
-export const currentViewTransform = readable<ViewportSettings>(viewTransform.current, set => { // Use tween.current for initial value
-	const unsubscribe = viewTransform.subscribe((value: ViewportSettings) => {
-		set(value);
-	});
-	return unsubscribe; // Return the unsubscribe function for cleanup
-});
+// REMOVED incorrect readable store derived from tween
 
 export const nodes = writable<Map<NodeId, DataNode>>(new Map()); // Keep writable for now, consider $state later
 export const edges = writable<Map<EdgeId, KartaEdge>>(new Map());

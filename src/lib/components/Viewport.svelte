@@ -8,8 +8,9 @@
 <script lang="ts">
 	import { get } from 'svelte/store';
 	import { onMount, onDestroy } from 'svelte'; // Added onDestroy
-	   import {
-	 viewTransform,
+	import {
+	 viewTransform, // Keep the Tween object
+	 // currentViewTransform, // REMOVED incorrect readable store import
 	 screenToCanvasCoordinates,
 	 // createNodeAtPosition, // No longer called directly from here
 	 nodes, // Still need nodes for DataNode info if NodeWrapper needs it
@@ -63,7 +64,7 @@
     // State for last known cursor position
     let lastScreenX = 0;
     let lastScreenY = 0;
-   
+
     // State for marquee selection
     let isMarqueeSelecting = false;
     let marqueeStartCoords: { canvasX: number; canvasY: number } | null = null;
@@ -72,6 +73,14 @@
     let marqueeRectElement: HTMLDivElement | null = null; // For the visual element
 
 	let contextMenuElement: HTMLElement | null = null; // Reference to the context menu div
+
+	// --- Constants for Scale Invariance ---
+	const desiredScreenOutlineWidth = 1; // Target outline width in screen pixels
+
+	// --- REMOVED Reactive Calculations for SelectionBox Props ---
+	// $: currentScale = $currentViewTransform?.scale ?? 1; // REMOVED
+	// $: invScale = currentScale > 0 ? 1 / currentScale : 1; // REMOVED
+	// $: outlineWidth = currentScale > 0 ? desiredScreenOutlineWidth / currentScale : desiredScreenOutlineWidth; // REMOVED
 
 	// --- Helper Functions ---
 
@@ -213,42 +222,42 @@
 			// Do NOT delegate to tool if starting marquee
 			return;
 		}
-	
+
 		// Need new handlers for marquee move/up, separate from general viewport move/up
 		function handleMarqueePointerMove(e: PointerEvent) {
 			if (!isMarqueeSelecting || !marqueeStartCoords || !canvasContainer) return;
-	
+
 			const rect = canvasContainer.getBoundingClientRect();
 			const { x: currentCanvasX, y: currentCanvasY } = screenToCanvasCoordinates(e.clientX, e.clientY, rect);
 			marqueeEndCoords = { canvasX: currentCanvasX, canvasY: currentCanvasY };
-	
+
 			// --- Update Selection Logic ---
 			updateSelectionFromMarquee(e.shiftKey, e.ctrlKey || e.metaKey);
-	
+
 			// --- Update Visual Marquee ---
 			updateMarqueeVisual(); // We'll define this helper later
 		}
-	
+
 		function handleMarqueePointerUp(e: PointerEvent) {
 			if (!isMarqueeSelecting || !canvasContainer) return;
-	
+
 			// Check if it was a click (minimal movement) vs a drag
 			const dx = marqueeEndCoords ? Math.abs(marqueeEndCoords.canvasX - marqueeStartCoords!.canvasX) : 0;
 			const dy = marqueeEndCoords ? Math.abs(marqueeEndCoords.canvasY - marqueeStartCoords!.canvasY) : 0;
 			const dragThreshold = 5 / viewTransform.current.scale; // Adjust threshold based on zoom
-	
+
 			if (dx < dragThreshold && dy < dragThreshold) {
 				// Treat as a click on the background
 				clearSelection();
 			} else {
 				// Final selection was already set during move, just cleanup
 			}
-	
+
 			// Cleanup
 			canvasContainer.releasePointerCapture(e.pointerId);
 			canvasContainer.removeEventListener('pointermove', handleMarqueePointerMove);
 			canvasContainer.removeEventListener('pointerup', handleMarqueePointerUp);
-	
+
 			isMarqueeSelecting = false;
 			marqueeStartCoords = null;
 			marqueeEndCoords = null;
@@ -258,35 +267,35 @@
 				marqueeRectElement = null;
 			}
 		}
-	
+
 		// Helper function to calculate and update selection during marquee
 		function updateSelectionFromMarquee(shiftKey: boolean, ctrlOrMetaKey: boolean) {
 			if (!isMarqueeSelecting || !marqueeStartCoords || !marqueeEndCoords || !canvasContainer || !initialSelection) return;
-	
+
 			const currentTransform = viewTransform.current;
-	
+
 			// Calculate marquee bounds in canvas coordinates
 			const marqueeLeft = Math.min(marqueeStartCoords.canvasX, marqueeEndCoords.canvasX);
 			const marqueeRight = Math.max(marqueeStartCoords.canvasX, marqueeEndCoords.canvasX);
 			const marqueeTop = Math.min(marqueeStartCoords.canvasY, marqueeEndCoords.canvasY);
 			const marqueeBottom = Math.max(marqueeStartCoords.canvasY, marqueeEndCoords.canvasY);
-	
+
 			const currentIntersectingIds = new Set<string>();
 			const nodeElements = canvas?.querySelectorAll<HTMLElement>('.node-wrapper'); // Query within canvas
-	
+
 			nodeElements?.forEach(nodeEl => {
 				const nodeId = nodeEl.dataset.id;
 				if (!nodeId) return;
-	
+
 				// Get node bounds (more accurate than viewNode state if possible)
 				// This uses screen coords, needs conversion
 				const nodeRect = nodeEl.getBoundingClientRect();
 				const viewportRect = canvasContainer.getBoundingClientRect();
-	
+
 				// Convert node screen bounds to canvas bounds
 				const nodeCanvasTopLeft = screenToCanvasCoordinates(nodeRect.left, nodeRect.top, viewportRect);
 				const nodeCanvasBottomRight = screenToCanvasCoordinates(nodeRect.right, nodeRect.bottom, viewportRect);
-	
+
 				// Simple AABB intersection check
 				if (
 					nodeCanvasTopLeft.x < marqueeRight &&
@@ -297,7 +306,7 @@
 					currentIntersectingIds.add(nodeId);
 				}
 			});
-	
+
 			// Determine target selection based on modifiers and initial state
 			let targetSelection: Set<string>;
 			if (shiftKey) {
@@ -307,28 +316,28 @@
 			} else {
 				targetSelection = currentIntersectingIds;
 			}
-	
+
 			// Update the main store directly
 			selectedNodeIds.set(targetSelection); // Note: This might trigger many updates
 		}
-	
+
 		// Creates or updates the visual marquee rectangle element
 		function updateMarqueeVisual() {
 			if (!isMarqueeSelecting || !marqueeStartCoords || !marqueeEndCoords || !canvasContainer) return;
-	
+
 			const transform = viewTransform.current;
-	
+
 			// Convert canvas coords to screen coords
 			const screenStartX = marqueeStartCoords.canvasX * transform.scale + transform.posX;
 			const screenStartY = marqueeStartCoords.canvasY * transform.scale + transform.posY;
 			const screenEndX = marqueeEndCoords.canvasX * transform.scale + transform.posX;
 			const screenEndY = marqueeEndCoords.canvasY * transform.scale + transform.posY;
-	
+
 			const left = Math.min(screenStartX, screenEndX);
 			const top = Math.min(screenStartY, screenEndY);
 			const width = Math.abs(screenStartX - screenEndX);
 			const height = Math.abs(screenStartY - screenEndY);
-	
+
 			if (!marqueeRectElement) {
 				// Create the element if it doesn't exist
 				marqueeRectElement = document.createElement('div');
@@ -340,7 +349,7 @@
 				marqueeRectElement.setAttribute('aria-hidden', 'true');
 				canvasContainer.appendChild(marqueeRectElement);
 			}
-	
+
 			// Update position and size
 			marqueeRectElement.style.left = `${left}px`;
 			marqueeRectElement.style.top = `${top}px`;
@@ -640,7 +649,10 @@ class="karta-viewport-container w-full h-screen overflow-hidden relative cursor-
         {/if}
 		<!-- Selection Box (conditionally rendered for multi-select) - Moved INSIDE transformed canvas -->
 		{#if $selectedNodeIds.size > 1}
-			<SelectionBox />
+			{@const currentScaleValue = viewTransform.current.scale}
+			{@const invScaleValue = currentScaleValue > 0 ? 1 / currentScaleValue : 1}
+			{@const outlineWidthValue = currentScaleValue > 0 ? desiredScreenOutlineWidth / currentScaleValue : desiredScreenOutlineWidth}
+			<SelectionBox inverseScale={invScaleValue} canvasOutlineWidth={outlineWidthValue} />
 		{/if}
 	</div>
 
