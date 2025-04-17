@@ -91,7 +91,8 @@
 		});
 
 		if (nodesToResize.length > 0) {
-			startResize(event, handlePosition, nodesToResize);
+			// Pass the ID of the node whose handle was clicked as the primary node
+			startResize(event, handlePosition, dataNode.id, nodesToResize);
 		}
 	}
 	// --- End Resize Handle Logic ---

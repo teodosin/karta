@@ -368,6 +368,7 @@ export async function createNodeFromMenu(ntype: string) {
         const defaultAttributes = getDefaultAttributesForType(ntype);
         // Use stored canvasX, canvasY
         await createNodeAtPosition(position.canvasX, position.canvasY, ntype, defaultAttributes);
+        closeCreateNodeMenu(); // Close menu after successful creation attempt
     } else if (viewportEl) { // Added check for viewportEl for error message context
         console.error('[KartaStore] Cannot create node from menu: Position not found in store.');
 

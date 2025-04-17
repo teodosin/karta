@@ -10,14 +10,15 @@ let startPointerX = 0; // Screen coordinates at start (Declaration added back)
 let startPointerY = 0; // Screen coordinates at start (Declaration added back)
 let draggedHandle: 'tl' | 'tr' | 'bl' | 'br' | null = null;
 let viewportContainerRect: DOMRect | null = null;
-// Store more initial state per node
-let initialNodesData: {
-	id: NodeId;
-	initialViewNode: ViewNode; // Keep the original ViewNode reference
+let primaryNodeId: NodeId | null = null; // ID of the node whose handle was clicked (might not be needed with bounds approach)
+// Store initial state per node
+let initialNodesData: Map<NodeId, {
+	initialViewNode: ViewNode;
 	initialState: TweenableNodeState; // Snapshot of state at drag start
-	initialAnchorCanvasPos: { x: number; y: number }; // Opposite corner pos
-    initialCenterCanvasPos: { x: number; y: number }; // Center pos
-}[] = [];
+}> = new Map();
+// Store initial bounding box info
+let initialBounds: { minX: number; minY: number; maxX: number; maxY: number; width: number; height: number; } | null = null;
+let initialBoundsAnchorPos: { x: number; y: number } | null = null; // Anchor point of the bounding box
 
 // --- Helper Functions ---
 
@@ -60,86 +61,86 @@ function applyConstraints(
 // --- Event Handlers ---
 
 function handlePointerMove(event: PointerEvent) {
-	if (!isResizing || !draggedHandle || !viewportContainerRect) return;
+	// Use initialBounds and initialBoundsAnchorPos now
+	if (!isResizing || !draggedHandle || !viewportContainerRect || !initialBounds || !initialBoundsAnchorPos) return;
 
 	event.preventDefault();
 	event.stopPropagation();
 
 	const currentCanvasPos = screenToCanvasCoordinates(event.clientX, event.clientY, viewportContainerRect);
 	const maintainAspectRatio = event.shiftKey;
-    const symmetricalResize = event.altKey; // Check Alt/Option key
+	// const symmetricalResize = event.altKey; // Symmetrical resize based on bounds center is complex, defer for now.
 
-	initialNodesData.forEach(({ id, initialViewNode, initialState, initialAnchorCanvasPos, initialCenterCanvasPos }) => {
-		let finalWidth: number;
-		let finalHeight: number;
-		let finalCenterX: number;
-		let finalCenterY: number;
-        const initialAspectRatio = initialState.width > 0 && initialState.height > 0 ? initialState.width / initialState.height : null;
+	// --- Calculate Transformation based on Bounding Box Anchor ---
+	const initialBoundsAspectRatio = initialBounds.width > 0 && initialBounds.height > 0 ? initialBounds.width / initialBounds.height : null;
 
-        if (symmetricalResize) {
-            // --- Symmetrical Resize (Center Fixed) ---
-            let halfWidth = Math.abs(currentCanvasPos.x - initialCenterCanvasPos.x);
-            let halfHeight = Math.abs(currentCanvasPos.y - initialCenterCanvasPos.y);
+	// 1. Calculate target dimensions of the bounding box based on cursor distance from the fixed anchor
+	const rawTargetBoundsWidth = Math.abs(currentCanvasPos.x - initialBoundsAnchorPos.x);
+	const rawTargetBoundsHeight = Math.abs(currentCanvasPos.y - initialBoundsAnchorPos.y);
 
-            // Apply constraints symmetrically
-            const constrained = applyConstraints(halfWidth * 2, halfHeight * 2, initialAspectRatio, maintainAspectRatio);
-            finalWidth = constrained.width;
-            finalHeight = constrained.height;
+	// 2. Apply constraints (min dimensions, aspect ratio) to the bounding box size
+	const constrainedBounds = applyConstraints(rawTargetBoundsWidth, rawTargetBoundsHeight, initialBoundsAspectRatio, maintainAspectRatio);
+	const finalBoundsWidth = constrainedBounds.width;
+	const finalBoundsHeight = constrainedBounds.height;
 
-            // Center remains the same
-            finalCenterX = initialCenterCanvasPos.x;
-            finalCenterY = initialCenterCanvasPos.y;
+	// 3. Calculate scale factors based on the change in bounding box size
+	const scaleX = initialBounds.width === 0 ? 1 : finalBoundsWidth / initialBounds.width;
+	const scaleY = initialBounds.height === 0 ? 1 : finalBoundsHeight / initialBounds.height;
 
-        } else {
-            // --- Standard Resize (Opposite Corner Fixed Visually) ---
-            const rawWidth = Math.abs(currentCanvasPos.x - initialAnchorCanvasPos.x);
-            const rawHeight = Math.abs(currentCanvasPos.y - initialAnchorCanvasPos.y);
+	// 4. Determine the new position of the bounding box anchor point.
+	//    For standard resize, the anchor point itself doesn't move relative to the canvas.
+	//    The *opposite* corner moves based on the calculated final dimensions.
+	const newBoundsAnchorX = initialBoundsAnchorPos.x;
+	const newBoundsAnchorY = initialBoundsAnchorPos.y;
 
-            // Apply constraints
-            const constrained = applyConstraints(rawWidth, rawHeight, initialAspectRatio, maintainAspectRatio);
-            finalWidth = constrained.width;
-            finalHeight = constrained.height;
+	// --- Apply Transformation to ALL Selected Nodes ---
+	const contextId = get(currentContextId);
+	const currentCtx = get(contexts).get(contextId);
 
-            // Calculate the change in dimensions
-            const deltaWidth = finalWidth - initialState.width;
-            const deltaHeight = finalHeight - initialState.height;
+	if (!currentCtx) {
+		console.error(`[ResizeLogic] Current context ${contextId} not found.`);
+		handlePointerUp(event);
+		return;
+	}
 
-            // Calculate the shift needed for the center based on the handle dragged
-            let shiftX = 0;
-            let shiftY = 0;
+	// Assign to a new const *after* the null check at the function start to satisfy TypeScript
+	const checkedBounds = initialBounds; // checkedBounds is now guaranteed non-null
+	const checkedBoundsAnchor = initialBoundsAnchorPos; // guaranteed non-null
 
-            if (draggedHandle === 'tl') { shiftX = -deltaWidth / 2; shiftY = -deltaHeight / 2; }
-            else if (draggedHandle === 'tr') { shiftX = deltaWidth / 2; shiftY = -deltaHeight / 2; }
-            else if (draggedHandle === 'bl') { shiftX = -deltaWidth / 2; shiftY = deltaHeight / 2; }
-            else { /* br */ shiftX = deltaWidth / 2; shiftY = deltaHeight / 2; }
+	initialNodesData.forEach(({ initialViewNode, initialState }, id) => {
+		const viewNode = currentCtx.viewNodes.get(id);
+		if (!viewNode) {
+			console.warn(`[ResizeLogic] ViewNode ${id} not found in context ${contextId} during resize update.`);
+			return; // Skip this node
+		}
 
-            // Calculate final center position by shifting the initial center
-            finalCenterX = initialCenterCanvasPos.x + shiftX;
-            finalCenterY = initialCenterCanvasPos.y + shiftY;
-        }
+		// 5a. Calculate node's initial position relative to the GROUP's anchor point
+		const initialRelX = initialState.x - checkedBoundsAnchor.x;
+		const initialRelY = initialState.y - checkedBoundsAnchor.y;
 
+		// 5b. Calculate the final absolute center position by scaling the relative position
+		//     and adding it to the NEW (which is the same as initial) anchor position.
+		const finalCenterX = newBoundsAnchorX + initialRelX * scaleX;
+		const finalCenterY = newBoundsAnchorY + initialRelY * scaleY;
 
-		// --- Apply Update ---
+		// 5c. Calculate final dimensions by scaling initial dimensions
+		const finalWidth = initialState.width * scaleX;
+		const finalHeight = initialState.height * scaleY;
+
 		const finalTargetState: TweenableNodeState = {
-			...initialState, // Preserve scale, rotation etc.
+			...initialState, // Preserve original rotation etc.
 			x: finalCenterX,
 			y: finalCenterY,
 			width: finalWidth,
 			height: finalHeight,
+			scale: initialState.scale // Keep individual node scale unchanged
 		};
 
-		// Update the tween directly
-		const contextId = get(currentContextId);
-		const currentCtx = get(contexts).get(contextId);
-		const viewNode = currentCtx?.viewNodes.get(id);
-		if (viewNode) {
-			viewNode.state.set(finalTargetState, { duration: 0 });
-		} else {
-			console.warn(`[ResizeLogic] ViewNode ${id} not found in context ${contextId} during resize.`);
-		}
+		// 6. Update the tween directly
+		viewNode.state.set(finalTargetState, { duration: 0 });
 	});
 
-	// Trigger reactivity for the contexts store after updating all nodes
+	// Trigger reactivity for the contexts store once after updating all nodes
 	contexts.update(map => map);
 }
 
@@ -151,7 +152,7 @@ function handlePointerUp(event: PointerEvent) {
 	window.removeEventListener('pointermove', handlePointerMove);
 	window.removeEventListener('pointerup', handlePointerUp);
 	isResizing = false;
-	initialNodesData = [];
+	initialNodesData.clear(); // Use clear() for Map
 	draggedHandle = null;
 	viewportContainerRect = null;
 	console.log('[ResizeLogic] Resize ended');
@@ -162,6 +163,7 @@ function handlePointerUp(event: PointerEvent) {
 export function startResize(
 	event: PointerEvent,
 	handlePosition: 'tl' | 'tr' | 'bl' | 'br',
+	clickedNodeId: NodeId, // Add the ID of the node whose handle was clicked
 	nodesToResize: { id: NodeId; initialViewNode: ViewNode }[]
 ) {
 	if (isResizing) return;
@@ -170,6 +172,7 @@ export function startResize(
 	startPointerX = event.clientX;
 	startPointerY = event.clientY;
 	draggedHandle = handlePosition;
+	primaryNodeId = clickedNodeId; // Store the primary node ID
 
     const containerEl = document.getElementById('viewport');
     if (!containerEl) {
@@ -179,39 +182,43 @@ export function startResize(
     }
     viewportContainerRect = containerEl.getBoundingClientRect();
 
-	// Calculate and store initial state for each node
-	initialNodesData = nodesToResize.map(n => {
-        const stateSnapshot = { ...n.initialViewNode.state.current }; // Take snapshot
-        let anchorX = 0;
-        let anchorY = 0;
+	// --- Calculate and store initial state for each node AND the bounding box ---
+	initialNodesData.clear();
+	initialBounds = null;
+	initialBoundsAnchorPos = null;
 
-        // Determine the fixed anchor corner's canvas position opposite the dragged handle
-        // Note: Uses the state snapshot for calculations
-        if (handlePosition === 'tl') { // Anchor is bottom-right
-            anchorX = stateSnapshot.x + stateSnapshot.width / 2; // Use center + half-width/height for corners
-            anchorY = stateSnapshot.y + stateSnapshot.height / 2;
-        } else if (handlePosition === 'tr') { // Anchor is bottom-left
-            anchorX = stateSnapshot.x - stateSnapshot.width / 2;
-            anchorY = stateSnapshot.y + stateSnapshot.height / 2;
-        } else if (handlePosition === 'bl') { // Anchor is top-right
-            anchorX = stateSnapshot.x + stateSnapshot.width / 2;
-            anchorY = stateSnapshot.y - stateSnapshot.height / 2;
-        } else { // handlePosition === 'br', Anchor is top-left
-            anchorX = stateSnapshot.x - stateSnapshot.width / 2;
-            anchorY = stateSnapshot.y - stateSnapshot.height / 2;
-        }
+	let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
 
-        return {
-            id: n.id,
-            initialViewNode: n.initialViewNode,
-            initialState: stateSnapshot, // Store the snapshot
-            initialAnchorCanvasPos: { x: anchorX, y: anchorY },
-            initialCenterCanvasPos: { x: stateSnapshot.x, y: stateSnapshot.y } // Store initial center
-        };
-    });
+	nodesToResize.forEach(n => {
+		const stateSnapshot = { ...n.initialViewNode.state.current }; // Take snapshot
+		initialNodesData.set(n.id, {
+			initialViewNode: n.initialViewNode,
+			initialState: stateSnapshot,
+		});
 
-	console.log(`[ResizeLogic] Resize started. Handle: ${handlePosition}, Nodes:`, initialNodesData.map(n => n.id));
+		// Update bounds based on node's corners
+		const halfWidth = stateSnapshot.width / 2;
+		const halfHeight = stateSnapshot.height / 2;
+		minX = Math.min(minX, stateSnapshot.x - halfWidth);
+		minY = Math.min(minY, stateSnapshot.y - halfHeight);
+		maxX = Math.max(maxX, stateSnapshot.x + halfWidth);
+		maxY = Math.max(maxY, stateSnapshot.y + halfHeight);
+	});
 
+	if (nodesToResize.length > 0) {
+		initialBounds = { minX, minY, maxX, maxY, width: maxX - minX, height: maxY - minY };
+
+		// Determine the fixed anchor corner of the BOUNDING BOX opposite the dragged handle
+		if (handlePosition === 'tl') { initialBoundsAnchorPos = { x: initialBounds.maxX, y: initialBounds.maxY }; } // Anchor is bottom-right
+		else if (handlePosition === 'tr') { initialBoundsAnchorPos = { x: initialBounds.minX, y: initialBounds.maxY }; } // Anchor is bottom-left
+		else if (handlePosition === 'bl') { initialBoundsAnchorPos = { x: initialBounds.maxX, y: initialBounds.minY }; } // Anchor is top-right
+		else { /* br */ initialBoundsAnchorPos = { x: initialBounds.minX, y: initialBounds.minY }; } // Anchor is top-left
+	}
+	// --- End initial state calculation ---
+
+	console.log(`[ResizeLogic] Resize started. Handle: ${handlePosition}, Nodes:`, Array.from(initialNodesData.keys()), "Bounds:", initialBounds);
+
+	// Add listeners AFTER storing initial data
 	window.addEventListener('pointermove', handlePointerMove);
 	window.addEventListener('pointerup', handlePointerUp);
 

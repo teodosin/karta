@@ -1,6 +1,6 @@
 import type { Tool, NodeId } from '$lib/types/types';
 import { get } from 'svelte/store';
-import { viewTransform, updateNodeLayout, screenToCanvasCoordinates, contexts, currentContextId, selectedNodeIds, setSelectedNodes } from '$lib/karta/KartaStore';
+import { viewTransform, updateNodeLayout, screenToCanvasCoordinates, contexts, currentContextId, selectedNodeIds, setSelectedNodes, toggleSelection } from '$lib/karta/KartaStore';
 
 export class MoveTool implements Tool {
     readonly name = 'move'; // Add the required name property
@@ -81,15 +81,27 @@ export class MoveTool implements Tool {
         const { x: mouseCanvasX, y: mouseCanvasY } = screenToCanvasCoordinates(event.clientX, event.clientY, containerRect);
         this.initialMousePos = { canvasX: mouseCanvasX, canvasY: mouseCanvasY };
 
-        // Determine which nodes to drag and store their initial positions
-        if (currentSelection.has(nodeId)) {
-            // Dragging an already selected node - drag the whole group
-            this.draggingNodeIds = new Set(currentSelection);
+        // --- Selection Logic ---
+        if (event.shiftKey) {
+            // Shift+Click: Toggle selection of the clicked node
+            toggleSelection(nodeId);
+            // Do NOT initiate drag on Shift+Click, it's purely for selection
+            this.isDragging = false;
+            return; // Stop further processing in onPointerDown
         } else {
-            // Dragging an unselected node - clear selection and drag only this one
-            setSelectedNodes(nodeId); // This updates the store reactively
-            this.draggingNodeIds = new Set([nodeId]);
+            // No Shift: Standard click behavior
+            if (currentSelection.has(nodeId)) {
+                // Clicking an already selected node: Prepare to drag the whole group
+                this.draggingNodeIds = new Set(currentSelection);
+            } else {
+                // Clicking an unselected node: Select only this node and prepare to drag it
+                setSelectedNodes(nodeId); // Replace selection
+                this.draggingNodeIds = new Set([nodeId]);
+            }
         }
+        // --- End Selection Logic ---
+
+        // --- Drag Initialization (only if not Shift+Click) ---
 
         // Store initial positions for all nodes being dragged
         let allNodesFound = true;
