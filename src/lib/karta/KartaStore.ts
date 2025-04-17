@@ -491,7 +491,7 @@ selectedNodeIds.update(currentSelection => {
 }
 
 // Node Creation
-export async function createNodeAtPosition(canvasX: number, canvasY: number, ntype: string = 'text', attributes: Record<string, any> = {}) {
+export async function createNodeAtPosition(canvasX: number, canvasY: number, ntype: string = 'text', attributes: Record<string, any> = {}): Promise<NodeId | null> {
 	const newNodeId: NodeId = uuidv4();
     const now = Date.now();
     let baseName = attributes.name || ntype;
@@ -549,8 +549,63 @@ export async function createNodeAtPosition(canvasX: number, canvasY: number, nty
                 await localAdapter.saveContext(updatedCtx); // Save context
             }
             console.log(`[KartaStore] Node ${newNodeId} and Context ${contextId} saved.`);
-        } catch (error) { console.error("Error saving node or context after creation:", error); }
-    } else { console.warn("LocalAdapter not initialized, persistence disabled."); }
+            return newNodeId; // Return ID on successful save
+        } catch (error) {
+            console.error("Error saving node or context after creation:", error);
+            // Optionally remove the node from stores if save failed? For now, just return null.
+            return null;
+        }
+    } else {
+        console.warn("LocalAdapter not initialized, persistence disabled.");
+        // Still add to stores for non-persistent use, but return ID
+        return newNodeId;
+        // Or return null if persistence is strictly required? Let's return ID for now.
+    }
+}
+
+// --- Paste/Drop Actions ---
+
+/**
+ * Creates an ImageNode at the specified position using a Data URL.
+ */
+export async function createImageNodeFromDataUrl(position: { x: number, y: number }, dataUrl: string) {
+	try {
+		// Create the basic node structure first
+		const newNodeId = await createNodeAtPosition(position.x, position.y, 'image');
+		if (!newNodeId) {
+			console.error("[KartaStore] Failed to create base node for image paste.");
+			return;
+		}
+
+		// Update the attributes with the image source
+		// TODO: Consider adding warnings or size limits for very large images.
+		await updateNodeAttributes(newNodeId, { src: dataUrl });
+
+		console.log(`[KartaStore] Created ImageNode ${newNodeId} from Data URL at (${position.x}, ${position.y})`);
+	} catch (error) {
+		console.error("[KartaStore] Error creating image node from Data URL:", error);
+	}
+}
+
+/**
+ * Creates a TextNode at the specified position with the given text content.
+ */
+export async function createTextNodeFromPaste(position: { x: number, y: number }, text: string) {
+	try {
+		// Create the basic node structure first
+		const newNodeId = await createNodeAtPosition(position.x, position.y, 'text');
+		if (!newNodeId) {
+			console.error("[KartaStore] Failed to create base node for text paste.");
+			return;
+		}
+
+		// Update the attributes with the pasted text
+		await updateNodeAttributes(newNodeId, { text: text });
+
+		console.log(`[KartaStore] Created TextNode ${newNodeId} from paste at (${position.x}, ${position.y})`);
+	} catch (error) {
+		console.error("[KartaStore] Error creating text node from paste:", error);
+	}
 }
 
 // Node Layout Update

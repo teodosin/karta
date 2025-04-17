@@ -33,7 +33,10 @@
 	 selectedNodeIds,
 	 clearSelection,
 	 setSelectedNodes,
-	 toggleSelection
+	 toggleSelection,
+	 // Imports for Paste/Drop
+	 createImageNodeFromDataUrl,
+	 createTextNodeFromPaste
 	 } from '$lib/karta/KartaStore';
 	 import NodeWrapper from './NodeWrapper.svelte';
 	 import EdgeLayer from './EdgeLayer.svelte';
@@ -464,6 +467,113 @@ function handleKeyDown(e: KeyboardEvent) {
    window.removeEventListener('pointerdown', handleClickOutsideContextMenu);
   };
     });
+
+// --- Paste/Drop Handlers ---
+
+function handleDragOver(e: DragEvent) {
+ e.preventDefault(); // Necessary to allow dropping
+ // Optional: Add visual feedback (e.g., change border style)
+ if (canvasContainer) {
+  // Example: Add a class, remove it on dragleave/drop
+ }
+}
+
+async function handleDrop(e: DragEvent) {
+ e.preventDefault();
+ if (!e.dataTransfer || !canvasContainer) return;
+
+ console.log('[Viewport] Drop event detected.');
+ const rect = canvasContainer.getBoundingClientRect();
+
+ for (const item of e.dataTransfer.items) {
+  if (item.kind === 'file' && item.type.startsWith('image/')) {
+   const file = item.getAsFile();
+   if (file) {
+    console.log(`[Viewport] Dropped image file: ${file.name}`);
+    try {
+    	const dataUrl = await readFileAsDataURL(file);
+    	const { x: canvasX, y: canvasY } = screenToCanvasCoordinates(e.clientX, e.clientY, rect);
+    	console.log(`[Viewport] Creating image node at canvas coords: (${canvasX}, ${canvasY})`);
+    	createImageNodeFromDataUrl({ x: canvasX, y: canvasY }, dataUrl);
+    } catch (error) {
+    	console.error('[Viewport] Error reading dropped file:', error);
+    }
+   }
+  }
+ }
+ // Optional: Remove visual feedback added in handleDragOver
+}
+
+async function handlePaste(e: ClipboardEvent) {
+ // Ignore paste events originating from inputs/textareas/contenteditables
+ const target = e.target as HTMLElement;
+ if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+  console.log('[Viewport] Paste event ignored (target is editable).');
+  return;
+ }
+
+ if (!e.clipboardData || !canvasContainer) return;
+ console.log('[Viewport] Paste event detected on viewport.');
+
+ e.preventDefault(); // Handle paste ourselves
+
+ const rect = canvasContainer.getBoundingClientRect();
+ let pasteCanvasX: number;
+ let pasteCanvasY: number;
+
+ // Determine paste position (last cursor or center)
+ if (lastScreenX !== 0 || lastScreenY !== 0) {
+  const coords = screenToCanvasCoordinates(lastScreenX, lastScreenY, rect);
+  pasteCanvasX = coords.x;
+  pasteCanvasY = coords.y;
+  console.log(`[Viewport] Using last cursor position for paste: (${pasteCanvasX}, ${pasteCanvasY})`);
+ } else {
+  const centerX = rect.left + rect.width / 2;
+  const centerY = rect.top + rect.height / 2;
+  const coords = screenToCanvasCoordinates(centerX, centerY, rect);
+  pasteCanvasX = coords.x;
+  pasteCanvasY = coords.y;
+  console.log(`[Viewport] Using viewport center for paste: (${pasteCanvasX}, ${pasteCanvasY})`);
+ }
+
+
+ for (const item of e.clipboardData.items) {
+  if (item.kind === 'file' && item.type.startsWith('image/')) {
+   const file = item.getAsFile();
+   if (file) {
+    console.log(`[Viewport] Pasted image file: ${file.name}`);
+    try {
+    	const dataUrl = await readFileAsDataURL(file);
+    	console.log(`[Viewport] Creating image node from paste at canvas coords: (${pasteCanvasX}, ${pasteCanvasY})`);
+    	createImageNodeFromDataUrl({ x: pasteCanvasX, y: pasteCanvasY }, dataUrl);
+    	return; // Handle first image found
+    } catch (error) {
+    	console.error('[Viewport] Error reading pasted file:', error);
+    }
+   }
+  } else if (item.kind === 'string' && item.type === 'text/plain') {
+   item.getAsString(text => {
+    if (text && text.trim().length > 0) {
+    	console.log(`[Viewport] Pasted text: "${text.substring(0, 50)}..."`);
+    	console.log(`[Viewport] Creating text node from paste at canvas coords: (${pasteCanvasX}, ${pasteCanvasY})`);
+    	createTextNodeFromPaste({ x: pasteCanvasX, y: pasteCanvasY }, text);
+    	return; // Handle first text found
+    }
+   });
+  }
+ }
+}
+
+// Helper function to read file as Data URL using Promise
+function readFileAsDataURL(file: File): Promise<string> {
+ return new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => resolve(reader.result as string);
+  reader.onerror = (error) => reject(error);
+  reader.readAsDataURL(file);
+ });
+}
+
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -480,6 +590,9 @@ class="karta-viewport-container w-full h-screen overflow-hidden relative cursor-
 	tabindex="0"
 	on:keydown={handleKeyDown}
 	on:keyup={handleKeyUp}
+	on:paste={handlePaste}
+	on:dragover={handleDragOver}
+	on:drop={handleDrop}
 >
 	<div
 		class="w-full h-full relative origin-top-left"

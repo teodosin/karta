@@ -108,7 +108,35 @@
 		if (isEditing) {
 			removeClickListener();
 		}
-	}); // Add missing closing brace for onDestroy
+	});
+
+	// --- Paste Handler ---
+	async function handlePaste(event: ClipboardEvent) {
+		if (!isEditing || !textAreaElement || !event.clipboardData) return;
+
+		event.preventDefault(); // Handle paste manually
+
+		const pastedText = event.clipboardData.getData('text/plain');
+		if (!pastedText) return;
+
+		const start = textAreaElement.selectionStart;
+		const end = textAreaElement.selectionEnd;
+
+		// Construct the new text value
+		const newText = editedText.substring(0, start) + pastedText + editedText.substring(end);
+
+		// Update the bound variable - Svelte handles textarea update
+		editedText = newText;
+
+		// Wait for Svelte to update the DOM, then set cursor position and adjust height
+		await tick();
+		if (textAreaElement) {
+			const newCursorPos = start + pastedText.length;
+			textAreaElement.selectionStart = newCursorPos;
+			textAreaElement.selectionEnd = newCursorPos;
+			adjustTextareaHeight(); // Adjust height after paste
+		}
+	}
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -128,6 +156,7 @@
 			bind:value={editedText}
 			on:keydown={handleKeyDown}
 			on:input={adjustTextareaHeight}
+			on:paste={handlePaste}
 			class="w-full h-auto bg-yellow-100 outline-none resize-none p-1 leading-tight text-gray-900 block"
 			style:font-size="{fontSize}px"
 			spellcheck="false"
