@@ -122,11 +122,8 @@ class LocalAdapter implements PersistenceService {
 
     async getNode(nodeId: string): Promise<DataNode | undefined> {
         const db = await this.dbPromise;
-        const node = await db.get('nodes', nodeId);
-        if (node && node.ntype === 'image' && node.attributes.assetId) {
-            await this.updateNodeSrcWithObjectUrl(node);
-        }
-        return node;
+        // Return node data directly without generating Object URL here
+        return db.get('nodes', nodeId);
     }
 
     async deleteNode(nodeId: string): Promise<void> {
@@ -138,15 +135,8 @@ class LocalAdapter implements PersistenceService {
 
     async getNodes(): Promise<DataNode[]> {
         const db = await this.dbPromise;
-        const nodes = await db.getAll('nodes');
-        // Generate Object URLs for image nodes after loading
-        await Promise.all(nodes.map(node => {
-            if (node.ntype === 'image' && node.attributes.assetId) {
-                return this.updateNodeSrcWithObjectUrl(node);
-            }
-            return Promise.resolve();
-        }));
-        return nodes;
+        // Return nodes directly without generating Object URLs here
+        return db.getAll('nodes');
     }
 
     async checkNameExists(name: string): Promise<boolean> {
@@ -165,11 +155,8 @@ class LocalAdapter implements PersistenceService {
         const nodesMap = new Map<NodeId, DataNode>();
         await Promise.all(nodeIds.map(async (id) => {
             const node = await store.get(id);
+            // Get node data directly without generating Object URL here
             if (node) {
-                 if (node.ntype === 'image' && node.attributes.assetId) {
-                    // Generate Object URL before adding to map
-                    await this.updateNodeSrcWithObjectUrl(node);
-                 }
                  nodesMap.set(id, node);
             }
         }));
@@ -257,33 +244,37 @@ class LocalAdapter implements PersistenceService {
          console.log(`[LocalAdapter] Deleted asset ${assetId}`);
     }
 
-    // Helper to update a node's src attribute with a generated Object URL
-    private async updateNodeSrcWithObjectUrl(node: DataNode): Promise<void> {
-        if (!node.attributes.assetId) return; // Should not happen if called correctly
-
-        const assetId = node.attributes.assetId;
-        const assetData = await this.getAsset(assetId);
-
-        // Revoke previous URL for this node if it exists
-        const oldUrl = this.objectUrlMap.get(node.id);
-        if (oldUrl) {
-            URL.revokeObjectURL(oldUrl);
-            this.objectUrlMap.delete(node.id);
+    /**
+     * Retrieves or generates an Object URL for a given asset ID.
+     * Checks the cache first, then fetches from DB if necessary.
+     * Returns null if the asset or blob is not found.
+     */
+    async getAssetObjectUrl(assetId: string): Promise<string | null> {
+        // 1. Check cache
+        const cachedUrl = this.objectUrlMap.get(assetId);
+        if (cachedUrl) {
+            // console.log(`[LocalAdapter] Returning cached Object URL for asset ${assetId}`);
+            return cachedUrl;
         }
 
+        // 2. Fetch asset data from DB
+        // console.log(`[LocalAdapter] Object URL for asset ${assetId} not cached. Fetching from DB...`);
+        const assetData = await this.getAsset(assetId);
+
         if (assetData?.blob) {
+            // 3. Generate new Object URL
             try {
                 const newObjectUrl = URL.createObjectURL(assetData.blob);
-                node.attributes.src = newObjectUrl; // Update the node object directly
-                this.objectUrlMap.set(node.id, newObjectUrl); // Track the new URL
-                // console.log(`[LocalAdapter] Generated Object URL for node ${node.id}: ${newObjectUrl}`);
+                this.objectUrlMap.set(assetId, newObjectUrl); // Cache the new URL
+                // console.log(`[LocalAdapter] Generated and cached new Object URL for asset ${assetId}`);
+                return newObjectUrl;
             } catch (error) {
-                 console.error(`[LocalAdapter] Error creating Object URL for node ${node.id}:`, error);
-                 node.attributes.src = ''; // Set src to empty on error
+                console.error(`[LocalAdapter] Error creating Object URL for asset ${assetId}:`, error);
+                return null; // Return null on generation error
             }
         } else {
-            console.warn(`[LocalAdapter] Asset data or blob not found for assetId ${assetId} (node ${node.id}). Setting src to empty.`);
-            node.attributes.src = ''; // Set src to empty if asset is missing
+            console.warn(`[LocalAdapter] Asset data or blob not found for assetId ${assetId} when requesting Object URL.`);
+            return null; // Return null if asset or blob doesn't exist
         }
     }
 

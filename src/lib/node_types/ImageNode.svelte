@@ -11,7 +11,8 @@
 	// Optional: import { Image } from 'lucide-svelte';
 
 	function getDefaultAttributes(baseName = 'Image'): Record<string, any> {
-		return { name: baseName, src: '', alt: '' }; // Placeholder src
+		// Initialize src as null or undefined to trigger lazy loading
+		return { name: baseName, src: null, alt: '', assetId: null };
 	}
 
 	function getDefaultViewNodeState(): Omit<TweenableNodeState, 'x' | 'y'> {
@@ -19,7 +20,8 @@
 	}
 
 	const imageNodePropertySchema: PropertyDefinition[] = [
-		{ key: 'src', label: 'Image URL', type: 'string' },
+		// Make src read-only for now as it's managed internally via Object URLs
+		{ key: 'src', label: 'Image URL (Read-Only)', type: 'string' }, // Consider making this read-only or hiding it
 		{ key: 'alt', label: 'Alt Text', type: 'string' }
 	];
 
@@ -37,14 +39,20 @@
 	// INSTANCE SCRIPT
 	import type { DataNode, ViewNode } from '$lib/types/types';
 	import { currentContextId } from '$lib/karta/KartaStore';
+	import { onMount } from 'svelte';
+	import { localAdapter } from '$lib/util/LocalAdapter'; // Import localAdapter
 
 	export let dataNode: DataNode;
 	export let viewNode: ViewNode;
 
 	// Type assertion for attributes
-	$: attributes = dataNode.attributes as { src?: string; alt?: string; name: string };
-	$: imgSrc = attributes?.src || ''; // Use src attribute or empty string
+	$: attributes = dataNode.attributes as { src?: string | null; alt?: string; name: string; assetId?: string | null }; // Add assetId type, allow null src
 	$: altText = attributes?.alt || `Image for ${attributes?.name ?? dataNode.id}`;
+	$: assetId = attributes?.assetId; // Reactive variable for assetId
+
+	// Local state for the image URL and loading status
+	let imageUrl: string | null = attributes?.src || null; // Initialize with src if present (might be cached URL from adapter)
+	let isLoading = false;
 
 	// Placeholder image (e.g., SVG or data URI) if src is empty
 	const placeholderSvg = `
@@ -54,8 +62,51 @@
 	`;
 	const placeholderDataUri = `data:image/svg+xml;utf8,${encodeURIComponent(placeholderSvg)}`;
 
-	// Instance logic...
+	async function fetchImageUrl(id: string | null | undefined) {
+		if (typeof id !== 'string' || !localAdapter) {
+			console.warn(`[ImageNode ${dataNode.id}] Invalid assetId or adapter not ready.`);
+			imageUrl = placeholderDataUri;
+			return;
+		}
+
+		isLoading = true;
+		console.log(`[ImageNode ${dataNode.id}] Fetching Object URL for asset ${id}`);
+		try {
+			const url = await localAdapter.getAssetObjectUrl(id);
+			if (url) {
+				imageUrl = url;
+				// console.log(`[ImageNode ${dataNode.id}] Object URL loaded: ${url.substring(0, 50)}...`);
+			} else {
+				console.warn(`[ImageNode ${dataNode.id}] Failed to get Object URL for asset ${id}.`);
+				imageUrl = placeholderDataUri; // Use placeholder if fetch fails
+			}
+		} catch (error) {
+			console.error(`[ImageNode ${dataNode.id}] Error fetching Object URL:`, error);
+			imageUrl = placeholderDataUri; // Use placeholder on error
+		} finally {
+			isLoading = false;
+		}
+	}
+
+	// Fetch Object URL on mount if needed
+	onMount(() => {
+		// Only fetch if imageUrl isn't already set and assetId exists
+		if (!imageUrl && assetId) {
+			fetchImageUrl(assetId);
+		} else if (imageUrl) {
+			// console.log(`[ImageNode ${dataNode.id}] Using existing src/cached URL: ${imageUrl.substring(0, 50)}...`);
+		}
+	});
+
+	// Reactive statement to handle potential changes in assetId after mount
+	$: if (assetId && !isLoading && !imageUrl) {
+		// Re-trigger fetch if assetId changes and we don't have a URL yet
+		console.log(`[ImageNode ${dataNode.id}] AssetId changed or URL missing, re-fetching.`);
+		fetchImageUrl(assetId);
+	}
+
 </script>
+
 <div
 	class={`
 		w-full h-full bg-gray-700 flex items-center justify-center overflow-hidden pointer-events-auto
@@ -63,22 +114,30 @@
 	`}
 	title={`Image Node: ${attributes?.name ?? dataNode.id}`}
 >
-	{#if imgSrc}
+	{#if isLoading}
+		<!-- Loading Indicator -->
+		<div class="w-full h-full flex items-center justify-center text-gray-400 text-xs animate-pulse">Loading...</div>
+	{:else if imageUrl && imageUrl !== placeholderDataUri}
+		<!-- Image Display -->
 		<img
-			src={imgSrc}
+			src={imageUrl}
 			alt={altText}
 			class="object-contain w-full h-full pointer-events-none"
 			loading="lazy"
 			on:error={(e) => {
-				// Prevent infinite loop if placeholder also fails
-				if (e.currentTarget instanceof HTMLImageElement && e.currentTarget.src !== placeholderDataUri) {
-					e.currentTarget.src = placeholderDataUri;
+				// Handle image loading errors (e.g., revoked Object URL)
+				console.warn(`[ImageNode ${dataNode.id}] Error loading image src: ${imageUrl?.substring(0, 50)}...`);
+				if (e.currentTarget instanceof HTMLImageElement) {
+					// Avoid setting placeholder if it's already the placeholder causing the error
+					if (e.currentTarget.src !== placeholderDataUri) {
+						imageUrl = placeholderDataUri; // Fallback to placeholder on error
+					}
 				}
 			}}
 		/>
 	{:else}
-		<!-- Display placeholder SVG directly -->
-		<div class="pointer-events-none w-full h-full flex items-center justify-center">{@html placeholderSvg}</div>
+		<!-- Placeholder Display -->
+		<div class="pointer-events-none w-full h-full flex items-center justify-center p-2" title="Image not loaded or found">{@html placeholderSvg}</div>
 	{/if}
 </div>
 
