@@ -406,40 +406,56 @@
 
     // Removed handleCanvasClick - click logic should be within tool's onPointerUp
 function handleKeyDown(e: KeyboardEvent) {
+	// Check if focus is currently within an input, textarea, or contenteditable element
+	const activeEl = document.activeElement;
+	const isInputFocused = activeEl && (
+		activeEl.tagName === 'INPUT' ||
+		activeEl.tagName === 'TEXTAREA' ||
+		(activeEl instanceof HTMLElement && activeEl.isContentEditable)
+	);
+
 	if (e.key === 'Tab') {
-		e.preventDefault();
-		if (!canvasContainer) return;
+		// Open Create Node Menu, but only if an input isn't focused.
+		// Default focus cycling is prevented globally in +layout.svelte.
+		if (!isInputFocused) {
+			if (!canvasContainer) return;
 
-		const rect = canvasContainer.getBoundingClientRect();
-		let screenX = lastScreenX;
-		let screenY = lastScreenY;
+			const rect = canvasContainer.getBoundingClientRect();
+			let screenX = lastScreenX;
+			let screenY = lastScreenY;
 
-		// Fallback to center if cursor hasn't moved over viewport yet
-		if (screenX === 0 && screenY === 0) {
-			screenX = rect.left + rect.width / 2;
-			screenY = rect.top + rect.height / 2;
-			console.log('Tab pressed: Cursor position unknown, using viewport center.');
+			// Fallback to center if cursor hasn't moved over viewport yet
+			if (screenX === 0 && screenY === 0) {
+				screenX = rect.left + rect.width / 2;
+				screenY = rect.top + rect.height / 2;
+				console.log('Tab pressed: Cursor position unknown, using viewport center.');
+			} else {
+				console.log(`Tab pressed: Using cursor position (${screenX}, ${screenY})`);
+			}
+
+			// Calculate canvas coordinates
+			const { x: canvasX, y: canvasY } = screenToCanvasCoordinates(screenX, screenY, rect);
+			console.log(`Tab pressed: Calculated canvas coordinates (${canvasX}, ${canvasY})`);
+
+			// Open the menu
+			openCreateNodeMenu(screenX, screenY, canvasX, canvasY);
+			// DO NOT call e.preventDefault() here - it's handled globally
 		} else {
-			console.log(`Tab pressed: Using cursor position (${screenX}, ${screenY})`);
+			console.log('[Viewport] Tab ignored for menu (input focused).');
 		}
 
-		// Calculate canvas coordinates
-		const { x: canvasX, y: canvasY } = screenToCanvasCoordinates(screenX, screenY, rect);
-		console.log(`Tab pressed: Calculated canvas coordinates (${canvasX}, ${canvasY})`);
-
-		// Open the menu, passing both screen and canvas coordinates
-		openCreateNodeMenu(screenX, screenY, canvasX, canvasY);
 	} else if (e.key === 'f' || e.key === 'F') {
-		if (!e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) { // Ensure no modifiers
+		// Handle both 'F' and 'Shift+F'
+		if (e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+			// Shift+F: Frame Context
+			e.preventDefault();
+			frameContext();
+		} else if (!e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+			// F (no modifiers): Center Focal Node
 			e.preventDefault();
 			centerOnFocalNode();
 		}
-		// Allow 'Shift+F' for future 'Frame Context' without conflict
-	} else if (e.key === 'f' || e.key === 'F') { // Check for Shift+F
-		if (e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
-			e.preventDefault();
-			frameContext();
-		}
+		// Ignore if other modifiers are pressed (e.g., Ctrl+F for browser search)
 	}
 
 	// Delegate keydown events to the active tool (unless handled above)
