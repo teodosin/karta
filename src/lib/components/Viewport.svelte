@@ -9,39 +9,42 @@
 	import { get } from 'svelte/store';
 	import { onMount, onDestroy } from 'svelte'; // Added onDestroy
 	import {
-	 viewTransform, // Keep the Tween object
-	 // currentViewTransform, // REMOVED incorrect readable store import
-	 screenToCanvasCoordinates,
-	 // createNodeAtPosition, // No longer called directly from here
-	 nodes, // Still need nodes for DataNode info if NodeWrapper needs it
-	 contexts, // Import contexts store
-	 currentContextId, // Import current context ID store
-	 currentTool,
-	 cancelConnectionProcess,
-	 // Imports for Create Node Menu
-	 isCreateNodeMenuOpen,
-	 createNodeMenuPosition,
-	 openCreateNodeMenu,
-	 closeCreateNodeMenu, // Import action to close menu
-	 // Imports for Context Menu
-	 isContextMenuOpen,
-	 contextMenuPosition,
-	 contextMenuContext,
-	 openContextMenu,
-	 closeContextMenu,
-	 type ContextMenuContextType, // Import the type
-	 // Add these imports for selection
-	 selectedNodeIds,
-	 clearSelection,
-	 setSelectedNodes,
-	 toggleSelection,
-	 // Imports for Paste/Drop
-	 // createImageNodeFromDataUrl, // Replaced by createImageNodeWithAsset
-	 createTextNodeFromPaste,
-	 createImageNodeWithAsset // Import the new function
-	 } from '$lib/karta/KartaStore';
-	 import NodeWrapper from './NodeWrapper.svelte';
-	 import EdgeLayer from './EdgeLayer.svelte';
+		viewTransform, // Keep the Tween object
+		screenToCanvasCoordinates,
+		nodes,
+		contexts,
+		currentContextId,
+		currentTool,
+		cancelConnectionProcess,
+		// Create Node Menu
+		isCreateNodeMenuOpen,
+		createNodeMenuPosition,
+		openCreateNodeMenu,
+		closeCreateNodeMenu,
+		// Context Menu
+		isContextMenuOpen,
+		contextMenuPosition,
+		contextMenuContext,
+		openContextMenu,
+		closeContextMenu,
+		type ContextMenuContextType,
+		switchContext, // Action for 'Enter Context'
+		centerViewOnCanvasPoint, // Action for 'Center View' (used by centerOnFocalNode)
+		centerOnFocalNode, // Action for shortcut 'F'
+		frameContext, // <-- Import action for menu/shortcut 'Shift+F'
+		requestNodeRename, // Action for 'Rename'
+		// Selection
+		selectedNodeIds,
+		clearSelection,
+		setSelectedNodes,
+		toggleSelection,
+		currentViewNodes, // Store for node states in current context
+		// Paste/Drop
+		createTextNodeFromPaste,
+		createImageNodeWithAsset
+	} from '$lib/karta/KartaStore';
+	import NodeWrapper from './NodeWrapper.svelte';
+	import EdgeLayer from './EdgeLayer.svelte';
 	import CreateNodeMenu from './CreateNodeMenu.svelte'; // Import the menu component
 	import ContextMenu from './ContextMenu.svelte'; // Import the context menu component
 	import SelectionBox from './SelectionBox.svelte'; // Import the selection box component
@@ -426,15 +429,28 @@ function handleKeyDown(e: KeyboardEvent) {
 
 		// Open the menu, passing both screen and canvas coordinates
 		openCreateNodeMenu(screenX, screenY, canvasX, canvasY);
+	} else if (e.key === 'f' || e.key === 'F') {
+		if (!e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) { // Ensure no modifiers
+			e.preventDefault();
+			centerOnFocalNode();
+		}
+		// Allow 'Shift+F' for future 'Frame Context' without conflict
+	} else if (e.key === 'f' || e.key === 'F') { // Check for Shift+F
+		if (e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+			e.preventDefault();
+			frameContext();
+		}
 	}
 
-	// Delegate keydown events to the active tool
-	get(currentTool)?.onKeyDown?.(e);
+	// Delegate keydown events to the active tool (unless handled above)
+	if (!e.defaultPrevented) {
+		get(currentTool)?.onKeyDown?.(e);
+	}
 
 
-        // Keep Escape key handling here for global cancel? Or move to tool?
-        // Let's keep it global for now.
-        if (e.key === 'Escape') {
+		      // Keep Escape key handling here for global cancel? Or move to tool?
+		      // Let's keep it global for now.
+		      if (e.key === 'Escape') {
             cancelConnectionProcess();
             closeCreateNodeMenu(); // Also close create menu on Escape
             closeContextMenu(); // Also close context menu on Escape
@@ -677,13 +693,82 @@ class="karta-viewport-container w-full h-screen overflow-hidden relative cursor-
 	<!-- Context Menu (conditionally rendered) -->
 	{#if $isContextMenuOpen && $contextMenuPosition}
 		{@const contextType = $contextMenuContext?.type}
-		{@const contextId = $contextMenuContext?.id}
-		{@const menuItems = contextType === 'node'
-			? [`Node Action (ID: ${contextId})`, 'Delete Node (NYI)']
-			: contextType === 'edge'
-			? [`Edge Action (ID: ${contextId})`, 'Delete Edge (NYI)']
-			: ['Create Node Here (NYI)', 'Paste (NYI)']}
+		{@const targetNodeId = $contextMenuContext?.id}
+		{@const currentNodesMap = $nodes}
+		{@const currentViewNodesMap = $currentViewNodes}
+
+		<!-- Dynamically generate menu items based on context -->
+		{@const menuItems = (() => {
+			let items: { label: string; action: () => void; disabled?: boolean }[] = [];
+			const targetDataNode = targetNodeId ? currentNodesMap.get(targetNodeId) : null;
+			const targetViewNode = targetNodeId ? currentViewNodesMap.get(targetNodeId) : null;
+			const screenPos = $contextMenuPosition; // Has screenX/Y
+
+			// Helper to get canvas coords from stored screen coords
+			const getCanvasCoords = () => {
+				if (!screenPos || !canvasContainer) return { x: 0, y: 0 };
+				const rect = canvasContainer.getBoundingClientRect();
+				// Use screenPos.x and screenPos.y which are the correct screen coordinates
+				return screenToCanvasCoordinates(screenPos.x, screenPos.y, rect);
+			};
+
+			if (contextType === 'node' && targetNodeId) {
+				const nodeState = targetViewNode?.state.current;
+				items = [
+					{
+						label: 'Enter Context',
+						action: () => { if (targetNodeId) switchContext(targetNodeId); },
+						disabled: !targetNodeId || targetNodeId === $currentContextId
+					},
+					{
+						label: 'Center View',
+						action: () => {
+							if (nodeState) {
+								centerViewOnCanvasPoint(nodeState.x + nodeState.width / 2, nodeState.y + nodeState.height / 2);
+							}
+						},
+						disabled: !nodeState
+					},
+					{
+						label: 'Rename',
+						action: () => { if (targetNodeId) requestNodeRename(targetNodeId); },
+						disabled: !targetDataNode || targetDataNode.attributes?.isSystemNode
+					},
+					// Add Delete options later
+				];
+			} else if (contextType === 'edge' && targetNodeId) {
+				items = [
+					{ label: 'Delete Edge', action: () => console.warn('Delete Edge NYI'), disabled: true }
+				];
+			} else if (contextType === 'background') {
+				items = [
+					{
+						label: 'Center Focal Node',
+						action: () => centerOnFocalNode(),
+						disabled: !$currentContextId // Disable if no context (shouldn't happen?)
+					},
+					{
+						label: 'Frame Context',
+						action: () => frameContext(), // Action to be implemented in KartaStore
+						disabled: !$currentContextId
+					},
+					{
+						label: 'Create Node Here',
+						action: () => {
+							const { x: canvasX, y: canvasY } = getCanvasCoords();
+							// Use screenPos.x and screenPos.y for the menu positioning part
+							openCreateNodeMenu(screenPos!.x, screenPos!.y, canvasX, canvasY);
+						},
+						disabled: !screenPos
+					},
+					{ label: 'Paste', action: () => console.warn('Paste action NYI from context menu.'), disabled: true }
+				];
+			}
+			return items;
+		})()}
+
 		<div bind:this={contextMenuElement}>
+			<!-- Pass only screen coordinates for positioning -->
 			<ContextMenu position={$contextMenuPosition} items={menuItems} />
 		</div>
 	{/if}

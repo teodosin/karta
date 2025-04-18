@@ -1,12 +1,19 @@
 <script lang="ts">
 	import type { ContextMenuContextType } from '$lib/karta/KartaStore'; // Import the type if needed for items later
+	import { closeContextMenu } from '$lib/karta/KartaStore'; // Import close action
 
 	// Props
-	export let position: { x: number; y: number } | null = null;
-	// For now, items are just strings. Could be objects later { label: string, action: () => void }
-	export let items: string[] = [];
+	export let position: { x: number; y: number } | null = null; // Expects screen coordinates
+	export let items: { label: string; action: () => void; disabled?: boolean }[] = [];
 
 	// TODO: Implement click outside logic later
+
+	function handleItemClick(item: { label: string; action: () => void; disabled?: boolean }) {
+		if (!item.disabled) {
+			item.action();
+			closeContextMenu(); // Close menu after action
+		}
+	}
 </script>
 
 {#if position}
@@ -21,11 +28,16 @@
 			<ul>
 				{#each items as item}
 					<li
-						class="px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+						class="px-4 py-2 text-sm {item.disabled
+							? 'text-gray-400 dark:text-gray-500 cursor-not-allowed'
+							: 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer'}"
 						role="menuitem"
-						on:click={() => console.log(`Context menu item clicked: ${item}`)}
+						aria-disabled={item.disabled ? 'true' : 'false'}
+						on:click={() => handleItemClick(item)}
+						on:keydown={(e) => e.key === 'Enter' && handleItemClick(item)}
+						tabindex={item.disabled ? -1 : 0}
 					>
-						{item}
+						{item.label}
 					</li>
 				{/each}
 			</ul>
@@ -39,5 +51,12 @@
 	/* Add any specific styles if needed, Tailwind covers most */
 	.context-menu {
 		min-width: 150px; /* Ensure a minimum width */
+	}
+	li:focus {
+		outline: none; /* Remove default outline */
+		background-color: #e5e7eb; /* Tailwind gray-200 */
+	}
+	:global(.dark) li:focus {
+		background-color: #374151; /* Tailwind gray-700 */
 	}
 </style>

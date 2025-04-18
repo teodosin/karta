@@ -59,6 +59,9 @@ export const propertiesPanelCollapsed = writable<boolean>(false);
 export const historyStack = writable<NodeId[]>([]);
 export const futureStack = writable<NodeId[]>([]);
 
+// --- Rename Request State ---
+export const nodeRenameRequestId = writable<NodeId | null>(null);
+
 // --- Derived Store for Current Context's ViewNodes ---
 export const currentViewNodes = derived(
 	[currentContextId, contexts],
@@ -343,12 +346,110 @@ function _applyStoresUpdate(
 
     // --- Update current context ID ---
     currentContextId.set(newContextId);
-}
-
-
-// --- Public Store Actions ---
-
-// Create Node Menu Actions
+   }
+   
+   
+   // --- Public Store Actions ---
+   
+   // --- Viewport Actions ---
+   /** Centers the viewport on a specific canvas coordinate, maintaining current scale. */
+   export function centerViewOnCanvasPoint(canvasX: number, canvasY: number) {
+    const viewportEl = document.getElementById('viewport'); // Assuming viewport has this ID
+    if (!viewportEl) {
+    	console.error("[centerViewOnCanvasPoint] Viewport element not found.");
+    	return;
+    }
+    const rect = viewportEl.getBoundingClientRect();
+    const targetScale = 1; // Reset scale to 1 for centering actions
+    const targetPosX = rect.width / 2 - canvasX * targetScale;
+    const targetPosY = rect.height / 2 - canvasY * targetScale;
+   
+    // Set duration to 0 for immediate jump, stopping any current tween
+    viewTransform.set({ scale: targetScale, posX: targetPosX, posY: targetPosY }, { duration: 0 });
+    console.log(`[KartaStore] Centering view on canvas point (${canvasX}, ${canvasY}) at scale 1`);
+   }
+   
+   /** Centers the viewport on the current focal node. */
+   export function centerOnFocalNode() {
+    const focalNodeId = get(currentContextId);
+    const focalViewNode = get(currentViewNodes).get(focalNodeId);
+   
+    if (focalViewNode) {
+    	const nodeState = focalViewNode.state.current;
+    	const centerX = nodeState.x + nodeState.width / 2;
+    	const centerY = nodeState.y + nodeState.height / 2;
+    	centerViewOnCanvasPoint(centerX, centerY);
+    	console.log(`[KartaStore] Centering on focal node ${focalNodeId} at (${centerX}, ${centerY})`);
+    } else {
+    	console.warn(`[KartaStore] Cannot center on focal node: ViewNode ${focalNodeId} not found in current context.`);
+    }
+   }
+   
+   /** Calculates the bounding box of all nodes in the current context and adjusts the viewport to frame them. */
+   export function frameContext() {
+    const viewportEl = document.getElementById('viewport');
+    if (!viewportEl) {
+    	console.error("[frameContext] Viewport element not found.");
+    	return;
+    }
+    const rect = viewportEl.getBoundingClientRect();
+    const nodesInContext = get(currentViewNodes);
+   
+    if (nodesInContext.size === 0) {
+    	console.log("[frameContext] No nodes in context to frame.");
+    	// Optionally reset to default view? For now, do nothing.
+    	// viewTransform.set({ ...DEFAULT_VIEWPORT_SETTINGS }, { duration: 0 });
+    	return;
+    }
+   
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+   
+    nodesInContext.forEach(viewNode => {
+    	const state = viewNode.state.current;
+    	const nodeLeft = state.x - (state.width / 2) * state.scale;
+    	const nodeRight = state.x + (state.width / 2) * state.scale;
+    	const nodeTop = state.y - (state.height / 2) * state.scale;
+    	const nodeBottom = state.y + (state.height / 2) * state.scale;
+   
+    	minX = Math.min(minX, nodeLeft);
+    	minY = Math.min(minY, nodeTop);
+    	maxX = Math.max(maxX, nodeRight);
+    	maxY = Math.max(maxY, nodeBottom);
+    });
+   
+    const boundsWidth = maxX - minX;
+    const boundsHeight = maxY - minY;
+    const boundsCenterX = minX + boundsWidth / 2;
+    const boundsCenterY = minY + boundsHeight / 2;
+   
+    if (boundsWidth <= 0 || boundsHeight <= 0) {
+    	console.log("[frameContext] Bounding box has zero or negative dimensions, centering on first node.");
+    	// Fallback: center on the first node found (or the focal node if it exists)
+    	const firstNode = nodesInContext.values().next().value;
+    	if (firstNode) {
+    		const state = firstNode.state.current;
+    		centerViewOnCanvasPoint(state.x + state.width / 2, state.y + state.height / 2);
+    	} else {
+    		viewTransform.set({ ...DEFAULT_VIEWPORT_SETTINGS }, { duration: 0 }); // Reset if truly empty
+    	}
+    	return;
+    }
+   
+    const padding = 0.1; // 10% padding
+    const scaleX = rect.width / (boundsWidth * (1 + padding));
+    const scaleY = rect.height / (boundsHeight * (1 + padding));
+    const targetScale = Math.min(scaleX, scaleY, 2); // Limit max zoom to 2x
+   
+    const targetPosX = rect.width / 2 - boundsCenterX * targetScale;
+    const targetPosY = rect.height / 2 - boundsCenterY * targetScale;
+   
+    viewTransform.set({ scale: targetScale, posX: targetPosX, posY: targetPosY }, { duration: 0 });
+    console.log(`[KartaStore] Framing context. Bounds: (${minX.toFixed(1)}, ${minY.toFixed(1)}) to (${maxX.toFixed(1)}, ${maxY.toFixed(1)}). New transform: scale=${targetScale.toFixed(2)}, pos=(${targetPosX.toFixed(1)}, ${targetPosY.toFixed(1)})`);
+   
+   }
+   
+   
+   // Create Node Menu Actions
 export function openCreateNodeMenu(screenX: number, screenY: number, canvasX: number, canvasY: number) {
     createNodeMenuPosition.set({ screenX, screenY, canvasX, canvasY });
     isCreateNodeMenuOpen.set(true);
@@ -809,11 +910,24 @@ export async function updateNodeAttributes(nodeId: NodeId, newAttributes: Record
     } else {
         console.log(`[updateNodeAttributes] No effective attribute changes for node ${nodeId}.`);
     }
-}
-
-
-// Edge Creation
-export async function createEdge(sourceId: NodeId, targetId: NodeId) {
+   }
+   
+   /** Signals that a rename should be initiated for the specified node. */
+   export function requestNodeRename(nodeId: NodeId) {
+    const node = get(nodes).get(nodeId);
+    if (node && !node.attributes?.isSystemNode) {
+    	nodeRenameRequestId.set(nodeId);
+    	console.log(`[KartaStore] Requested rename for node ${nodeId}`);
+    } else if (node?.attributes?.isSystemNode) {
+    	console.warn(`[KartaStore] Rename request ignored for system node ${nodeId}`);
+    } else {
+    	console.warn(`[KartaStore] Rename request ignored for non-existent node ${nodeId}`);
+    }
+   }
+   
+   
+   // Edge Creation
+   export async function createEdge(sourceId: NodeId, targetId: NodeId) {
     if (sourceId === targetId) { console.warn("Cannot connect node to itself."); return; }
     const currentEdges = get(edges);
     for (const edge of currentEdges.values()) {

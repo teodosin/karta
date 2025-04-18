@@ -7,7 +7,7 @@
 -->
 <script lang="ts">
 	import type { DataNode, ViewNode } from '$lib/types/types';
-	import { currentContextId, updateNodeAttributes, selectedNodeIds, currentViewNodes } from '$lib/karta/KartaStore'; // Import selectedNodeIds and currentViewNodes
+	import { currentContextId, updateNodeAttributes, selectedNodeIds, currentViewNodes, nodeRenameRequestId } from '$lib/karta/KartaStore'; // Import selectedNodeIds, currentViewNodes, and nodeRenameRequestId
 	import { getNodeComponent } from '$lib/node_types/registry';
 	import { tick } from 'svelte';
 	import { fade } from 'svelte/transition'; // Import fade transition
@@ -71,6 +71,13 @@
 	}
 
 	// --- Resize Handle Logic Removed - Handled by SelectionBox ---
+
+	// Reactive statement to listen for rename requests
+	$: if ($nodeRenameRequestId === dataNode?.id) {
+		console.log(`[NodeWrapper ${dataNode.id}] Received rename request via store.`);
+		startEditing(); // Use existing function to start editing
+		nodeRenameRequestId.set(null); // Reset the request store immediately
+	}
 </script>
 
 {#if dataNode && viewNode}
