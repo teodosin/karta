@@ -2,7 +2,7 @@ import { writable, get, derived, readable } from 'svelte/store';
 import { Tween } from 'svelte/motion'; // Removed 'tweened' as it's not used directly here
 import { cubicOut } from 'svelte/easing';
 import { localAdapter } from '../util/LocalAdapter';
-import type { DataNode, KartaEdge, ViewNode, Context, Tool, NodeId, EdgeId, AbsoluteTransform, ViewportSettings, TweenableNodeState, StorableContext, StorableViewNode, StorableViewportSettings } from '../types/types';
+import type { DataNode, KartaEdge, ViewNode, Context, Tool, NodeId, EdgeId, AbsoluteTransform, ViewportSettings, TweenableNodeState, StorableContext, StorableViewNode, StorableViewportSettings, AssetData } from '../types/types'; // Added AssetData import
 import { MoveTool } from '../tools/MoveTool';
 import { ConnectTool } from '../tools/ConnectTool';
 import { ContextTool } from '../tools/ContextTool';
@@ -612,6 +612,76 @@ export async function createTextNodeFromPaste(position: { x: number, y: number }
 	} catch (error) {
 		console.error("[KartaStore] Error creating text node from paste:", error);
 	}
+}
+
+/**
+ * Creates an ImageNode, saves its Blob asset, and sets the Object URL as src.
+ */
+export async function createImageNodeWithAsset(
+    position: { x: number, y: number },
+    imageBlob: Blob,
+    objectUrl: string, // Pre-generated Object URL
+    assetName: string,
+    initialWidth?: number,
+    initialHeight?: number
+): Promise<NodeId | null> {
+    if (!localAdapter) {
+        console.error("[createImageNodeWithAsset] LocalAdapter not available.");
+        URL.revokeObjectURL(objectUrl); // Revoke if we can't save
+        return null;
+    }
+
+    let newNodeId: NodeId | null = null;
+    try {
+        // 1. Create the base 'image' node with alt text, but no src initially
+        // Use the existing createNodeAtPosition function
+        newNodeId = await createNodeAtPosition(
+            position.x,
+            position.y,
+            'image',
+            { alt: assetName }, // Set alt attribute initially
+            initialWidth,
+            initialHeight
+        );
+
+        if (!newNodeId) {
+            throw new Error("Failed to create base node structure.");
+        }
+
+        // 2. Prepare asset data and save it using the newNodeId as assetId
+        const assetData: AssetData = { blob: imageBlob, mimeType: imageBlob.type, name: assetName };
+        await localAdapter.saveAsset(newNodeId, assetData);
+
+        // 3. Update the node attributes with the Object URL and assetId
+        // Use the existing updateNodeAttributes function
+        await updateNodeAttributes(newNodeId, { src: objectUrl, assetId: newNodeId });
+
+        console.log(`[KartaStore] Created ImageNode ${newNodeId} with asset ${assetName}`);
+        return newNodeId;
+
+    } catch (error) {
+        console.error("[createImageNodeWithAsset] Error:", error);
+        // Cleanup logic:
+        if (newNodeId) {
+            // If the base node was created, attempt to delete it from DB.
+            // The updated localAdapter.deleteNode will also call deleteAsset,
+            // which handles revoking any URL *it* might have tracked.
+            console.log(`[createImageNodeWithAsset] Cleaning up partially created node ${newNodeId}`);
+            await localAdapter.deleteNode(newNodeId);
+            // Also remove from stores manually
+            nodes.update(n => { n.delete(newNodeId!); return n; });
+            contexts.update(ctxMap => {
+                ctxMap.forEach(ctx => ctx.viewNodes.delete(newNodeId!));
+                return ctxMap;
+            });
+        }
+        // Regardless of whether the node was created, revoke the initially passed objectUrl
+        // as it might not have been tracked/revoked by the adapter if saveAsset failed.
+        URL.revokeObjectURL(objectUrl);
+        console.log(`[createImageNodeWithAsset] Revoked initial objectUrl: ${objectUrl}`);
+
+        return null; // Indicate failure
+    }
 }
 
 // Node Layout Update

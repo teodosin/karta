@@ -1,7 +1,7 @@
 import * as idb from 'idb';
 // Import Context, ViewNode, NodeId, and AbsoluteTransform
 // Also import ViewportSettings
-import type { DataNode, KartaEdge, Context, ViewNode, NodeId, AbsoluteTransform, ViewportSettings, StorableContext, StorableViewNode, StorableViewportSettings } from '../types/types'; // Import Storable types
+import type { DataNode, KartaEdge, Context, ViewNode, NodeId, AbsoluteTransform, ViewportSettings, StorableContext, StorableViewNode, StorableViewportSettings, AssetData } from '../types/types'; // Import Storable types & AssetData
 
 // Removed local definitions for StorableViewNode, StorableViewportSettings, StorableContext
 // They are now imported from types.ts
@@ -33,13 +33,14 @@ interface PersistenceService {
 
 class LocalAdapter implements PersistenceService {
     private dbPromise: Promise<idb.IDBPDatabase<KartaDB>>;
+    private objectUrlMap = new Map<string, string>(); // Tracks generated Object URLs { nodeId: objectUrl }
 
     constructor() {
         console.log('[LocalAdapter] Constructor: Initializing DB connection...');
         const startTime = performance.now();
 
-        // DB Version 4: Added edge indexes
-        this.dbPromise = idb.openDB<KartaDB>('karta-db', 4, {
+        // DB Version 5: Added assets store
+        this.dbPromise = idb.openDB<KartaDB>('karta-db', 5, {
             upgrade(db, oldVersion, newVersion, tx, event) {
                 console.log(`[LocalAdapter] Upgrading DB from v${oldVersion} to v${newVersion}...`);
                 // Create initial stores if upgrading from v0
@@ -89,6 +90,13 @@ class LocalAdapter implements PersistenceService {
                         }
                     } else { console.warn('[LocalAdapter] Cannot add edge indexes: "edges" store does not exist.'); }
                  }
+                // Create assets store if upgrading from v0, v1, v2, v3, or v4
+                if (oldVersion < 5) {
+                   if (!db.objectStoreNames.contains('assets')) {
+                       console.log('[LocalAdapter] Creating "assets" object store.');
+                       db.createObjectStore('assets'); // Key is assetId (usually nodeId)
+                   }
+                }
                 console.log('[LocalAdapter] DB upgrade complete.');
             },
             blocked() { console.error('[LocalAdapter] IDB blocked. Close other tabs accessing the DB.'); },
@@ -114,7 +122,11 @@ class LocalAdapter implements PersistenceService {
 
     async getNode(nodeId: string): Promise<DataNode | undefined> {
         const db = await this.dbPromise;
-        return db.get('nodes', nodeId);
+        const node = await db.get('nodes', nodeId);
+        if (node && node.ntype === 'image' && node.attributes.assetId) {
+            await this.updateNodeSrcWithObjectUrl(node);
+        }
+        return node;
     }
 
     async deleteNode(nodeId: string): Promise<void> {
@@ -126,7 +138,15 @@ class LocalAdapter implements PersistenceService {
 
     async getNodes(): Promise<DataNode[]> {
         const db = await this.dbPromise;
-        return db.getAll('nodes');
+        const nodes = await db.getAll('nodes');
+        // Generate Object URLs for image nodes after loading
+        await Promise.all(nodes.map(node => {
+            if (node.ntype === 'image' && node.attributes.assetId) {
+                return this.updateNodeSrcWithObjectUrl(node);
+            }
+            return Promise.resolve();
+        }));
+        return nodes;
     }
 
     async checkNameExists(name: string): Promise<boolean> {
@@ -145,7 +165,13 @@ class LocalAdapter implements PersistenceService {
         const nodesMap = new Map<NodeId, DataNode>();
         await Promise.all(nodeIds.map(async (id) => {
             const node = await store.get(id);
-            if (node) nodesMap.set(id, node);
+            if (node) {
+                 if (node.ntype === 'image' && node.attributes.assetId) {
+                    // Generate Object URL before adding to map
+                    await this.updateNodeSrcWithObjectUrl(node);
+                 }
+                 nodesMap.set(id, node);
+            }
         }));
         await tx.done;
         return nodesMap;
@@ -200,6 +226,78 @@ class LocalAdapter implements PersistenceService {
         await tx.done;
         return relevantEdges;
     }
+
+    // --- Asset Methods ---
+
+    async saveAsset(assetId: string, assetData: AssetData): Promise<void> {
+        const db = await this.dbPromise;
+        const tx = db.transaction('assets', 'readwrite');
+        await tx.objectStore('assets').put(assetData, assetId);
+        await tx.done;
+        console.log(`[LocalAdapter] Saved asset ${assetId}`);
+    }
+
+    async getAsset(assetId: string): Promise<AssetData | undefined> {
+        const db = await this.dbPromise;
+        return db.get('assets', assetId);
+    }
+
+    async deleteAsset(assetId: string): Promise<void> {
+        const db = await this.dbPromise;
+        const tx = db.transaction('assets', 'readwrite');
+        await tx.objectStore('assets').delete(assetId);
+        await tx.done;
+        // Revoke and remove Object URL if it exists for this assetId (which is usually nodeId)
+        const existingUrl = this.objectUrlMap.get(assetId);
+        if (existingUrl) {
+            URL.revokeObjectURL(existingUrl);
+            this.objectUrlMap.delete(assetId);
+            console.log(`[LocalAdapter] Revoked and removed Object URL for asset ${assetId}`);
+        }
+         console.log(`[LocalAdapter] Deleted asset ${assetId}`);
+    }
+
+    // Helper to update a node's src attribute with a generated Object URL
+    private async updateNodeSrcWithObjectUrl(node: DataNode): Promise<void> {
+        if (!node.attributes.assetId) return; // Should not happen if called correctly
+
+        const assetId = node.attributes.assetId;
+        const assetData = await this.getAsset(assetId);
+
+        // Revoke previous URL for this node if it exists
+        const oldUrl = this.objectUrlMap.get(node.id);
+        if (oldUrl) {
+            URL.revokeObjectURL(oldUrl);
+            this.objectUrlMap.delete(node.id);
+        }
+
+        if (assetData?.blob) {
+            try {
+                const newObjectUrl = URL.createObjectURL(assetData.blob);
+                node.attributes.src = newObjectUrl; // Update the node object directly
+                this.objectUrlMap.set(node.id, newObjectUrl); // Track the new URL
+                // console.log(`[LocalAdapter] Generated Object URL for node ${node.id}: ${newObjectUrl}`);
+            } catch (error) {
+                 console.error(`[LocalAdapter] Error creating Object URL for node ${node.id}:`, error);
+                 node.attributes.src = ''; // Set src to empty on error
+            }
+        } else {
+            console.warn(`[LocalAdapter] Asset data or blob not found for assetId ${assetId} (node ${node.id}). Setting src to empty.`);
+            node.attributes.src = ''; // Set src to empty if asset is missing
+        }
+    }
+
+    // Method to clean up all generated Object URLs
+    // Use arrow function syntax to ensure 'this' context is correct when used as event listener
+    private cleanupObjectUrls = (): void => {
+        console.log(`[LocalAdapter] Cleaning up ${this.objectUrlMap.size} Object URLs before unload...`);
+        this.objectUrlMap.forEach((url, nodeId) => {
+            URL.revokeObjectURL(url);
+            // console.log(`[LocalAdapter] Revoked Object URL for node ${nodeId}`);
+        });
+        this.objectUrlMap.clear();
+        console.log('[LocalAdapter] Object URL map cleared.');
+    };
 
     // --- Context Methods ---
 
@@ -303,6 +401,10 @@ interface KartaDB extends idb.DBSchema {
     contexts: {
         key: NodeId;
         value: StorableContext; // Stores relative StorableViewNodes and StorableViewportSettings
+    };
+    assets: { // New store for binary asset data
+        key: string; // assetId (usually the nodeId of the image node)
+        value: AssetData; // { blob: Blob, mimeType: string, name: string }
     };
 }
 

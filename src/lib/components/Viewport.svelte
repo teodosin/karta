@@ -36,8 +36,9 @@
 	 setSelectedNodes,
 	 toggleSelection,
 	 // Imports for Paste/Drop
-	 createImageNodeFromDataUrl,
-	 createTextNodeFromPaste
+	 // createImageNodeFromDataUrl, // Replaced by createImageNodeWithAsset
+	 createTextNodeFromPaste,
+	 createImageNodeWithAsset // Import the new function
 	 } from '$lib/karta/KartaStore';
 	 import NodeWrapper from './NodeWrapper.svelte';
 	 import EdgeLayer from './EdgeLayer.svelte';
@@ -83,19 +84,8 @@
 	// $: outlineWidth = currentScale > 0 ? desiredScreenOutlineWidth / currentScale : desiredScreenOutlineWidth; // REMOVED
 
 	// --- Helper Functions ---
-
-	// Helper function to read file as Data URL using Promise
-	function readFileAsDataURL(file: File): Promise<string> {
-		return new Promise((resolve, reject) => {
-			const reader = new FileReader();
-			reader.onload = () => resolve(reader.result as string);
-			reader.onerror = (error) => reject(error);
-			reader.readAsDataURL(file);
-		});
-	}
-
-	// Helper function to get image dimensions from a Data URL
-	function getImageDimensions(dataUrl: string): Promise<{ width: number; height: number }> {
+	// Helper function to get image dimensions from an Object URL or Data URL
+	function getImageDimensionsFromUrl(url: string): Promise<{ width: number; height: number }> {
 		return new Promise((resolve, reject) => {
 			const img = new Image();
 			img.onload = () => {
@@ -106,7 +96,7 @@
 				// Fallback to default dimensions if loading fails
 				resolve({ width: 100, height: 100 }); // Or use registry defaults?
 			};
-			img.src = dataUrl;
+			img.src = url;
 		});
 	}
 
@@ -531,12 +521,15 @@ async function handleDrop(e: DragEvent) {
    if (file) {
     console.log(`[Viewport] Dropped image file: ${file.name}`);
     try {
-    		const dataUrl = await readFileAsDataURL(file);
-    		const dimensions = await getImageDimensions(dataUrl);
-    		const { x: canvasX, y: canvasY } = screenToCanvasCoordinates(e.clientX, e.clientY, rect);
-    		console.log(`[Viewport] Creating image node at canvas coords: (${canvasX}, ${canvasY}) with dimensions ${dimensions.width}x${dimensions.height}`);
-    		// Pass dimensions to the store action
-    		createImageNodeFromDataUrl({ x: canvasX, y: canvasY }, dataUrl, dimensions.width, dimensions.height);
+    		      // Create Object URL (must be revoked later if creation fails)
+    		      const objectUrl = URL.createObjectURL(file);
+    		      const assetName = file.name || 'Dropped Image';
+    		      const { x: canvasX, y: canvasY } = screenToCanvasCoordinates(e.clientX, e.clientY, rect);
+    		      // Get dimensions from the object URL
+    		      const dimensions = await getImageDimensionsFromUrl(objectUrl);
+    		      console.log(`[Viewport] Creating image node via asset at canvas coords: (${canvasX}, ${canvasY}) with dimensions ${dimensions.width}x${dimensions.height}`);
+    		      // Call the new store action, passing the Blob, Object URL, and dimensions
+    		      createImageNodeWithAsset({ x: canvasX, y: canvasY }, file, objectUrl, assetName, dimensions.width, dimensions.height);
     } catch (error) {
     	console.error('[Viewport] Error reading dropped file:', error);
     }
@@ -585,12 +578,15 @@ async function handlePaste(e: ClipboardEvent) {
    if (file) {
     console.log(`[Viewport] Pasted image file: ${file.name}`);
    try {
-    const dataUrl = await readFileAsDataURL(file);
-    const dimensions = await getImageDimensions(dataUrl);
-    console.log(`[Viewport] Creating image node from paste at canvas coords: (${pasteCanvasX}, ${pasteCanvasY}) with dimensions ${dimensions.width}x${dimensions.height}`);
-    // Pass dimensions to the store action
-    createImageNodeFromDataUrl({ x: pasteCanvasX, y: pasteCanvasY }, dataUrl, dimensions.width, dimensions.height);
-    	return; // Handle first image found
+            // Create Object URL (must be revoked later if creation fails)
+            const objectUrl = URL.createObjectURL(file);
+            const assetName = file.name || 'Pasted Image';
+            // Get dimensions from the object URL
+            const dimensions = await getImageDimensionsFromUrl(objectUrl);
+            console.log(`[Viewport] Creating image node via asset from paste at canvas coords: (${pasteCanvasX}, ${pasteCanvasY}) with dimensions ${dimensions.width}x${dimensions.height}`);
+            // Call the new store action, passing the Blob, Object URL, and dimensions
+            createImageNodeWithAsset({ x: pasteCanvasX, y: pasteCanvasY }, file, objectUrl, assetName, dimensions.width, dimensions.height);
+            return; // Handle first image found
     } catch (error) {
     	console.error('[Viewport] Error reading pasted file:', error);
     }

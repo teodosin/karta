@@ -94,6 +94,13 @@ export interface StorableContext {
     viewportSettings?: StorableViewportSettings;
 }
 
+// Represents the data stored for a binary asset (like an image)
+export interface AssetData {
+    blob: Blob;
+    mimeType: string;
+    name: string; // Original filename or generated name
+}
+
 // Interface for defining editable properties for nodes in the Properties Panel
 export interface PropertyDefinition {
   key: string; // Corresponds to a key in DataNode.attributes
