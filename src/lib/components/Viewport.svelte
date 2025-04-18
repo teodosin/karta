@@ -643,8 +643,8 @@ class="karta-viewport-container w-full h-screen overflow-hidden relative cursor-
                 {/if}
             {/each}
         {/if}
-		<!-- Selection Box (conditionally rendered for multi-select) - Moved INSIDE transformed canvas -->
-		{#if $selectedNodeIds.size > 1}
+		<!-- Selection Box (now always mounted, internal logic handles visibility) - Moved INSIDE transformed canvas -->
+		{#if true} <!-- Wrap in valid block to fix {@const} placement -->
 			{@const currentScaleValue = viewTransform.current.scale}
 			{@const invScaleValue = currentScaleValue > 0 ? 1 / currentScaleValue : 1}
 			{@const outlineWidthValue = currentScaleValue > 0 ? desiredScreenOutlineWidth / currentScaleValue : desiredScreenOutlineWidth}

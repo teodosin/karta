@@ -460,28 +460,32 @@ console.log('[Selection] Set:', Array.from(idsToSelect));
 
 /** Deselects a specific node. */
 export function deselectNode(nodeId: NodeId) {
-selectedNodeIds.update(currentSelection => {
-const deleted = currentSelection.delete(nodeId);
-if (deleted) {
-console.log('[Selection] Deselected:', nodeId, ' New selection:', Array.from(currentSelection));
-return new Set(currentSelection); // Return new Set to trigger update
-}
-return currentSelection; // No change
-});
+	selectedNodeIds.update(currentSelection => {
+		if (!currentSelection.has(nodeId)) {
+			return currentSelection; // No change needed
+		}
+		// Create a new Set without the specified nodeId
+		const nextSelection = new Set(currentSelection);
+		nextSelection.delete(nodeId);
+		console.log('[Selection] Deselected:', nodeId, ' New selection:', Array.from(nextSelection));
+		return nextSelection; // Return the new Set
+	});
 }
 
 /** Toggles the selection state of a single node. */
 export function toggleSelection(nodeId: NodeId) {
-selectedNodeIds.update(currentSelection => {
-    if (currentSelection.has(nodeId)) {
-        currentSelection.delete(nodeId);
-        console.log('[Selection] Toggled OFF:', nodeId, ' New selection:', Array.from(currentSelection));
-    } else {
-        currentSelection.add(nodeId);
-        console.log('[Selection] Toggled ON:', nodeId, ' New selection:', Array.from(currentSelection));
-    }
-    return new Set(currentSelection); // Return new Set to trigger update
-});
+	selectedNodeIds.update(currentSelection => {
+		// Create a new Set based on the current one
+		const nextSelection = new Set(currentSelection);
+		if (nextSelection.has(nodeId)) {
+			nextSelection.delete(nodeId); // Modify the new Set
+			console.log('[Selection] Toggled OFF:', nodeId, ' New selection:', Array.from(nextSelection));
+		} else {
+			nextSelection.add(nodeId); // Modify the new Set
+			console.log('[Selection] Toggled ON:', nodeId, ' New selection:', Array.from(nextSelection));
+		}
+		return nextSelection; // Return the new Set
+	});
 }
 
 // Node Creation

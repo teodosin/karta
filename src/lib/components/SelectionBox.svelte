@@ -9,7 +9,12 @@
 	const selectionBounds = derived(
 		[selectedNodeIds, currentViewNodes], // Depend on the stores
 		([$selectedNodeIds, $currentViewNodes]) => { // Get store values in callback
-			if ($selectedNodeIds.size <= 1) {
+			console.log('[SelectionBox Derived] Running...'); // DEBUG
+			console.log('[SelectionBox Derived] Selected IDs:', $selectedNodeIds); // DEBUG
+			console.log('[SelectionBox Derived] Current View Nodes:', $currentViewNodes); // DEBUG
+			const size = $selectedNodeIds.size;
+			if (size === 0) { // Handle empty selection
+				console.log('[SelectionBox Derived] Size is 0, returning null.'); // DEBUG
 				return null;
 			}
 
@@ -17,7 +22,9 @@
 			let nodesInData: { id: string; initialViewNode: ViewNode }[] = [];
 
 			$selectedNodeIds.forEach(id => {
+				console.log(`[SelectionBox Derived] Checking ID: ${id}`); // DEBUG
 				const viewNode = $currentViewNodes.get(id); // Use .get() on the Map value
+				console.log(`[SelectionBox Derived] Found viewNode for ${id}:`, viewNode); // DEBUG
 				if (viewNode) {
 					const state = viewNode.state.current;
 					const halfWidth = state.width / 2;
@@ -30,10 +37,16 @@
 				}
 			});
 
-			if (nodesInData.length > 1) {
-				return { minX, minY, maxX, maxY, width: maxX - minX, height: maxY - minY, nodesInData };
+			// Check if any valid nodes were found (might be empty if IDs exist but nodes don't)
+			if (nodesInData.length === 0) {
+				console.log('[SelectionBox Derived] nodesInData is empty, returning null.'); // DEBUG
+				return null;
 			}
-			return null;
+
+			// Always return bounds if at least one node is selected
+			const bounds = { minX, minY, maxX, maxY, width: maxX - minX, height: maxY - minY, nodesInData };
+			console.log('[SelectionBox Derived] Returning bounds:', bounds); // DEBUG
+			return bounds;
 		}
 	);
 
@@ -47,7 +60,8 @@
 	function handleResizePointerDown(event: PointerEvent, handlePosition: 'tl' | 'tr' | 'bl' | 'br') {
 		// Access derived value directly
 		const boundsData = get(selectionBounds); // Use get() to access store value outside reactive context
-        if (!boundsData || boundsData.nodesInData.length <= 1) return;
+		// Only check if boundsData exists (meaning at least one node is selected)
+		if (!boundsData) return;
 
 		event.stopPropagation(); // Prevent viewport panning etc.
 
@@ -60,47 +74,49 @@
 
 </script>
 
-{#if $selectionBounds} <!-- Use canvas bounds directly -->
-	{@const bounds = $selectionBounds} <!-- Use canvas bounds -->
-	<!-- Bounding Box Visual -->
+{#if $selectionBounds}
+	{@const bounds = $selectionBounds}
+	{@const numSelected = $selectedNodeIds.size} <!-- Get size for conditional rendering -->
+
+	<!-- Bounding Box Visual (Only for multi-select) -->
+	{#if numSelected > 1} <!-- Reverted: Dashed box only for multi-select -->
+		<div
+			class="selection-box absolute pointer-events-none"
+			style:left="{bounds.minX}px"
+			style:top="{bounds.minY}px"
+			style:width="{bounds.width}px"
+			style:height="{bounds.height}px"
+			style:border-width="{canvasOutlineWidth}px"
+			aria-hidden="true"
+		>
+		</div>
+	{/if}
+
+	<!-- Resize Handles (For single and multi-select) - Positioned directly -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
-		class="selection-box absolute pointer-events-none"
-		style:left="{bounds.minX}px"
-		style:top="{bounds.minY}px"
-		style:width="{bounds.width}px"
-		style:height="{bounds.height}px"
-		style:border-width="{canvasOutlineWidth}px"
-		aria-hidden="true"
-	>
-	<!-- Position/Size based on canvas coordinates -->
-	<!-- Border width calculated for scale invariance -->
-	<!-- DEBUG removed -->
-		<!-- Resize Handles -->
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div
-			class="resize-handle top-left"
-			style="left: 0; top: 0; transform: translate(-50%, -50%) scale({inverseScale});"
-			on:pointerdown={(e) => handleResizePointerDown(e, 'tl')}
-		/>
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div
-			class="resize-handle top-right"
-			style="left: 100%; top: 0; transform: translate(-50%, -50%) scale({inverseScale});"
-			on:pointerdown={(e) => handleResizePointerDown(e, 'tr')}
-		/>
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div
-			class="resize-handle bottom-left"
-			style="left: 0; top: 100%; transform: translate(-50%, -50%) scale({inverseScale});"
-			on:pointerdown={(e) => handleResizePointerDown(e, 'bl')}
-		/>
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div
-			class="resize-handle bottom-right"
-			style="left: 100%; top: 100%; transform: translate(-50%, -50%) scale({inverseScale});"
-			on:pointerdown={(e) => handleResizePointerDown(e, 'br')}
-		/>
-	</div>
+		class="resize-handle top-left"
+		style="left: {bounds.minX}px; top: {bounds.minY}px; transform: translate(-50%, -50%) scale({inverseScale});"
+		on:pointerdown={(e) => handleResizePointerDown(e, 'tl')}
+	/>
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div
+		class="resize-handle top-right"
+		style="left: {bounds.maxX}px; top: {bounds.minY}px; transform: translate(-50%, -50%) scale({inverseScale});"
+		on:pointerdown={(e) => handleResizePointerDown(e, 'tr')}
+	/>
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div
+		class="resize-handle bottom-left"
+		style="left: {bounds.minX}px; top: {bounds.maxY}px; transform: translate(-50%, -50%) scale({inverseScale});"
+		on:pointerdown={(e) => handleResizePointerDown(e, 'bl')}
+	/>
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div
+		class="resize-handle bottom-right"
+		style="left: {bounds.maxX}px; top: {bounds.maxY}px; transform: translate(-50%, -50%) scale({inverseScale});"
+		on:pointerdown={(e) => handleResizePointerDown(e, 'br')}
+	/>
 {/if}
 
 <style>
@@ -110,6 +126,8 @@
 		/* border-width is now set inline */
 		z-index: 50; /* Above properties panel (z-40) */
 	}
+
+	/* .handles-container style removed */
 
 	/* Copied from NodeWrapper - consider abstracting */
 	.resize-handle {
