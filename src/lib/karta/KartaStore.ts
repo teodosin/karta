@@ -873,6 +873,8 @@ export async function switchContext(newContextId: NodeId, isUndoRedo: boolean = 
     const oldContextId = get(currentContextId);
     if (newContextId === oldContextId) return; // No change
 
+    clearSelection(); // Clear selection when switching context
+
     // --- History Management ---
     if (!isUndoRedo) {
         historyStack.update(stack => [...stack, oldContextId]);
