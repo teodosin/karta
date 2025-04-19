@@ -111,33 +111,33 @@
 		class="resize-handle top-left"
 		style="left: {bounds.minX}px; top: {bounds.minY}px; transform: translate(-50%, -50%) scale({inverseScale});"
 		on:pointerdown={(e) => handleResizePointerDown(e, 'tl')}
-	/>
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	></div>
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="resize-handle top-right"
 		style="left: {bounds.maxX}px; top: {bounds.minY}px; transform: translate(-50%, -50%) scale({inverseScale});"
 		on:pointerdown={(e) => handleResizePointerDown(e, 'tr')}
-	/>
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	></div>
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="resize-handle bottom-left"
 		style="left: {bounds.minX}px; top: {bounds.maxY}px; transform: translate(-50%, -50%) scale({inverseScale});"
 		on:pointerdown={(e) => handleResizePointerDown(e, 'bl')}
-	/>
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	></div>
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="resize-handle bottom-right"
 		style="left: {bounds.maxX}px; top: {bounds.maxY}px; transform: translate(-50%, -50%) scale({inverseScale});"
 		on:pointerdown={(e) => handleResizePointerDown(e, 'br')}
-	/>
+	></div>
 
 	<!-- Connection Handle (Bottom Center) -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="connection-handle"
-		style="left: {bounds.minX + bounds.width / 2}px; top: {bounds.maxY}px; transform: translate(-50%, 50%) scale({inverseScale});"
+		style="left: {bounds.minX + bounds.width / 2}px; top: {bounds.maxY + 25}px; transform: translate(-50%, 100%) scale({inverseScale});"
 		on:pointerdown={handleConnectStart}
-	/>
+	></div>
 {/if}
 
 <style>
