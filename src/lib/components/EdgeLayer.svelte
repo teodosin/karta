@@ -11,7 +11,7 @@
         currentContextId, // Need current context ID again
         // Removed currentTransformTweens import
         isConnecting,
-        connectionSourceNodeId,
+        connectionSourceNodeIds, // Use the array store
         tempLineTargetPosition
     } from '$lib/karta/KartaStore';
     import type { NodeId } from '../types/types'; // Import from types.ts
@@ -20,24 +20,6 @@
 	// Get the current context object reactively
 	   $: currentCtx = $contexts.get($currentContextId);
 
-    // Reactive calculation for the temporary line
-    $: tempLinePath = (() => {
-        if (!$isConnecting) return null;
-
-        const sourceId = $connectionSourceNodeId;
-        // Get ViewNode from the current context
-        const sourceViewNode = sourceId ? currentCtx?.viewNodes.get(sourceId) : null;
-        const targetPos = $tempLineTargetPosition;
-
-        if (sourceViewNode && targetPos) {
-            // Calculate center based on the ViewNode's state tween
-            const sourceState = sourceViewNode.state.current;
-            const sourceX = sourceState.x; // Use center X directly
-            const sourceY = sourceState.y; // Use center Y directly
-            return `M ${sourceX} ${sourceY} L ${targetPos.x} ${targetPos.y}`;
-        }
-        return null;
-    })();
 
 </script>
 
@@ -66,13 +48,21 @@
 	           {/if}
     {/each}
 
-	<!-- Temporary connection line -->
-    {#if tempLinePath}
-        <path
-            class="temp-edge"
-            d={tempLinePath}
-        />
-    {/if}
+	<!-- Temporary connection line(s) -->
+	{#if $isConnecting && $tempLineTargetPosition}
+		{#each $connectionSourceNodeIds as sourceId (sourceId)}
+			{@const sourceViewNode = currentCtx?.viewNodes.get(sourceId)}
+			{#if sourceViewNode}
+				{@const sourceState = sourceViewNode.state.current}
+				{@const sourceX = sourceState.x}
+				{@const sourceY = sourceState.y}
+				<path
+					class="temp-edge"
+					d={`M ${sourceX} ${sourceY} L ${$tempLineTargetPosition.x} ${$tempLineTargetPosition.y}`}
+				/>
+			{/if}
+		{/each}
+	{/if}
 </svg>
 
 <style>

@@ -16,8 +16,9 @@
     {#each [
         { tool: 'move', label: 'Move Tool', icon: MousePointer2, instance: MoveTool },
         { tool: 'connect', label: 'Connect Tool', icon: Workflow, instance: ConnectTool },
-        { tool: 'context', label: 'Context Tool', icon: Focus, instance: ContextTool }
+        { tool: 'context', label: 'Context Tool', icon: Focus, instance: ContextTool } // Removed trailing comma
       ] as item (item.tool)}
+        {#if item.tool !== 'connect'} <!-- Temporarily hide connect tool button -->
         <div class="relative group"> <!-- Container for tooltip positioning -->
             <button
                 type="button"
@@ -39,7 +40,8 @@
                     {item.label}
                 </span>
             </button>
-        </div>
+        </div> <!-- End of the div.relative.group -->
+        {/if} <!-- End of the if block -->
     {/each}
     <!-- TODO: Add Reset View/All later -->
 </div>

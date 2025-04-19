@@ -33,7 +33,7 @@ export const contexts = writable<Map<NodeId, Context>>(new Map());
 export const currentContextId = writable<NodeId>(ROOT_NODE_ID);
 export const currentTool = writable<Tool>(new MoveTool());
 export const isConnecting = writable<boolean>(false);
-export const connectionSourceNodeId = writable<NodeId | null>(null);
+export const connectionSourceNodeIds = writable<NodeId[]>([]); // Changed to array
 export const tempLineTargetPosition = writable<{ x: number; y: number } | null>(null);
 // Removed currentTransformTweens store
 export const selectedNodeIds = writable<Set<NodeId>>(new Set());
@@ -946,31 +946,50 @@ export async function updateNodeAttributes(nodeId: NodeId, newAttributes: Record
 }
 
 // Connection Process Helpers
-export function startConnectionProcess(nodeId: NodeId) {
-    if (get(currentTool)?.name !== 'connect' || get(isConnecting)) return;
-    const contextId = get(currentContextId);
-    const context = get(contexts).get(contextId);
-    const sourceViewNode = context?.viewNodes.get(nodeId); // This is ViewNode { id, state: Tween }
-    if (sourceViewNode) {
-        isConnecting.set(true);
-        connectionSourceNodeId.set(nodeId);
-        // Access position/dimensions via the tween's current state
-        const sourceState = sourceViewNode.state.current;
-        const startX = sourceState.x + sourceState.width / 2;
-        const startY = sourceState.y + sourceState.height / 2;
-        tempLineTargetPosition.set({ x: startX, y: startY });
-        console.log("Starting connection from:", nodeId);
-    } else {
-        console.warn(`Cannot start connection: ViewNode ${nodeId} not found in current context ${contextId}`);
-    }
+export function startConnectionProcess(sourceIds: NodeId[]) {
+	// Removed tool check: if (get(currentTool)?.name !== 'connect' || get(isConnecting)) return;
+	if (get(isConnecting) || sourceIds.length === 0) return; // Prevent starting if already connecting or no sources
+	const contextId = get(currentContextId);
+	const nodes = get(currentViewNodes); // Use currentViewNodes for simpler access
+	// Check if all source nodes exist in the current view (optional, but good practice)
+	const allSourcesExist = sourceIds.every(id => nodes.has(id));
+	if (allSourcesExist) {
+		isConnecting.set(true);
+		connectionSourceNodeIds.set(sourceIds); // Set the array of source IDs
+		// Initialize temp line position slightly offset from the first source node? Or handle in EdgeLayer?
+		// For now, let EdgeLayer handle initial position based on source node centers.
+		tempLineTargetPosition.set(null); // Ensure it starts null
+		console.log(`[KartaStore] Starting connection from node(s): ${sourceIds.join(', ')}`);
+	} else {
+		console.warn(`[KartaStore] Could not start connection: One or more source nodes not found in context ${contextId}`);
+	}
 }
 export function updateTempLinePosition(canvasX: number, canvasY: number) { if (get(isConnecting)) tempLineTargetPosition.set({x: canvasX, y: canvasY}); }
 export function finishConnectionProcess(targetNodeId: NodeId | null) {
-    if (!get(isConnecting)) return;
-    const sourceId = get(connectionSourceNodeId);
-    if (sourceId && targetNodeId) createEdge(sourceId, targetNodeId);
-    else console.log("Connection cancelled.");
-    isConnecting.set(false); connectionSourceNodeId.set(null); tempLineTargetPosition.set(null);
+	if (!get(isConnecting)) return;
+	const sourceIds = get(connectionSourceNodeIds);
+	if (targetNodeId) {
+		// Check if target node exists (optional but good practice)
+		const nodes = get(currentViewNodes); // Use currentViewNodes
+		if (nodes.has(targetNodeId)) {
+			console.log(`[KartaStore] Finishing connection to target node: ${targetNodeId}`);
+			// Create edge(s)
+			sourceIds.forEach(sourceId => {
+				if (sourceId !== targetNodeId) { // Prevent self-connection for each source
+					createEdge(sourceId, targetNodeId); // Call existing createEdge
+				} else {
+					console.log(`[KartaStore] Skipping self-connection for node: ${sourceId}`);
+				}
+			});
+			// Note: The original 'else' block after createEdge seemed misplaced/empty, removed it.
+		} else {
+			console.log(`[KartaStore] Connection cancelled: Target node ${targetNodeId} not found.`);
+		}
+	}
+	else console.log("Connection cancelled.");
+	isConnecting.set(false);
+	connectionSourceNodeIds.set([]); // Reset to empty array
+	tempLineTargetPosition.set(null);
 }
 export function cancelConnectionProcess() { finishConnectionProcess(null); }
 

@@ -1,7 +1,12 @@
 <script lang="ts">
 	import { derived, get } from 'svelte/store'; // Use Svelte 4 derived/get
-	import { selectedNodeIds, currentViewNodes } from '$lib/karta/KartaStore'; // Removed currentViewTransform import
+	import {
+		selectedNodeIds,
+		currentViewNodes,
+		startConnectionProcess // Import the action to start connection
+	} from '$lib/karta/KartaStore';
 	import { startResize } from '$lib/interaction/ResizeLogic';
+	import type { NodeId } from '$lib/types/types';
 	import type { ViewNode } from '$lib/types/types'; // Removed ViewportSettings, onMount
 
 	// Svelte 5: Use $derived rune
@@ -72,6 +77,14 @@
 		startResize(event, handlePosition, primaryNodeId, boundsData.nodesInData);
 	}
 
+	function handleConnectStart(event: PointerEvent) {
+		event.stopPropagation(); // Prevent viewport panning etc.
+		const currentSelectedIds = get(selectedNodeIds); // Get the Set of IDs
+		if (currentSelectedIds.size > 0) {
+			startConnectionProcess(Array.from(currentSelectedIds)); // Pass IDs as an array
+		}
+	}
+
 </script>
 
 {#if $selectionBounds}
@@ -117,6 +130,14 @@
 		style="left: {bounds.maxX}px; top: {bounds.maxY}px; transform: translate(-50%, -50%) scale({inverseScale});"
 		on:pointerdown={(e) => handleResizePointerDown(e, 'br')}
 	/>
+
+	<!-- Connection Handle (Bottom Center) -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div
+		class="connection-handle"
+		style="left: {bounds.minX + bounds.width / 2}px; top: {bounds.maxY}px; transform: translate(-50%, 50%) scale({inverseScale});"
+		on:pointerdown={handleConnectStart}
+	/>
 {/if}
 
 <style>
@@ -145,4 +166,16 @@
 	.resize-handle.top-right { cursor: nesw-resize; }
 	.resize-handle.bottom-left { cursor: nesw-resize; }
 	.resize-handle.bottom-right { cursor: nwse-resize; }
+
+	.connection-handle {
+		position: absolute;
+		width: 12px; /* Slightly larger? */
+		height: 12px;
+		background-color: #f59e0b; /* Tailwind amber-500 */
+		border: 1px solid white;
+		border-radius: 50%; /* Circle */
+		z-index: 51; /* Above selection box, same as resize handles */
+		pointer-events: auto;
+		cursor: crosshair;
+	}
 </style>

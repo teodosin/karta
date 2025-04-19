@@ -8,7 +8,7 @@
 <script lang="ts">
 	import { get } from 'svelte/store';
 	import { onMount, onDestroy } from 'svelte'; // Added onDestroy
-	import {
+	import { // Svelte 4: Use imports
 		viewTransform, // Keep the Tween object
 		screenToCanvasCoordinates,
 		nodes,
@@ -16,6 +16,9 @@
 		currentContextId,
 		currentTool,
 		cancelConnectionProcess,
+		isConnecting, // Import connection state
+		updateTempLinePosition, // Import action
+		finishConnectionProcess, // Import action
 		// Create Node Menu
 		isCreateNodeMenuOpen,
 		createNodeMenuPosition,
@@ -104,6 +107,40 @@
 	}
 
 	// --- Event Handlers ---
+
+	// --- Connection Drag Handlers (Global Listeners) ---
+	function handleConnectionPointerMove(event: PointerEvent) {
+		if (!get(isConnecting) || !canvasContainer) return; // Check if connecting and container exists
+		// console.log('Global Connection Pointer Move'); // DEBUG
+		const rect = canvasContainer.getBoundingClientRect();
+		const { x: canvasX, y: canvasY } = screenToCanvasCoordinates(event.clientX, event.clientY, rect);
+		updateTempLinePosition(canvasX, canvasY);
+	}
+
+	function handleConnectionPointerUp(event: PointerEvent) {
+		if (!get(isConnecting) || event.button !== 0) return; // Only primary button release
+		// console.log('Global Connection Pointer Up'); // DEBUG
+
+		let targetNodeId: string | null = null;
+		let currentElement: HTMLElement | null = event.target as HTMLElement;
+
+		// Traverse up DOM to find a node element with data-id
+		while (currentElement) {
+			if (currentElement.dataset?.id && currentElement.classList.contains('node-wrapper')) {
+				targetNodeId = currentElement.dataset.id;
+				break; // Found it
+			}
+			// Stop if we hit the canvas container or body
+			if (currentElement === document.body || currentElement === canvasContainer) {
+				break;
+			}
+			currentElement = currentElement.parentElement;
+		}
+
+		finishConnectionProcess(targetNodeId); // KartaStore handles state reset and edge creation
+		// Listeners are removed by the $effect cleanup
+	}
+
 
 // --- Event Handlers ---
 	function handleWheel(e: WheelEvent) {
@@ -479,6 +516,13 @@ function handleKeyDown(e: KeyboardEvent) {
 	}
 
 	function handleContextMenu(e: MouseEvent) {
+		// Prevent context menu if currently connecting
+		if (get(isConnecting)) {
+			e.preventDefault();
+			cancelConnectionProcess(); // Cancel connection on right-click
+			return;
+		}
+
 		e.preventDefault(); // Prevent default browser context menu
 
 		const targetElement = e.target as HTMLElement;
@@ -529,8 +573,36 @@ function handleKeyDown(e: KeyboardEvent) {
    window.removeEventListener('pointerdown', handleClickOutsideContextMenu);
   };
     });
-
-// --- Paste/Drop Handlers ---
+   
+    // --- Lifecycle & Effects ---
+   
+    // Effect to manage global listeners for connection drag
+    // Svelte 5: Use $effect rune
+    // Svelte 4: Use $: reactive statement with a function call or onMount/onDestroy
+    $: { // Reactive block for Svelte 4 effect simulation
+    	if (typeof window !== 'undefined') { // Ensure runs only in browser
+    		if ($isConnecting) {
+    			// console.log('Effect: Adding connection listeners'); // DEBUG
+    			window.addEventListener('pointermove', handleConnectionPointerMove);
+    			window.addEventListener('pointerup', handleConnectionPointerUp);
+    		} else {
+    			// console.log('Effect: Removing connection listeners'); // DEBUG
+    			window.removeEventListener('pointermove', handleConnectionPointerMove);
+    			window.removeEventListener('pointerup', handleConnectionPointerUp);
+    		}
+    	}
+    }
+   
+    // Ensure listeners are removed on component destroy
+    onDestroy(() => {
+    	if (typeof window !== 'undefined') {
+    		window.removeEventListener('pointermove', handleConnectionPointerMove);
+    		window.removeEventListener('pointerup', handleConnectionPointerUp);
+    		// Remove any other global listeners added here
+    	}
+    });
+   
+    // --- Paste/Drop Handlers ---
 
 function handleDragOver(e: DragEvent) {
  e.preventDefault(); // Necessary to allow dropping
