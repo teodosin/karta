@@ -1,5 +1,5 @@
 import type { Tool, NodeId } from '$lib/types/types';
-import { switchContext } from '$lib/karta/ContextStore'; // Import the action from ContextStore
+import { switchContext } from '$lib/karta/KartaStore'; // Import the action
 
 export class ContextTool implements Tool {
     readonly name = 'context';

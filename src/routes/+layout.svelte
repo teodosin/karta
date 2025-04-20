@@ -1,14 +1,10 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import '../app.css';
-	import { initializeStores } from '$lib/karta/initialize'; // Import the initialization function
 
 	let { children } = $props();
 
 	onMount(() => {
-		// Initialize the Karta stores
-		initializeStores();
-
 		const handleGlobalKeyDown = (event: KeyboardEvent) => {
 			// Prevent default focus cycling for Tab key globally
 			if (event.key === 'Tab') {

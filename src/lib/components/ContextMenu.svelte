@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { ContextMenuContextType } from '$lib/karta/UIStateStore'; // Import the type from UIStateStore
-	import { closeContextMenu } from '$lib/karta/UIStateStore'; // Import close action from UIStateStore
+	import type { ContextMenuContextType } from '$lib/karta/KartaStore'; // Import the type if needed for items later
+	import { closeContextMenu } from '$lib/karta/KartaStore'; // Import close action
 
 	// Props
 	export let position: { x: number; y: number } | null = null; // Expects screen coordinates

@@ -38,7 +38,7 @@
 <script lang="ts">
 	// INSTANCE SCRIPT
 	import type { DataNode, ViewNode } from '$lib/types/types';
-	import { currentContextId } from '$lib/karta/ContextStore'; // Import from ContextStore
+	import { currentContextId } from '$lib/karta/KartaStore';
 	import { onMount } from 'svelte';
 	import { localAdapter } from '$lib/util/LocalAdapter'; // Import localAdapter
 

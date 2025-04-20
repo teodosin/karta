@@ -5,16 +5,21 @@
 // Keep this focused on display logic; avoid editor-specific features.
 -->
 <script lang="ts">
-	import { get } from 'svelte/store';
-	import type { NodeId } from '../types/types'; // Import from types.ts
-
-	// Import from new store modules
-	import { edges } from '$lib/karta/EdgeStore';
-	import { contexts, currentContextId } from '$lib/karta/ContextStore';
-	import { isConnecting, connectionSourceNodeIds, tempLineTargetPosition } from '$lib/karta/ToolStore';
+	import {
+        edges,
+        contexts, // Need contexts store again
+        currentContextId, // Need current context ID again
+        // Removed currentTransformTweens import
+        isConnecting,
+        connectionSourceNodeIds, // Use the array store
+        tempLineTargetPosition
+    } from '$lib/karta/KartaStore';
+    import type { NodeId } from '../types/types'; // Import from types.ts
+    import { get } from 'svelte/store';
 
 	// Get the current context object reactively
-	$: currentCtx = $contexts.get($currentContextId);
+	   $: currentCtx = $contexts.get($currentContextId);
+
 
 </script>
 

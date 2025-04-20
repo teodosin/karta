@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { currentTool, setTool } from '$lib/karta/ToolStore'; // Import from ToolStore
+    import { currentTool, setTool } from '$lib/karta/KartaStore';
     // Tool instances are used for instanceof checks
     import { MoveTool } from '$lib/tools/MoveTool';
     import { ConnectTool } from '$lib/tools/ConnectTool';

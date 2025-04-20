@@ -36,8 +36,7 @@
 <script lang="ts">
 	// INSTANCE SCRIPT
 	import type { DataNode, ViewNode } from '$lib/types/types';
-	import { updateNodeAttributes } from '$lib/karta/NodeStore'; // Import from NodeStore
-	import { currentContextId } from '$lib/karta/ContextStore'; // Import from ContextStore
+	import { updateNodeAttributes, currentContextId } from '$lib/karta/KartaStore';
 	import { tick, onDestroy } from 'svelte'; // Import onDestroy
 
 	export let dataNode: DataNode;
