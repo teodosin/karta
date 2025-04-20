@@ -7,7 +7,10 @@
 -->
 <script lang="ts">
 	import type { DataNode, ViewNode } from '$lib/types/types';
-	import { currentContextId, updateNodeAttributes, selectedNodeIds, currentViewNodes, nodeRenameRequestId } from '$lib/karta/KartaStore'; // Import selectedNodeIds, currentViewNodes, and nodeRenameRequestId
+	import { currentContextId, currentViewNodes } from '$lib/karta/ContextStore'; // Import context-related stores
+	import { updateNodeAttributes } from '$lib/karta/NodeStore'; // Import node attribute action
+	import { selectedNodeIds } from '$lib/karta/SelectionStore'; // Import selection store
+	import { nodeRenameRequestId } from '$lib/karta/UIStateStore'; // Import rename request store
 	import { getNodeComponent } from '$lib/node_types/registry';
 	import { tick } from 'svelte';
 	import { fade } from 'svelte/transition'; // Import fade transition

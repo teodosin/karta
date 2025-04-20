@@ -7,45 +7,23 @@
 -->
 <script lang="ts">
 	import { get } from 'svelte/store';
-	import { onMount, onDestroy } from 'svelte'; // Added onDestroy
-	import { // Svelte 4: Use imports
-		viewTransform, // Keep the Tween object
-		screenToCanvasCoordinates,
-		nodes,
-		contexts,
-		currentContextId,
-		currentTool,
-		cancelConnectionProcess,
-		isConnecting, // Import connection state
-		updateTempLinePosition, // Import action
-		finishConnectionProcess, // Import action
-		// Create Node Menu
-		isCreateNodeMenuOpen,
-		createNodeMenuPosition,
-		openCreateNodeMenu,
-		closeCreateNodeMenu,
-		// Context Menu
-		isContextMenuOpen,
-		contextMenuPosition,
-		contextMenuContext,
-		openContextMenu,
-		closeContextMenu,
-		type ContextMenuContextType,
-		switchContext, // Action for 'Enter Context'
-		centerViewOnCanvasPoint, // Action for 'Center View' (used by centerOnFocalNode)
-		centerOnFocalNode, // Action for shortcut 'F'
-		frameContext, // <-- Import action for menu/shortcut 'Shift+F'
-		requestNodeRename, // Action for 'Rename'
-		// Selection
-		selectedNodeIds,
-		clearSelection,
-		setSelectedNodes,
-		toggleSelection,
-		currentViewNodes, // Store for node states in current context
-		// Paste/Drop
-		createTextNodeFromPaste,
-		createImageNodeWithAsset
-	} from '$lib/karta/KartaStore';
+	import { onMount, onDestroy } from 'svelte';
+
+	// Import from new store modules
+	import { viewTransform, screenToCanvasCoordinates, centerViewOnCanvasPoint, centerOnFocalNode, frameContext } from '$lib/karta/ViewportStore';
+	import { nodes, createTextNodeFromPaste, createImageNodeWithAsset } from '$lib/karta/NodeStore';
+	import { contexts, currentContextId, currentViewNodes, switchContext } from '$lib/karta/ContextStore';
+	import { currentTool, isConnecting, connectionSourceNodeIds, tempLineTargetPosition, startConnectionProcess, updateTempLinePosition, finishConnectionProcess, cancelConnectionProcess } from '$lib/karta/ToolStore'; // Assuming startConnectionProcess is moved here
+	import {
+		isCreateNodeMenuOpen, createNodeMenuPosition, openCreateNodeMenu, closeCreateNodeMenu,
+		isContextMenuOpen, contextMenuPosition, contextMenuContext, openContextMenu, closeContextMenu,
+		type ContextMenuContextType, // Import type from UIStateStore where it's defined
+		requestNodeRename
+	} from '$lib/karta/UIStateStore';
+	import { selectedNodeIds, clearSelection, setSelectedNodes, toggleSelection } from '$lib/karta/SelectionStore';
+	// HistoryStore imports are not directly needed in Viewport
+
+	// Component Imports
 	import NodeWrapper from './NodeWrapper.svelte';
 	import EdgeLayer from './EdgeLayer.svelte';
 	import CreateNodeMenu from './CreateNodeMenu.svelte'; // Import the menu component
