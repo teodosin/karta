@@ -36,7 +36,8 @@
 <script lang="ts">
 	// INSTANCE SCRIPT
 	import type { DataNode, ViewNode } from '$lib/types/types';
-	import { updateNodeAttributes, currentContextId } from '$lib/karta/KartaStore';
+	import { updateNodeAttributes } from '$lib/karta/NodeStore'; // Corrected import
+	import { currentContextId } from '$lib/karta/ContextStore'; // Corrected import
 	import { tick, onDestroy } from 'svelte'; // Import onDestroy
 
 	export let dataNode: DataNode;
@@ -90,6 +91,11 @@
 
 	$: if (isEditing && textAreaElement) {
 		adjustTextareaHeight(); // Adjust height when editing starts or text changes
+	}
+
+	// Synchronize editedText with textContent when not editing or when textContent changes
+	$: if (!isEditing) {
+		editedText = textContent;
 	}
 
 	// --- Click Outside Logic ---

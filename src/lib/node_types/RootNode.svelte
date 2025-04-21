@@ -37,7 +37,7 @@
 <script lang="ts">
 	// INSTANCE SCRIPT (runs for each component instance)
 	import type { DataNode, ViewNode } from '$lib/types/types';
-	import { currentContextId } from '$lib/karta/KartaStore';
+	import { currentContextId } from '$lib/karta/ContextStore'; // Corrected import
 	// Import BrainCog again for the template
 	import { BrainCog } from 'lucide-svelte';
 

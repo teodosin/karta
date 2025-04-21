@@ -105,3 +105,19 @@ export function requestNodeRename(nodeId: NodeId) {
     nodeRenameRequestId.set(nodeId);
     console.log(`[KartaStore] Requested rename for node ${nodeId}`);
 }
+// --- Subscription to link selection changes to properties panel visibility ---
+import { selectedNodeIds } from './SelectionStore';
+
+selectedNodeIds.subscribe(selectedIds => {
+	console.log(`[UIStateStore Sub] selectedNodeIds changed. Size: ${selectedIds.size}`);
+	if (selectedIds.size === 1) {
+		const selectedId = selectedIds.values().next().value;
+		console.log(`[UIStateStore Sub] Exactly one node selected: ${selectedId}. Setting properties panel node and visibility to true.`);
+		setPropertiesPanelNode(selectedId ?? null); // Use nullish coalescing for type safety
+		setPropertiesPanelVisibility(true);
+	} else {
+		console.log(`[UIStateStore Sub] ${selectedIds.size} nodes selected. Setting properties panel node to null and visibility to false.`);
+		setPropertiesPanelNode(null);
+		setPropertiesPanelVisibility(false);
+	}
+});

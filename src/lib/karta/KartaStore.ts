@@ -1061,7 +1061,7 @@ export async function switchContext(newContextId: NodeId, isUndoRedo: boolean = 
         // Only tween the viewport if settings were loaded for the context.
         // If undefined (meaning context was newly created), keep viewport as is.
         if (newViewportSettings !== undefined) {
-            viewTransform.set(newViewportSettings, { duration: VIEWPORT_TWEEN_DURATION });
+            viewTransform.set(newViewportSettings, { duration: 0 }); // Set duration to 0 to prevent tweening
         } else {
             console.log(`[switchContext] Context ${newContextId} was newly created or had no saved viewport; viewport position maintained.`);
         }
@@ -1314,22 +1314,4 @@ if (typeof window !== 'undefined' ) {
 }
 
 // --- Reactive Logic / Subscriptions ---
-
-// Automatically manage Properties Panel based on selection
-selectedNodeIds.subscribe(selectedIds => {
-	if (selectedIds.size === 1) {
-		const selectedId = selectedIds.values().next().value;
-		setPropertiesPanelNode(selectedId ?? null); // Use nullish coalescing for type safety
-		setPropertiesPanelVisibility(true);
-		console.log(`[Selection Sub] Properties panel shown for node: ${selectedId}`);
-	} else {
-		setPropertiesPanelNode(null);
-		setPropertiesPanelVisibility(false);
-		if (selectedIds.size === 0) {
-			console.log(`[Selection Sub] Properties panel hidden (no selection)`);
-		} else {
-			console.log(`[Selection Sub] Properties panel hidden (${selectedIds.size} nodes selected)`);
-		}
-	}
-});
 
