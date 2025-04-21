@@ -116,14 +116,11 @@ async function _loadAndProcessContext(
         finalViewNodes.set(contextId, { id: contextId, state: new Tween(correctedFocalInitialState, { duration: 0 }) });
         // For newly created contexts, don't set viewport settings yet.
         // Let the viewport remain where it is. Settings will be saved on first interaction/switch away.
-        finalViewportSettings = {
-            scale: 1,
-            posX: window.innerWidth / 2,
-            posY: window.innerHeight / 2
-        };
+        // For newly created contexts, don't set viewport settings here.
+        // Let finalViewportSettings remain undefined.
     }
 
-    	// --- Add Previous Focal Node (if context is new and applicable) ---
+     // --- Add Previous Focal Node (if context is new and applicable) ---
     	if (contextWasCreated) {
     		const currentHistory: NodeId[] = get(historyStack); // Explicitly type
     		const previousContextId = currentHistory.length > 0 ? currentHistory[currentHistory.length - 1] : null;
@@ -388,10 +385,17 @@ export async function switchContext(newContextId: NodeId, isUndoRedo: boolean = 
         _applyStoresUpdate(newContextId, processedContext, loadedDataNodes, loadedEdges);
 
         // --- Phase 4: Update Viewport ---
-        const newViewportSettings = processedContext.viewportSettings || DEFAULT_VIEWPORT_SETTINGS;
-        viewTransform.set(newViewportSettings, { duration: VIEWPORT_TWEEN_DURATION }); // Set instantly
+        // --- Phase 4: Update Viewport ---
+        // Only update the viewport if saved settings exist for the context.
+        // If processedContext.viewportSettings is undefined (newly created context),
+        // the viewport should remain unchanged.
+        if (processedContext.viewportSettings !== undefined) {
+            viewTransform.set(processedContext.viewportSettings, { duration: VIEWPORT_TWEEN_DURATION }); // Restore tween duration
+            console.log(`[switchContext] Loaded viewport settings for context ${newContextId}. Applying with tween.`);
+        } else {
+            console.log(`[switchContext] Context ${newContextId} was newly created or had no saved viewport settings. Viewport position maintained.`);
+        }
 
-        // Move this console log inside the try block where initialDataNode is defined
         console.log(`[switchContext] Successfully switched to context ${newContextId}`);
 
     } catch (error) {
