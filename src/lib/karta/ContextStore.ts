@@ -1,0 +1,541 @@
+import { writable, get, derived } from 'svelte/store';
+import { Tween } from 'svelte/motion';
+import { cubicOut } from 'svelte/easing';
+import { localAdapter } from '../util/LocalAdapter';
+import type { DataNode, KartaEdge, ViewNode, Context, NodeId, EdgeId, AbsoluteTransform, ViewportSettings, TweenableNodeState, StorableContext, StorableViewNode, StorableViewportSettings, Tool } from '../types/types'; // Added EdgeId and Tool
+import { getDefaultViewNodeStateForType } from '$lib/node_types/registry';
+import { nodes, _ensureDataNodeExists } from './NodeStore'; // Assuming NodeStore exports these
+import { edges } from './EdgeStore'; // Assuming EdgeStore exports this
+import { viewTransform, DEFAULT_VIEWPORT_SETTINGS, VIEWPORT_TWEEN_DURATION, DEFAULT_FOCAL_TRANSFORM } from './ViewportStore'; // Assuming ViewportStore exports these
+import { historyStack, futureStack } from './HistoryStore'; // Assuming HistoryStore exports these
+import { clearSelection } from './SelectionStore'; // Assuming SelectionStore exports these
+import { propertiesPanelPosition, setPropertiesPanelNode, setPropertiesPanelVisibility } from './UIStateStore'; // Assuming UIStateStore exports these
+import { setTool, currentTool, initializeTools } from './ToolStore'; // Assuming ToolStore exports these and initializeTools
+
+
+// Define the Root Node ID
+export const ROOT_NODE_ID = '00000000-0000-0000-0000-000000000000';
+
+// Constants
+const NODE_TWEEN_DURATION = 250; // Duration for node transitions
+const NODE_TWEEN_OPTIONS = { duration: NODE_TWEEN_DURATION, easing: cubicOut };
+
+// Stores
+export const contexts = writable<Map<NodeId, Context>>(new Map());
+export const currentContextId = writable<NodeId>(ROOT_NODE_ID);
+
+// Derived Store for Current Context's ViewNodes
+export const currentViewNodes = derived(
+	[currentContextId, contexts],
+	([$currentContextId, $contexts]) => {
+		return $contexts.get($currentContextId)?.viewNodes ?? new Map<NodeId, ViewNode>();
+	}
+);
+
+// Internal Helper Functions
+async function _getFocalNodeInitialState(targetNodeId: NodeId, oldContext: Context | undefined): Promise<TweenableNodeState> {
+    const targetViewNodeInOldCtx = oldContext?.viewNodes.get(targetNodeId);
+
+    if (targetViewNodeInOldCtx) {
+        // Use existing state from the previous context
+        return { ...targetViewNodeInOldCtx.state.current }; // Return a copy
+    } else {
+        // Node not visible in old context, calculate defaults
+        console.log(`[_getFocalNodeInitialState] Node ${targetNodeId} not found in old context. Calculating defaults.`);
+        const dataNode = await _ensureDataNodeExists(targetNodeId); // Ensure DataNode exists to get ntype
+        const defaultState: { width: number; height: number; scale: number; rotation: number; } = dataNode ? getDefaultViewNodeStateForType(dataNode.ntype) : getDefaultViewNodeStateForType('generic'); // Fallback to generic
+
+        // Combine default placement with default dimensions/rotation
+        return {
+            ...DEFAULT_FOCAL_TRANSFORM, // Default x, y, scale
+            width: defaultState.width,
+            height: defaultState.height,
+            rotation: defaultState.rotation
+        };
+    }
+}
+
+async function _loadAndProcessContext(
+    contextId: NodeId,
+    focalInitialStateFromOldContext: TweenableNodeState, // Full initial state including dimensions
+    oldContext: Context | undefined // Previous context for potential tween reuse
+): Promise<{ finalContext: Context | undefined, wasCreated: boolean }> {
+
+    if (!localAdapter) return { finalContext: undefined, wasCreated: false };
+
+    const storableContext = await localAdapter.getContext(contextId);
+    let contextWasCreated = false;
+    const finalViewNodes = new Map<NodeId, ViewNode>();
+    let finalViewportSettings: ViewportSettings | undefined = undefined;
+
+    if (storableContext) {
+        // --- Context exists in DB ---
+        console.log(`[_loadAndProcessContext] Context ${contextId} loaded from DB.`);
+        // Convert StorableViewNodes to ViewNodes with Tweens, reusing old tweens if possible
+        for (const [nodeId, storableNode] of storableContext.viewNodes) {
+            // Extract only the placement part needed by _calculateTargetState
+            const focalPlacement: AbsoluteTransform = { x: focalInitialStateFromOldContext.x, y: focalInitialStateFromOldContext.y, scale: focalInitialStateFromOldContext.scale };
+            const targetState = _calculateTargetState(nodeId, contextId, focalPlacement, storableNode);
+            const existingViewNode = oldContext?.viewNodes.get(nodeId);
+
+            if (existingViewNode) {
+                existingViewNode.state.set(targetState, NODE_TWEEN_OPTIONS); // Update existing tween
+                finalViewNodes.set(nodeId, existingViewNode); // Reuse ViewNode object
+            } else {
+                // Create new ViewNode with a new Tween, starting from target state? Or current if exists? Start from target.
+                finalViewNodes.set(nodeId, { id: nodeId, state: new Tween(targetState, NODE_TWEEN_OPTIONS) });
+            }
+        }
+        // Convert stored viewport settings
+        finalViewportSettings = _convertStorableViewportSettings(storableContext.viewportSettings, finalViewNodes.get(contextId));
+
+    } else {
+        // --- Context needs creation ---
+        console.log(`[_loadAndProcessContext] Context ${contextId} not found in DB, creating new.`);
+        contextWasCreated = true;
+        const focalDataNode = await localAdapter.getNode(contextId);
+        if (!focalDataNode) throw new Error(`Cannot create context for non-existent node: ${contextId}`);
+        if (contextId === ROOT_NODE_ID) {
+             console.log(`[_loadAndProcessContext] Root context creation: Loaded focalDataNode ntype: ${focalDataNode.ntype}`);
+        }
+
+        // Create initial state and ViewNode for the focal node
+        // Use type-specific defaults for size/scale/rotation
+        if (contextId === ROOT_NODE_ID) {
+             console.log(`[_loadAndProcessContext] Root context creation: Getting default view state for ntype: ${focalDataNode.ntype}`);
+        }
+        // Use the state passed in, which already contains defaults or state from old context
+        const correctedFocalInitialState: TweenableNodeState = {
+             x: focalInitialStateFromOldContext.x,
+             y: focalInitialStateFromOldContext.y,
+             scale: focalInitialStateFromOldContext.scale,
+             rotation: focalInitialStateFromOldContext.rotation,
+             width: focalInitialStateFromOldContext.width, // Use width from old context/defaults
+             height: focalInitialStateFromOldContext.height // Use height from old context/defaults
+        };
+        finalViewNodes.set(contextId, { id: contextId, state: new Tween(correctedFocalInitialState, { duration: 0 }) });
+        // For newly created contexts, don't set viewport settings yet.
+        // Let the viewport remain where it is. Settings will be saved on first interaction/switch away.
+        finalViewportSettings = {
+            scale: 1,
+            posX: window.innerWidth / 2,
+            posY: window.innerHeight / 2
+        };
+    }
+
+    	// --- Add Previous Focal Node (if context is new and applicable) ---
+    	if (contextWasCreated) {
+    		const currentHistory: NodeId[] = get(historyStack); // Explicitly type
+    		const previousContextId = currentHistory.length > 0 ? currentHistory[currentHistory.length - 1] : null;
+    		if (previousContextId && previousContextId !== contextId && !finalViewNodes.has(previousContextId)) {
+    			const previousFocalViewNode = oldContext?.viewNodes.get(previousContextId);
+    			if (previousFocalViewNode) {
+    				finalViewNodes.set(previousContextId, previousFocalViewNode);
+    			}
+    		}
+    	}
+
+    // --- Add Default Connected Nodes (if context didn't just load them) ---
+    // This ensures nodes connected *after* the context was last saved are still added by default
+    const directlyConnectedEdges = await localAdapter.getEdgesByNodeIds([contextId]);
+    const connectedNodeIdsToAdd = new Set<NodeId>();
+    for (const edge of directlyConnectedEdges.values()) {
+        const neighborId = edge.source === contextId ? edge.target : edge.source;
+        if (neighborId !== contextId && !finalViewNodes.has(neighborId)) {
+            connectedNodeIdsToAdd.add(neighborId);
+        }
+    }
+
+    if (connectedNodeIdsToAdd.size > 0) {
+        console.log(`[_loadAndProcessContext] Adding ${connectedNodeIdsToAdd.size} default connected nodes.`);
+        contextWasCreated = true; // Mark modified if defaults added
+        let defaultOffset = 150;
+        const angleIncrement = 360 / connectedNodeIdsToAdd.size;
+        let currentAngle = 0;
+        const focalState = finalViewNodes.get(contextId)!.state.current; // Focal state must exist
+
+        for (const connectedId of connectedNodeIdsToAdd) {
+            const existingViewNodeInOldContext = oldContext?.viewNodes.get(connectedId);
+            // Calculate default position relative to current focal state
+            const angleRad = (currentAngle * Math.PI) / 180;
+            const defaultRelX = defaultOffset * Math.cos(angleRad);
+            const defaultRelY = defaultOffset * Math.sin(angleRad);
+            const scaledRelX = defaultRelX * focalState.scale;
+            const scaledRelY = defaultRelY * focalState.scale;
+            const defaultAbsX = focalState.x + scaledRelX;
+            const defaultAbsY = focalState.y + scaledRelY;
+            const defaultState: TweenableNodeState = {
+                x: defaultAbsX, y: defaultAbsY, scale: focalState.scale, rotation: 0,
+                width: 100, height: 100 // Default size - TODO: Get from DataNode?
+            };
+
+            if (existingViewNodeInOldContext) {
+                finalViewNodes.set(connectedId, existingViewNodeInOldContext);
+            } else {
+                // Create new ViewNode/Tween
+                finalViewNodes.set(connectedId, { id: connectedId, state: new Tween(defaultState, NODE_TWEEN_OPTIONS) });
+            }
+            currentAngle += angleIncrement;
+        }
+    }
+
+    // Construct the final Context object
+    const finalContext: Context = {
+        id: contextId,
+        viewNodes: finalViewNodes,
+        viewportSettings: finalViewportSettings // Allow undefined if context was new/had no settings
+    };
+
+    // Save immediately if it was newly created or defaults were added
+    if (contextWasCreated && localAdapter) {
+        await localAdapter.saveContext(finalContext);
+    }
+
+    return { finalContext, wasCreated: contextWasCreated };
+}
+
+function _calculateTargetState(
+    nodeId: NodeId,
+    contextId: NodeId,
+    focalPlacement: AbsoluteTransform,
+    storableNode: StorableViewNode
+): TweenableNodeState {
+     if (nodeId === contextId) {
+        return {
+            x: focalPlacement.x, y: focalPlacement.y,
+            scale: focalPlacement.scale, rotation: storableNode.rotation,
+            width: storableNode.width, height: storableNode.height
+        };
+    } else {
+        const absScale = focalPlacement.scale * storableNode.relScale;
+        const scaledRelX = storableNode.relX * focalPlacement.scale;
+        const scaledRelY = storableNode.relY * focalPlacement.scale;
+        const absX = focalPlacement.x + scaledRelX;
+        const absY = focalPlacement.y + scaledRelY;
+        return {
+            x: absX, y: absY, scale: absScale, rotation: storableNode.rotation,
+            width: storableNode.width, height: storableNode.height
+        };
+    }
+}
+
+function _convertStorableViewportSettings(
+    storableSettings: StorableViewportSettings | undefined,
+    focalViewNode: ViewNode | undefined
+): ViewportSettings | undefined {
+    if (!storableSettings) return undefined;
+
+    const focalState = focalViewNode?.state.current;
+    if (focalState) {
+        const absPosX = storableSettings.relPosX - (focalState.x * storableSettings.scale);
+        const absPosY = storableSettings.relPosY - (focalState.y * storableSettings.scale);
+        return { scale: storableSettings.scale, posX: absPosX, posY: absPosY };
+    } else {
+        console.warn("Focal node state not found when converting viewport settings.");
+        return { ...DEFAULT_VIEWPORT_SETTINGS };
+    }
+}
+
+async function _loadContextData(context: Context | undefined): Promise<{ loadedDataNodes: Map<NodeId, DataNode>, loadedEdges: Map<EdgeId, KartaEdge> }> {
+    let loadedDataNodes = new Map<NodeId, DataNode>();
+    let loadedEdges = new Map<EdgeId, KartaEdge>();
+
+    if (!localAdapter || !context) {
+        return { loadedDataNodes, loadedEdges };
+    }
+
+    const viewNodeIds = Array.from(context.viewNodes.keys());
+    if (viewNodeIds.length > 0) {
+        loadedDataNodes = await localAdapter.getDataNodesByIds(viewNodeIds);
+
+        loadedEdges = await localAdapter.getEdgesByNodeIds(viewNodeIds);
+    } else {
+        console.warn(`[_loadContextData] Context ${context.id} has no view nodes.`);
+    }
+    return { loadedDataNodes, loadedEdges };
+}
+
+function _applyStoresUpdate(
+    newContextId: NodeId,
+    processedContext: Context, // The fully processed context with ViewNodes/Tweens
+    loadedDataNodes: Map<NodeId, DataNode>,
+    loadedEdges: Map<EdgeId, KartaEdge>
+) {
+    // --- Update nodes and edges stores (Mark-and-Sweep) ---
+    const currentNodesMap = get(nodes);
+    const currentEdgesMap = get(edges);
+    const nodesToRemove = new Set(currentNodesMap.keys());
+    const edgesToRemove = new Set(currentEdgesMap.keys());
+    const nextNodes = new Map<NodeId, DataNode>();
+    const nextEdges = new Map<EdgeId, KartaEdge>();
+
+    // Add/update nodes needed for the new context
+    for (const [nodeId, dataNode] of loadedDataNodes.entries()) {
+        nextNodes.set(nodeId, dataNode);
+        nodesToRemove.delete(nodeId); // Mark this node to be kept
+    }
+    // Add/update edges relevant to the new context
+    for (const [edgeId, edge] of loadedEdges.entries()) {
+        // Only keep edges where both source and target nodes are present in the new context
+        if (processedContext.viewNodes.has(edge.source) && processedContext.viewNodes.has(edge.target)) {
+             nextEdges.set(edgeId, edge);
+             edgesToRemove.delete(edgeId); // Mark this edge to be kept
+        }
+    }
+    // Update stores
+    nodes.set(nextNodes);
+    edges.set(nextEdges);
+
+    // --- Update contexts store ---
+    // Set the fully processed context (containing ViewNodes with Tweens)
+    contexts.update((map: Map<NodeId, Context>) => map.set(newContextId, processedContext)); // Explicitly type map
+
+    // --- Update current context ID ---
+    currentContextId.set(newContextId);
+   }
+
+
+export function updateNodeLayout(nodeId: NodeId, newX: number, newY: number) {
+    const contextId = get(currentContextId);
+    const currentCtx = get(contexts).get(contextId);
+    const viewNode = currentCtx?.viewNodes.get(nodeId); // This is ViewNode { id, state: Tween }
+
+    if (viewNode) {
+        // 1. Get the current state from the tween
+        const currentState = viewNode.state.current;
+
+        // 2. Create the new target state with updated position
+        const newState: TweenableNodeState = {
+            ...currentState, // Preserve scale, rotation, width, height
+            x: newX,
+            y: newY
+        };
+
+        // 3. Update the tween instantly (no animation during drag)
+        viewNode.state.set(newState, { duration: 0 });
+
+        // 4. Trigger reactivity for the contexts store
+        // Although we mutated the tween *within* the ViewNode, explicitly
+        // signalling that the contexts map has changed ensures Svelte updates.
+        contexts.update((map: Map<NodeId, Context>) => map); // Explicitly type map
+
+        // 5. Persist the change asynchronously
+        // saveContext reads the .current state from the tween when converting
+        if (localAdapter && currentCtx) {
+            // Debounce saving? For now, save on every update during drag.
+            currentCtx.viewportSettings = { ...viewTransform.current }; // Capture viewport - Access .current directly
+            localAdapter.saveContext(currentCtx)
+                .catch(err => console.error(`Error saving context ${contextId} during layout update:`, err));
+        }
+    } else {
+        console.warn(`ViewNode ${nodeId} not found in context ${contextId} for layout update`);
+    }
+}
+
+export async function switchContext(newContextId: NodeId, isUndoRedo: boolean = false) { // Added isUndoRedo flag
+    const oldContextId = get(currentContextId);
+    if (newContextId === oldContextId) return; // No change
+
+    clearSelection(); // Clear selection when switching context
+
+    // --- History Management ---
+    if (!isUndoRedo) {
+        historyStack.update((stack: NodeId[]) => [...stack, oldContextId]); // Explicitly type stack
+        futureStack.set([]); // Clear future stack on new action
+        console.log(`[switchContext] Pushed ${oldContextId} to history.`);
+    }
+    // --- End History Management ---
+
+
+    if (!localAdapter) {
+        console.error("[switchContext] LocalAdapter not available."); return;
+    }
+    console.log(`[switchContext] Switching from ${oldContextId} to ${newContextId}`);
+
+    // --- Phase 1: Save Old Context State (Async) ---
+    const oldContext = get(contexts).get(oldContextId);
+    if (oldContext) {
+        oldContext.viewportSettings = { ...viewTransform.current }; // Capture current viewport - Access .current directly
+        localAdapter.saveContext(oldContext) // Adapter converts ViewNode with Tween back to Storable
+            .then(() => console.log(`[switchContext] Old context ${oldContextId} saved.`))
+            .catch(error => console.error(`[switchContext] Error saving old context ${oldContextId}:`, error));
+    } else {
+        console.warn(`[switchContext] Old context ${oldContextId} not found in memory for saving.`);
+    }
+
+    // --- Phase 2: Load and Process New Context ---
+    try {
+        // Determine initial state (x,y,scale,width,height,rotation) for the new focal node based on old context
+        const focalInitialState = await _getFocalNodeInitialState(newContextId, oldContext);
+
+        // Load StorableContext, convert/merge into in-memory Context with Tweens, add defaults
+        const { finalContext: processedContext } = await _loadAndProcessContext(
+            newContextId,
+            focalInitialState, // Pass the full initial state object
+            oldContext // Pass old context to reuse tweens
+        );
+
+        if (!processedContext) {
+            throw new Error("Failed to load or create the new context object.");
+        }
+
+        // Load necessary DataNodes and Edges for the nodes now in the context
+        const loadedData = await _loadContextData(processedContext);
+        const loadedDataNodes = loadedData.loadedDataNodes;
+        const loadedEdges = loadedData.loadedEdges;
+
+        // --- Phase 3: Apply Svelte Stores ---
+        _applyStoresUpdate(newContextId, processedContext, loadedDataNodes, loadedEdges);
+
+        // --- Phase 4: Update Viewport ---
+        const newViewportSettings = processedContext.viewportSettings || DEFAULT_VIEWPORT_SETTINGS;
+        viewTransform.set(newViewportSettings, { duration: VIEWPORT_TWEEN_DURATION }); // Set instantly
+
+        // Move this console log inside the try block where initialDataNode is defined
+        console.log(`[switchContext] Successfully switched to context ${newContextId}`);
+
+    } catch (error) {
+        console.error(`[switchContext] Error switching context to ${newContextId}:`, error);
+        // Consider reverting to oldContextId or showing an error state
+    }
+}
+
+async function initializeStores() {
+    console.log("[initializeStores] Initializing Karta stores...");
+    initializeTools(); // Initialize tool instances here
+
+    // Ensure currentTool is not null before calling activate (this check might be redundant after initializeTools)
+    const currentToolInstance = get(currentTool);
+    if (currentToolInstance) {
+        currentToolInstance.activate(); // Activate default tool
+    }
+
+
+    if (!localAdapter) {
+        console.error("[initializeStores] LocalAdapter not initialized. Cannot proceed.");
+        // Set default empty state on critical error
+        nodes.set(new Map());
+        edges.set(new Map());
+        contexts.set(new Map());
+        currentContextId.set(ROOT_NODE_ID); // Default to root ID even on error
+        viewTransform.set(DEFAULT_VIEWPORT_SETTINGS, { duration: 0 });
+        setTool('move');
+        return;
+    }
+
+    let targetInitialContextId = ROOT_NODE_ID; // Default
+    let initialDataNode: DataNode | null = null;
+    let initialProcessedContext: Context | undefined = undefined;
+    let loadedDataNodes = new Map<NodeId, DataNode>();
+    let loadedEdges = new Map<EdgeId, KartaEdge>();
+
+    try {
+        // 1. Determine Initial Context ID - FORCING ROOT FOR NOW
+        // if (typeof window !== 'undefined' && window.localStorage) {
+        //     const savedId = localStorage.getItem('karta-last-context-id');
+        //     if (savedId) {
+        //         targetInitialContextId = savedId;
+        //         console.log(`[initializeStores] Found last context ID in localStorage: ${targetInitialContextId}`);
+        //     } else {
+        //         console.log(`[initializeStores] No last context ID found, defaulting to ROOT: ${ROOT_NODE_ID}`);
+        //     }
+        // } else {
+        //     console.log(`[initializeStores] localStorage not available, defaulting to ROOT: ${ROOT_NODE_ID}`);
+        // }
+        targetInitialContextId = ROOT_NODE_ID; // FORCE START WITH ROOT
+        console.log(`[initializeStores] Forcing start with ROOT_NODE_ID: ${targetInitialContextId}`);
+
+        // 2. Ensure Initial DataNode Exists (Attempt target ID first)
+        initialDataNode = await _ensureDataNodeExists(targetInitialContextId);
+
+        // 3. Fallback to Root if target ID failed
+        if (!initialDataNode) {
+            console.warn(`[initializeStores] Failed to ensure target node ${targetInitialContextId} exists. Falling back to ROOT.`);
+            targetInitialContextId = ROOT_NODE_ID; // Reset target ID to root
+            initialDataNode = await _ensureDataNodeExists(ROOT_NODE_ID);
+            if (!initialDataNode) {
+                // If even the root fails, throw a critical error
+                throw new Error("CRITICAL: Failed to ensure even the Root DataNode exists during initialization.");
+            }
+        }
+        // 3.5 Ensure Root Node has isSystemNode flag (for backward compatibility)
+        if (initialDataNode.id === ROOT_NODE_ID && !initialDataNode.attributes?.isSystemNode) {
+            console.warn(`[initializeStores] Root node ${ROOT_NODE_ID} is missing the isSystemNode flag. Adding and saving...`);
+            initialDataNode.attributes = { ...initialDataNode.attributes, isSystemNode: true };
+            initialDataNode.modifiedAt = Date.now();
+            try {
+                await localAdapter.saveNode(initialDataNode);
+                console.log(`[initializeStores] Successfully added isSystemNode flag to root node.`);
+            } catch (saveError) {
+                console.error(`[initializeStores] CRITICAL: Failed to save isSystemNode flag to root node:`, saveError);
+                // Continue initialization, but the root might remain unprotected if saving failed.
+            }
+        }
+
+
+        // 4. Load Initial Context & Data (Generalized)
+        // Construct the default initial state for the root node
+        const rootDefaultViewState = getDefaultViewNodeStateForType('root');
+        const rootInitialState: TweenableNodeState = {
+            ...DEFAULT_FOCAL_TRANSFORM, // x, y, scale
+            width: rootDefaultViewState.width,
+            height: rootDefaultViewState.height,
+            rotation: rootDefaultViewState.rotation
+        };
+
+        const { finalContext } = await _loadAndProcessContext(
+            initialDataNode.id, // Use the validated ID
+            rootInitialState, // Pass the full default state
+            undefined // No old context on init
+        );
+        initialProcessedContext = finalContext;
+
+        if (!initialProcessedContext) {
+            throw new Error(`Failed to load or process initial context for node: ${initialDataNode.id}`);
+        }
+
+        const loadedData = await _loadContextData(initialProcessedContext);
+        const loadedDataNodes = loadedData.loadedDataNodes;
+        const loadedEdges = loadedData.loadedEdges;
+
+        // 5. Apply Initial State
+        _applyStoresUpdate(initialDataNode.id, initialProcessedContext, loadedDataNodes, loadedEdges);
+
+        // 6. Set Initial Viewport
+        const initialViewportSettings = initialProcessedContext.viewportSettings || DEFAULT_VIEWPORT_SETTINGS;
+        viewTransform.set(initialViewportSettings, { duration: 0 }); // Set instantly
+
+        console.log(`[initializeStores] Stores initialized successfully, starting context: ${initialDataNode.id}`);
+
+    } catch (error) {
+        console.error("[initializeStores] Error during store initialization:", error);
+        // Set default empty state on error
+        nodes.set(new Map());
+        edges.set(new Map());
+        contexts.set(new Map());
+        currentContextId.set(ROOT_NODE_ID); // Default to root ID even on error
+        viewTransform.set(DEFAULT_VIEWPORT_SETTINGS, { duration: 0 });
+    }
+
+    // 7. Set Initial Properties Panel Position (calculated only in browser)
+    propertiesPanelPosition.set({ x: window.innerWidth - 320, y: 50 }); // Set browser-dependent default
+
+    // 8. Set Initial Tool (runs even if init fails partially)
+    setTool('move');
+}
+
+// Run initialization only in browser environment
+if (typeof window !== 'undefined' ) {
+    initializeStores();
+
+    // Subscribe to save last context ID
+    currentContextId.subscribe(id => {
+        if (typeof window !== 'undefined' && window.localStorage) { // Check if localStorage is available
+            localStorage.setItem('karta-last-context-id', id);
+            console.log(`[KartaStore] Saved last context ID to localStorage: ${id}`);
+        }
+    });
+}
+
+// Export internal helpers for use by other stores if needed
+export { _getFocalNodeInitialState, _loadAndProcessContext, _calculateTargetState, _convertStorableViewportSettings, _loadContextData, _applyStoresUpdate, initializeStores };

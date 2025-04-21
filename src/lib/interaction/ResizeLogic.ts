@@ -1,5 +1,7 @@
 import type { ViewNode, NodeId, TweenableNodeState } from '$lib/types/types';
-import { nodes, contexts, currentContextId, viewTransform, screenToCanvasCoordinates } from '$lib/karta/KartaStore'; // Import nodes store
+import { nodes } from '$lib/karta/NodeStore'; // Import nodes store
+import { contexts, currentContextId } from '$lib/karta/ContextStore';
+import { viewTransform, screenToCanvasCoordinates } from '$lib/karta/ViewportStore';
 import { get } from 'svelte/store';
 
 const MIN_NODE_DIMENSION = 20;

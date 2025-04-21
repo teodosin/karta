@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { viewTransform } from '$lib/karta/KartaStore';
+	import { viewTransform } from '$lib/karta/ViewportStore';
 	import { onMount, onDestroy, tick } from 'svelte';
 	
 	// Create local copies to trigger reactivity

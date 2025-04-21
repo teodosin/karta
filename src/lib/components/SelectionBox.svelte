@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { derived, get } from 'svelte/store'; // Use Svelte 4 derived/get
 	import {
-		selectedNodeIds,
-		currentViewNodes,
-		startConnectionProcess // Import the action to start connection
-	} from '$lib/karta/KartaStore';
+		selectedNodeIds
+	} from '$lib/karta/SelectionStore';
+	import { currentViewNodes } from '$lib/karta/ContextStore';
+	import { startConnectionProcess } from '$lib/karta/ToolStore'; // Import the action to start connection
 	import { startResize } from '$lib/interaction/ResizeLogic';
 	import type { NodeId } from '$lib/types/types';
 	import type { ViewNode } from '$lib/types/types'; // Removed ViewportSettings, onMount

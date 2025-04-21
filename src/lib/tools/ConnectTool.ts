@@ -5,9 +5,9 @@ import {
     updateTempLinePosition,
     finishConnectionProcess,
     cancelConnectionProcess,
-    screenToCanvasCoordinates,
     isConnecting // Need to check if already connecting
-} from '$lib/karta/KartaStore';
+} from '$lib/karta/ToolStore';
+import { screenToCanvasCoordinates } from '$lib/karta/ViewportStore';
 
 export class ConnectTool implements Tool {
     readonly name = 'connect';
@@ -45,7 +45,7 @@ export class ConnectTool implements Tool {
 
         const nodeId = nodeEl.dataset.id;
         // console.log('ConnectTool onPointerDown on node', nodeId); // Keep this one?
-        startConnectionProcess(nodeId); // KartaStore handles the state
+        startConnectionProcess([nodeId]); // KartaStore handles the state
         this.addWindowListeners(); // Add listeners to track pointer movement and release
     }
 

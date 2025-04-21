@@ -8,10 +8,9 @@
 		setPropertiesPanelVisibility,
 		setPropertiesPanelPosition,
 		setPropertiesPanelSize,
-		togglePropertiesPanelCollapsed,
-		nodes, // To get DataNode
-		updateNodeAttributes // To update attributes
-	} from '$lib/karta/KartaStore';
+		togglePropertiesPanelCollapsed
+	} from '$lib/karta/UIStateStore';
+	import { nodes, updateNodeAttributes } from '$lib/karta/NodeStore'; // To get DataNode and update attributes
 	import { getNodeTypeDef } from '$lib/node_types/registry'; // To get property schema
 	import type { DataNode, PropertyDefinition } from '$lib/types/types';
 	import { onDestroy, onMount } from 'svelte';

@@ -1,14 +1,8 @@
 <script lang="ts">
-	import {
-		nodes,
-		currentContextId,
-		historyStack,
-		futureStack,
-		undoContextSwitch,
-		redoContextSwitch,
-		fetchAvailableContextDetails, // Import the new function
-		switchContext // Import switchContext for list items
-	} from '$lib/karta/KartaStore';
+	import { nodes } from '$lib/karta/NodeStore';
+	import { currentContextId, switchContext } from '$lib/karta/ContextStore';
+	import { fetchAvailableContextDetails } from '$lib/karta/NodeStore';
+	import { historyStack, futureStack, undoContextSwitch, redoContextSwitch } from '$lib/karta/HistoryStore';
 	import type { NodeId, DataNode } from '$lib/types/types';
 	import { onMount, onDestroy } from 'svelte'; // Import onMount and onDestroy
 

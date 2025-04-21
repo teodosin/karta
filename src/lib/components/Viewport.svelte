@@ -9,43 +9,49 @@
 	import { get } from 'svelte/store';
 	import { onMount, onDestroy } from 'svelte'; // Added onDestroy
 	import { // Svelte 4: Use imports
-		viewTransform, // Keep the Tween object
-		screenToCanvasCoordinates,
-		nodes,
 		contexts,
 		currentContextId,
+		currentViewNodes, // Store for node states in current context
+		switchContext, // Action for 'Enter Context'
+	} from '$lib/karta/ContextStore';
+	import {
+		viewTransform, // Keep the Tween object
+		screenToCanvasCoordinates,
+		centerViewOnCanvasPoint, // Action for 'Center View' (used by centerOnFocalNode)
+		centerOnFocalNode, // Action for shortcut 'F'
+		frameContext // <-- Import action for menu/shortcut 'Shift+F'
+	} from '$lib/karta/ViewportStore';
+	import {
 		currentTool,
 		cancelConnectionProcess,
 		isConnecting, // Import connection state
 		updateTempLinePosition, // Import action
-		finishConnectionProcess, // Import action
-		// Create Node Menu
+		finishConnectionProcess // Import action
+	} from '$lib/karta/ToolStore';
+	import {
 		isCreateNodeMenuOpen,
 		createNodeMenuPosition,
 		openCreateNodeMenu,
 		closeCreateNodeMenu,
-		// Context Menu
 		isContextMenuOpen,
 		contextMenuPosition,
 		contextMenuContext,
 		openContextMenu,
 		closeContextMenu,
 		type ContextMenuContextType,
-		switchContext, // Action for 'Enter Context'
-		centerViewOnCanvasPoint, // Action for 'Center View' (used by centerOnFocalNode)
-		centerOnFocalNode, // Action for shortcut 'F'
-		frameContext, // <-- Import action for menu/shortcut 'Shift+F'
 		requestNodeRename, // Action for 'Rename'
-		// Selection
+	} from '$lib/karta/UIStateStore';
+	import {
 		selectedNodeIds,
 		clearSelection,
 		setSelectedNodes,
-		toggleSelection,
-		currentViewNodes, // Store for node states in current context
-		// Paste/Drop
+		toggleSelection
+	} from '$lib/karta/SelectionStore';
+	import {
+		nodes, // To get DataNode
 		createTextNodeFromPaste,
 		createImageNodeWithAsset
-	} from '$lib/karta/KartaStore';
+	} from '$lib/karta/NodeStore';
 	import NodeWrapper from './NodeWrapper.svelte';
 	import EdgeLayer from './EdgeLayer.svelte';
 	import CreateNodeMenu from './CreateNodeMenu.svelte'; // Import the menu component

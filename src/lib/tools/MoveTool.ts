@@ -1,6 +1,8 @@
 import type { Tool, NodeId } from '$lib/types/types';
 import { get } from 'svelte/store';
-import { viewTransform, updateNodeLayout, screenToCanvasCoordinates, contexts, currentContextId, selectedNodeIds, setSelectedNodes, toggleSelection } from '$lib/karta/KartaStore';
+import { viewTransform, screenToCanvasCoordinates } from '$lib/karta/ViewportStore';
+import { updateNodeLayout, contexts, currentContextId } from '$lib/karta/ContextStore';
+import { selectedNodeIds, setSelectedNodes, toggleSelection } from '$lib/karta/SelectionStore';
 
 export class MoveTool implements Tool {
     readonly name = 'move'; // Add the required name property

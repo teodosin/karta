@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getAvailableNodeTypesForMenu } from '$lib/node_types/registry';
-	import { createNodeFromMenu, closeCreateNodeMenu } from '$lib/karta/KartaStore';
+	import { createNodeFromMenu, closeCreateNodeMenu } from '$lib/karta/UIStateStore';
 	import type { IconComponent } from '$lib/node_types/types';
 	import { onMount, onDestroy } from 'svelte';
 
