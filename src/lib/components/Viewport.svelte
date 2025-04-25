@@ -877,7 +877,20 @@ class="karta-viewport-container w-full h-screen overflow-hidden relative cursor-
 				];
 			} else if (contextType === 'edge' && targetNodeId) {
 				items = [
-					{ label: 'Delete Edge', action: () => { if (targetNodeId) deleteEdge(targetNodeId); closeContextMenu(); } }
+					{
+						label: 'Delete Edge(s)', // Changed label to indicate multi-deletion
+						action: () => {
+							const edgesToDelete = get(selectedEdgeIds);
+							if (edgesToDelete.size > 0) {
+								edgesToDelete.forEach(edgeId => deleteEdge(edgeId));
+								clearEdgeSelection(); // Clear selection after deleting
+							} else if (targetNodeId) {
+								// If no edges are multi-selected, delete the single right-clicked edge
+								deleteEdge(targetNodeId);
+							}
+							closeContextMenu();
+						}
+					}
 				];
 			} else if (contextType === 'background') {
 				items = [

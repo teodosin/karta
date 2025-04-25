@@ -55,7 +55,7 @@
 	                   id={edge.id}
 	                   class={`edge ${$selectedEdgeIds.has(edge.id) ? 'selected' : ''}`}
 	                   d={`M ${sourceX} ${sourceY} L ${targetX} ${targetY}`}
-	       stroke-width={2 * inverseScale}
+	       stroke-width={$selectedEdgeIds.has(edge.id) ? 3 * inverseScale : 2 * inverseScale}
 	               />
 	           {/if}
 	   {/each}
@@ -90,11 +90,16 @@
 		/* Add transition for hover effect */
 		transition: stroke 0.1s ease-in-out;
 	}
-	:global(.edge:hover) {
+	/* Apply hover style to the visible edge when the hit area is hovered */
+	:global(.edge-hit-area:hover + .edge) {
 		stroke: #d1d5db; /* gray-300 */
 	}
 	:global(.edge.selected) {
 		stroke: #3b82f6; /* blue-500 */
+	}
+	/* New rule for selected edge hover */
+	:global(.edge-hit-area:hover + .edge.selected) {
+		stroke: #93c5fd; /* blue-300 */ /* Lighter blue for selected hover */
 	}
 	:global(.edge-hit-area) {
 		stroke: transparent;
