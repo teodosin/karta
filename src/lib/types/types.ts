@@ -115,6 +115,13 @@ export interface PropertyDefinition {
 
 // --- End Storage-Specific Types ---
 
+// --- Global Settings ---
+export interface KartaSettings {
+  version: number; // For potential future migrations
+  saveLastViewedContext: boolean; // Whether to reopen the last context on startup
+  // Add other global settings here as needed
+}
+
 // Represents connections between DataNodes (context-independent)
 export interface KartaEdge {
 	id: EdgeId; // Use EdgeId type

@@ -11,10 +11,12 @@ import { historyStack, futureStack } from './HistoryStore'; // Assuming HistoryS
 import { clearSelection } from './SelectionStore'; // Assuming SelectionStore exports these
 import { propertiesPanelPosition, setPropertiesPanelNode, setPropertiesPanelVisibility } from './UIStateStore'; // Assuming UIStateStore exports these
 import { setTool, currentTool, initializeTools } from './ToolStore'; // Assuming ToolStore exports these and initializeTools
+import { settings } from './SettingsStore'; // Import settings store
 
 
 // Define the Root Node ID
 export const ROOT_NODE_ID = '00000000-0000-0000-0000-000000000000';
+const LAST_CONTEXT_STORAGE_KEY = 'kartaLastContextId'; // Key for localStorage
 
 // Constants
 const NODE_TWEEN_DURATION = 250; // Duration for node transitions
@@ -330,12 +332,12 @@ export function updateNodeLayout(nodeId: NodeId, newX: number, newY: number) {
 }
 
 export async function switchContext(newContextId: NodeId, isUndoRedo: boolean = false) { // Added isUndoRedo flag
-    const oldContextId = get(currentContextId);
-    if (newContextId === oldContextId) return; // No change
+	const oldContextId = get(currentContextId);
+	if (newContextId === oldContextId) return; // No change
 
-    clearSelection(); // Clear selection when switching context
+	clearSelection(); // Clear selection when switching context
 
-    // --- History Management ---
+	// --- History Management ---
     if (!isUndoRedo) {
         historyStack.update((stack: NodeId[]) => [...stack, oldContextId]); // Explicitly type stack
         futureStack.set([]); // Clear future stack on new action
@@ -396,19 +398,31 @@ export async function switchContext(newContextId: NodeId, isUndoRedo: boolean = 
             console.log(`[switchContext] Context ${newContextId} was newly created or had no saved viewport settings. Viewport position maintained.`);
         }
 
-        console.log(`[switchContext] Successfully switched to context ${newContextId}`);
+  console.log(`[switchContext] Successfully switched to context ${newContextId}`);
 
-    } catch (error) {
-        console.error(`[switchContext] Error switching context to ${newContextId}:`, error);
+  // --- Save Last Context ID ---
+  try {
+   const currentSettings = get(settings);
+   if (currentSettings.saveLastViewedContext && typeof window !== 'undefined' && window.localStorage) {
+    localStorage.setItem(LAST_CONTEXT_STORAGE_KEY, newContextId);
+    console.log(`[switchContext] Saved last context ID ${newContextId} to localStorage.`);
+   }
+  } catch (error) {
+   console.error('[switchContext] Error saving last context ID to localStorage:', error);
+  }
+  // --- End Save Last Context ID ---
+
+ } catch (error) {
+  console.error(`[switchContext] Error switching context to ${newContextId}:`, error);
         // Consider reverting to oldContextId or showing an error state
     }
 }
 
-async function initializeStores() {
-    console.log("[initializeStores] Initializing Karta stores...");
-    initializeTools(); // Initialize tool instances here
+async function initializeStores() { // Remove export keyword here
+	console.log('[initializeStores] Initializing Karta stores...');
+	initializeTools(); // Initialize tool instances here
 
-    // Ensure currentTool is not null before calling activate (this check might be redundant after initializeTools)
+	// Ensure currentTool is not null before calling activate (this check might be redundant after initializeTools)
     const currentToolInstance = get(currentTool);
     if (currentToolInstance) {
         currentToolInstance.activate(); // Activate default tool
@@ -427,30 +441,38 @@ async function initializeStores() {
         return;
     }
 
-    let targetInitialContextId = ROOT_NODE_ID; // Default
-    let initialDataNode: DataNode | null = null;
-    let initialProcessedContext: Context | undefined = undefined;
+ let targetInitialContextId = ROOT_NODE_ID; // Default
+ let initialDataNode: DataNode | null = null;
+ let initialProcessedContext: Context | undefined = undefined;
     let loadedDataNodes = new Map<NodeId, DataNode>();
     let loadedEdges = new Map<EdgeId, KartaEdge>();
 
     try {
-        // 1. Determine Initial Context ID - FORCING ROOT FOR NOW
-        // if (typeof window !== 'undefined' && window.localStorage) {
-        //     const savedId = localStorage.getItem('karta-last-context-id');
-        //     if (savedId) {
-        //         targetInitialContextId = savedId;
-        //         console.log(`[initializeStores] Found last context ID in localStorage: ${targetInitialContextId}`);
-        //     } else {
-        //         console.log(`[initializeStores] No last context ID found, defaulting to ROOT: ${ROOT_NODE_ID}`);
-        //     }
-        // } else {
-        //     console.log(`[initializeStores] localStorage not available, defaulting to ROOT: ${ROOT_NODE_ID}`);
-        // }
-        targetInitialContextId = ROOT_NODE_ID; // FORCE START WITH ROOT
-        console.log(`[initializeStores] Forcing start with ROOT_NODE_ID: ${targetInitialContextId}`);
+  // 1. Determine Initial Context ID based on settings
+  try {
+   const currentSettings = get(settings); // Read settings (should be loaded by +layout.svelte)
+   if (currentSettings.saveLastViewedContext && typeof window !== 'undefined' && window.localStorage) {
+    const savedId = localStorage.getItem(LAST_CONTEXT_STORAGE_KEY);
+    if (savedId) {
+     // Basic validation: check if it looks like a UUID? For now, just check if not null/empty.
+     // A more robust check would involve ensuring the node actually exists later.
+     targetInitialContextId = savedId;
+     console.log(`[initializeStores] Found last context ID in localStorage: ${targetInitialContextId}`);
+    } else {
+     console.log(`[initializeStores] No last context ID found, defaulting to ROOT: ${ROOT_NODE_ID}`);
+     targetInitialContextId = ROOT_NODE_ID;
+    }
+   } else {
+    console.log(`[initializeStores] Setting disabled or localStorage not available, defaulting to ROOT: ${ROOT_NODE_ID}`);
+    targetInitialContextId = ROOT_NODE_ID;
+   }
+  } catch (error) {
+   console.error('[initializeStores] Error reading settings or localStorage for last context ID:', error);
+   targetInitialContextId = ROOT_NODE_ID; // Fallback to ROOT on error
+  }
 
-        // 2. Ensure Initial DataNode Exists (Attempt target ID first)
-        initialDataNode = await _ensureDataNodeExists(targetInitialContextId);
+  // 2. Ensure Initial DataNode Exists (Attempt target ID first)
+  initialDataNode = await _ensureDataNodeExists(targetInitialContextId);
 
         // 3. Fallback to Root if target ID failed
         if (!initialDataNode) {
@@ -505,9 +527,36 @@ async function initializeStores() {
         // 5. Apply Initial State
         _applyStoresUpdate(initialDataNode.id, initialProcessedContext, loadedDataNodes, loadedEdges);
 
-        // 6. Set Initial Viewport
-        const initialViewportSettings = initialProcessedContext.viewportSettings || DEFAULT_VIEWPORT_SETTINGS;
-        viewTransform.set(initialViewportSettings, { duration: 0 }); // Set instantly
+  // 6. Set Initial Viewport
+  // If loading the root context and no last context was saved, center the root node.
+  // Otherwise, use loaded viewport settings or defaults.
+  let initialViewportSettings = initialProcessedContext.viewportSettings || DEFAULT_VIEWPORT_SETTINGS;
+
+  if (initialDataNode.id === ROOT_NODE_ID && targetInitialContextId === ROOT_NODE_ID && typeof window !== 'undefined') {
+   // Calculate translation to center the root node (at 0,0)
+   const centerX = window.innerWidth / 2;
+   const centerY = window.innerHeight / 2;
+   // The viewport position is the top-left corner in canvas coordinates.
+   // To center the node at (0,0), the top-left should be at (centerX / scale, centerY / scale)
+   // However, viewTransform stores the top-left in screen coordinates relative to the canvas origin.
+   // So, the required translation in screen space is simply (centerX, centerY).
+   // The viewTransform store's posX/posY represent the canvas origin's screen coordinates.
+   // To move the canvas origin so that the root node (at canvas 0,0) is at screen (centerX, centerY),
+   // the canvas origin needs to be at screen (centerX, centerY).
+   // The viewTransform posX/posY are the screen coordinates of the canvas origin.
+   // So, we want viewTransform.posX = centerX and viewTransform.posY = centerY.
+   // The scale should be the default scale.
+   initialViewportSettings = {
+    scale: DEFAULT_VIEWPORT_SETTINGS.scale, // Use default scale
+    posX: centerX,
+    posY: centerY
+   };
+   console.log(`[initializeStores] Centering root node at screen (${centerX}, ${centerY}).`);
+  } else {
+   console.log(`[initializeStores] Loading context ${initialDataNode.id}. Using saved or default viewport settings.`);
+  }
+
+  viewTransform.set(initialViewportSettings, { duration: 0 }); // Set instantly
 
         console.log(`[initializeStores] Stores initialized successfully, starting context: ${initialDataNode.id}`);
 
@@ -528,18 +577,5 @@ async function initializeStores() {
     setTool('move');
 }
 
-// Run initialization only in browser environment
-if (typeof window !== 'undefined' ) {
-    initializeStores();
-
-    // Subscribe to save last context ID
-    currentContextId.subscribe(id => {
-        if (typeof window !== 'undefined' && window.localStorage) { // Check if localStorage is available
-            localStorage.setItem('karta-last-context-id', id);
-            console.log(`[KartaStore] Saved last context ID to localStorage: ${id}`);
-        }
-    });
-}
-
-// Export internal helpers for use by other stores if needed
+// Export internal helpers AND the initializeStores function
 export { _getFocalNodeInitialState, _loadAndProcessContext, _calculateTargetState, _convertStorableViewportSettings, _loadContextData, _applyStoresUpdate, initializeStores };
