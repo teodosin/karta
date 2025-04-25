@@ -8,12 +8,18 @@
 	import { edges } from '$lib/karta/EdgeStore';
 	import { contexts, currentContextId } from '$lib/karta/ContextStore';
 	import { isConnecting, connectionSourceNodeIds, tempLineTargetPosition } from '$lib/karta/ToolStore';
-	   import type { NodeId } from '../types/types'; // Import from types.ts
-	   import { get } from 'svelte/store';
+	import { selectedEdgeIds } from '$lib/karta/EdgeSelectionStore'; // Import the edge selection store
+	// Removed: import { viewTransform } from '$lib/karta/ViewportStore';
+	import type { NodeId } from '../types/types'; // Import from types.ts
+	import { get } from 'svelte/store';
+
+	// Declare inverseScale as a prop passed from Viewport
+	export let inverseScale: number;
 
 	// Get the current context object reactively
-	   $: currentCtx = $contexts.get($currentContextId);
+	$: currentCtx = $contexts.get($currentContextId);
 
+	// Removed internal inverseScale calculation and log
 
 </script>
 
@@ -34,13 +40,25 @@
 	               {@const sourceY = sourceState.y} // Use center Y directly
 	               {@const targetX = targetState.x} // Use center X directly
 	               {@const targetY = targetState.y} // Use center Y directly
+	               <!-- Hit area for interaction -->
+	               <!-- Uses stroke-width scaled by inverseScale to maintain constant screen size, mimicking SelectionBox handle scaling -->
+	               <path
+	                   id={`hit-area-${edge.id}`}
+	                   class="edge-hit-area"
+	                   d={`M ${sourceX} ${sourceY} L ${targetX} ${targetY}`}
+	                   data-edge-id={edge.id}
+	       stroke-width={30 * inverseScale}
+	               />
+	               <!-- Visible edge -->
+	               <!-- Uses stroke-width scaled by inverseScale to maintain constant screen size -->
 	               <path
 	                   id={edge.id}
-	                   class="edge"
+	                   class={`edge ${$selectedEdgeIds.has(edge.id) ? 'selected' : ''}`}
 	                   d={`M ${sourceX} ${sourceY} L ${targetX} ${targetY}`}
+	       stroke-width={2 * inverseScale}
 	               />
 	           {/if}
-    {/each}
+	   {/each}
 
 	<!-- Temporary connection line(s) -->
 	{#if $isConnecting && $tempLineTargetPosition}
@@ -63,18 +81,32 @@
 	:global(.axis-line) {
 		stroke: rgba(156, 163, 175, 0.3); /* gray-400 at 30% opacity */
 		stroke-width: 1;
-		vector-effect: non-scaling-stroke; /* Keep width constant on zoom */
 		fill: none;
 	}
 	:global(.edge) {
 		stroke: #9ca3af; /* gray-400 */
-		stroke-width: 2;
+		/* stroke-width is now set inline based on inverseScale */
+		fill: none;
+		/* Add transition for hover effect */
+		transition: stroke 0.1s ease-in-out;
+	}
+	:global(.edge:hover) {
+		stroke: #d1d5db; /* gray-300 */
+	}
+	:global(.edge.selected) {
+		stroke: #3b82f6; /* blue-500 */
+	}
+	:global(.edge-hit-area) {
+		stroke: transparent;
+		/* stroke-width is now set inline based on inverseScale */
+		fill: none;
+		pointer-events: stroke; /* Only trigger on stroke */
+		cursor: pointer; /* Indicate interactivity */
+	}
+	:global(.temp-edge) {
+		stroke: #86198f; /* pink-900 */
+		stroke-width: 2; /* Keep temp edge constant size for now */
+		stroke-dasharray: 5, 5;
 		fill: none;
 	}
-    :global(.temp-edge) {
-        stroke: #86198f; /* pink-900 */
-        stroke-width: 2;
-        stroke-dasharray: 5, 5;
-        fill: none;
-    }
 </style>

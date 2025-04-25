@@ -22,3 +22,15 @@ export async function createEdge(sourceId: NodeId, targetId: NodeId) {
         catch (error) { console.error("Error saving edge:", error); }
     } else { console.warn("LocalAdapter not initialized, persistence disabled."); }
 }
+
+export async function deleteEdge(edgeId: EdgeId) {
+    edges.update(e => {
+        e.delete(edgeId);
+        return e;
+    });
+    console.log(`Deleted edge ${edgeId}`);
+    if (localAdapter) {
+        try { await localAdapter.deleteEdge(edgeId); }
+        catch (error) { console.error("Error deleting edge:", error); }
+    } else { console.warn("LocalAdapter not initialized, persistence disabled."); }
+}

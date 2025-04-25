@@ -48,10 +48,17 @@
 		toggleSelection
 	} from '$lib/karta/SelectionStore';
 	import {
+		selectedEdgeIds, // Import edge selection store
+		clearEdgeSelection, // Import edge selection actions
+		setSelectedEdges,
+		toggleEdgeSelection
+	} from '$lib/karta/EdgeSelectionStore'; // Import the edge selection store
+	import {
 		nodes, // To get DataNode
 		createTextNodeFromPaste,
 		createImageNodeWithAsset
 	} from '$lib/karta/NodeStore';
+	import { deleteEdge } from '$lib/karta/EdgeStore'; // Import deleteEdge action
 	import NodeWrapper from './NodeWrapper.svelte';
 	import EdgeLayer from './EdgeLayer.svelte';
 	import CreateNodeMenu from './CreateNodeMenu.svelte'; // Import the menu component
@@ -60,6 +67,10 @@
 	// Removed Toolbar and ContextPathDisplay imports
 
 	let canvasContainer: HTMLElement;
+
+	// Calculate inverse scale for constant screen size elements, to be passed to children
+	$: inverseScale = 1 / viewTransform.current.scale;
+
 	let canvas: HTMLElement;
 
     // Reactive definition for the current context object
@@ -169,11 +180,7 @@
     const panSensitivityFactor = 1.6;  // Slightly faster pan
     const wheelZoomFactor = 1.75; // Increased Standard wheel zoom factor
     const pinchZoomSensitivity = 0.09; // Touchpad pinch zoom sensitivity
-
-    // --- Heuristic Update ---
-    // Detect if input is likely touchpad pan (both X and Y deltas present)
-    const deltaThreshold = 0.1; // Use a small threshold
-    if (Math.abs(e.deltaX) > deltaThreshold && Math.abs(e.deltaY) > deltaThreshold) {
+    if (Math.abs(e.deltaX) > 0.1 && Math.abs(e.deltaY) > 0.1) { // Use a small threshold
         lastInputWasTouchpad = true;
     }
 
@@ -232,13 +239,51 @@
 			return; // Don't delegate middle mouse
 		}
 
-		// Check if the click target is the background (canvas or container)
 		const targetElement = e.target as HTMLElement;
 		const clickedOnNode = targetElement.closest('.node-wrapper');
+		const clickedOnEdge = targetElement.closest('.edge-hit-area'); // Check if an edge hit area was clicked
 		const clickedOnBackground = targetElement === canvasContainer || targetElement === canvas;
 
+		// --- Handle Edge Click ---
+		if (clickedOnEdge && e.button === 0) { // Left click on an edge hit area
+			e.preventDefault(); // Prevent default behavior
+
+			const edgeId = (clickedOnEdge as HTMLElement).dataset.edgeId;
+			if (edgeId) {
+				// Clear node selection when selecting an edge
+				clearSelection();
+
+				const currentEdgeSelection = get(selectedEdgeIds);
+				const isSelected = currentEdgeSelection.has(edgeId);
+				const shiftKey = e.shiftKey;
+				const ctrlOrMetaKey = e.ctrlKey || e.metaKey;
+
+				if (shiftKey) {
+					// Shift+Click: Toggle selection for this edge
+					toggleEdgeSelection(edgeId);
+				} else if (ctrlOrMetaKey) {
+					// Ctrl/Meta+Click: Toggle selection for this edge
+					toggleEdgeSelection(edgeId);
+				} else {
+					// Simple click: Set selection to only this edge, unless it's already the only selected edge
+					if (!isSelected || currentEdgeSelection.size > 1) {
+						setSelectedEdges([edgeId]);
+					} else {
+						// If already the only selected edge, clear selection
+						clearEdgeSelection();
+					}
+				}
+			}
+			return; // Stop processing after handling edge click
+		}
+
+		// --- Handle Background Click (and Marquee Start) ---
 		if (clickedOnBackground && e.button === 0) { // Left click on background
 			e.preventDefault(); // Prevent default text selection/drag behavior
+			// Clear both node and edge selections on background click
+			clearSelection();
+			clearEdgeSelection();
+
 			isMarqueeSelecting = true;
 			lastInputWasTouchpad = false; // Assume mouse interaction for marquee
 
@@ -247,7 +292,7 @@
 			const { x: canvasX, y: canvasY } = screenToCanvasCoordinates(e.clientX, e.clientY, rect);
 			marqueeStartCoords = { canvasX, canvasY };
 			marqueeEndCoords = { canvasX, canvasY }; // Initialize end coords
-			initialSelection = new Set(get(selectedNodeIds)); // Store initial selection
+			initialSelection = new Set(get(selectedNodeIds)); // Store initial node selection (marquee only affects nodes)
 
 			// Capture pointer on the container
 			canvasContainer.setPointerCapture(e.pointerId);
@@ -483,6 +528,7 @@ function handleKeyDown(e: KeyboardEvent) {
 			// Open the menu
 			openCreateNodeMenu(screenX, screenY, canvasX, canvasY);
 			// DO NOT call e.preventDefault() here - it's handled globally
+			return; // Prevent further handling if menu is opened
 		} else {
 			console.log('[Viewport] Tab ignored for menu (input focused).');
 		}
@@ -532,18 +578,17 @@ function handleKeyDown(e: KeyboardEvent) {
 		e.preventDefault(); // Prevent default browser context menu
 
 		const targetElement = e.target as HTMLElement;
-		const clickedNodeWrapper = targetElement.closest('.node-wrapper');
-		const clickedEdge = targetElement.closest('svg .edge-path'); // Basic check for edge click
+		const clickedOnNode = targetElement.closest('.node-wrapper');
+		const clickedOnEdge = targetElement.closest('.edge-hit-area'); // Check for edge hit area click
 
 		let context: ContextMenuContextType;
 
-		if (clickedNodeWrapper) {
-			const nodeId = (clickedNodeWrapper as HTMLElement).dataset.id;
+		if (clickedOnNode) {
+			const nodeId = (clickedOnNode as HTMLElement).dataset.id;
 			context = { type: 'node', id: nodeId };
 			console.log('Context menu on node:', nodeId);
-		} else if (clickedEdge) {
-			// TODO: Enhance EdgeLayer to add data-id to paths to identify specific edge
-			const edgeId = (clickedEdge as HTMLElement).dataset.id; // Assuming data-id exists later
+		} else if (clickedOnEdge) { // Corrected typo here
+			const edgeId = (clickedOnEdge as HTMLElement).dataset.edgeId; // Corrected typo here
 			context = { type: 'edge', id: edgeId || 'unknown' }; // Use unknown if ID not found yet
 			console.log('Context menu on edge:', edgeId || 'unknown');
 		} else {
@@ -579,9 +624,9 @@ function handleKeyDown(e: KeyboardEvent) {
    window.removeEventListener('pointerdown', handleClickOutsideContextMenu);
   };
     });
-   
+
     // --- Lifecycle & Effects ---
-   
+
     // Effect to manage global listeners for connection drag
     // Svelte 5: Use $effect rune
     // Svelte 4: Use $: reactive statement with a function call or onMount/onDestroy
@@ -598,7 +643,7 @@ function handleKeyDown(e: KeyboardEvent) {
     		}
     	}
     }
-   
+
     // Ensure listeners are removed on component destroy
     onDestroy(() => {
     	if (typeof window !== 'undefined') {
@@ -607,7 +652,7 @@ function handleKeyDown(e: KeyboardEvent) {
     		// Remove any other global listeners added here
     	}
     });
-   
+
     // --- Paste/Drop Handlers ---
 
 function handleDragOver(e: DragEvent) {
@@ -742,7 +787,7 @@ class="karta-viewport-container w-full h-screen overflow-hidden relative cursor-
 		style:transform="translate({viewTransform.current.posX}px, {viewTransform.current.posY}px) scale({viewTransform.current.scale})"
 	>
 		<!-- Edge Rendering Layer -->
-        <EdgeLayer />
+        <EdgeLayer {inverseScale} />
 
 		<!-- Node Rendering Layer - Iterate over ViewNodes in the current context -->
         {#if currentCtx}
@@ -832,7 +877,7 @@ class="karta-viewport-container w-full h-screen overflow-hidden relative cursor-
 				];
 			} else if (contextType === 'edge' && targetNodeId) {
 				items = [
-					{ label: 'Delete Edge', action: () => console.warn('Delete Edge NYI'), disabled: true }
+					{ label: 'Delete Edge', action: () => { if (targetNodeId) deleteEdge(targetNodeId); closeContextMenu(); } }
 				];
 			} else if (contextType === 'background') {
 				items = [
