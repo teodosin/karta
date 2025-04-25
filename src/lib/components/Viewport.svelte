@@ -863,12 +863,20 @@ class="karta-viewport-container w-full h-screen overflow-hidden relative cursor-
 					{
 						label: 'Remove from Context',
 						action: () => {
-							if (targetNodeId && currentCtx) {
-								removeViewNodeFromContext(currentCtx.id, targetNodeId);
+							const selected = get(selectedNodeIds);
+							const currentCtxId = get(currentContextId);
+							if (currentCtx) {
+								// Iterate through selected nodes and remove from context, skipping the focal node
+								selected.forEach(nodeId => {
+									if (nodeId !== currentCtxId) {
+										removeViewNodeFromContext(currentCtxId, nodeId);
+									}
+								});
+								clearSelection(); // Clear selection after removing
 							}
 						},
 						// This will be disabled in Step 2 if it's the focal node
-						disabled: false
+						disabled: false // This will be updated in Step 2
 					},
 					{
 						label: 'Center View',
