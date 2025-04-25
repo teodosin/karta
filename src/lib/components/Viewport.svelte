@@ -13,6 +13,7 @@
 		currentContextId,
 		currentViewNodes, // Store for node states in current context
 		switchContext, // Action for 'Enter Context'
+		removeViewNodeFromContext, // Action for 'Remove from Context'
 	} from '$lib/karta/ContextStore';
 	import {
 		viewTransform, // Keep the Tween object
@@ -858,6 +859,16 @@ class="karta-viewport-container w-full h-screen overflow-hidden relative cursor-
 						label: 'Enter Context',
 						action: () => { if (targetNodeId) switchContext(targetNodeId); },
 						disabled: !targetNodeId || targetNodeId === $currentContextId
+					},
+					{
+						label: 'Remove from Context',
+						action: () => {
+							if (targetNodeId && currentCtx) {
+								removeViewNodeFromContext(currentCtx.id, targetNodeId);
+							}
+						},
+						// This will be disabled in Step 2 if it's the focal node
+						disabled: false
 					},
 					{
 						label: 'Center View',

@@ -331,6 +331,42 @@ export function updateNodeLayout(nodeId: NodeId, newX: number, newY: number) {
     }
 }
 
+export async function removeViewNodeFromContext(contextId: NodeId, viewNodeId: NodeId) {
+    const currentCtx = get(contexts).get(contextId);
+
+    if (!currentCtx) {
+        console.warn(`[removeViewNodeFromContext] Context ${contextId} not found.`);
+        return;
+    }
+
+    if (!currentCtx.viewNodes.has(viewNodeId)) {
+        console.warn(`[removeViewNodeFromContext] ViewNode ${viewNodeId} not found in context ${contextId}.`);
+        return;
+    }
+
+    // Remove the ViewNode from the context's map
+    currentCtx.viewNodes.delete(viewNodeId);
+
+    // Update the contexts store to trigger reactivity
+    contexts.update((map: Map<NodeId, Context>) => map);
+
+    console.log(`[removeViewNodeFromContext] Removed ViewNode ${viewNodeId} from context ${contextId}.`);
+
+    // Persist the updated context
+    if (localAdapter) {
+        try {
+            // Capture current viewport settings before saving
+            currentCtx.viewportSettings = { ...get(viewTransform).current };
+            await localAdapter.saveContext(currentCtx);
+            console.log(`[removeViewNodeFromContext] Saved context ${contextId} after removing ViewNode ${viewNodeId}.`);
+        } catch (error) {
+            console.error(`[removeViewNodeFromContext] Error saving context ${contextId} after removing ViewNode ${viewNodeId}:`, error);
+        }
+    } else {
+        console.warn("[removeViewNodeFromContext] LocalAdapter not initialized, persistence disabled.");
+    }
+}
+
 export async function switchContext(newContextId: NodeId, isUndoRedo: boolean = false) { // Added isUndoRedo flag
 	const oldContextId = get(currentContextId);
 	if (newContextId === oldContextId) return; // No change
