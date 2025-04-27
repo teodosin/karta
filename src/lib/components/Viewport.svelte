@@ -41,6 +41,10 @@
 		closeContextMenu,
 		type ContextMenuContextType,
 		requestNodeRename, // Action for 'Rename'
+		isConfirmationDialogOpen, // Import confirmation dialog state
+		confirmationDialogMessage, // Import confirmation dialog message store
+		confirmationDialogAction, // Import confirmation dialog action store
+		openConfirmationDialog, // Import action to open dialog
 	} from '$lib/karta/UIStateStore';
 	import {
 		selectedNodeIds,
@@ -65,6 +69,7 @@
 	import CreateNodeMenu from './CreateNodeMenu.svelte'; // Import the menu component
 	import ContextMenu from './ContextMenu.svelte'; // Import the context menu component
 	import SelectionBox from './SelectionBox.svelte'; // Import the selection box component
+	import ConfirmationDialog from './ConfirmationDialog.svelte'; // Import the confirmation dialog component
 	// Removed Toolbar and ContextPathDisplay imports
 
 	let canvasContainer: HTMLElement;
@@ -892,7 +897,21 @@ class="karta-viewport-container w-full h-screen overflow-hidden relative cursor-
 						action: () => { if (targetNodeId) requestNodeRename(targetNodeId); },
 						disabled: !targetDataNode || targetDataNode.attributes?.isSystemNode
 					},
-					// Add Delete options later
+					{
+						label: 'Delete Permanently',
+						action: () => {
+							if (targetNodeId) {
+								openConfirmationDialog(
+									'Are you sure you want to permanently delete this node? This action cannot be undone.',
+									() => {
+										// TODO: Implement actual permanent deletion logic here in a later step
+										console.log(`Confirmed permanent deletion for node: ${targetNodeId}`);
+									}
+								);
+							}
+						},
+						disabled: !targetNodeId || targetNodeId === $currentContextId // Disable if it's the focal node
+					}
 				];
 			} else if (contextType === 'edge' && targetNodeId) {
 				items = [
@@ -943,3 +962,4 @@ class="karta-viewport-container w-full h-screen overflow-hidden relative cursor-
 			<ContextMenu position={$contextMenuPosition} items={menuItems} />
 		</div>
 	{/if}
+<ConfirmationDialog />

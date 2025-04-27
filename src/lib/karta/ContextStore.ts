@@ -356,7 +356,7 @@ export async function removeViewNodeFromContext(contextId: NodeId, viewNodeId: N
     if (localAdapter) {
         try {
             // Capture current viewport settings before saving
-            currentCtx.viewportSettings = { ...get(viewTransform).current };
+            currentCtx.viewportSettings = { ...viewTransform.current }; // Corrected access
             await localAdapter.saveContext(currentCtx);
             console.log(`[removeViewNodeFromContext] Saved context ${contextId} after removing ViewNode ${viewNodeId}.`);
         } catch (error) {

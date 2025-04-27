@@ -23,6 +23,10 @@ export const propertiesPanelCollapsed = writable<boolean>(false);
 // Rename Request State
 export const nodeRenameRequestId = writable<NodeId | null>(null);
 
+// Confirmation Dialog Stores
+export const isConfirmationDialogOpen = writable<boolean>(false);
+export const confirmationDialogMessage = writable<string>('');
+export const confirmationDialogAction = writable<(() => void) | null>(null); // Action to run on confirm
 
 // Create Node Menu Actions
 export function openCreateNodeMenu(screenX: number, screenY: number, canvasX: number, canvasY: number) {
@@ -72,6 +76,23 @@ export function closeContextMenu() {
     contextMenuContext.set(null);
     console.log(`[KartaStore] Closing context menu`);
 }
+
+// Confirmation Dialog Actions
+export function openConfirmationDialog(message: string, action: () => void) {
+    confirmationDialogMessage.set(message);
+    confirmationDialogAction.set(() => { // Wrap action in a function to prevent immediate execution
+        action();
+        closeConfirmationDialog(); // Close dialog after action is done
+    });
+    isConfirmationDialogOpen.set(true);
+}
+
+export function closeConfirmationDialog() {
+    isConfirmationDialogOpen.set(false);
+    confirmationDialogMessage.set('');
+    confirmationDialogAction.set(null);
+}
+
 
 // Properties Panel Actions
 export function setPropertiesPanelVisibility(visible: boolean) {
