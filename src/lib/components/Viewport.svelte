@@ -599,6 +599,13 @@ function handleKeyDown(e: KeyboardEvent) {
 		if (clickedOnNode) {
 			const nodeId = (clickedOnNode as HTMLElement).dataset.id;
 			context = { type: 'node', id: nodeId };
+
+			// --- New Logic: Update selection on right-click if node is not already selected ---
+			const currentSelection = get(selectedNodeIds);
+			if (nodeId && !currentSelection.has(nodeId)) {
+				setSelectedNodes([nodeId]); // Clear existing and select only this node
+			}
+			// If the node is already selected, do nothing to the selection.
 			console.log('Context menu on node:', nodeId);
 		} else if (clickedOnEdge) { // Corrected typo here
 			const edgeId = (clickedOnEdge as HTMLElement).dataset.edgeId; // Corrected typo here
