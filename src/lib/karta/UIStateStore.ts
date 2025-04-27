@@ -78,13 +78,15 @@ export function closeContextMenu() {
 }
 
 // Confirmation Dialog Actions
-export function openConfirmationDialog(message: string, action: () => void) {
-    confirmationDialogMessage.set(message);
-    confirmationDialogAction.set(() => { // Wrap action in a function to prevent immediate execution
-        action();
-        closeConfirmationDialog(); // Close dialog after action is done
-    });
-    isConfirmationDialogOpen.set(true);
+// Update signature to accept contextId and the action callback type
+export function openConfirmationDialog(message: string, actionCallback: (contextId: NodeId) => void, contextId: NodeId) {
+	confirmationDialogMessage.set(message);
+	// Store a function that calls the original callback with the captured contextId
+	confirmationDialogAction.set(() => {
+		actionCallback(contextId);
+		// DO NOT close dialog here; it's closed by ConfirmationDialog.svelte
+	});
+	isConfirmationDialogOpen.set(true);
 }
 
 export function closeConfirmationDialog() {

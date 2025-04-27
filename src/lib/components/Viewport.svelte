@@ -59,12 +59,13 @@
 		toggleEdgeSelection
 	} from '$lib/karta/EdgeSelectionStore'; // Import the edge selection store
 	import {
-		nodes, // To get DataNode
+		nodes, // To get DataNode (Imported for ghost check)
 		createTextNodeFromPaste,
-		createImageNodeWithAsset
+		createImageNodeWithAsset,
+		deleteDataNodePermanently // Import the new deletion function
 	} from '$lib/karta/NodeStore';
-	import { deleteEdge } from '$lib/karta/EdgeStore'; // Import deleteEdge action
-	import NodeWrapper from './NodeWrapper.svelte';
+import { deleteEdge } from '$lib/karta/EdgeStore'; // Import deleteEdge action
+import NodeWrapper from './NodeWrapper.svelte';
 	import EdgeLayer from './EdgeLayer.svelte';
 	import CreateNodeMenu from './CreateNodeMenu.svelte'; // Import the menu component
 	import ContextMenu from './ContextMenu.svelte'; // Import the context menu component
@@ -160,7 +161,13 @@
 			currentElement = currentElement.parentElement;
 		}
 
-		finishConnectionProcess(targetNodeId); // KartaStore handles state reset and edge creation
+		// Check if the target node is a ghost node
+		if (targetNodeId && !get(nodes).has(targetNodeId)) {
+			console.warn('[Viewport] Cannot connect: Target node is a ghost node.');
+			cancelConnectionProcess(); // Cancel if target is ghost
+		} else {
+			finishConnectionProcess(targetNodeId); // Proceed if target is valid or null (background)
+		}
 		// Listeners are removed by the $effect cleanup
 	}
 
@@ -799,9 +806,8 @@ class="karta-viewport-container w-full h-screen overflow-hidden relative cursor-
         {#if currentCtx}
             {#each [...currentCtx.viewNodes.values()] as viewNode (viewNode.id)}
                 {@const dataNode = $nodes.get(viewNode.id)}
-                {#if dataNode} <!-- Ensure corresponding DataNode exists -->
-                    <NodeWrapper {viewNode} {dataNode} /> <!-- Removed nodeId prop -->
-                {/if}
+                <!-- Always render NodeWrapper; let it handle the ghost state if dataNode is missing -->
+                <NodeWrapper {viewNode} {dataNode} />
             {/each}
         {/if}
 		<!-- Selection Box (now always mounted, internal logic handles visibility) - Moved INSIDE transformed canvas -->
@@ -880,8 +886,8 @@ class="karta-viewport-container w-full h-screen overflow-hidden relative cursor-
 								clearSelection(); // Clear selection after removing
 							}
 						},
-						// This will be disabled in Step 2 if it's the focal node
-						disabled: false // This will be updated in Step 2
+						// Disable if it's the focal node
+						disabled: !targetNodeId || targetNodeId === $currentContextId
 					},
 					{
 						label: 'Center View',
@@ -900,14 +906,20 @@ class="karta-viewport-container w-full h-screen overflow-hidden relative cursor-
 					{
 						label: 'Delete Permanently',
 						action: () => {
+							// Ensure targetNodeId is not null or undefined before proceeding
 							if (targetNodeId) {
 								openConfirmationDialog(
 									'Are you sure you want to permanently delete this node? This action cannot be undone.',
-									() => {
-										// TODO: Implement actual permanent deletion logic here in a later step
-										console.log(`Confirmed permanent deletion for node: ${targetNodeId}`);
-									}
+									// The callback now receives the ID
+									async (idToDelete) => {
+										// Call the actual permanent deletion function with the received ID
+										await deleteDataNodePermanently(idToDelete);
+										console.log(`Initiated permanent deletion for node: ${idToDelete}`);
+									},
+									targetNodeId // Pass the targetNodeId here
 								);
+							} else {
+								console.error("Delete Permanently action triggered with undefined targetNodeId");
 							}
 						},
 						disabled: !targetNodeId || targetNodeId === $currentContextId // Disable if it's the focal node

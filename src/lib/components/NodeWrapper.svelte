@@ -8,7 +8,7 @@
 <script lang="ts">
 	import type { DataNode, ViewNode } from '$lib/types/types';
 	import { currentContextId, currentViewNodes } from '$lib/karta/ContextStore';
-	import { updateNodeAttributes } from '$lib/karta/NodeStore';
+	import { nodes, updateNodeAttributes } from '$lib/karta/NodeStore'; // Import nodes store
 	import { selectedNodeIds } from '$lib/karta/SelectionStore';
 	import { nodeRenameRequestId } from '$lib/karta/UIStateStore';
 	import { getNodeComponent } from '$lib/node_types/registry';
@@ -16,8 +16,9 @@
 	import { fade } from 'svelte/transition'; // Import fade transition
 	// Removed startResize import as handles are now in SelectionBox
 
-	export let dataNode: DataNode;
-	export let viewNode: ViewNode;
+	// Make dataNode potentially undefined
+	export let dataNode: DataNode | undefined;
+	export let viewNode: ViewNode; // viewNode is always required
 
 	let nodeWrapperRef: HTMLElement | null = null; // Reference to the main wrapper div
 	let inputElementRef: HTMLInputElement | null = null; // Reference to the input field
@@ -25,15 +26,20 @@
 	let isEditingName = false;
 	let editedName = '';
 
-	// Dynamically get the component based on ntype
+	// Dynamically get the component based on ntype - only if dataNode exists
 	$: NodeComponent = dataNode ? getNodeComponent(dataNode.ntype) : null;
-	$: nodeName = dataNode?.attributes?.name ?? dataNode?.ntype ?? 'Unnamed Node'; // Robust fallback
-	$: isSelected = dataNode ? $selectedNodeIds.has(dataNode.id) : false; // Check if this node is selected
-	$: isRenamable = !dataNode?.attributes?.isSystemNode; // Check the attribute
+	// Use viewNode.id for fallback if dataNode is missing (ghost node)
+	$: nodeName = dataNode?.attributes?.name ?? dataNode?.ntype ?? `Deleted Node (${viewNode.id.substring(0, 8)})`;
+	// Selection and Renamable depend on dataNode existing
+	$: isSelected = dataNode ? $selectedNodeIds.has(dataNode.id) : false;
+	$: isRenamable = dataNode ? !dataNode.attributes?.isSystemNode : false; // Ghost nodes are not renamable
+	// Ghost state is determined by checking the global $nodes store
+	$: isGhost = !$nodes.has(viewNode.id);
 
 	async function startEditing() {
-		if (!isRenamable) return; // Prevent editing if not renamable
-		editedName = nodeName;
+		// Can only edit if not a ghost and renamable
+		if (isGhost || !isRenamable || !dataNode) return;
+		editedName = dataNode.attributes?.name ?? dataNode.ntype ?? ''; // Use current name from dataNode
 		isEditingName = true;
 		await tick(); // Wait for input to render
 		inputElementRef?.focus();
@@ -43,9 +49,8 @@
 	}
 
 	function handleNameSubmit() {
-		// Only submit if renamable and editing
-		if (isRenamable && isEditingName && editedName.trim() && editedName !== nodeName) {
-			// Store action now handles uniqueness and system node checks
+		// Can only submit if not a ghost, renamable, editing, and dataNode exists
+		if (!isGhost && isRenamable && isEditingName && dataNode && editedName.trim() && editedName !== (dataNode.attributes?.name ?? dataNode.ntype)) {
 			updateNodeAttributes(dataNode.id, { ...dataNode.attributes, name: editedName.trim() });
 		}
 		isEditingName = false;
@@ -76,66 +81,79 @@
 	// --- Resize Handle Logic Removed - Handled by SelectionBox ---
 
 	// Reactive statement to listen for rename requests
-	$: if ($nodeRenameRequestId === dataNode?.id) {
-		console.log(`[NodeWrapper ${dataNode.id}] Received rename request via store.`);
-		startEditing(); // Use existing function to start editing
+	$: if ($nodeRenameRequestId === viewNode.id) { // Check against viewNode.id
+		// Ensure dataNode exists before attempting to rename
+		if (dataNode) {
+			console.log(`[NodeWrapper ${viewNode.id}] Received rename request via store.`);
+			startEditing(); // Use existing function to start editing
+		} else {
+			console.warn(`[NodeWrapper ${viewNode.id}] Received rename request, but DataNode is missing (ghost node?). Cannot rename.`);
+		}
 		nodeRenameRequestId.set(null); // Reset the request store immediately
 	}
 </script>
 
-{#if dataNode && viewNode}
+<!-- Render the wrapper if viewNode exists -->
+{#if viewNode}
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<!-- Use viewNode.id as it's guaranteed for data-id -->
 	<div
 		bind:this={nodeWrapperRef}
 		transition:fade|global
-	    data-id={dataNode.id}
+		data-id={viewNode.id}
 		class={`
-			node-wrapper absolute select-none cursor-grab pointer-events-none
+			node-wrapper absolute select-none pointer-events-auto
 		`}
 		class:selected={isSelected}
+		class:ghost-node={isGhost}
 		style:width="{viewNode.state.current.width}px"
 		style:height="{viewNode.state.current.height}px"
 		style:transform="translate({viewNode.state.current.x}px, {viewNode.state.current.y}px) scale({viewNode.state.current.scale}) rotate({viewNode.state.current.rotation}deg) translateX(-50%) translateY(-50%)"
-		on:mouseenter={(e: MouseEvent) => nodeWrapperRef?.classList.add('node-hover')}
+		on:mouseenter={(e: MouseEvent) => { if (!isGhost) nodeWrapperRef?.classList.add('node-hover'); }}
 		on:mouseleave={(e: MouseEvent) => nodeWrapperRef?.classList.remove('node-hover')}
 	>
-		<!-- Inner container for the specific node type component -->
-		<div class="node-content relative w-full h-full pointer-events-auto">
-			{#if NodeComponent}
-				<svelte:component this={NodeComponent} {dataNode} {viewNode} />
-			{:else}
-				<!-- Fallback rendering if component not found -->
-				<div class="w-full h-full bg-red-500 flex items-center justify-center text-white font-bold">?</div>
-			{/if}
-		</div>
-
-		<!-- Resize Handles Removed - Handled by SelectionBox -->
-
-		<!-- External Label & Input - Positioned below the wrapper -->
-		<div
-			class="node-label absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full mt-1 px-1.5 py-0.5 bg-gray-700 bg-opacity-80 text-white text-xs rounded whitespace-nowrap pointer-events-auto"
-			class:cursor-text={isRenamable}
-			title={isRenamable ? 'Double-click to rename' : 'System node (cannot be renamed)'}
-		>
-			{#if isRenamable}
-				{#if isEditingName}
-					<input
-						bind:this={inputElementRef}
-						type="text"
-						bind:value={editedName}
-						on:keydown={handleKeyDown}
-						class="bg-gray-900 text-white text-xs p-0 border border-blue-500 rounded outline-none focus:ring-1 focus:ring-blue-400"
-						style:width="{Math.max(60, nodeName.length * 7 + 10)}px"
-						spellcheck="false"
-					/>
+		{#if !isGhost && dataNode}
+			<!-- Inner container for the specific node type component - Render only if NOT ghost -->
+			<div class="node-content relative w-full h-full pointer-events-auto">
+				{#if NodeComponent}
+					<svelte:component this={NodeComponent} {dataNode} {viewNode} />
 				{:else}
-					<span on:dblclick={startEditing}>{nodeName}</span>
+					<!-- Fallback rendering if component not found -->
+					<div class="w-full h-full bg-red-500 flex items-center justify-center text-white font-bold">?</div>
 				{/if}
-			{:else}
-				<!-- Display name for non-renamable nodes, no interaction -->
-				<span>{nodeName}</span>
-			{/if}
-		</div>
+			</div>
+
+			<!-- External Label & Input - Render only if NOT ghost -->
+			<div
+				class="node-label absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full mt-1 px-1.5 py-0.5 bg-gray-700 bg-opacity-80 text-white text-xs rounded whitespace-nowrap pointer-events-auto"
+				class:cursor-text={isRenamable}
+				title={isRenamable ? 'Double-click to rename' : 'System node (cannot be renamed)'}
+			>
+				{#if isRenamable}
+					{#if isEditingName}
+						<input
+							bind:this={inputElementRef}
+							type="text"
+							bind:value={editedName}
+							on:keydown={handleKeyDown}
+							class="bg-gray-900 text-white text-xs p-0 border border-blue-500 rounded outline-none focus:ring-1 focus:ring-blue-400"
+							style:width="{Math.max(60, nodeName.length * 7 + 10)}px"
+							spellcheck="false"
+						/>
+					{:else}
+						<span on:dblclick={startEditing}>{nodeName}</span>
+					{/if}
+				{:else}
+					<!-- Display name for non-renamable nodes, no interaction -->
+					<span>{nodeName}</span>
+				{/if}
+			</div>
+		{:else if isGhost}
+			<!-- Render a simple placeholder for ghost nodes -->
+			<div class="ghost-placeholder w-full h-full flex items-center justify-center text-gray-500 italic text-sm">
+				(Deleted)
+			</div>
+		{/if}
 	</div>
 {/if}
 
@@ -144,7 +162,7 @@
         /* Add touch-action for better mobile/touchpad behavior */
         touch-action: none;
 		/* Add transition for potential hover effects */
-		transition: filter 0.15s ease-in-out;
+		transition: filter 0.15s ease-in-out, opacity 0.15s ease-in-out, border 0.15s ease-in-out;
 	}
 
 	.node-wrapper.selected {
@@ -154,11 +172,12 @@
 		/* Ensure it doesn't conflict with hover or other outlines */
 		z-index: 10; /* Bring selected nodes slightly forward if needed */
 	}
-	.node-wrapper.node-hover .node-content {
+	/* Apply hover only to non-ghost nodes */
+	.node-wrapper:not(.ghost-node).node-hover .node-content {
 		/* Example hover effect: slightly brighter */
  		filter: brightness(1.1);
 	}
-	.node-wrapper.node-hover .node-label {
+	.node-wrapper:not(.ghost-node).node-hover .node-label {
 		/* Make label more prominent on hover */
 		background-color: rgba(40, 40, 40, 0.9); /* Darker background */
 	}
@@ -169,6 +188,19 @@
 		height: 1.25rem; /* Match typical text line height */
 		vertical-align: middle;
 	}
+
+	/* Ghost node style */
+	.ghost-node {
+		opacity: 0.4;
+		border: 1px dashed #6b7280; /* Tailwind gray-500 */
+		/* pointer-events: none; REMOVED - Allow wrapper interaction */
+		background-color: rgba(55, 65, 81, 0.2); /* Tailwind gray-700 with low opacity */
+	}
+	/* Style for the placeholder text inside ghost node */
+	.ghost-placeholder {
+		pointer-events: none; /* Ensure placeholder itself is non-interactive */
+	}
+
 
 	/* Resize Handle Styles Removed - Handled by SelectionBox */
 </style>

@@ -4,6 +4,7 @@
 		selectedNodeIds
 	} from '$lib/karta/SelectionStore';
 	import { currentViewNodes } from '$lib/karta/ContextStore';
+	import { nodes } from '$lib/karta/NodeStore'; // Import global nodes store
 	import { startConnectionProcess } from '$lib/karta/ToolStore'; // Import the action to start connection
 	import { startResize } from '$lib/interaction/ResizeLogic';
 	import type { NodeId } from '$lib/types/types';
@@ -81,7 +82,18 @@
 		event.stopPropagation(); // Prevent viewport panning etc.
 		const currentSelectedIds = get(selectedNodeIds); // Get the Set of IDs
 		if (currentSelectedIds.size > 0) {
-			startConnectionProcess(Array.from(currentSelectedIds)); // Pass IDs as an array
+			// Check if any selected node is a ghost
+			const allNodesMap = get(nodes);
+			const selectedIdsArray = Array.from(currentSelectedIds);
+			const containsGhost = selectedIdsArray.some(id => !allNodesMap.has(id));
+
+			if (containsGhost) {
+				console.warn('[SelectionBox] Cannot start connection: Selection contains a ghost node.');
+				// Optionally provide user feedback here (e.g., flash the handle red)
+				return; // Prevent starting connection
+			}
+
+			startConnectionProcess(selectedIdsArray); // Pass IDs as an array
 		}
 	}
 

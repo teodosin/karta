@@ -257,33 +257,32 @@ async function _loadContextData(context: Context | undefined): Promise<{ loadedD
 function _applyStoresUpdate(
     newContextId: NodeId,
     processedContext: Context, // The fully processed context with ViewNodes/Tweens
-    loadedDataNodes: Map<NodeId, DataNode>,
-    loadedEdges: Map<EdgeId, KartaEdge>
+    loadedDataNodesForContext: Map<NodeId, DataNode>, // Renamed for clarity
+    loadedEdgesForContext: Map<EdgeId, KartaEdge> // Renamed for clarity
 ) {
-    // --- Update nodes and edges stores (Mark-and-Sweep) ---
-    const currentNodesMap = get(nodes);
-    const currentEdgesMap = get(edges);
-    const nodesToRemove = new Set(currentNodesMap.keys());
-    const edgesToRemove = new Set(currentEdgesMap.keys());
-    const nextNodes = new Map<NodeId, DataNode>();
-    const nextEdges = new Map<EdgeId, KartaEdge>();
+    // --- Update nodes store (Merge) ---
+    // Keep all existing nodes, only add/update the ones loaded for the new context
+    nodes.update(currentNodesMap => {
+        const nextNodes = new Map<NodeId, DataNode>(currentNodesMap); // Start with all existing nodes
+        for (const [nodeId, dataNode] of loadedDataNodesForContext.entries()) {
+            nextNodes.set(nodeId, dataNode); // Add or overwrite node data loaded for this context
+        }
+        console.log(`[_applyStoresUpdate] Merged ${loadedDataNodesForContext.size} nodes into global $nodes store.`);
+        console.log(`[_applyStoresUpdate] Final $nodes map size: ${nextNodes.size}`);
+        return nextNodes;
+    });
 
-    // Add/update nodes needed for the new context
-    for (const [nodeId, dataNode] of loadedDataNodes.entries()) {
-        nextNodes.set(nodeId, dataNode);
-        nodesToRemove.delete(nodeId); // Mark this node to be kept
-    }
-    // Add/update edges relevant to the new context
-    for (const [edgeId, edge] of loadedEdges.entries()) {
-        // Only keep edges where both source and target nodes are present in the new context
+    // --- Update edges store (Filter based on new context's view) ---
+    // Edges are still context-dependent for display
+    const nextEdges = new Map<EdgeId, KartaEdge>();
+    for (const [edgeId, edge] of loadedEdgesForContext.entries()) {
+        // Only keep edges where both source and target nodes are present in the new context's view
         if (processedContext.viewNodes.has(edge.source) && processedContext.viewNodes.has(edge.target)) {
              nextEdges.set(edgeId, edge);
-             edgesToRemove.delete(edgeId); // Mark this edge to be kept
         }
     }
-    // Update stores
-    nodes.set(nextNodes);
     edges.set(nextEdges);
+    console.log(`[_applyStoresUpdate] Set $edges store with ${nextEdges.size} edges relevant to context ${newContextId}.`);
 
     // --- Update contexts store ---
     // Set the fully processed context (containing ViewNodes with Tweens)
@@ -477,49 +476,63 @@ async function initializeStores() { // Remove export keyword here
         return;
     }
 
- let targetInitialContextId = ROOT_NODE_ID; // Default
- let initialDataNode: DataNode | null = null;
- let initialProcessedContext: Context | undefined = undefined;
-    let loadedDataNodes = new Map<NodeId, DataNode>();
-    let loadedEdges = new Map<EdgeId, KartaEdge>();
-
     try {
-  // 1. Determine Initial Context ID based on settings
-  try {
-   const currentSettings = get(settings); // Read settings (should be loaded by +layout.svelte)
-   if (currentSettings.saveLastViewedContext && typeof window !== 'undefined' && window.localStorage) {
-    const savedId = localStorage.getItem(LAST_CONTEXT_STORAGE_KEY);
-    if (savedId) {
-     // Basic validation: check if it looks like a UUID? For now, just check if not null/empty.
-     // A more robust check would involve ensuring the node actually exists later.
-     targetInitialContextId = savedId;
-     console.log(`[initializeStores] Found last context ID in localStorage: ${targetInitialContextId}`);
-    } else {
-     console.log(`[initializeStores] No last context ID found, defaulting to ROOT: ${ROOT_NODE_ID}`);
-     targetInitialContextId = ROOT_NODE_ID;
-    }
-   } else {
-    console.log(`[initializeStores] Setting disabled or localStorage not available, defaulting to ROOT: ${ROOT_NODE_ID}`);
-    targetInitialContextId = ROOT_NODE_ID;
-   }
-  } catch (error) {
-   console.error('[initializeStores] Error reading settings or localStorage for last context ID:', error);
-   targetInitialContextId = ROOT_NODE_ID; // Fallback to ROOT on error
-  }
+        // 0. Load ALL DataNodes into the store on startup
+        console.log('[initializeStores] Loading all DataNodes from persistence...');
+        const allDataNodesArray = await localAdapter.getNodes();
+        const allDataNodesMap = new Map(allDataNodesArray.map(node => [node.id, node]));
+        nodes.set(allDataNodesMap);
+        console.log(`[initializeStores] Loaded ${allDataNodesArray.length} DataNodes into store.`);
 
-  // 2. Ensure Initial DataNode Exists (Attempt target ID first)
-  initialDataNode = await _ensureDataNodeExists(targetInitialContextId);
-
-        // 3. Fallback to Root if target ID failed
-        if (!initialDataNode) {
-            console.warn(`[initializeStores] Failed to ensure target node ${targetInitialContextId} exists. Falling back to ROOT.`);
-            targetInitialContextId = ROOT_NODE_ID; // Reset target ID to root
-            initialDataNode = await _ensureDataNodeExists(ROOT_NODE_ID);
-            if (!initialDataNode) {
-                // If even the root fails, throw a critical error
-                throw new Error("CRITICAL: Failed to ensure even the Root DataNode exists during initialization.");
+        // 1. Determine Initial Context ID based on settings
+        let targetInitialContextId = ROOT_NODE_ID; // Default
+        try {
+            const currentSettings = get(settings); // Read settings (should be loaded by +layout.svelte)
+            if (currentSettings.saveLastViewedContext && typeof window !== 'undefined' && window.localStorage) {
+                const savedId = localStorage.getItem(LAST_CONTEXT_STORAGE_KEY);
+                // Check if the saved ID corresponds to an existing node
+                if (savedId && allDataNodesMap.has(savedId)) {
+                    targetInitialContextId = savedId;
+                    console.log(`[initializeStores] Found and validated last context ID in localStorage: ${targetInitialContextId}`);
+                } else {
+                    if (savedId && !allDataNodesMap.has(savedId)) {
+                         console.warn(`[initializeStores] Saved last context ID ${savedId} not found in loaded nodes. Defaulting to ROOT.`);
+                    } else {
+                         console.log(`[initializeStores] No last context ID found, defaulting to ROOT: ${ROOT_NODE_ID}`);
+                    }
+                    targetInitialContextId = ROOT_NODE_ID;
+                }
+            } else {
+                console.log(`[initializeStores] Setting disabled or localStorage not available, defaulting to ROOT: ${ROOT_NODE_ID}`);
+                targetInitialContextId = ROOT_NODE_ID;
             }
+        } catch (error) {
+            console.error('[initializeStores] Error reading settings or localStorage for last context ID:', error);
+            targetInitialContextId = ROOT_NODE_ID; // Fallback to ROOT on error
         }
+
+        // 2. Ensure Initial DataNode Exists (Attempt target ID first)
+        // Since we loaded all nodes, we just need to get it from the store
+        let initialDataNode = get(nodes).get(targetInitialContextId);
+
+        // 3. Fallback to Root if target ID failed (shouldn't happen if we validated against allDataNodesMap)
+        // This block is mostly for safety/backward compatibility if validation above was missed
+        if (!initialDataNode) {
+             console.warn(`[initializeStores] Target node ${targetInitialContextId} not found in loaded nodes. Falling back to ROOT.`);
+             targetInitialContextId = ROOT_NODE_ID; // Reset target ID to root
+             initialDataNode = get(nodes).get(ROOT_NODE_ID); // Get root from the already loaded nodes
+             if (!initialDataNode) {
+                 // If even the root is not in the loaded nodes (critical error)
+                 // Try ensuring it one last time (maybe DB was empty initially?)
+                 initialDataNode = await _ensureDataNodeExists(ROOT_NODE_ID);
+                 if (!initialDataNode) {
+                    throw new Error("CRITICAL: Root DataNode not found in loaded nodes or DB during initialization.");
+                 }
+                 // If ensured, add it to the store
+                 nodes.update(n => n.set(initialDataNode!.id, initialDataNode!));
+             }
+        }
+
         // 3.5 Ensure Root Node has isSystemNode flag (for backward compatibility)
         if (initialDataNode.id === ROOT_NODE_ID && !initialDataNode.attributes?.isSystemNode) {
             console.warn(`[initializeStores] Root node ${ROOT_NODE_ID} is missing the isSystemNode flag. Adding and saving...`);
@@ -528,6 +541,8 @@ async function initializeStores() { // Remove export keyword here
             try {
                 await localAdapter.saveNode(initialDataNode);
                 console.log(`[initializeStores] Successfully added isSystemNode flag to root node.`);
+                // Update the node in the store as well
+                nodes.update(n => n.set(initialDataNode!.id, initialDataNode!));
             } catch (saveError) {
                 console.error(`[initializeStores] CRITICAL: Failed to save isSystemNode flag to root node:`, saveError);
                 // Continue initialization, but the root might remain unprotected if saving failed.
@@ -550,49 +565,52 @@ async function initializeStores() { // Remove export keyword here
             rootInitialState, // Pass the full default state
             undefined // No old context on init
         );
-        initialProcessedContext = finalContext;
+        let initialProcessedContext = finalContext;
 
         if (!initialProcessedContext) {
             throw new Error(`Failed to load or process initial context for node: ${initialDataNode.id}`);
         }
 
+        // Load necessary DataNodes and Edges for the nodes now in the context
+        // Note: loadedDataNodesForContext here will only contain nodes *in the initial context*
         const loadedData = await _loadContextData(initialProcessedContext);
-        const loadedDataNodes = loadedData.loadedDataNodes;
+        const loadedDataNodesForContext = loadedData.loadedDataNodes; // Renamed for clarity
         const loadedEdges = loadedData.loadedEdges;
 
         // 5. Apply Initial State
-        _applyStoresUpdate(initialDataNode.id, initialProcessedContext, loadedDataNodes, loadedEdges);
+        // _applyStoresUpdate will now merge loadedDataNodesForContext into the existing $nodes store
+        _applyStoresUpdate(initialDataNode.id, initialProcessedContext, loadedDataNodesForContext, loadedEdges);
 
-  // 6. Set Initial Viewport
-  // If loading the root context and no last context was saved, center the root node.
-  // Otherwise, use loaded viewport settings or defaults.
-  let initialViewportSettings = initialProcessedContext.viewportSettings || DEFAULT_VIEWPORT_SETTINGS;
+        // 6. Set Initial Viewport
+        // If loading the root context and no last context was saved, center the root node.
+        // Otherwise, use loaded viewport settings or defaults.
+        let initialViewportSettings = initialProcessedContext.viewportSettings || DEFAULT_VIEWPORT_SETTINGS;
 
-  if (initialDataNode.id === ROOT_NODE_ID && targetInitialContextId === ROOT_NODE_ID && typeof window !== 'undefined') {
-   // Calculate translation to center the root node (at 0,0)
-   const centerX = window.innerWidth / 2;
-   const centerY = window.innerHeight / 2;
-   // The viewport position is the top-left corner in canvas coordinates.
-   // To center the node at (0,0), the top-left should be at (centerX / scale, centerY / scale)
-   // However, viewTransform stores the top-left in screen coordinates relative to the canvas origin.
-   // So, the required translation in screen space is simply (centerX, centerY).
-   // The viewTransform store's posX/posY represent the canvas origin's screen coordinates.
-   // To move the canvas origin so that the root node (at canvas 0,0) is at screen (centerX, centerY),
-   // the canvas origin needs to be at screen (centerX, centerY).
-   // The viewTransform posX/posY are the screen coordinates of the canvas origin.
-   // So, we want viewTransform.posX = centerX and viewTransform.posY = centerY.
-   // The scale should be the default scale.
-   initialViewportSettings = {
-    scale: DEFAULT_VIEWPORT_SETTINGS.scale, // Use default scale
-    posX: centerX,
-    posY: centerY
-   };
-   console.log(`[initializeStores] Centering root node at screen (${centerX}, ${centerY}).`);
-  } else {
-   console.log(`[initializeStores] Loading context ${initialDataNode.id}. Using saved or default viewport settings.`);
-  }
+        if (initialDataNode.id === ROOT_NODE_ID && targetInitialContextId === ROOT_NODE_ID && typeof window !== 'undefined') {
+            // Calculate translation to center the root node (at 0,0)
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
+            // The viewport position is the top-left corner in canvas coordinates.
+            // To center the node at (0,0), the top-left should be at (centerX / scale, centerY / scale)
+            // However, viewTransform stores the top-left in screen coordinates relative to the canvas origin.
+            // So, the required translation in screen space is simply (centerX, centerY).
+            // The viewTransform store's posX/posY represent the canvas origin's screen coordinates.
+            // To move the canvas origin so that the root node (at canvas 0,0) is at screen (centerX, centerY),
+            // the canvas origin needs to be at screen (centerX, centerY).
+            // The viewTransform posX/posY are the screen coordinates of the canvas origin.
+            // So, we want viewTransform.posX = centerX and viewTransform.posY = centerY.
+            // The scale should be the default scale.
+            initialViewportSettings = {
+                scale: DEFAULT_VIEWPORT_SETTINGS.scale, // Use default scale
+                posX: centerX,
+                posY: centerY
+            };
+            console.log(`[initializeStores] Centering root node at screen (${centerX}, ${centerY}).`);
+        } else {
+            console.log(`[initializeStores] Loading context ${initialDataNode.id}. Using saved or default viewport settings.`);
+        }
 
-  viewTransform.set(initialViewportSettings, { duration: 0 }); // Set instantly
+        viewTransform.set(initialViewportSettings, { duration: 0 }); // Set instantly
 
         console.log(`[initializeStores] Stores initialized successfully, starting context: ${initialDataNode.id}`);
 
@@ -607,7 +625,10 @@ async function initializeStores() { // Remove export keyword here
     }
 
     // 7. Set Initial Properties Panel Position (calculated only in browser)
-    propertiesPanelPosition.set({ x: window.innerWidth - 320, y: 50 }); // Set browser-dependent default
+    if (typeof window !== 'undefined') {
+        propertiesPanelPosition.set({ x: window.innerWidth - 320, y: 50 }); // Set browser-dependent default
+    }
+
 
     // 8. Set Initial Tool (runs even if init fails partially)
     setTool('move');

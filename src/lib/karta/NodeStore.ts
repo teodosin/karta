@@ -4,7 +4,8 @@ import type { DataNode, NodeId, AssetData, AbsoluteTransform, ViewportSettings, 
 import { v4 as uuidv4 } from 'uuid';
 import { getDefaultAttributesForType, getDefaultViewNodeStateForType } from '$lib/node_types/registry';
 import { Tween } from 'svelte/motion';
-import { currentContextId, contexts, ROOT_NODE_ID } from './ContextStore'; // Assuming ContextStore will export these
+// Import removeViewNodeFromContext as well
+import { currentContextId, contexts, ROOT_NODE_ID, removeViewNodeFromContext } from './ContextStore';
 import { viewTransform } from './ViewportStore'; // Assuming ViewportStore will export this
 
 export const nodes = writable<Map<NodeId, DataNode>>(new Map());
@@ -350,6 +351,87 @@ export async function fetchAvailableContextDetails(): Promise<{ id: NodeId, name
         console.error("[fetchAvailableContextDetails] Error fetching context details:", error);
         return [];
     }
-}
-
-export { _ensureDataNodeExists };
+   }
+   
+   // Import necessary stores and types for deletion
+   import { edges, deleteEdge } from './EdgeStore'; // Assuming EdgeStore exports edges store and deleteEdge action
+   
+   export async function deleteDataNodePermanently(nodeId: NodeId): Promise<void> {
+    console.log(`[NodeStore] Attempting permanent deletion for node: ${nodeId}`);
+    if (!localAdapter) {
+    	console.error("[deleteDataNodePermanently] LocalAdapter not available.");
+    	return;
+    }
+   
+    try {
+    	// 1. Get the node data to check type for asset deletion
+    	const dataNodeToDelete = get(nodes).get(nodeId); // Get from store first
+    	if (!dataNodeToDelete) {
+    		// If not in store, try fetching from DB (might be a ghost node scenario)
+    		const nodeFromDb = await localAdapter.getNode(nodeId);
+    		if (!nodeFromDb) {
+    			console.warn(`[deleteDataNodePermanently] Node ${nodeId} not found in store or DB. Cannot delete.`);
+    			return;
+    		}
+    		// If found in DB but not store, proceed with deletion from DB
+    		console.warn(`[deleteDataNodePermanently] Node ${nodeId} found in DB but not in store. Proceeding with DB deletion.`);
+    	}
+   
+    	// 2. Find connected edges
+    	const allEdges = get(edges);
+    	const connectedEdges = [...allEdges.values()].filter(edge => edge.source === nodeId || edge.target === nodeId);
+    	console.log(`[deleteDataNodePermanently] Found ${connectedEdges.length} connected edges for node ${nodeId}.`);
+   
+    	// 3. Remove DataNode from the store *first* to trigger UI updates (like ghosting)
+    	let nodeRemovedFromStore = false;
+    	nodes.update(n => {
+    		if (n.has(nodeId)) {
+    			n.delete(nodeId);
+    			nodeRemovedFromStore = true;
+    			return n;
+    		}
+    		return n; // Return original map if node wasn't there
+    	});
+    	if (nodeRemovedFromStore) {
+    		console.log(`[NodeStore] Removed node ${nodeId} from store.`);
+    	}
+   
+   
+    	// 4. Delete connected edges (store update + persistence handled by deleteEdge)
+    	for (const edge of connectedEdges) {
+    		await deleteEdge(edge.id); // deleteEdge should handle store and persistence
+    	}
+    	console.log(`[deleteDataNodePermanently] Deleted ${connectedEdges.length} connected edges for node ${nodeId}.`);
+   
+    	// 5. Delete asset if it's an image node
+    	// Use the node data we fetched earlier (either from store or DB)
+    	const nodeType = dataNodeToDelete?.ntype ?? (await localAdapter.getNode(nodeId))?.ntype; // Check type
+    	if (nodeType === 'image') {
+    		// Asset ID is the same as Node ID for images currently
+    		await localAdapter.deleteAsset(nodeId);
+    		console.log(`[deleteDataNodePermanently] Deleted associated asset for image node ${nodeId}.`);
+    	}
+   
+    	// 6. Delete the DataNode from persistence
+    	await localAdapter.deleteNode(nodeId);
+    	console.log(`[deleteDataNodePermanently] Successfully deleted node ${nodeId} from persistence.`);
+   
+    	// 7. Remove the ViewNode from the *current* context
+    	const currentCtxId = get(currentContextId);
+    	if (currentCtxId) {
+    		await removeViewNodeFromContext(currentCtxId, nodeId);
+    		console.log(`[deleteDataNodePermanently] Removed ViewNode ${nodeId} from current context ${currentCtxId}.`);
+    	} else {
+    		console.warn(`[deleteDataNodePermanently] Could not determine current context ID to remove ViewNode ${nodeId}.`);
+    	}
+   
+   
+    } catch (error) {
+    	console.error(`[deleteDataNodePermanently] Error deleting node ${nodeId}:`, error);
+    	// Consider adding rollback logic if needed, though complex.
+    	// For now, log the error. The node might be partially deleted.
+    }
+   }
+   
+   
+   export { _ensureDataNodeExists };
