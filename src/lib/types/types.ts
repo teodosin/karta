@@ -28,7 +28,9 @@ export interface DataNode {
 // In-memory representation of a node's view state within a context
 export interface ViewNode {
   id: NodeId; // Same UUID as the corresponding DataNode
-  state: Tween<TweenableNodeState>; // Tween manages all visual properties
+  state: Tween<TweenableNodeState>; // Tween manages core visual properties (position, size, rotation)
+  // Generic view-specific attributes, interpreted by the node component
+  attributes?: Record<string, any>;
 }
 
 // Represents an absolute transform in the canvas coordinate space
@@ -77,6 +79,8 @@ export interface StorableViewNode {
     height: number;
     relScale: number;
     rotation: number;
+    // Generic view-specific attributes for storage
+    attributes?: Record<string, any>;
 }
 
 // Represents ViewportSettings as stored (relative coordinates where applicable)
@@ -154,3 +158,7 @@ export interface Tool {
 	// Optional method to update the cursor style
 	updateCursor?(): void;
 }
+
+// --- Available Fonts ---
+export const AVAILABLE_FONTS = ['Nunito', 'Lustria', 'Bodoni Moda', 'Georgia'] as const;
+export type AvailableFont = typeof AVAILABLE_FONTS[number];

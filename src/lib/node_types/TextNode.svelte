@@ -11,7 +11,14 @@
 	// Optional: import { Type } from 'lucide-svelte';
 
 	function getDefaultAttributes(baseName = 'Text'): Record<string, any> {
-		return { name: baseName, text: '', fontSize: 16 };
+		return {
+			name: baseName,
+			text: '',
+			fontSize: 16,
+			karta_fillColor: '#FEF9C3', // Default tan post-it color
+			karta_textColor: '#000000', // Default black text
+			karta_font: 'Nunito'       // Default font (matches global default)
+		};
 	}
 
 	function getDefaultViewNodeState(): Omit<TweenableNodeState, 'x' | 'y'> {
@@ -35,18 +42,33 @@
 
 <script lang="ts">
 	// INSTANCE SCRIPT
-	import type { DataNode, ViewNode } from '$lib/types/types';
+	import type { DataNode, ViewNode, AvailableFont } from '$lib/types/types'; // Import AvailableFont
 	import { updateNodeAttributes } from '$lib/karta/NodeStore'; // Corrected import
 	import { currentContextId } from '$lib/karta/ContextStore'; // Corrected import
 	import { tick, onDestroy } from 'svelte'; // Import onDestroy
+	import { AVAILABLE_FONTS } from '$lib/types/types'; // Import AVAILABLE_FONTS
 
 	export let dataNode: DataNode;
 	export let viewNode: ViewNode;
 
-	// Type assertion for attributes - assumes NodeWrapper ensures correct ntype/attributes
-	$: attributes = dataNode.attributes as { text?: string; fontSize?: number; name: string };
-	$: textContent = attributes?.text ?? '';
-	$: fontSize = attributes?.fontSize ?? 16; // Default font size if not specified
+	// Type assertion for dataNode attributes - assumes NodeWrapper ensures correct ntype/attributes
+	$: dataNodeAttributes = dataNode.attributes as { text?: string; fontSize?: number; name: string; karta_fillColor?: string; karta_textColor?: string; karta_font?: AvailableFont };
+	$: textContent = dataNodeAttributes?.text ?? '';
+	$: fontSize = dataNodeAttributes?.fontSize ?? 16; // Default font size if not specified
+
+	// Type assertion for viewNode attributes
+	$: viewNodeAttributes = viewNode.attributes as { karta_fillColor?: string; karta_textColor?: string; karta_font?: AvailableFont } | undefined;
+
+	// --- Define Fallbacks ---
+	const FALLBACK_FILL_COLOR = '#FEF9C3'; // Default tan post-it color (Tailwind yellow-100)
+	const FALLBACK_TEXT_COLOR = '#000000'; // Default black text
+	const FALLBACK_FONT: AvailableFont = 'Nunito'; // Use global default font as fallback
+
+	// --- Reactive Effective Styles ---
+	$: effectiveFillColor = viewNodeAttributes?.karta_fillColor ?? dataNodeAttributes?.karta_fillColor ?? FALLBACK_FILL_COLOR;
+	$: effectiveTextColor = viewNodeAttributes?.karta_textColor ?? dataNodeAttributes?.karta_textColor ?? FALLBACK_TEXT_COLOR;
+	$: effectiveFont = viewNodeAttributes?.karta_font ?? dataNodeAttributes?.karta_font ?? FALLBACK_FONT;
+
 
 	let isEditing = false;
 	let editedText = '';
@@ -65,7 +87,8 @@
 
 	function handleTextSubmit() {
 		if (isEditing && editedText !== textContent) {
-			updateNodeAttributes(dataNode.id, { ...attributes, text: editedText });
+			// Only update the 'text' attribute on the DataNode
+			updateNodeAttributes(dataNode.id, { text: editedText });
 		}
 		isEditing = false;
 		removeClickListener(); // Remove listener after submit
@@ -148,11 +171,13 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
 	class={`
-		w-full h-full bg-yellow-100 text-gray-900 p-2 overflow-hidden
+		w-full h-full p-2 overflow-hidden
 		flex items-center justify-center pointer-events-auto
 		${dataNode.id === $currentContextId ? 'ring-4 ring-offset-2 ring-offset-gray-900 ring-orange-500 rounded' : 'rounded shadow-md'}
 	`}
-	title={`Text Node: ${attributes?.name ?? dataNode.id}`}
+	style:background-color={effectiveFillColor}
+	style:color={effectiveTextColor}
+	title={`Text Node: ${dataNodeAttributes?.name ?? dataNode.id}`}
 	on:dblclick={startEditing}
 >
 	{#if isEditing}
@@ -163,8 +188,11 @@
 			on:keydown={handleKeyDown}
 			on:input={adjustTextareaHeight}
 			on:paste={handlePaste}
-			class="w-full h-auto bg-yellow-100 outline-none resize-none p-1 leading-tight text-gray-900 block"
+			class="w-full h-auto outline-none resize-none p-1 leading-tight block"
 			style:font-size="{fontSize}px"
+			style:background-color={effectiveFillColor}
+			style:color={effectiveTextColor}
+			style:font-family={effectiveFont}
 			spellcheck="false"
 		></textarea> <!-- Ensure closing tag -->
 	{:else}
@@ -172,6 +200,7 @@
 		<div
 			class="w-full h-full overflow-y-auto whitespace-pre-wrap break-words p-1 leading-tight"
 			style:font-size="{fontSize}px"
+			style:font-family={effectiveFont}
 		>
 			{textContent || ''} {#if !textContent}&nbsp;{/if} <!-- Ensure div has height even if empty -->
 		</div>
@@ -181,8 +210,9 @@
 <style>
 	div, textarea {
 		box-sizing: border-box;
-		font-family: sans-serif; /* Or choose a specific font */
+		/* font-family is now set via inline style */
 		/* line-height: 1.4; */ /* Removed as leading-tight is used */
+		transition: background-color 0.2s ease, color 0.2s ease; /* Add transitions */
 	}
 	/* Add scrollbar styling if desired */
 	div::-webkit-scrollbar {

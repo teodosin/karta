@@ -309,7 +309,16 @@ class LocalAdapter implements PersistenceService {
             let storableNode: StorableViewNode;
             if (nodeId === context.id) {
                 // Focal node is always relative origin
-                storableNode = { id: viewNode.id, relX: 0, relY: 0, width: nodeState.width, height: nodeState.height, relScale: 1, rotation: nodeState.rotation };
+                storableNode = {
+                    id: viewNode.id,
+                    relX: 0,
+                    relY: 0,
+                    width: nodeState.width,
+                    height: nodeState.height,
+                    relScale: 1,
+                    rotation: nodeState.rotation,
+                    attributes: viewNode.attributes // Include generic attributes
+                };
             } else {
                 // Calculate relative properties based on focal node's current state
                 const relScale = nodeState.scale / focalNodeState.scale;
@@ -318,7 +327,16 @@ class LocalAdapter implements PersistenceService {
                 // Simplified relative position calculation (no rotation considered for offset)
                 const relX = dx / focalNodeState.scale;
                 const relY = dy / focalNodeState.scale;
-                storableNode = { id: viewNode.id, relX, relY, width: nodeState.width, height: nodeState.height, relScale, rotation: nodeState.rotation };
+                storableNode = {
+                    id: viewNode.id,
+                    relX,
+                    relY,
+                    width: nodeState.width,
+                    height: nodeState.height,
+                    relScale,
+                    rotation: nodeState.rotation,
+                    attributes: viewNode.attributes // Include generic attributes
+                };
             }
             storableViewNodes.push([nodeId, storableNode]);
         }

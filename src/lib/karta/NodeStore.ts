@@ -435,3 +435,104 @@ export async function fetchAvailableContextDetails(): Promise<{ id: NodeId, name
    
    
    export { _ensureDataNodeExists };
+
+   // --- Generic ViewNode Attribute Update ---
+   export async function updateViewNodeAttribute(viewNodeId: string, attributeKey: string, attributeValue: any): Promise<void> {
+       const currentCtxId = get(currentContextId);
+       if (!currentCtxId) {
+           console.error("[updateViewNodeAttribute] Cannot update attribute: No current context ID");
+           return;
+       }
+
+       const currentContexts = get(contexts);
+       const currentContext = currentContexts.get(currentCtxId);
+       if (!currentContext) {
+           console.error(`[updateViewNodeAttribute] Cannot update attribute: Context ${currentCtxId} not found`);
+           return;
+       }
+
+       const viewNode = currentContext.viewNodes.get(viewNodeId);
+       if (!viewNode) {
+           console.error(`[updateViewNodeAttribute] Cannot update attribute: ViewNode ${viewNodeId} not found in context ${currentCtxId}`);
+           return;
+       }
+
+       const dataNodeId = viewNode.id; // ViewNode ID is same as DataNode ID
+       const allNodes = get(nodes);
+       const dataNode = allNodes.get(dataNodeId);
+
+       if (!dataNode) {
+            console.error(`[updateViewNodeAttribute] Cannot update attribute: DataNode ${dataNodeId} not found`);
+           return;
+       }
+
+       // --- Type Check ---
+       let isValidAttribute = false;
+       if (dataNode.ntype === 'text' && ['karta_fillColor', 'karta_textColor', 'karta_font'].includes(attributeKey)) {
+           isValidAttribute = true;
+       }
+       // Future: Add checks for other node types and their valid view attributes here
+
+       if (!isValidAttribute) {
+           console.error(`[updateViewNodeAttribute] Attribute key "${attributeKey}" is not valid for node type "${dataNode.ntype}"`);
+           return;
+       }
+
+       // --- Update State ---
+       let viewNodeUpdated = false;
+       let dataNodeUpdated = false;
+
+       // Ensure attributes objects exist
+       if (!viewNode.attributes) {
+           viewNode.attributes = {};
+       }
+       if (!dataNode.attributes) {
+           // This shouldn't happen based on DataNode interface, but check anyway
+           dataNode.attributes = {};
+       }
+
+
+       // Update ViewNode Attributes
+       if (viewNode.attributes[attributeKey] !== attributeValue) {
+            viewNode.attributes[attributeKey] = attributeValue;
+            viewNodeUpdated = true;
+       }
+
+        // Update DataNode Attributes (Default)
+       if (dataNode.attributes[attributeKey] !== attributeValue) {
+           dataNode.attributes[attributeKey] = attributeValue;
+           dataNodeUpdated = true;
+       }
+
+       // --- Trigger Store Updates & Persistence ---
+       if (viewNodeUpdated) {
+           contexts.update(ctxMap => {
+               const newViewNodes = new Map(currentContext.viewNodes);
+               // Create a new ViewNode object to ensure reactivity
+               newViewNodes.set(viewNodeId, { ...viewNode, attributes: { ...viewNode.attributes } });
+               ctxMap.set(currentCtxId, { ...currentContext, viewNodes: newViewNodes });
+               return new Map(ctxMap);
+           });
+           if (localAdapter) {
+               // Save the entire context as ViewNode attributes changed
+               await localAdapter.saveContext(get(contexts).get(currentCtxId)!);
+           }
+       }
+
+       if (dataNodeUpdated) {
+            nodes.update(nodeMap => {
+               // Create a new DataNode object
+               nodeMap.set(dataNodeId, { ...dataNode, attributes: { ...dataNode.attributes } });
+               return new Map(nodeMap);
+            });
+            if (localAdapter) {
+                await localAdapter.saveNode(get(nodes).get(dataNodeId)!);
+            }
+       }
+
+       if (viewNodeUpdated || dataNodeUpdated) {
+            console.log(`[updateViewNodeAttribute] Updated ${attributeKey} for ViewNode ${viewNodeId} to ${attributeValue}.`);
+       } else {
+            console.log(`[updateViewNodeAttribute] No effective change for ${attributeKey} on ViewNode ${viewNodeId}.`);
+       }
+   }
