@@ -82,10 +82,11 @@ async function _loadAndProcessContext(
 
             if (existingViewNode) {
                 existingViewNode.state.set(targetState, NODE_TWEEN_OPTIONS); // Update existing tween
+                existingViewNode.attributes = storableNode.attributes; // Copy attributes
                 finalViewNodes.set(nodeId, existingViewNode); // Reuse ViewNode object
             } else {
                 // Create new ViewNode with a new Tween, starting from target state? Or current if exists? Start from target.
-                finalViewNodes.set(nodeId, { id: nodeId, state: new Tween(targetState, NODE_TWEEN_OPTIONS) });
+                finalViewNodes.set(nodeId, { id: nodeId, state: new Tween(targetState, NODE_TWEEN_OPTIONS), attributes: storableNode.attributes });
             }
         }
         // Convert stored viewport settings
