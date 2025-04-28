@@ -442,7 +442,7 @@
 		<!-- Content (Scrollable) -->
 		{#if !$propertiesPanelCollapsed} <!-- Use #if block to conditionally render content -->
 		<div
-			class="panel-content flex-grow p-3 overflow-y-auto space-y-4"
+			class="panel-content flex-grow p-3 overflow-y-auto space-y-4 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full"
 		>
 				<!-- Attributes Section -->
 				<section>
@@ -593,3 +593,12 @@
 {/if}
 
 <!-- Style block removed, classes applied directly -->
+<style>
+	:global(.dark) {
+		--cp-bg-color: #333;
+		--cp-border-color: white;
+		--cp-text-color: white;
+		--cp-input-color: #555;
+		--cp-button-hover-color: #777;
+	}
+</style>
