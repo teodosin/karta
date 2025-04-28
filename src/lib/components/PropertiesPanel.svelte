@@ -45,6 +45,10 @@
 	let fillColorRgb: { r: number; g: number; b: number; a: number } = { r: 254, g: 249, b: 195, a: 1 }; // Initial default
 	let textColorRgb: { r: number; g: number; b: number; a: number } = { r: 0, g: 0, b: 0, a: 1 }; // Initial default
 
+	// State to control color picker pop-up visibility
+	let isFillPickerOpen = false;
+	let isTextColorPickerOpen = false;
+
 	// Helper to convert hex or rgba string to RGB object
 	function hexOrRgbaToRgb(color: string | undefined): { r: number; g: number; b: number; a: number } {
 		if (!color) return { r: 0, g: 0, b: 0, a: 1 }; // Default to black if undefined
@@ -163,6 +167,35 @@
 			}
 		}
 	}
+
+	// --- Click Outside Logic for Color Pickers ---
+	function handleClickOutside(event: MouseEvent) {
+		// Check if the click is outside the panel element itself
+		if (panelElement && !panelElement.contains(event.target as Node)) {
+			// If clicked outside the panel, close any open color pickers
+			if (isFillPickerOpen || isTextColorPickerOpen) {
+				isFillPickerOpen = false;
+				isTextColorPickerOpen = false;
+			}
+		}
+	}
+
+	// Add/remove click outside listener based on picker state
+	$: {
+		if (isFillPickerOpen || isTextColorPickerOpen) {
+			// Add listener when either picker is open
+			document.addEventListener('click', handleClickOutside);
+		} else {
+			// Remove listener when both pickers are closed
+			document.removeEventListener('click', handleClickOutside);
+		}
+	}
+
+	// Cleanup listener on component destroy
+	onDestroy(() => {
+		document.removeEventListener('click', handleClickOutside);
+	});
+
 
 	// --- Dragging Logic ---
 	function handleDragStart(event: PointerEvent) {
@@ -507,20 +540,48 @@
 					</h3>
 					<div class="space-y-2">
 						<!-- Fill Color -->
-						<div class="flex items-center justify-between gap-2">
+						<div class="flex items-center justify-between gap-2 relative">
 							<label for="view-fillColor" class="text-sm">Fill Color</label>
-							<ColorPicker
-								bind:rgb={fillColorRgb}
-								onInput={(e) => handleColorChange('karta_fillColor', e)}
-							/>
+							<!-- Color Swatch to open picker -->
+							<div
+								class="w-6 h-6 rounded-full border border-gray-400 dark:border-gray-600 cursor-pointer"
+								style="background-color: {rgbToRgbaString(fillColorRgb)};"
+								on:click={() => { isFillPickerOpen = true; }}
+								title="Select Fill Color"
+							></div>
+							<!-- Color Picker -->
+							{#if isFillPickerOpen}
+								<div class="absolute z-50 top-full right-0 mt-2">
+									<ColorPicker
+										bind:rgb={fillColorRgb}
+										onInput={(e) => handleColorChange('karta_fillColor', e)}
+										bind:isOpen={isFillPickerOpen}
+										disableCloseClickOutside={true}
+									/>
+								</div>
+							{/if}
 						</div>
 						<!-- Text Color -->
-						<div class="flex items-center justify-between gap-2">
+						<div class="flex items-center justify-between gap-2 relative">
 							<label for="view-textColor" class="text-sm">Text Color</label>
-							<ColorPicker
-								bind:rgb={textColorRgb}
-								onInput={(e) => handleColorChange('karta_textColor', e)}
-							/>
+							<!-- Color Swatch to open picker -->
+							<div
+								class="w-6 h-6 rounded-full border border-gray-400 dark:border-gray-600 cursor-pointer"
+								style="background-color: {rgbToRgbaString(textColorRgb)};"
+								on:click={() => { isTextColorPickerOpen = true; }}
+								title="Select Text Color"
+							></div>
+							<!-- Color Picker -->
+							{#if isTextColorPickerOpen}
+								<div class="absolute z-50 top-full right-0 mt-2">
+									<ColorPicker
+										bind:rgb={textColorRgb}
+										onInput={(e) => handleColorChange('karta_textColor', e)}
+										bind:isOpen={isTextColorPickerOpen}
+										disableCloseClickOutside={true}
+									/>
+								</div>
+							{/if}
 						</div>
 						<!-- Font -->
 						<div class="flex items-center justify-between gap-2">

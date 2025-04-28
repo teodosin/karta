@@ -616,7 +616,17 @@ export async function addExistingNodeToCurrentContext(path: string, position: { 
     	}
         console.log(`[addExistingNodeToCurrentContext] Found DataNode: ${dataNode.id}`);
 
-        // 4. Get current context ID and context
+        // 4. Add the fetched DataNode to the global store if it's not already there
+        // This prevents it from appearing as a ghost node
+        nodes.update(n => {
+            if (!n.has(dataNode.id)) {
+                n.set(dataNode.id, dataNode);
+                console.log(`[addExistingNodeToCurrentContext] Added DataNode ${dataNode.id} to global store.`);
+            }
+            return n;
+        });
+
+        // 5. Get current context ID and context
         const currentCtxId = get(currentContextId);
         if (!currentCtxId) {
             console.error("[addExistingNodeToCurrentContext] Cannot add node: No current context ID");
@@ -629,9 +639,9 @@ export async function addExistingNodeToCurrentContext(path: string, position: { 
             return;
         }
 
-        // 5. Check if ViewNode for dataNode.id already exists in context.viewNodes
+        // 6. Check if ViewNode for dataNode.id already exists in context.viewNodes
         if (currentContext.viewNodes.has(dataNode.id)) {
-            // 6. If yes: select the existing ViewNode and center the view on it
+            // 7. If yes: select the existing ViewNode and center the view on it
             console.log(`[addExistingNodeToCurrentContext] ViewNode ${dataNode.id} already exists in context ${currentCtxId}. Selecting and centering.`);
             setSelectedNodes(new Set([dataNode.id]));
 
@@ -654,10 +664,10 @@ export async function addExistingNodeToCurrentContext(path: string, position: { 
             return; // Node already present, nothing more to do here
         }
 
-        // 7. If no: Create a new ViewNode
+        // 8. If no: Create a new ViewNode
         console.log(`[addExistingNodeToCurrentContext] ViewNode ${dataNode.id} not found in context ${currentCtxId}. Creating new ViewNode.`);
 
-        // 7a. Create initial state (using position and defaults from registry)
+        // 8a. Create initial state (using position and defaults from registry)
         const defaultViewState = getDefaultViewNodeStateForType(dataNode.ntype);
         const initialState: TweenableNodeState = {
             x: position.x,
@@ -668,7 +678,7 @@ export async function addExistingNodeToCurrentContext(path: string, position: { 
             rotation: defaultViewState.rotation
         };
 
-        // 7b. Create new ViewNode with Tween, copying relevant karta_* attributes from dataNode.attributes
+        // 8b. Create new ViewNode with Tween, copying relevant karta_* attributes from dataNode.attributes
         const viewAttributes: Record<string, any> = {};
         if (dataNode.attributes) {
             for (const key in dataNode.attributes) {
@@ -685,7 +695,7 @@ export async function addExistingNodeToCurrentContext(path: string, position: { 
             attributes: viewAttributes
         };
 
-        // 7c. Update contexts store immutably
+        // 8c. Update contexts store immutably
         let updatedContext: Context | undefined = undefined;
         contexts.update(ctxMap => {
             const originalContext = ctxMap.get(currentCtxId);
@@ -710,7 +720,7 @@ export async function addExistingNodeToCurrentContext(path: string, position: { 
             return newCtxMap;
         });
 
-        // 7d. Persist context via localAdapter.saveContext()
+        // 8d. Persist context via localAdapter.saveContext()
         if (updatedContext) {
             await localAdapter.saveContext(updatedContext);
             console.log(`[addExistingNodeToCurrentContext] Added ViewNode ${dataNode.id} to context ${currentCtxId} and saved.`);
