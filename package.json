@@ -28,6 +28,7 @@
 		"@types/uuid": "^10.0.0",
 		"idb": "^8.0.2",
 		"lucide-svelte": "^0.487.0",
+		"svelte-awesome-color-picker": "^4.0.1",
 		"uuid": "^11.1.0"
 	}
 }
