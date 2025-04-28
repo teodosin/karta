@@ -45,6 +45,7 @@
 		confirmationDialogMessage, // Import confirmation dialog message store
 		confirmationDialogAction, // Import confirmation dialog action store
 		openConfirmationDialog, // Import action to open dialog
+		         openNodeSearch // Import node search action
 	} from '$lib/karta/UIStateStore';
 	import {
 		selectedNodeIds,
@@ -970,7 +971,16 @@ class="karta-viewport-container w-full h-screen overflow-hidden relative cursor-
 						},
 						disabled: !screenPos
 					},
-					{ label: 'Paste', action: () => console.warn('Paste action NYI from context menu.'), disabled: true }
+						              { // Add Search Node item
+						                  label: 'Search Node...',
+						                  action: () => {
+						                      const { x: canvasX, y: canvasY } = getCanvasCoords();
+						                      // Use screenPos.x and screenPos.y for the initial modal position hint
+						                      openNodeSearch(screenPos!.x, screenPos!.y, canvasX, canvasY);
+						                  },
+						                  disabled: !screenPos // Disable if position is somehow missing
+						              },
+					// { label: 'Paste', action: () => console.warn('Paste action NYI from context menu.'), disabled: true } // Remove Paste item
 				];
 			}
 			return items;

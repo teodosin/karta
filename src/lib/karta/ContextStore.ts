@@ -478,29 +478,31 @@ async function initializeStores() { // Remove export keyword here
     }
 
     try {
-        // 0. Load ALL DataNodes into the store on startup
-        console.log('[initializeStores] Loading all DataNodes from persistence...');
-        const allDataNodesArray = await localAdapter.getNodes();
-        const allDataNodesMap = new Map(allDataNodesArray.map(node => [node.id, node]));
-        nodes.set(allDataNodesMap);
-        console.log(`[initializeStores] Loaded ${allDataNodesArray.length} DataNodes into store.`);
+        // 0. Initialize stores to empty state
+        console.log('[initializeStores] Initializing stores to empty state.');
+        nodes.set(new Map());
+        edges.set(new Map());
+        contexts.set(new Map());
+        currentContextId.set(ROOT_NODE_ID); // Temporarily set to root
 
-        // 1. Determine Initial Context ID based on settings
+        // 1. Determine Target Initial Context ID based on settings
         let targetInitialContextId = ROOT_NODE_ID; // Default
         try {
             const currentSettings = get(settings); // Read settings (should be loaded by +layout.svelte)
             if (currentSettings.saveLastViewedContext && typeof window !== 'undefined' && window.localStorage) {
                 const savedId = localStorage.getItem(LAST_CONTEXT_STORAGE_KEY);
-                // Check if the saved ID corresponds to an existing node
-                if (savedId && allDataNodesMap.has(savedId)) {
-                    targetInitialContextId = savedId;
-                    console.log(`[initializeStores] Found and validated last context ID in localStorage: ${targetInitialContextId}`);
-                } else {
-                    if (savedId && !allDataNodesMap.has(savedId)) {
-                         console.warn(`[initializeStores] Saved last context ID ${savedId} not found in loaded nodes. Defaulting to ROOT.`);
+                if (savedId) {
+                    // Check if the saved ID corresponds to an existing node in the DB
+                    const nodeExists = await localAdapter.getNode(savedId);
+                    if (nodeExists) {
+                        targetInitialContextId = savedId;
+                        console.log(`[initializeStores] Found and validated last context ID in localStorage: ${targetInitialContextId}`);
                     } else {
-                         console.log(`[initializeStores] No last context ID found, defaulting to ROOT: ${ROOT_NODE_ID}`);
+                        console.warn(`[initializeStores] Saved last context ID ${savedId} not found in DB. Defaulting to ROOT.`);
+                        targetInitialContextId = ROOT_NODE_ID;
                     }
+                } else {
+                    console.log(`[initializeStores] No last context ID found, defaulting to ROOT: ${ROOT_NODE_ID}`);
                     targetInitialContextId = ROOT_NODE_ID;
                 }
             } else {
@@ -512,29 +514,28 @@ async function initializeStores() { // Remove export keyword here
             targetInitialContextId = ROOT_NODE_ID; // Fallback to ROOT on error
         }
 
-        // 2. Ensure Initial DataNode Exists (Attempt target ID first)
-        // Since we loaded all nodes, we just need to get it from the store
-        let initialDataNode = get(nodes).get(targetInitialContextId);
+        // 2. Ensure and Load Initial DataNode (Target or Root)
+        let initialDataNode = await localAdapter.getNode(targetInitialContextId);
 
-        // 3. Fallback to Root if target ID failed (shouldn't happen if we validated against allDataNodesMap)
-        // This block is mostly for safety/backward compatibility if validation above was missed
         if (!initialDataNode) {
-             console.warn(`[initializeStores] Target node ${targetInitialContextId} not found in loaded nodes. Falling back to ROOT.`);
-             targetInitialContextId = ROOT_NODE_ID; // Reset target ID to root
-             initialDataNode = get(nodes).get(ROOT_NODE_ID); // Get root from the already loaded nodes
-             if (!initialDataNode) {
-                 // If even the root is not in the loaded nodes (critical error)
-                 // Try ensuring it one last time (maybe DB was empty initially?)
-                 initialDataNode = await _ensureDataNodeExists(ROOT_NODE_ID);
-                 if (!initialDataNode) {
-                    throw new Error("CRITICAL: Root DataNode not found in loaded nodes or DB during initialization.");
-                 }
-                 // If ensured, add it to the store
-                 nodes.update(n => n.set(initialDataNode!.id, initialDataNode!));
-             }
+            console.warn(`[initializeStores] Target node ${targetInitialContextId} not found in DB. Falling back to ROOT.`);
+            targetInitialContextId = ROOT_NODE_ID; // Reset target ID to root
+            initialDataNode = await localAdapter.getNode(ROOT_NODE_ID);
+            if (!initialDataNode) {
+                // If even the root is not in the DB, ensure it exists
+                initialDataNode = await _ensureDataNodeExists(ROOT_NODE_ID); // This creates and saves if needed
+                if (!initialDataNode) {
+                    throw new Error("CRITICAL: Root DataNode could not be found or created during initialization.");
+                }
+            }
         }
 
-        // 3.5 Ensure Root Node has isSystemNode flag (for backward compatibility)
+        // Add the successfully loaded/ensured initial node to the nodes store
+        nodes.update(n => n.set(initialDataNode!.id, initialDataNode!));
+        console.log(`[initializeStores] Initial node ${initialDataNode.id} loaded into store.`);
+
+
+        // 3. Ensure Root Node has isSystemNode flag (if the initial node IS the root node)
         if (initialDataNode.id === ROOT_NODE_ID && !initialDataNode.attributes?.isSystemNode) {
             console.warn(`[initializeStores] Root node ${ROOT_NODE_ID} is missing the isSystemNode flag. Adding and saving...`);
             initialDataNode.attributes = { ...initialDataNode.attributes, isSystemNode: true };

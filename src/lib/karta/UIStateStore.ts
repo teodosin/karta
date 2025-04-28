@@ -95,6 +95,23 @@ export function closeConfirmationDialog() {
     confirmationDialogAction.set(null);
 }
 
+// Node Search Modal Stores
+export const isNodeSearchOpen = writable<boolean>(false);
+export const nodeSearchPosition = writable<{ screenX: number; screenY: number; canvasX: number; canvasY: number } | null>(null);
+
+// Node Search Modal Actions
+export function openNodeSearch(screenX: number, screenY: number, canvasX: number, canvasY: number) {
+    nodeSearchPosition.set({ screenX, screenY, canvasX, canvasY });
+    isNodeSearchOpen.set(true);
+    console.log(`[UIStateStore] Opening node search at screen (${screenX}, ${screenY}), canvas (${canvasX}, ${canvasY})`);
+}
+
+export function closeNodeSearch() {
+    isNodeSearchOpen.set(false);
+    nodeSearchPosition.set(null);
+    console.log(`[UIStateStore] Closing node search`);
+}
+
 
 // Properties Panel Actions
 export function setPropertiesPanelVisibility(visible: boolean) {

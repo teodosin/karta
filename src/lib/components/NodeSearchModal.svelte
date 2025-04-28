@@ -1,21 +1,23 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte'; // Corrected import
-	import { get } from 'svelte/store'; // Corrected import
+	import { onMount, onDestroy } from 'svelte';
+	import { get } from 'svelte/store';
+	import { browser } from '$app/environment'; // Import browser environment variable
+	import { localAdapter } from '$lib/util/LocalAdapter'; // Import localAdapter
 	import {
 		isNodeSearchOpen,
 		nodeSearchPosition,
 		closeNodeSearch
 	} from '$lib/karta/UIStateStore';
-	import type { NodeId } from '$lib/types/types'; // Import NodeId type
-	import { searchNodes, addExistingNodeToCurrentContext } from '$lib/karta/NodeStore'; // Import store actions
+	// NodeId type might not be needed here anymore
+	import { addExistingNodeToCurrentContext } from '$lib/karta/NodeStore'; // Keep addExistingNodeToCurrentContext
 	import { fade } from 'svelte/transition';
 
-	// Define the type for search results based on the optimized searchNodes return type
-	type SearchResult = { id: NodeId, path: string, name: string };
+	// Removed SearchResult type
 
 	let searchInput: HTMLInputElement;
 	let searchQuery = '';
-	let searchResults: SearchResult[] = []; // Use the defined type
+	let allNodePaths: string[] = []; // Store all fetched paths
+	let filteredNodePaths: string[] = []; // Store filtered paths for display
 	let selectedIndex = -1; // For keyboard navigation
 
 	// --- Positioning ---
@@ -29,35 +31,42 @@
 		positionStyle = `left: ${x}px; top: ${y}px;`;
 	}
 
-	// --- Search Logic ---
-	async function performSearch() { // Make async
-		console.log('Searching for:', searchQuery);
-		searchResults = await searchNodes(searchQuery); // Call actual search function
-		selectedIndex = -1; // Reset selection when results change
-	}
+	// --- Search Logic (Local Filtering) ---
+	// No need for performSearch or debounceTimer
 
-	// Debounce search
-	let debounceTimer: number;
+	// Reactive block to filter paths based on search query
 	$: {
-		clearTimeout(debounceTimer);
-		// Trigger search only if query has content.
-		if (searchQuery.trim().length > 0) {
-			debounceTimer = window.setTimeout(performSearch, 300);
+		if (!allNodePaths) {
+			filteredNodePaths = []; // Handle case where paths haven't loaded yet
+		} else if (searchQuery.trim().length > 0) {
+			const lowerCaseQuery = searchQuery.toLowerCase();
+			// Basic filter (TODO: Replace with fuzzy search library like fuse.js later)
+			filteredNodePaths = allNodePaths.filter(path =>
+				path.toLowerCase().includes(lowerCaseQuery)
+			);
 		} else {
-			searchResults = []; // Clear results if query is empty
-			selectedIndex = -1;
+			// Show all paths if query is empty (create new array reference)
+			filteredNodePaths = [...allNodePaths];
 		}
+		if (selectedIndex >= filteredNodePaths.length) {
+			selectedIndex = -1; // Reset selection if it becomes invalid after filtering
+		} else if (filteredNodePaths.length > 0 && selectedIndex === -1) {
+	            // Optionally select the first item automatically? Or leave as -1.
+	            // selectedIndex = 0;
+	       } else if (filteredNodePaths.length === 0) {
+	           selectedIndex = -1; // Ensure reset if no results
+	       }
 	}
 
 	// --- Event Handlers ---
-	async function handleResultClick(result: SearchResult) { // Use SearchResult type, make async
-		console.log('Selected result:', result);
+	async function handleResultClick(path: string) { // Accept path string
+		console.log('Selected node path:', path);
 		const position = get(nodeSearchPosition); // Get position from store
-		if (position) {
-			// Call action with only the ID and canvas coordinates
-			await addExistingNodeToCurrentContext(result.id, { x: position.canvasX, y: position.canvasY });
+		if (position && path) {
+			// Call action with the selected PATH and canvas coordinates
+			await addExistingNodeToCurrentContext(path, { x: position.canvasX, y: position.canvasY });
 		} else {
-			console.error("Cannot add node: Search position is null.");
+			console.error("Cannot add node: Search position or selected path is invalid.", { position, path });
 		}
 		closeNodeSearch(); // Close modal after action
 	}
@@ -67,17 +76,17 @@
 			closeNodeSearch();
 		} else if (event.key === 'ArrowDown') {
 			event.preventDefault();
-			selectedIndex = Math.min(selectedIndex + 1, searchResults.length - 1);
+			selectedIndex = Math.min(selectedIndex + 1, filteredNodePaths.length - 1);
 		} else if (event.key === 'ArrowUp') {
 			event.preventDefault();
 			selectedIndex = Math.max(selectedIndex - 1, 0); // Don't go below 0
 		} else if (event.key === 'Enter') {
 			event.preventDefault();
-			if (selectedIndex >= 0 && selectedIndex < searchResults.length) {
-				handleResultClick(searchResults[selectedIndex]);
-			} else if (searchResults.length === 1) {
+			if (selectedIndex >= 0 && selectedIndex < filteredNodePaths.length) {
+				handleResultClick(filteredNodePaths[selectedIndex]); // Pass selected path
+			} else if (filteredNodePaths.length === 1) {
 				// If only one result, Enter selects it even if not highlighted
-				handleResultClick(searchResults[0]);
+				handleResultClick(filteredNodePaths[0]); // Pass the single path
 			}
 		}
 	}
@@ -89,16 +98,37 @@
 		}
 	}
 
-	onMount(() => {
+	onMount(async () => { // Make onMount async
 		// Focus the input when the modal opens
 		searchInput?.focus();
-		// Use pointerdown listener for click outside
-		window.addEventListener('pointerdown', handleClickOutside, true); // Use capture phase
+
+		// Fetch all node paths on mount
+		if (localAdapter) {
+			try {
+				allNodePaths = await localAdapter.getAllNodePaths();
+				filteredNodePaths = [...allNodePaths]; // Initialize filtered list (create new array reference)
+				console.log(`[NodeSearchModal] Fetched ${allNodePaths.length} node paths.`);
+			} catch (error) {
+				console.error("[NodeSearchModal] Error fetching node paths on mount:", error);
+				allNodePaths = [];
+				filteredNodePaths = [];
+			}
+		} else {
+			console.error("[NodeSearchModal] LocalAdapter not available on mount.");
+		}
+
+		// Use pointerdown listener for click outside, only in browser
+		if (browser) {
+			window.addEventListener('pointerdown', handleClickOutside, true); // Use capture phase
+		}
 	});
 
 	onDestroy(() => {
-		window.removeEventListener('pointerdown', handleClickOutside, true);
-		clearTimeout(debounceTimer);
+		// Remove listener only in browser
+		if (browser) {
+			window.removeEventListener('pointerdown', handleClickOutside, true);
+		}
+		// clearTimeout(debounceTimer); // Removed leftover timer clear
 	});
 </script>
 
@@ -115,41 +145,40 @@
 		tabindex="-1"
 	>
 		<label id="search-node-label" for="search-node-input" class="text-sm font-medium text-gray-700 dark:text-gray-300">
-			Search Node by Path/Name:
+			Search Node by Path:
 		</label>
 		<input
 			bind:this={searchInput}
 			bind:value={searchQuery}
 			id="search-node-input"
 			type="text"
-			placeholder="Enter node path or name..."
+			placeholder="Enter node path..."
 			class="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
 		/>
 
-		{#if searchResults.length > 0}
+		{#if filteredNodePaths.length > 0}
 			<ul class="mt-2 max-h-60 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded" role="listbox">
-				{#each searchResults as result, index (result.id)} <!-- Add key for better performance -->
+				{#each filteredNodePaths as path, index (path)} <!-- Iterate over paths, use path as key -->
 					<!-- svelte-ignore a11y_click_events_have_key_events -->
 					<li
 						class="px-3 py-1.5 text-sm cursor-pointer truncate {selectedIndex === index
 							? 'bg-blue-100 dark:bg-blue-900 text-blue-900 dark:text-blue-100'
 							: 'text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'}"
 						class:selected={selectedIndex === index}
-						on:click={() => handleResultClick(result)}
+						on:click={() => handleResultClick(path)}
 						on:mouseenter={() => (selectedIndex = index)}
 						role="option"
 						aria-selected={selectedIndex === index}
-						id="search-result-{result.id}"
+						id="search-result-{index}"
 					>
-						{result.name || result.path || result.id} <!-- Display name first, then path -->
-						{#if result.name && result.path && result.name !== result.path}
-							<span class="text-xs text-gray-500 dark:text-gray-400 ml-2">({result.path})</span> <!-- Show path if different from name -->
-						{/if}
+						{path} <!-- Display the path -->
 					</li>
 				{/each}
 			</ul>
-		{:else if searchQuery.trim().length > 0} <!-- Check trimmed query -->
+		{:else if searchQuery.trim().length > 0 && allNodePaths.length > 0} <!-- Show 'not found' only if search attempted on existing paths -->
 			<div class="mt-2 px-3 py-1.5 text-sm text-gray-500 italic">No matching nodes found.</div>
+			     {:else if allNodePaths.length === 0 && searchQuery.trim().length === 0} <!-- Indicate loading or no nodes -->
+			          <div class="mt-2 px-3 py-1.5 text-sm text-gray-500 italic">Loading node paths...</div>
 		{/if}
 	</div>
 {/if}

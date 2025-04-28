@@ -3,6 +3,7 @@
 	import '../app.css';
 	import { settings } from '$lib/karta/SettingsStore'; // Import the settings store
 	import { initializeStores } from '$lib/karta/ContextStore'; // Import the main store initializer
+	import NodeSearchModal from '$lib/components/NodeSearchModal.svelte'; // Import the modal component
 
 	let { children } = $props();
 
@@ -38,3 +39,5 @@
 </script>
 
 {@render children()}
+
+<NodeSearchModal />

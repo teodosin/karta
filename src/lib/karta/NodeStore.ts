@@ -1,4 +1,6 @@
 import { writable, get } from 'svelte/store';
+import { setSelectedNodes } from './SelectionStore'; // Import selection action
+// Removed highlightNodeId import
 import { localAdapter } from '../util/LocalAdapter';
 import type { DataNode, NodeId, AssetData, AbsoluteTransform, ViewportSettings, TweenableNodeState, StorableContext, StorableViewNode, StorableViewportSettings, ViewNode, Context } from '../types/types'; // Added Context type
 import { v4 as uuidv4 } from 'uuid';
@@ -6,7 +8,7 @@ import { getDefaultAttributesForType, getDefaultViewNodeStateForType } from '$li
 import { Tween } from 'svelte/motion';
 // Import removeViewNodeFromContext as well
 import { currentContextId, contexts, ROOT_NODE_ID, removeViewNodeFromContext } from './ContextStore';
-import { viewTransform } from './ViewportStore'; // Assuming ViewportStore will export this
+import { viewTransform, centerViewOnCanvasPoint } from './ViewportStore'; // Import centering function
 
 export const nodes = writable<Map<NodeId, DataNode>>(new Map());
 
@@ -337,10 +339,11 @@ export async function fetchAvailableContextDetails(): Promise<{ id: NodeId, name
         }
 
         const dataNodesMap = await localAdapter.getDataNodesByIds(contextIds);
-        const contextDetails = Array.from(dataNodesMap.values())
-            .map((node: DataNode) => ({ // Explicitly type node
-                id: node.id,
-                name: node.attributes?.name ?? `Node ${node.id.substring(0, 8)}`, // Fallback name
+        // Add type assertion for iterator
+        const contextDetails = Array.from(dataNodesMap.values() as IterableIterator<DataNode>)
+        	.map((node: DataNode) => ({ // Explicitly type node
+        		id: node.id,
+        		name: node.attributes?.name ?? `Node ${node.id.substring(0, 8)}`, // Fallback name
                 path: node.path ?? `/${node.attributes?.name ?? node.id.substring(0, 8)}` // Fallback path
             }))
             .sort((a, b) => a.path.localeCompare(b.path)); // Sort alphabetically by path
@@ -580,4 +583,145 @@ export async function fetchAvailableContextDetails(): Promise<{ id: NodeId, name
        } else {
             console.log(`[updateViewNodeAttribute] No effective change for ${attributeKey} on ViewNode ${viewNodeId}.`);
        }
+   }
+// --- Node Search Action ---
+
+/**
+ * Adds an existing DataNode to the current context as a ViewNode.
+ * If a ViewNode for this DataNode already exists, it selects it instead.
+ * Fetches the DataNode by path.
+ * Initializes the new ViewNode using default attributes from the DataNode.
+ *
+ * @param path The path of the DataNode to add.
+ * @param position The canvas coordinates where the new ViewNode should be placed.
+ */
+export async function addExistingNodeToCurrentContext(path: string, position: { x: number; y: number }): Promise<void> {
+ console.log(`[NodeStore] Attempting to add node with path "${path}" to current context.`);
+
+ // 1. Check localAdapter
+ if (!localAdapter) {
+        console.error("[addExistingNodeToCurrentContext] LocalAdapter not available.");
+        return;
+    }
+
+    try {
+    	// 2. Call localAdapter.getDataNodeByPath(path)
+    	const dataNode = await localAdapter.getDataNodeByPath(path);
+   
+    	// 3. Check if DataNode exists
+    	if (!dataNode) {
+    		console.error(`[addExistingNodeToCurrentContext] DataNode with path "${path}" not found.`);
+    		// TODO: Provide user feedback? Maybe via a notification store?
+    		return;
+    	}
+        console.log(`[addExistingNodeToCurrentContext] Found DataNode: ${dataNode.id}`);
+
+        // 4. Get current context ID and context
+        const currentCtxId = get(currentContextId);
+        if (!currentCtxId) {
+            console.error("[addExistingNodeToCurrentContext] Cannot add node: No current context ID");
+            return;
+        }
+        const currentContexts = get(contexts);
+        const currentContext = currentContexts.get(currentCtxId);
+        if (!currentContext) {
+            console.error(`[addExistingNodeToCurrentContext] Cannot add node: Context ${currentCtxId} not found`);
+            return;
+        }
+
+        // 5. Check if ViewNode for dataNode.id already exists in context.viewNodes
+        if (currentContext.viewNodes.has(dataNode.id)) {
+            // 6. If yes: select the existing ViewNode and center the view on it
+            console.log(`[addExistingNodeToCurrentContext] ViewNode ${dataNode.id} already exists in context ${currentCtxId}. Selecting and centering.`);
+            setSelectedNodes(new Set([dataNode.id]));
+
+            // Center view on the existing node
+            const existingViewNode = currentContext.viewNodes.get(dataNode.id);
+            if (existingViewNode) {
+                const nodeState = existingViewNode.state.current;
+                // Calculate center based on node position and dimensions (assuming center anchor)
+                const centerX = nodeState.x; // Already center X
+                const centerY = nodeState.y; // Already center Y
+                // If anchor wasn't center, calculation would be:
+                // const centerX = nodeState.x + (nodeState.width / 2) * nodeState.scale;
+                // const centerY = nodeState.y + (nodeState.height / 2) * nodeState.scale;
+                centerViewOnCanvasPoint(centerX, centerY);
+                 console.log(`[addExistingNodeToCurrentContext] Centered view on existing node ${dataNode.id} at (${centerX.toFixed(1)}, ${centerY.toFixed(1)})`);
+            } else {
+                console.warn(`[addExistingNodeToCurrentContext] Could not find existing ViewNode ${dataNode.id} in context map to center view.`);
+            }
+
+            return; // Node already present, nothing more to do here
+        }
+
+        // 7. If no: Create a new ViewNode
+        console.log(`[addExistingNodeToCurrentContext] ViewNode ${dataNode.id} not found in context ${currentCtxId}. Creating new ViewNode.`);
+
+        // 7a. Create initial state (using position and defaults from registry)
+        const defaultViewState = getDefaultViewNodeStateForType(dataNode.ntype);
+        const initialState: TweenableNodeState = {
+            x: position.x,
+            y: position.y,
+            width: defaultViewState.width,
+            height: defaultViewState.height,
+            scale: defaultViewState.scale,
+            rotation: defaultViewState.rotation
+        };
+
+        // 7b. Create new ViewNode with Tween, copying relevant karta_* attributes from dataNode.attributes
+        const viewAttributes: Record<string, any> = {};
+        if (dataNode.attributes) {
+            for (const key in dataNode.attributes) {
+                if (key.startsWith('karta_')) {
+                    viewAttributes[key] = dataNode.attributes[key];
+                }
+            }
+        }
+        console.log(`[addExistingNodeToCurrentContext] Initializing ViewNode ${dataNode.id} with attributes:`, viewAttributes);
+
+        const newViewNode: ViewNode = {
+            id: dataNode.id,
+            state: new Tween(initialState, { duration: 0 }), // Initialize instantly
+            attributes: viewAttributes
+        };
+
+        // 7c. Update contexts store immutably
+        let updatedContext: Context | undefined = undefined;
+        contexts.update(ctxMap => {
+            const originalContext = ctxMap.get(currentCtxId);
+            if (!originalContext) return ctxMap; // Should not happen
+
+            // Create new viewNodes map immutably
+            const newViewNodes = new Map(originalContext.viewNodes);
+            newViewNodes.set(dataNode.id, newViewNode);
+
+            // Create new context object immutably
+            updatedContext = { // Assign to outer variable
+                ...originalContext,
+                viewNodes: newViewNodes,
+                // Capture current viewport settings when adding a node? Or rely on context switch save?
+                // Let's capture it here for consistency with createNodeAtPosition
+                viewportSettings: { ...viewTransform.current }
+            };
+
+            // Create new top-level map immutably
+            const newCtxMap = new Map(ctxMap);
+            newCtxMap.set(currentCtxId, updatedContext);
+            return newCtxMap;
+        });
+
+        // 7d. Persist context via localAdapter.saveContext()
+        if (updatedContext) {
+            await localAdapter.saveContext(updatedContext);
+            console.log(`[addExistingNodeToCurrentContext] Added ViewNode ${dataNode.id} to context ${currentCtxId} and saved.`);
+             // Optionally select the newly added node
+             setSelectedNodes(new Set([dataNode.id]));
+        } else {
+            console.error(`[addExistingNodeToCurrentContext] Failed to get updated context ${currentCtxId} for saving after adding ViewNode.`);
+            // TODO: Consider rolling back store update?
+        }
+
+    } catch (error) {
+    	console.error(`[addExistingNodeToCurrentContext] Error adding node with path "${path}":`, error);
+    }
    }
