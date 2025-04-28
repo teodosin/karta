@@ -42,8 +42,12 @@
 	const HANDLE_SIZE = 6; // px size of invisible handles
 
 	// --- Color Picker State ---
-	let fillColorRgb: { r: number; g: number; b: number; a: number } = { r: 254, g: 249, b: 195, a: 1 }; // Initial default
-	let textColorRgb: { r: number; g: number; b: number; a: number } = { r: 0, g: 0, b: 0, a: 1 }; // Initial default
+	let fillColorRgb: { r: number; g: number; b: number; a: number } = { r: 254, g: 249, b: 195, a: 1 }; // Derived from store/node
+	let textColorRgb: { r: number; g: number; b: number; a: number } = { r: 0, g: 0, b: 0, a: 1 }; // Derived from store/node
+
+	// Intermediate state for color pickers to avoid store updates during drag
+	let intermediateFillColorRgb = { ...fillColorRgb };
+	let intermediateTextColorRgb = { ...textColorRgb };
 
 	// State to control color picker pop-up visibility
 	let isFillPickerOpen = false;
@@ -140,19 +144,55 @@
 			selectedFontValue = currentFont;
 			selectedFontSizeValue = currentFontSize;
 
-			// Initialize color picker state from effective colors
+			// Initialize color picker state AND intermediate state from effective colors
 			fillColorRgb = hexOrRgbaToRgb(effectiveFillColor);
 			textColorRgb = hexOrRgbaToRgb(effectiveTextColor);
+			intermediateFillColorRgb = { ...fillColorRgb }; // Initialize intermediate state
+			intermediateTextColorRgb = { ...textColorRgb }; // Initialize intermediate state
 		} else {
 			// Reset when node changes or is not text
 			fillColorRgb = { r: 254, g: 249, b: 195, a: 1 };
 			textColorRgb = { r: 0, g: 0, b: 0, a: 1 };
+			intermediateFillColorRgb = { ...fillColorRgb };
+			intermediateTextColorRgb = { ...textColorRgb };
 			currentFont = 'Nunito';
 			currentFontSize = 16; // Reset font size state
 			selectedFontValue = 'Nunito'; // Reset binding state
 			selectedFontSizeValue = 16; // Reset binding state
 		}
 	}
+
+	// --- Apply Intermediate Color on Picker Close ---
+	let prevIsFillPickerOpen = isFillPickerOpen;
+	$: {
+		if (prevIsFillPickerOpen && !isFillPickerOpen && selectedViewNode) {
+			// Picker was just closed, apply the intermediate color if changed
+			const originalColorString = rgbToRgbaString(fillColorRgb);
+			const finalColorString = rgbToRgbaString(intermediateFillColorRgb);
+			if (originalColorString !== finalColorString) {
+				console.log(`Applying fill color change: ${finalColorString}`);
+				updateViewNodeAttribute(selectedViewNode.id, 'karta_fillColor', finalColorString);
+				fillColorRgb = { ...intermediateFillColorRgb }; // Update original state to match
+			}
+		}
+		prevIsFillPickerOpen = isFillPickerOpen; // Update previous state for next check
+	}
+
+	let prevIsTextColorPickerOpen = isTextColorPickerOpen;
+	$: {
+		if (prevIsTextColorPickerOpen && !isTextColorPickerOpen && selectedViewNode) {
+			// Picker was just closed, apply the intermediate color if changed
+			const originalColorString = rgbToRgbaString(textColorRgb);
+			const finalColorString = rgbToRgbaString(intermediateTextColorRgb);
+			if (originalColorString !== finalColorString) {
+				console.log(`Applying text color change: ${finalColorString}`);
+				updateViewNodeAttribute(selectedViewNode.id, 'karta_textColor', finalColorString);
+				textColorRgb = { ...intermediateTextColorRgb }; // Update original state to match
+			}
+		}
+		prevIsTextColorPickerOpen = isTextColorPickerOpen; // Update previous state for next check
+	}
+
 
 	// --- Text Node Style Handlers ---
 		function handleFontChange(event: Event) {
@@ -421,7 +461,7 @@
 		isResizing = false;
 		resizeDirection = null;
 		document.removeEventListener('pointermove', handleResizeMove);
-		// 'pointerup' and 'pointercancel' listeners were added with { once: true }
+		// 'pointerup' and 'pointercancel' listeners were added to document with { once: true }
 		document.body.style.cursor = ''; // Reset cursor
 		// Check if the pointer capture target exists before trying to release
 		// This handles cases where the element might be removed during the operation
@@ -542,46 +582,23 @@
 						<!-- Fill Color -->
 						<div class="flex items-center justify-between gap-2 relative">
 							<label for="view-fillColor" class="text-sm">Fill Color</label>
-							<!-- Color Swatch to open picker -->
-							<div
-								class="w-6 h-6 rounded-full border border-gray-400 dark:border-gray-600 cursor-pointer"
-								style="background-color: {rgbToRgbaString(fillColorRgb)};"
-								on:click={() => { isFillPickerOpen = true; }}
-								title="Select Fill Color"
-							></div>
-							<!-- Color Picker -->
-							{#if isFillPickerOpen}
-								<div class="absolute z-50 top-full right-0 mt-2">
-									<ColorPicker
-										bind:rgb={fillColorRgb}
-										onInput={(e) => handleColorChange('karta_fillColor', e)}
-										bind:isOpen={isFillPickerOpen}
-										disableCloseClickOutside={true}
-									/>
-								</div>
-							{/if}
+								<ColorPicker
+									bind:rgb={fillColorRgb}
+									onInput={(e) => handleColorChange('karta_fillColor', e)}
+									bind:isOpen={isFillPickerOpen}
+									position="responsive"
+								/>
 						</div>
 						<!-- Text Color -->
 						<div class="flex items-center justify-between gap-2 relative">
 							<label for="view-textColor" class="text-sm">Text Color</label>
 							<!-- Color Swatch to open picker -->
-							<div
-								class="w-6 h-6 rounded-full border border-gray-400 dark:border-gray-600 cursor-pointer"
-								style="background-color: {rgbToRgbaString(textColorRgb)};"
-								on:click={() => { isTextColorPickerOpen = true; }}
-								title="Select Text Color"
-							></div>
-							<!-- Color Picker -->
-							{#if isTextColorPickerOpen}
-								<div class="absolute z-50 top-full right-0 mt-2">
-									<ColorPicker
-										bind:rgb={textColorRgb}
-										onInput={(e) => handleColorChange('karta_textColor', e)}
-										bind:isOpen={isTextColorPickerOpen}
-										disableCloseClickOutside={true}
-									/>
-								</div>
-							{/if}
+								<ColorPicker
+									bind:rgb={textColorRgb}
+									onInput={(e) => handleColorChange('karta_textColor', e)}
+									bind:isOpen={isTextColorPickerOpen}
+									position="responsive"
+								/>
 						</div>
 						<!-- Font -->
 						<div class="flex items-center justify-between gap-2">
