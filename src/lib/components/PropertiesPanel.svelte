@@ -111,7 +111,11 @@
 	// --- Text Node Style State ---
 	let currentFillColor: string = '#FEF9C3'; // Default fallback
 	let currentTextColor: string = '#000000'; // Default fallback
-	let currentFont: AvailableFont = 'Nunito'; // Default fallback
+	let currentFont: AvailableFont = 'Nunito'; // Default fallback (calculated effective value)
+	let currentFontSize = 16; // Default fallback for font size (calculated effective value)
+	let selectedFontValue: AvailableFont = 'Nunito'; // Local state for select binding
+	let selectedFontSizeValue: number = 16; // Local state for input binding
+	const FALLBACK_FONT_SIZE = 16; // Define fallback globally in script
 
 	$: {
 		if (selectedViewNode && selectedDataNode && selectedDataNode.ntype === 'text') {
@@ -120,11 +124,17 @@
 			const FALLBACK_FILL_COLOR = '#FEF9C3';
 			const FALLBACK_TEXT_COLOR = '#000000';
 			const FALLBACK_FONT: AvailableFont = 'Nunito';
+			// Removed declaration from here
 
 			// Get effective colors and font
 			const effectiveFillColor = viewAttrs?.karta_fillColor ?? dataAttrs?.karta_fillColor ?? FALLBACK_FILL_COLOR;
 			const effectiveTextColor = viewAttrs?.karta_textColor ?? dataAttrs?.karta_textColor ?? FALLBACK_TEXT_COLOR;
 			currentFont = viewAttrs?.karta_font ?? dataAttrs?.karta_font ?? FALLBACK_FONT;
+			currentFontSize = viewAttrs?.karta_fontSize ?? dataAttrs?.karta_fontSize ?? FALLBACK_FONT_SIZE; // Calculate effective font size
+
+			// Update local state for bindings based on calculated effective values
+			selectedFontValue = currentFont;
+			selectedFontSizeValue = currentFontSize;
 
 			// Initialize color picker state from effective colors
 			fillColorRgb = hexOrRgbaToRgb(effectiveFillColor);
@@ -134,6 +144,9 @@
 			fillColorRgb = { r: 254, g: 249, b: 195, a: 1 };
 			textColorRgb = { r: 0, g: 0, b: 0, a: 1 };
 			currentFont = 'Nunito';
+			currentFontSize = 16; // Reset font size state
+			selectedFontValue = 'Nunito'; // Reset binding state
+			selectedFontSizeValue = 16; // Reset binding state
 		}
 	}
 
@@ -451,8 +464,8 @@
 					</h3>
 					<div class="space-y-2">
 						{#each Object.entries(selectedDataNode.attributes) as [key, value]}
-							<!-- Only show attributes NOT defined in the type-specific schema, and not internal flags or view defaults -->
-							{#if key !== 'isSystemNode' && !key.startsWith('karta_') && !typeSpecificKeys.has(key)}
+							<!-- Only show attributes NOT defined in the type-specific schema, and not internal flags or view defaults, and not the old fontSize -->
+							{#if key !== 'isSystemNode' && key !== 'fontSize' && !key.startsWith('karta_') && !typeSpecificKeys.has(key)}
 								<div class="flex items-center justify-between gap-2">
 									<label for="attr-{key}" class="text-sm capitalize truncate">{key}</label>
 									{#if key === 'name'}
@@ -483,57 +496,11 @@
 					</div>
 				</section>
 
-				<!-- Type Properties Section -->
-				{#if propertySchema.length > 0}
-					<section>
-						<h3 class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 mb-2">
-							{nodeTypeDef?.displayName ?? selectedDataNode.ntype} Properties
-						</h3>
-						<div class="space-y-2">
-							{#each propertySchema as propDef (propDef.key)}
-								<div class="flex flex-col gap-1">
-									<label for="prop-{propDef.key}" class="text-sm">{propDef.label}</label>
-									{#if propDef.type === 'string'}
-										<input
-											type="text"
-											id="prop-{propDef.key}"
-											value={selectedDataNode.attributes[propDef.key] ?? ''}
-											on:change={(e) => handleAttributeChange(propDef.key, (e.target as HTMLInputElement).value)}
-											class="w-full px-2 py-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
-										/>
-									{:else if propDef.type === 'number'}
-										<input
-											type="number"
-											id="prop-{propDef.key}"
-											value={selectedDataNode.attributes[propDef.key] ?? 0}
-											on:change={(e) => handleAttributeChange(propDef.key, parseFloat((e.target as HTMLInputElement).value) || 0)}
-											class="w-full px-2 py-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
-										/>
-									{:else if propDef.type === 'boolean'}
-										<input
-											type="checkbox"
-											id="prop-{propDef.key}"
-											checked={!!selectedDataNode.attributes[propDef.key]}
-											on:change={(e) => handleAttributeChange(propDef.key, (e.target as HTMLInputElement).checked)}
-											class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-										/>
-									{:else if propDef.type === 'textarea'}
-										<textarea
-											id="prop-{propDef.key}"
-											value={selectedDataNode.attributes[propDef.key] ?? ''}
-											on:change={(e) => handleAttributeChange(propDef.key, (e.target as HTMLTextAreaElement).value)}
-											class="w-full px-2 py-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm min-h-[60px]"
-											rows={3}
-										></textarea>
-									{/if}
-								</div>
-							{/each}
-						</div>
-					</section>
-				{/if} <!-- End of Type Properties Section #if -->
+				<!-- Type Properties Section Removed -->
 
 				<!-- Text Node View Properties Section -->
 				{#if selectedDataNode.ntype === 'text' && selectedViewNode}
+				{#key selectedViewNode} <!-- Force re-render when selectedViewNode reference changes -->
 				<section>
 					<h3 class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 mb-2">
 						Text View Styles (Context Specific)
@@ -556,11 +523,11 @@
 							/>
 						</div>
 						<!-- Font -->
-						<div class="flex flex-col gap-1">
+						<div class="flex items-center justify-between gap-2">
 							<label for="view-font" class="text-sm">Font</label>
 							<select
 								id="view-font"
-								bind:value={currentFont}
+								bind:value={selectedFontValue}
 								on:change={handleFontChange}
 								class="w-full px-2 py-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
 							>
@@ -569,8 +536,24 @@
 								{/each}
 							</select>
 						</div>
+						<!-- Font Size -->
+						<div class="flex items-center justify-between gap-2">
+							<label for="view-fontSize" class="text-sm">Font Size</label>
+							<input
+								type="number"
+								id="view-fontSize"
+								bind:value={selectedFontSizeValue}
+								on:change={(e) => {
+									if (selectedViewNode) {
+										updateViewNodeAttribute(selectedViewNode.id, 'karta_fontSize', parseFloat((e.target as HTMLInputElement).value) || FALLBACK_FONT_SIZE);
+									}
+								}}
+								class="w-20 px-2 py-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+							/>
+						</div>
 					</div>
 				</section>
+				{/key} <!-- End of #key block -->
 				{/if} <!-- End of Text Node View Properties Section #if -->
 
 			</div> <!-- End of panel-content div -->

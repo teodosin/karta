@@ -14,7 +14,7 @@
 		return {
 			name: baseName,
 			text: '',
-			fontSize: 16,
+			karta_fontSize: 16, // Default font size
 			karta_fillColor: '#FEF9C3', // Default tan post-it color
 			karta_textColor: '#000000', // Default black text
 			karta_font: 'Nunito'       // Default font (matches global default)
@@ -27,7 +27,7 @@
 
 	const textNodePropertySchema: PropertyDefinition[] = [
 		// { key: 'text', label: 'Content', type: 'textarea' }, // Removed - edit directly on node
-		{ key: 'fontSize', label: 'Font Size', type: 'number' } // Assuming number input is desired
+		// { key: 'karta_fontSize', label: 'Font Size', type: 'number' } // Removed - Handled in View Styles
 	];
 
 	export const nodeTypeDef: Omit<NodeTypeDefinition, 'component'> = {
@@ -52,22 +52,23 @@
 	export let viewNode: ViewNode;
 
 	// Type assertion for dataNode attributes - assumes NodeWrapper ensures correct ntype/attributes
-	$: dataNodeAttributes = dataNode.attributes as { text?: string; fontSize?: number; name: string; karta_fillColor?: string; karta_textColor?: string; karta_font?: AvailableFont };
+	$: dataNodeAttributes = dataNode.attributes as { text?: string; karta_fontSize?: number; name: string; karta_fillColor?: string; karta_textColor?: string; karta_font?: AvailableFont };
 	$: textContent = dataNodeAttributes?.text ?? '';
-	$: fontSize = dataNodeAttributes?.fontSize ?? 16; // Default font size if not specified
 
 	// Type assertion for viewNode attributes
-	$: viewNodeAttributes = viewNode.attributes as { karta_fillColor?: string; karta_textColor?: string; karta_font?: AvailableFont } | undefined;
+	$: viewNodeAttributes = viewNode.attributes as { karta_fontSize?: number; karta_fillColor?: string; karta_textColor?: string; karta_font?: AvailableFont } | undefined;
 
 	// --- Define Fallbacks ---
 	const FALLBACK_FILL_COLOR = '#FEF9C3'; // Default tan post-it color (Tailwind yellow-100)
 	const FALLBACK_TEXT_COLOR = '#000000'; // Default black text
 	const FALLBACK_FONT: AvailableFont = 'Nunito'; // Use global default font as fallback
+	const FALLBACK_FONT_SIZE = 16; // Default font size
 
 	// --- Reactive Effective Styles ---
 	$: effectiveFillColor = viewNodeAttributes?.karta_fillColor ?? dataNodeAttributes?.karta_fillColor ?? FALLBACK_FILL_COLOR;
 	$: effectiveTextColor = viewNodeAttributes?.karta_textColor ?? dataNodeAttributes?.karta_textColor ?? FALLBACK_TEXT_COLOR;
 	$: effectiveFont = viewNodeAttributes?.karta_font ?? dataNodeAttributes?.karta_font ?? FALLBACK_FONT;
+	$: effectiveFontSize = viewNodeAttributes?.karta_fontSize ?? dataNodeAttributes?.karta_fontSize ?? FALLBACK_FONT_SIZE;
 
 
 	let isEditing = false;
@@ -175,7 +176,7 @@
 			on:keydown={handleKeyDown}
 			on:paste={handlePaste}
 			class="w-full h-full outline-none resize-none leading-tight block"
-			style:font-size="{fontSize}px"
+			style:font-size="{effectiveFontSize}px"
 			style:background-color={effectiveFillColor}
 			style:color={effectiveTextColor}
 			style:font-family={effectiveFont}
@@ -185,7 +186,7 @@
 		<!-- Display State: Div -->
 		<div
 			class="w-full h-full overflow-y-auto whitespace-pre-wrap break-words leading-tight"
-			style:font-size="{fontSize}px"
+			style:font-size="{effectiveFontSize}px"
 			style:font-family={effectiveFont}
 		>
 			{textContent || ''} {#if !textContent}&nbsp;{/if} <!-- Ensure div has height even if empty -->

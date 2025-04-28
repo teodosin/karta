@@ -468,7 +468,7 @@ export async function fetchAvailableContextDetails(): Promise<{ id: NodeId, name
 
        // --- Type Check ---
        let isValidAttribute = false;
-       if (dataNode.ntype === 'text' && ['karta_fillColor', 'karta_textColor', 'karta_font'].includes(attributeKey)) {
+       if (dataNode.ntype === 'text' && ['karta_fillColor', 'karta_textColor', 'karta_font', 'karta_fontSize'].includes(attributeKey)) {
            isValidAttribute = true;
        }
        // Future: Add checks for other node types and their valid view attributes here
@@ -478,59 +478,104 @@ export async function fetchAvailableContextDetails(): Promise<{ id: NodeId, name
            return;
        }
 
-       // --- Update State ---
-       let viewNodeUpdated = false;
-       let dataNodeUpdated = false;
+       // --- Determine if updates are needed (compare with original values) ---
+       const needsViewNodeUpdate = viewNode.attributes?.[attributeKey] !== attributeValue;
+       const needsDataNodeUpdate = dataNode.attributes?.[attributeKey] !== attributeValue;
 
-       // Ensure attributes objects exist
-       if (!viewNode.attributes) {
-           viewNode.attributes = {};
-       }
-       if (!dataNode.attributes) {
-           // This shouldn't happen based on DataNode interface, but check anyway
-           dataNode.attributes = {};
-       }
-
-
-       // Update ViewNode Attributes
-       if (viewNode.attributes[attributeKey] !== attributeValue) {
-            viewNode.attributes[attributeKey] = attributeValue;
-            viewNodeUpdated = true;
-       }
-
-        // Update DataNode Attributes (Default)
-       if (dataNode.attributes[attributeKey] !== attributeValue) {
-           dataNode.attributes[attributeKey] = attributeValue;
-           dataNodeUpdated = true;
-       }
-
-       // --- Trigger Store Updates & Persistence ---
-       if (viewNodeUpdated) {
+       // --- Trigger Store Updates & Persistence (using immutable patterns) ---
+       if (needsViewNodeUpdate) {
            contexts.update(ctxMap => {
-               const newViewNodes = new Map(currentContext.viewNodes);
-               // Create a new ViewNode object to ensure reactivity
-               newViewNodes.set(viewNodeId, { ...viewNode, attributes: { ...viewNode.attributes } });
-               ctxMap.set(currentCtxId, { ...currentContext, viewNodes: newViewNodes });
-               return new Map(ctxMap);
+               // Get the original context and viewNodes map again inside update
+               const originalContext = ctxMap.get(currentCtxId);
+               if (!originalContext) return ctxMap; // Should not happen based on earlier checks, but safe
+               const originalViewNode = originalContext.viewNodes.get(viewNodeId);
+               if (!originalViewNode) return ctxMap; // Should not happen
+
+               // Create new attributes object immutably
+               const newViewAttributes = {
+                   ...(originalViewNode.attributes ?? {}), // Ensure attributes object exists
+                   [attributeKey]: attributeValue
+               };
+
+               // Create new ViewNode object immutably
+               const newViewNode = {
+                   ...originalViewNode,
+                   attributes: newViewAttributes
+               };
+
+               // Create new viewNodes map immutably
+               const newViewNodes = new Map(originalContext.viewNodes);
+               newViewNodes.set(viewNodeId, newViewNode);
+
+               // Create new context object immutably
+               const newContext = {
+                   ...originalContext,
+                   viewNodes: newViewNodes
+               };
+
+               // Create new top-level map immutably
+               const newCtxMap = new Map(ctxMap);
+               newCtxMap.set(currentCtxId, newContext);
+               return newCtxMap;
            });
+
            if (localAdapter) {
-               // Save the entire context as ViewNode attributes changed
-               await localAdapter.saveContext(get(contexts).get(currentCtxId)!);
+               try {
+                   // Save the entire context as ViewNode attributes changed
+                   const updatedContext = get(contexts).get(currentCtxId);
+                   if (updatedContext) {
+                       await localAdapter.saveContext(updatedContext);
+                   } else {
+                        console.error(`[updateViewNodeAttribute] Failed to get updated context ${currentCtxId} for saving.`);
+                   }
+               } catch (error) {
+                   console.error(`[updateViewNodeAttribute] Error saving context ${currentCtxId} after view attribute update:`, error);
+                   // Consider rollback? For now, just log.
+               }
            }
        }
 
-       if (dataNodeUpdated) {
+       if (needsDataNodeUpdate) {
             nodes.update(nodeMap => {
-               // Create a new DataNode object
-               nodeMap.set(dataNodeId, { ...dataNode, attributes: { ...dataNode.attributes } });
-               return new Map(nodeMap);
+                // Get original DataNode again inside update
+                const originalDataNode = nodeMap.get(dataNodeId);
+                if (!originalDataNode) return nodeMap; // Should not happen
+
+                // Create new attributes object immutably
+                const newDataAttributes = {
+                    ...(originalDataNode.attributes ?? {}), // Ensure attributes object exists
+                    [attributeKey]: attributeValue
+                };
+
+                // Create new DataNode object immutably
+                const newDataNode = {
+                    ...originalDataNode,
+                    attributes: newDataAttributes,
+                    modifiedAt: Date.now() // Update modified time
+                };
+
+                // Create new top-level map immutably
+                const newNodeMap = new Map(nodeMap);
+                newNodeMap.set(dataNodeId, newDataNode);
+                return newNodeMap;
             });
+
             if (localAdapter) {
-                await localAdapter.saveNode(get(nodes).get(dataNodeId)!);
+                try {
+                    const updatedDataNode = get(nodes).get(dataNodeId);
+                    if (updatedDataNode) {
+                        await localAdapter.saveNode(updatedDataNode);
+                    } else {
+                        console.error(`[updateViewNodeAttribute] Failed to get updated data node ${dataNodeId} for saving.`);
+                    }
+                } catch (error) {
+                    console.error(`[updateViewNodeAttribute] Error saving node ${dataNodeId} after data attribute update:`, error);
+                    // Consider rollback? For now, just log.
+                }
             }
        }
 
-       if (viewNodeUpdated || dataNodeUpdated) {
+       if (needsViewNodeUpdate || needsDataNodeUpdate) {
             console.log(`[updateViewNodeAttribute] Updated ${attributeKey} for ViewNode ${viewNodeId} to ${attributeValue}.`);
        } else {
             console.log(`[updateViewNodeAttribute] No effective change for ${attributeKey} on ViewNode ${viewNodeId}.`);
