@@ -298,8 +298,8 @@ export async function updateNodeAttributes(nodeId: NodeId, newAttributes: Record
         ...dataNode,
         attributes: attributesToSave, // Use the final attributes map (name might have been incremented)
         modifiedAt: Date.now(),
-        // Potentially update path if name changed? For now, keep path separate.
-        // path: `/${attributesToSave.name}` // Example if path should sync
+        // Update path if name changed
+        path: `/${attributesToSave.name}`
     };
 
     // Update the store
