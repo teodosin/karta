@@ -220,20 +220,15 @@
 		}
 	}
 
-	// Add/remove click outside listener based on picker state
-	$: {
-		if (isFillPickerOpen || isTextColorPickerOpen) {
-			// Add listener when either picker is open
-			document.addEventListener('click', handleClickOutside);
-		} else {
-			// Remove listener when both pickers are closed
-			document.removeEventListener('click', handleClickOutside);
-		}
-	}
+	onMount(() => {
+		document.addEventListener('click', handleClickOutside);
+	});
 
 	// Cleanup listener on component destroy
 	onDestroy(() => {
-		document.removeEventListener('click', handleClickOutside);
+		if (typeof document !== 'undefined') {
+			document.removeEventListener('click', handleClickOutside);
+		}
 	});
 
 
@@ -596,7 +591,6 @@
 								<ColorPicker
 									bind:rgb={textColorRgb}
 									onInput={(e) => handleColorChange('karta_textColor', e)}
-									bind:isOpen={isTextColorPickerOpen}
 									position="responsive"
 								/>
 						</div>
