@@ -16,6 +16,7 @@
 	import type { DataNode, PropertyDefinition, ViewNode, AvailableFont } from '$lib/types/types'; // Import ViewNode, AvailableFont
 	import { AVAILABLE_FONTS } from '$lib/types/types'; // Import AVAILABLE_FONTS
 	import { onDestroy, onMount } from 'svelte';
+	import ColorPicker from 'svelte-awesome-color-picker'; // Import ColorPicker
 	import { Move, Minimize2, X } from 'lucide-svelte'; // Icons for header
 
 	// --- Component State ---
@@ -40,6 +41,60 @@
 	const MIN_PANEL_HEIGHT = 100; // Minimum height (allow smaller for just header)
 	const HANDLE_SIZE = 6; // px size of invisible handles
 
+	// --- Color Picker State ---
+	let fillColorRgb: { r: number; g: number; b: number; a: number } = { r: 254, g: 249, b: 195, a: 1 }; // Initial default
+	let textColorRgb: { r: number; g: number; b: number; a: number } = { r: 0, g: 0, b: 0, a: 1 }; // Initial default
+
+	// Helper to convert hex or rgba string to RGB object
+	function hexOrRgbaToRgb(color: string | undefined): { r: number; g: number; b: number; a: number } {
+		if (!color) return { r: 0, g: 0, b: 0, a: 1 }; // Default to black if undefined
+
+		// Handle hex color (with or without alpha)
+		const hexMatch = color.match(/^#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/);
+		if (hexMatch) {
+			let hex = hexMatch[1];
+			if (hex.length === 3) hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+			if (hex.length === 4) hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2] + hex[3] + hex[3];
+			const r = parseInt(hex.substring(0, 2), 16);
+			const g = parseInt(hex.substring(2, 4), 16);
+			const b = parseInt(hex.substring(4, 6), 16);
+			const a = hex.length === 8 ? parseInt(hex.substring(6, 8), 16) / 255 : 1;
+			return { r, g, b, a };
+		}
+
+		// Handle rgba color
+		const rgbaMatch = color.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*(\d*\.?\d+)\s*)?\)$/);
+		if (rgbaMatch) {
+			const r = parseInt(rgbaMatch[1], 10);
+			const g = parseInt(rgbaMatch[2], 10);
+			const b = parseInt(rgbaMatch[3], 10);
+			const a = rgbaMatch[4] ? parseFloat(rgbaMatch[4]) : 1;
+			return { r, g, b, a };
+		}
+
+		console.warn("Could not parse color string:", color);
+		return { r: 0, g: 0, b: 0, a: 1 }; // Fallback
+	}
+
+	// Helper to convert RGB object to rgba string
+	function rgbToRgbaString(rgb: { r: number; g: number; b: number; a: number }): string {
+		// Clamp values to valid ranges
+		const r = Math.max(0, Math.min(255, Math.round(rgb.r)));
+		const g = Math.max(0, Math.min(255, Math.round(rgb.g)));
+		const b = Math.max(0, Math.min(255, Math.round(rgb.b)));
+		const a = Math.max(0, Math.min(1, rgb.a));
+		return `rgba(${r}, ${g}, ${b}, ${a})`;
+	}
+
+	// Single handler for color changes
+	// Adjusted handler for onInput event
+	function handleColorChange(key: 'karta_fillColor' | 'karta_textColor', eventDetail: { rgb: { r: number; g: number; b: number; a: number } | null }) {
+		if (selectedViewNode && eventDetail.rgb) {
+			const rgbaString = rgbToRgbaString(eventDetail.rgb);
+			updateViewNodeAttribute(selectedViewNode.id, key, rgbaString);
+		}
+	}
+
 	// --- Reactive Data ---
 	// Get selected DataNode
 	$: selectedDataNode = $propertiesPanelNodeId ? $nodes.get($propertiesPanelNodeId) : null;
@@ -56,7 +111,7 @@
 	// --- Text Node Style State ---
 	let currentFillColor: string = '#FEF9C3'; // Default fallback
 	let currentTextColor: string = '#000000'; // Default fallback
-	let currentFont: AvailableFont = 'Inter'; // Default fallback
+	let currentFont: AvailableFont = 'Nunito'; // Default fallback
 
 	$: {
 		if (selectedViewNode && selectedDataNode && selectedDataNode.ntype === 'text') {
@@ -64,32 +119,25 @@
 			const dataAttrs = selectedDataNode.attributes;
 			const FALLBACK_FILL_COLOR = '#FEF9C3';
 			const FALLBACK_TEXT_COLOR = '#000000';
-			const FALLBACK_FONT: AvailableFont = 'Inter';
+			const FALLBACK_FONT: AvailableFont = 'Nunito';
 
-			currentFillColor = viewAttrs?.karta_fillColor ?? dataAttrs?.karta_fillColor ?? FALLBACK_FILL_COLOR;
-			currentTextColor = viewAttrs?.karta_textColor ?? dataAttrs?.karta_textColor ?? FALLBACK_TEXT_COLOR;
+			// Get effective colors and font
+			const effectiveFillColor = viewAttrs?.karta_fillColor ?? dataAttrs?.karta_fillColor ?? FALLBACK_FILL_COLOR;
+			const effectiveTextColor = viewAttrs?.karta_textColor ?? dataAttrs?.karta_textColor ?? FALLBACK_TEXT_COLOR;
 			currentFont = viewAttrs?.karta_font ?? dataAttrs?.karta_font ?? FALLBACK_FONT;
+
+			// Initialize color picker state from effective colors
+			fillColorRgb = hexOrRgbaToRgb(effectiveFillColor);
+			textColorRgb = hexOrRgbaToRgb(effectiveTextColor);
 		} else {
 			// Reset when node changes or is not text
-			currentFillColor = '#FEF9C3';
-			currentTextColor = '#000000';
-			currentFont = 'Inter';
+			fillColorRgb = { r: 254, g: 249, b: 195, a: 1 };
+			textColorRgb = { r: 0, g: 0, b: 0, a: 1 };
+			currentFont = 'Nunito';
 		}
 	}
 
 	// --- Text Node Style Handlers ---
-	function handleFillChange(event: Event) {
-		if (selectedViewNode) {
-			const target = event.target as HTMLInputElement;
-			updateViewNodeAttribute(selectedViewNode.id, 'karta_fillColor', target.value);
-		}
-	}
-	function handleTextChange(event: Event) {
-			if (selectedViewNode) {
-			const target = event.target as HTMLInputElement;
-			updateViewNodeAttribute(selectedViewNode.id, 'karta_textColor', target.value);
-		}
-	}
 		function handleFontChange(event: Event) {
 			if (selectedViewNode) {
 			const target = event.target as HTMLSelectElement;
@@ -494,23 +542,17 @@
 						<!-- Fill Color -->
 						<div class="flex items-center justify-between gap-2">
 							<label for="view-fillColor" class="text-sm">Fill Color</label>
-							<input
-								type="color"
-								id="view-fillColor"
-								bind:value={currentFillColor}
-								on:input={handleFillChange}
-								class="w-8 h-8 p-0 border-none rounded cursor-pointer"
+							<ColorPicker
+								bind:rgb={fillColorRgb}
+								onInput={(e) => handleColorChange('karta_fillColor', e)}
 							/>
 						</div>
 						<!-- Text Color -->
 						<div class="flex items-center justify-between gap-2">
 							<label for="view-textColor" class="text-sm">Text Color</label>
-							<input
-								type="color"
-								id="view-textColor"
-								bind:value={currentTextColor}
-								on:input={handleTextChange}
-								class="w-8 h-8 p-0 border-none rounded cursor-pointer"
+							<ColorPicker
+								bind:rgb={textColorRgb}
+								onInput={(e) => handleColorChange('karta_textColor', e)}
 							/>
 						</div>
 						<!-- Font -->
