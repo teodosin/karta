@@ -104,18 +104,6 @@
 		}
 	}
 
-	// Adjust textarea height dynamically (simple approach)
-	function adjustTextareaHeight() {
-		if (textAreaElement) {
-			textAreaElement.style.height = 'auto'; // Reset height
-			textAreaElement.style.height = `${textAreaElement.scrollHeight}px`;
-		}
-	}
-
-	$: if (isEditing && textAreaElement) {
-		adjustTextareaHeight(); // Adjust height when editing starts or text changes
-	}
-
 	// Synchronize editedText with textContent when not editing or when textContent changes
 	$: if (!isEditing) {
 		editedText = textContent;
@@ -163,7 +151,6 @@
 			const newCursorPos = start + pastedText.length;
 			textAreaElement.selectionStart = newCursorPos;
 			textAreaElement.selectionEnd = newCursorPos;
-			adjustTextareaHeight(); // Adjust height after paste
 		}
 	}
 </script>
@@ -186,9 +173,8 @@
 			bind:this={textAreaElement}
 			bind:value={editedText}
 			on:keydown={handleKeyDown}
-			on:input={adjustTextareaHeight}
 			on:paste={handlePaste}
-			class="w-full h-auto outline-none resize-none p-1 leading-tight block"
+			class="w-full h-full outline-none resize-none leading-tight block"
 			style:font-size="{fontSize}px"
 			style:background-color={effectiveFillColor}
 			style:color={effectiveTextColor}
@@ -198,7 +184,7 @@
 	{:else}
 		<!-- Display State: Div -->
 		<div
-			class="w-full h-full overflow-y-auto whitespace-pre-wrap break-words p-1 leading-tight"
+			class="w-full h-full overflow-y-auto whitespace-pre-wrap break-words leading-tight"
 			style:font-size="{fontSize}px"
 			style:font-family={effectiveFont}
 		>
@@ -216,14 +202,14 @@
 	}
 	/* Add scrollbar styling if desired */
 	div::-webkit-scrollbar {
-		width: 6px;
+		width: 4px;
 	}
 	div::-webkit-scrollbar-thumb {
 		background-color: rgba(0,0,0,0.2);
 		border-radius: 3px;
 	}
 	textarea::-webkit-scrollbar {
-		width: 6px;
+		width: 3px;
 	}
 	textarea::-webkit-scrollbar-thumb {
 		background-color: rgba(0,0,0,0.3);
