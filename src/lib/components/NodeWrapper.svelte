@@ -84,10 +84,8 @@
 	$: if ($nodeRenameRequestId === viewNode.id) { // Check against viewNode.id
 		// Ensure dataNode exists before attempting to rename
 		if (dataNode) {
-			console.log(`[NodeWrapper ${viewNode.id}] Received rename request via store.`);
 			startEditing(); // Use existing function to start editing
 		} else {
-			console.warn(`[NodeWrapper ${viewNode.id}] Received rename request, but DataNode is missing (ghost node?). Cannot rename.`);
 		}
 		nodeRenameRequestId.set(null); // Reset the request store immediately
 	}

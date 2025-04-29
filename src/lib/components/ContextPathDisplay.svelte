@@ -32,7 +32,7 @@
    try {
     availableContexts = await fetchAvailableContextDetails();
    } catch (error) {
-    console.error('Error fetching context list:', error);
+    // console.error('Error fetching context list:', error); // Keep error logs for now
     availableContexts = []; // Clear list on error
    } finally {
     isLoadingList = false;

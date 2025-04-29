@@ -43,7 +43,6 @@ async function _getFocalNodeInitialState(targetNodeId: NodeId, oldContext: Conte
         return { ...targetViewNodeInOldCtx.state.current }; // Return a copy
     } else {
         // Node not visible in old context, calculate defaults
-        console.log(`[_getFocalNodeInitialState] Node ${targetNodeId} not found in old context. Calculating defaults.`);
         const dataNode = await _ensureDataNodeExists(targetNodeId); // Ensure DataNode exists to get ntype
         const defaultState: { width: number; height: number; scale: number; rotation: number; } = dataNode ? getDefaultViewNodeStateForType(dataNode.ntype) : getDefaultViewNodeStateForType('generic'); // Fallback to generic
 
@@ -72,7 +71,6 @@ async function _loadAndProcessContext(
 
     if (storableContext) {
         // --- Context exists in DB ---
-        console.log(`[_loadAndProcessContext] Context ${contextId} loaded from DB.`);
         // Convert StorableViewNodes to ViewNodes with Tweens, reusing old tweens if possible
         for (const [nodeId, storableNode] of storableContext.viewNodes) {
             // Extract only the placement part needed by _calculateTargetState
@@ -94,18 +92,15 @@ async function _loadAndProcessContext(
 
     } else {
         // --- Context needs creation ---
-        console.log(`[_loadAndProcessContext] Context ${contextId} not found in DB, creating new.`);
         contextWasCreated = true;
         const focalDataNode = await localAdapter.getNode(contextId);
         if (!focalDataNode) throw new Error(`Cannot create context for non-existent node: ${contextId}`);
         if (contextId === ROOT_NODE_ID) {
-             console.log(`[_loadAndProcessContext] Root context creation: Loaded focalDataNode ntype: ${focalDataNode.ntype}`);
         }
 
         // Create initial state and ViewNode for the focal node
         // Use type-specific defaults for size/scale/rotation
         if (contextId === ROOT_NODE_ID) {
-             console.log(`[_loadAndProcessContext] Root context creation: Getting default view state for ntype: ${focalDataNode.ntype}`);
         }
         // Use the state passed in, which already contains defaults or state from old context
         const correctedFocalInitialState: TweenableNodeState = {
@@ -147,7 +142,6 @@ async function _loadAndProcessContext(
     }
 
     if (connectedNodeIdsToAdd.size > 0) {
-        console.log(`[_loadAndProcessContext] Adding ${connectedNodeIdsToAdd.size} default connected nodes.`);
         contextWasCreated = true; // Mark modified if defaults added
         let defaultOffset = 150;
         const angleIncrement = 360 / connectedNodeIdsToAdd.size;
@@ -250,7 +244,6 @@ async function _loadContextData(context: Context | undefined): Promise<{ loadedD
 
         loadedEdges = await localAdapter.getEdgesByNodeIds(viewNodeIds);
     } else {
-        console.warn(`[_loadContextData] Context ${context.id} has no view nodes.`);
     }
     return { loadedDataNodes, loadedEdges };
 }
@@ -268,8 +261,6 @@ function _applyStoresUpdate(
         for (const [nodeId, dataNode] of loadedDataNodesForContext.entries()) {
             nextNodes.set(nodeId, dataNode); // Add or overwrite node data loaded for this context
         }
-        console.log(`[_applyStoresUpdate] Merged ${loadedDataNodesForContext.size} nodes into global $nodes store.`);
-        console.log(`[_applyStoresUpdate] Final $nodes map size: ${nextNodes.size}`);
         return nextNodes;
     });
 
@@ -283,7 +274,6 @@ function _applyStoresUpdate(
         }
     }
     edges.set(nextEdges);
-    console.log(`[_applyStoresUpdate] Set $edges store with ${nextEdges.size} edges relevant to context ${newContextId}.`);
 
     // --- Update contexts store ---
     // Set the fully processed context (containing ViewNodes with Tweens)
@@ -324,7 +314,7 @@ export function updateNodeLayout(nodeId: NodeId, newX: number, newY: number) {
             // Debounce saving? For now, save on every update during drag.
             currentCtx.viewportSettings = { ...viewTransform.current }; // Capture viewport - Access .current directly
             localAdapter.saveContext(currentCtx)
-                .catch(err => console.error(`Error saving context ${contextId} during layout update:`, err));
+                .catch(err => { /* console.error(`Error saving context ${contextId} during layout update:`, err); */ }); // Keep error logs for now
         }
     } else {
         console.warn(`ViewNode ${nodeId} not found in context ${contextId} for layout update`);
@@ -350,7 +340,6 @@ export async function removeViewNodeFromContext(contextId: NodeId, viewNodeId: N
     // Update the contexts store to trigger reactivity
     contexts.update((map: Map<NodeId, Context>) => map);
 
-    console.log(`[removeViewNodeFromContext] Removed ViewNode ${viewNodeId} from context ${contextId}.`);
 
     // Persist the updated context
     if (localAdapter) {
@@ -358,7 +347,6 @@ export async function removeViewNodeFromContext(contextId: NodeId, viewNodeId: N
             // Capture current viewport settings before saving
             currentCtx.viewportSettings = { ...viewTransform.current }; // Corrected access
             await localAdapter.saveContext(currentCtx);
-            console.log(`[removeViewNodeFromContext] Saved context ${contextId} after removing ViewNode ${viewNodeId}.`);
         } catch (error) {
             console.error(`[removeViewNodeFromContext] Error saving context ${contextId} after removing ViewNode ${viewNodeId}:`, error);
         }
@@ -377,7 +365,6 @@ export async function switchContext(newContextId: NodeId, isUndoRedo: boolean = 
     if (!isUndoRedo) {
         historyStack.update((stack: NodeId[]) => [...stack, oldContextId]); // Explicitly type stack
         futureStack.set([]); // Clear future stack on new action
-        console.log(`[switchContext] Pushed ${oldContextId} to history.`);
     }
     // --- End History Management ---
 
@@ -385,14 +372,13 @@ export async function switchContext(newContextId: NodeId, isUndoRedo: boolean = 
     if (!localAdapter) {
         console.error("[switchContext] LocalAdapter not available."); return;
     }
-    console.log(`[switchContext] Switching from ${oldContextId} to ${newContextId}`);
 
     // --- Phase 1: Save Old Context State (Async) ---
     const oldContext = get(contexts).get(oldContextId);
     if (oldContext) {
         oldContext.viewportSettings = { ...viewTransform.current }; // Capture current viewport - Access .current directly
         localAdapter.saveContext(oldContext) // Adapter converts ViewNode with Tween back to Storable
-            .then(() => console.log(`[switchContext] Old context ${oldContextId} saved.`))
+            .then(() => { /* console.log(`[switchContext] Old context ${oldContextId} saved.`); */ })
             .catch(error => console.error(`[switchContext] Error saving old context ${oldContextId}:`, error));
     } else {
         console.warn(`[switchContext] Old context ${oldContextId} not found in memory for saving.`);
@@ -429,19 +415,15 @@ export async function switchContext(newContextId: NodeId, isUndoRedo: boolean = 
         // the viewport should remain unchanged.
         if (processedContext.viewportSettings !== undefined) {
             viewTransform.set(processedContext.viewportSettings, { duration: VIEWPORT_TWEEN_DURATION }); // Restore tween duration
-            console.log(`[switchContext] Loaded viewport settings for context ${newContextId}. Applying with tween.`);
         } else {
-            console.log(`[switchContext] Context ${newContextId} was newly created or had no saved viewport settings. Viewport position maintained.`);
         }
 
-  console.log(`[switchContext] Successfully switched to context ${newContextId}`);
 
   // --- Save Last Context ID ---
   try {
    const currentSettings = get(settings);
    if (currentSettings.saveLastViewedContext && typeof window !== 'undefined' && window.localStorage) {
     localStorage.setItem(LAST_CONTEXT_STORAGE_KEY, newContextId);
-    console.log(`[switchContext] Saved last context ID ${newContextId} to localStorage.`);
    }
   } catch (error) {
    console.error('[switchContext] Error saving last context ID to localStorage:', error);
@@ -455,7 +437,6 @@ export async function switchContext(newContextId: NodeId, isUndoRedo: boolean = 
 }
 
 async function initializeStores() { // Remove export keyword here
-	console.log('[initializeStores] Initializing Karta stores...');
 	initializeTools(); // Initialize tool instances here
 
 	// Ensure currentTool is not null before calling activate (this check might be redundant after initializeTools)
@@ -479,7 +460,6 @@ async function initializeStores() { // Remove export keyword here
 
     try {
         // 0. Initialize stores to empty state
-        console.log('[initializeStores] Initializing stores to empty state.');
         nodes.set(new Map());
         edges.set(new Map());
         contexts.set(new Map());
@@ -496,7 +476,6 @@ async function initializeStores() { // Remove export keyword here
                     const nodeExists = await localAdapter.getNode(savedId);
                     if (nodeExists) {
                         targetInitialContextId = savedId;
-                        console.log(`[initializeStores] Found and validated last context ID in localStorage: ${targetInitialContextId}`);
                     } else {
                         console.warn(`[initializeStores] Saved last context ID ${savedId} not found in DB. Defaulting to ROOT.`);
                         targetInitialContextId = ROOT_NODE_ID;

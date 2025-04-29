@@ -159,7 +159,7 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
 	class={`
-		w-full h-full p-2 overflow-hidden
+		w-full h-full p-2 pr-0 overflow-hidden
 		flex items-center justify-center pointer-events-auto
 		${dataNode.id === $currentContextId ? 'ring-4 ring-offset-2 ring-offset-gray-900 ring-orange-500 rounded' : 'rounded shadow-md'}
 	`}

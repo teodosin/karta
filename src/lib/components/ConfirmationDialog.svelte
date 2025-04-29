@@ -26,7 +26,7 @@
 </script>
 
 {#if $isConfirmationDialogOpen}
-<script>console.log('ConfirmationDialog is open');</script>
+<script></script>
 <div
 	class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]"
 	role="dialog"

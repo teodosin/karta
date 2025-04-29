@@ -160,7 +160,6 @@ function handlePointerUp(event: PointerEvent) {
 	initialNodesData.clear(); // Use clear() for Map
 	draggedHandle = null;
 	viewportContainerRect = null;
-	console.log('[ResizeLogic] Resize ended');
 }
 
 // --- Public Function ---
@@ -221,7 +220,6 @@ export function startResize(
 	}
 	// --- End initial state calculation ---
 
-	console.log(`[ResizeLogic] Resize started. Handle: ${handlePosition}, Nodes:`, Array.from(initialNodesData.keys()), "Bounds:", initialBounds);
 
 	// Add listeners AFTER storing initial data
 	window.addEventListener('pointermove', handlePointerMove);

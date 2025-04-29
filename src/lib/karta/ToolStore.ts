@@ -18,14 +18,13 @@ let instantiatedToolInstances: { [key: string]: Tool } | null = null; // Declare
 export function setTool(toolName: 'move' | 'connect' | 'context') {
     // Ensure tools are initialized before setting
     if (!instantiatedToolInstances) {
-        console.error("Tool instances not initialized yet!");
+        // console.error("Tool instances not initialized yet!"); // Keep error logs for now
         return;
     }
     const current = get(currentTool);
     const next = instantiatedToolInstances[toolName];
     if (current !== next) {
         current?.deactivate(); next?.activate(); currentTool.set(next);
-        console.log(`Switched tool to: ${toolName}`);
     }
 }
 
@@ -43,7 +42,6 @@ export function startConnectionProcess(sourceIds: NodeId[]) {
 		// Initialize temp line position slightly offset from the first source node? Or handle in EdgeLayer?
 		// For now, let EdgeLayer handle initial position based on source node centers.
 		tempLineTargetPosition.set(null); // Ensure it starts null
-		console.log(`[KartaStore] Starting connection from node(s): ${sourceIds.join(', ')}`);
 	} else {
 		console.warn(`[KartaStore] Could not start connection: One or more source nodes not found in context ${contextId}`);
 	}
@@ -56,21 +54,18 @@ export function finishConnectionProcess(targetNodeId: NodeId | null) {
 		// Check if target node exists (optional but good practice)
 		const nodes = get(currentViewNodes); // Use currentViewNodes
 		if (nodes.has(targetNodeId)) {
-			console.log(`[KartaStore] Finishing connection to target node: ${targetNodeId}`);
 			// Create edge(s)
 			sourceIds.forEach(sourceId => {
 				if (sourceId !== targetNodeId) { // Prevent self-connection for each source
 					createEdge(sourceId, targetNodeId); // Call existing createEdge
 				} else {
-					console.log(`[KartaStore] Skipping self-connection for node: ${sourceId}`);
 				}
 			});
 			// Note: The original 'else' block after createEdge seemed misplaced/empty, removed it.
 		} else {
-			console.log(`[KartaStore] Connection cancelled: Target node ${targetNodeId} not found.`);
 		}
 	}
-	else console.log("Connection cancelled.");
+	else { /* Connection cancelled */ }
 	isConnecting.set(false);
 	connectionSourceNodeIds.set([]); // Reset to empty array
 	tempLineTargetPosition.set(null);
@@ -86,5 +81,4 @@ export function initializeTools() {
     };
     // Set the initial tool after instantiation
     currentTool.set(instantiatedToolInstances.move);
-    console.log("[ToolStore] Tool instances initialized.");
 }

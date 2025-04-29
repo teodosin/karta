@@ -25,7 +25,6 @@
 			// Prevent default focus cycling for Tab key globally
 			if (event.key === 'Tab') {
 				event.preventDefault();
-				console.log('[Layout] Global Tab key default prevented.');
 			}
 		};
 

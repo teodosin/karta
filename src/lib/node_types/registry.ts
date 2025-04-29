@@ -35,7 +35,6 @@ for (const path in modules) {
 			definition: definition,
 			component: component
 		};
-		console.log(`[Registry] Registered node type: ${definition.ntype}`);
 	} else {
 		// Add more specific warnings
 		let warnings = [];

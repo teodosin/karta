@@ -10,7 +10,6 @@ export const futureStack = writable<NodeId[]>([]);
 export function undoContextSwitch() {
     const history = get(historyStack);
     if (history.length === 0) {
-        console.log("[undoContextSwitch] History stack is empty.");
         return;
     }
 
@@ -20,14 +19,12 @@ export function undoContextSwitch() {
     historyStack.update(stack => stack.slice(0, -1)); // Remove last element
     futureStack.update(stack => [...stack, currentId]); // Add current to future
 
-    console.log(`[undoContextSwitch] Undoing to: ${previousId}`);
     switchContext(previousId, true); // Call switchContext with isUndoRedo flag
 }
 
 export function redoContextSwitch() {
     const future = get(futureStack);
     if (future.length === 0) {
-        console.log("[redoContextSwitch] Future stack is empty.");
         return;
     }
 
@@ -37,6 +34,5 @@ export function redoContextSwitch() {
     futureStack.update(stack => stack.slice(0, -1)); // Remove last element
     historyStack.update(stack => [...stack, currentId]); // Add current to history
 
-    console.log(`[redoContextSwitch] Redoing to: ${nextId}`);
     switchContext(nextId, true); // Call switchContext with isUndoRedo flag
 }

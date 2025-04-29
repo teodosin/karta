@@ -4,10 +4,8 @@ import { switchContext } from '$lib/karta/ContextStore'; // Import the action
 export class ContextTool implements Tool {
     readonly name = 'context';
     activate() {
-        // console.log('ContextTool activated');
     }
     deactivate() {
-        // console.log('ContextTool deactivated');
         document.body.style.cursor = 'default'; // Reset cursor
     }
 
@@ -20,7 +18,6 @@ export class ContextTool implements Tool {
         if (!nodeEl || !nodeEl.dataset.id) return; // Exit if not a node
 
         const nodeId = nodeEl.dataset.id;
-        console.log('ContextTool attempting switch to node', nodeId);
 
         // Call the KartaStore action to handle the switch
         switchContext(nodeId);

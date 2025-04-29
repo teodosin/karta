@@ -60,13 +60,11 @@
 
 	// --- Event Handlers ---
 	async function handleResultClick(path: string) { // Accept path string
-		console.log('Selected node path:', path);
 		const position = get(nodeSearchPosition); // Get position from store
 		if (position && path) {
 			// Call action with the selected PATH and canvas coordinates
 			await addExistingNodeToCurrentContext(path, { x: position.canvasX, y: position.canvasY });
 		} else {
-			console.error("Cannot add node: Search position or selected path is invalid.", { position, path });
 		}
 		closeNodeSearch(); // Close modal after action
 	}
@@ -98,30 +96,32 @@
 		}
 	}
 
-	onMount(async () => { // Make onMount async
-		// Focus the input when the modal opens
-		searchInput?.focus();
-
-		// Fetch all node paths on mount
+	async function fetchNodePaths() {
 		if (localAdapter) {
 			try {
 				allNodePaths = await localAdapter.getAllNodePaths();
 				filteredNodePaths = [...allNodePaths]; // Initialize filtered list (create new array reference)
-				console.log(`[NodeSearchModal] Fetched ${allNodePaths.length} node paths.`);
 			} catch (error) {
-				console.error("[NodeSearchModal] Error fetching node paths on mount:", error);
 				allNodePaths = [];
 				filteredNodePaths = [];
 			}
 		} else {
-			console.error("[NodeSearchModal] LocalAdapter not available on mount.");
 		}
+	}
 
+	onMount(() => {
 		// Use pointerdown listener for click outside, only in browser
 		if (browser) {
 			window.addEventListener('pointerdown', handleClickOutside, true); // Use capture phase
 		}
 	});
+
+	// Reactive statement to fetch paths and focus input when modal opens
+	$: if ($isNodeSearchOpen) {
+		fetchNodePaths();
+		// Focus the input when the modal opens
+		searchInput?.focus();
+	}
 
 	onDestroy(() => {
 		// Remove listener only in browser

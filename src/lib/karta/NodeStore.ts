@@ -20,7 +20,6 @@ async function _ensureDataNodeExists(nodeId: NodeId): Promise<DataNode | null> {
     try {
         let dataNode = await localAdapter.getNode(nodeId);
         if (nodeId === ROOT_NODE_ID) {
-            console.log(`[_ensureDataNodeExists] Root node check: Found in DB?`, !!dataNode, dataNode ? `Existing ntype: ${dataNode.ntype}` : '');
         }
         if (!dataNode) {
             console.warn(`[_ensureDataNodeExists] DataNode ${nodeId} not found. Creating default.`);
@@ -31,7 +30,6 @@ async function _ensureDataNodeExists(nodeId: NodeId): Promise<DataNode | null> {
             const defaultPath = isRoot ? '/root' : `/${defaultName}`;
             const defaultNtype = isRoot ? 'root' : 'generic';
             if (isRoot) {
-                console.log(`[_ensureDataNodeExists] Root node creation: Assigning ntype: ${defaultNtype}`);
             }
 
             dataNode = {
@@ -43,7 +41,6 @@ async function _ensureDataNodeExists(nodeId: NodeId): Promise<DataNode | null> {
                 attributes: { name: defaultName, ...(isRoot && { isSystemNode: true }) }, // Set name and system flag for root
             };
             await localAdapter.saveNode(dataNode);
-            console.log(`[_ensureDataNodeExists] Default DataNode ${nodeId} created and saved.`);
         }
         return dataNode;
     } catch (error) {
@@ -120,7 +117,6 @@ export async function createNodeAtPosition(
                 updatedCtx.viewportSettings = { ...viewTransform.current }; // Capture viewport state - Access .current directly
                 await localAdapter.saveContext(updatedCtx); // Save context
             }
-            console.log(`[KartaStore] Node ${newNodeId} and Context ${contextId} saved.`);
             return newNodeId; // Return ID on successful save
         } catch (error) {
             console.error("Error saving node or context after creation:", error);
@@ -149,7 +145,6 @@ export async function createImageNodeFromDataUrl(position: { x: number, y: numbe
 		// TODO: Consider adding warnings or size limits for very large images.
 		await updateNodeAttributes(newNodeId, { src: dataUrl });
 
-		console.log(`[KartaStore] Created ImageNode ${newNodeId} from Data URL at (${position.x}, ${position.y})`);
 	} catch (error) {
 		console.error("[KartaStore] Error creating image node from Data URL:", error);
 	}
@@ -167,7 +162,6 @@ export async function createTextNodeFromPaste(position: { x: number, y: number }
 		// Update the attributes with the pasted text
 		await updateNodeAttributes(newNodeId, { text: text });
 
-		console.log(`[KartaStore] Created TextNode ${newNodeId} from paste at (${position.x}, ${position.y})`);
 	} catch (error) {
 		console.error("[KartaStore] Error creating text node from paste:", error);
 	}
@@ -195,7 +189,7 @@ export async function createImageNodeWithAsset(
             position.x,
             position.y,
             'image',
-            { alt: assetName }, // Set alt attribute initially
+            { alt: assetName, name: assetName }, // Set alt and name attributes initially
             initialWidth,
             initialHeight
         );
@@ -212,7 +206,6 @@ export async function createImageNodeWithAsset(
         // Use the existing updateNodeAttributes function
         await updateNodeAttributes(newNodeId, { src: objectUrl, assetId: newNodeId });
 
-        console.log(`[KartaStore] Created ImageNode ${newNodeId} with asset ${assetName}`);
         return newNodeId;
 
     } catch (error) {
@@ -222,7 +215,6 @@ export async function createImageNodeWithAsset(
             // If the base node was created, attempt to delete it from DB.
             // The updated localAdapter.deleteNode will also call deleteAsset,
             // which handles revoking any URL *it* might have tracked.
-            console.log(`[createImageNodeWithAsset] Cleaning up partially created node ${newNodeId}`);
             await localAdapter.deleteNode(newNodeId);
             // Also remove from stores manually
             nodes.update(n => { n.delete(newNodeId!); return n; });
@@ -234,7 +226,6 @@ export async function createImageNodeWithAsset(
         // Regardless of whether the node was created, revoke the initially passed objectUrl
         // as it might not have been tracked/revoked by the adapter if saveAsset failed.
         URL.revokeObjectURL(objectUrl);
-        console.log(`[createImageNodeWithAsset] Revoked initial objectUrl: ${objectUrl}`);
 
         return null; // Indicate failure
     }
@@ -277,7 +268,6 @@ export async function updateNodeAttributes(nodeId: NodeId, newAttributes: Record
                     nameExists = await localAdapter.checkNameExists(nameToSet);
                     counter++;
                 }
-                console.log(`[updateNodeAttributes] Unique name found: "${nameToSet}"`);
             }
             // Update attributesToSave with the final unique name
             attributesToSave.name = nameToSet;
@@ -307,7 +297,6 @@ export async function updateNodeAttributes(nodeId: NodeId, newAttributes: Record
     // Compare the final attributesToSave with the original dataNode attributes
     if (JSON.stringify(attributesToSave) !== JSON.stringify(dataNode.attributes)) {
         nodes.update(n => n.set(nodeId, updatedNodeData));
-        console.log(`[updateNodeAttributes] Updated attributes for node ${nodeId}:`, attributesToSave);
 
         // Persist changes
         if (localAdapter) {
@@ -322,7 +311,6 @@ export async function updateNodeAttributes(nodeId: NodeId, newAttributes: Record
             console.warn("[updateNodeAttributes] LocalAdapter not initialized, persistence disabled.");
         }
     } else {
-        console.log(`[updateNodeAttributes] No effective attribute changes for node ${nodeId}.`);
     }
    }
 
@@ -360,7 +348,6 @@ export async function fetchAvailableContextDetails(): Promise<{ id: NodeId, name
    import { edges, deleteEdge } from './EdgeStore'; // Assuming EdgeStore exports edges store and deleteEdge action
    
    export async function deleteDataNodePermanently(nodeId: NodeId): Promise<void> {
-    console.log(`[NodeStore] Attempting permanent deletion for node: ${nodeId}`);
     if (!localAdapter) {
     	console.error("[deleteDataNodePermanently] LocalAdapter not available.");
     	return;
@@ -383,7 +370,6 @@ export async function fetchAvailableContextDetails(): Promise<{ id: NodeId, name
     	// 2. Find connected edges
     	const allEdges = get(edges);
     	const connectedEdges = [...allEdges.values()].filter(edge => edge.source === nodeId || edge.target === nodeId);
-    	console.log(`[deleteDataNodePermanently] Found ${connectedEdges.length} connected edges for node ${nodeId}.`);
    
     	// 3. Remove DataNode from the store *first* to trigger UI updates (like ghosting)
     	let nodeRemovedFromStore = false;
@@ -396,7 +382,6 @@ export async function fetchAvailableContextDetails(): Promise<{ id: NodeId, name
     		return n; // Return original map if node wasn't there
     	});
     	if (nodeRemovedFromStore) {
-    		console.log(`[NodeStore] Removed node ${nodeId} from store.`);
     	}
    
    
@@ -404,7 +389,6 @@ export async function fetchAvailableContextDetails(): Promise<{ id: NodeId, name
     	for (const edge of connectedEdges) {
     		await deleteEdge(edge.id); // deleteEdge should handle store and persistence
     	}
-    	console.log(`[deleteDataNodePermanently] Deleted ${connectedEdges.length} connected edges for node ${nodeId}.`);
    
     	// 5. Delete asset if it's an image node
     	// Use the node data we fetched earlier (either from store or DB)
@@ -412,18 +396,15 @@ export async function fetchAvailableContextDetails(): Promise<{ id: NodeId, name
     	if (nodeType === 'image') {
     		// Asset ID is the same as Node ID for images currently
     		await localAdapter.deleteAsset(nodeId);
-    		console.log(`[deleteDataNodePermanently] Deleted associated asset for image node ${nodeId}.`);
     	}
    
     	// 6. Delete the DataNode from persistence
     	await localAdapter.deleteNode(nodeId);
-    	console.log(`[deleteDataNodePermanently] Successfully deleted node ${nodeId} from persistence.`);
    
     	// 7. Remove the ViewNode from the *current* context
     	const currentCtxId = get(currentContextId);
     	if (currentCtxId) {
     		await removeViewNodeFromContext(currentCtxId, nodeId);
-    		console.log(`[deleteDataNodePermanently] Removed ViewNode ${nodeId} from current context ${currentCtxId}.`);
     	} else {
     		console.warn(`[deleteDataNodePermanently] Could not determine current context ID to remove ViewNode ${nodeId}.`);
     	}
@@ -579,9 +560,7 @@ export async function fetchAvailableContextDetails(): Promise<{ id: NodeId, name
        }
 
        if (needsViewNodeUpdate || needsDataNodeUpdate) {
-            console.log(`[updateViewNodeAttribute] Updated ${attributeKey} for ViewNode ${viewNodeId} to ${attributeValue}.`);
        } else {
-            console.log(`[updateViewNodeAttribute] No effective change for ${attributeKey} on ViewNode ${viewNodeId}.`);
        }
    }
 // --- Node Search Action ---
@@ -596,7 +575,6 @@ export async function fetchAvailableContextDetails(): Promise<{ id: NodeId, name
  * @param position The canvas coordinates where the new ViewNode should be placed.
  */
 export async function addExistingNodeToCurrentContext(path: string, position: { x: number; y: number }): Promise<void> {
- console.log(`[NodeStore] Attempting to add node with path "${path}" to current context.`);
 
  // 1. Check localAdapter
  if (!localAdapter) {
@@ -614,14 +592,12 @@ export async function addExistingNodeToCurrentContext(path: string, position: { 
     		// TODO: Provide user feedback? Maybe via a notification store?
     		return;
     	}
-        console.log(`[addExistingNodeToCurrentContext] Found DataNode: ${dataNode.id}`);
 
         // 4. Add the fetched DataNode to the global store if it's not already there
         // This prevents it from appearing as a ghost node
         nodes.update(n => {
             if (!n.has(dataNode.id)) {
                 n.set(dataNode.id, dataNode);
-                console.log(`[addExistingNodeToCurrentContext] Added DataNode ${dataNode.id} to global store.`);
             }
             return n;
         });
@@ -642,7 +618,6 @@ export async function addExistingNodeToCurrentContext(path: string, position: { 
         // 6. Check if ViewNode for dataNode.id already exists in context.viewNodes
         if (currentContext.viewNodes.has(dataNode.id)) {
             // 7. If yes: select the existing ViewNode and center the view on it
-            console.log(`[addExistingNodeToCurrentContext] ViewNode ${dataNode.id} already exists in context ${currentCtxId}. Selecting and centering.`);
             setSelectedNodes(new Set([dataNode.id]));
 
             // Center view on the existing node
@@ -656,7 +631,6 @@ export async function addExistingNodeToCurrentContext(path: string, position: { 
                 // const centerX = nodeState.x + (nodeState.width / 2) * nodeState.scale;
                 // const centerY = nodeState.y + (nodeState.height / 2) * nodeState.scale;
                 centerViewOnCanvasPoint(centerX, centerY);
-                 console.log(`[addExistingNodeToCurrentContext] Centered view on existing node ${dataNode.id} at (${centerX.toFixed(1)}, ${centerY.toFixed(1)})`);
             } else {
                 console.warn(`[addExistingNodeToCurrentContext] Could not find existing ViewNode ${dataNode.id} in context map to center view.`);
             }
@@ -665,7 +639,6 @@ export async function addExistingNodeToCurrentContext(path: string, position: { 
         }
 
         // 8. If no: Create a new ViewNode
-        console.log(`[addExistingNodeToCurrentContext] ViewNode ${dataNode.id} not found in context ${currentCtxId}. Creating new ViewNode.`);
 
         // 8a. Create initial state (using position and defaults from registry)
         const defaultViewState = getDefaultViewNodeStateForType(dataNode.ntype);
@@ -687,7 +660,6 @@ export async function addExistingNodeToCurrentContext(path: string, position: { 
                 }
             }
         }
-        console.log(`[addExistingNodeToCurrentContext] Initializing ViewNode ${dataNode.id} with attributes:`, viewAttributes);
 
         const newViewNode: ViewNode = {
             id: dataNode.id,
@@ -723,7 +695,6 @@ export async function addExistingNodeToCurrentContext(path: string, position: { 
         // 8d. Persist context via localAdapter.saveContext()
         if (updatedContext) {
             await localAdapter.saveContext(updatedContext);
-            console.log(`[addExistingNodeToCurrentContext] Added ViewNode ${dataNode.id} to context ${currentCtxId} and saved.`);
              // Optionally select the newly added node
              setSelectedNodes(new Set([dataNode.id]));
         } else {

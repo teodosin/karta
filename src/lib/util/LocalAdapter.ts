@@ -47,42 +47,34 @@ class LocalAdapter implements PersistenceService {
 	private objectUrlMap = new Map<string, string>(); // Tracks generated Object URLs { nodeId: objectUrl }
 
 	constructor() {
-		console.log('[LocalAdapter] Constructor: Initializing DB connection...');
 		const startTime = performance.now();
 
 		// DB Version 6: Added path_idx index to nodes store
 		this.dbPromise = idb.openDB<KartaDB>('karta-db', 6, {
 			upgrade(db, oldVersion, newVersion, tx, event) {
-				console.log(`[LocalAdapter] Upgrading DB from v${oldVersion} to v${newVersion}...`);
 				// Ensure 'nodes' store exists and has its indexes
 				if (!db.objectStoreNames.contains('nodes')) {
-					console.log('[LocalAdapter] Creating "nodes" object store.');
 					const nodeStore = db.createObjectStore('nodes', { keyPath: 'id' });
 					// Add path index if it doesn't exist
 					if (!nodeStore.indexNames.contains('path_idx')) {
-						console.log('[LocalAdapter] Creating "path_idx" index on new "nodes" store.');
 						nodeStore.createIndex('path_idx', 'path', { unique: true }); // Path should be unique
 					}
 				}
 
 				// Ensure 'edges' store exists and has its indexes
 				if (!db.objectStoreNames.contains('edges')) {
-					console.log('[LocalAdapter] Creating "edges" object store.');
 					const edgeStore = db.createObjectStore('edges', { keyPath: 'id' });
 					// Create indexes immediately after store creation if they don't exist
 					if (!edgeStore.indexNames.contains('source_idx')) {
-						console.log('[LocalAdapter] Creating "source_idx" index on new "edges" store.');
 						edgeStore.createIndex('source_idx', 'source', { unique: false });
 					}
 					if (!edgeStore.indexNames.contains('target_idx')) {
-						console.log('[LocalAdapter] Creating "target_idx" index on new "edges" store.');
 						edgeStore.createIndex('target_idx', 'target', { unique: false });
 					}
 				}
 
 				// Ensure 'contexts' store exists
 				if (!db.objectStoreNames.contains('contexts')) {
-					console.log('[LocalAdapter] Creating "contexts" object store.');
 					db.createObjectStore('contexts', { keyPath: 'id' });
 				}
 				// Add path index if upgrading from v1, v2, v3, v4, or v5 (where nodes store exists but path_idx might not)
@@ -90,7 +82,6 @@ class LocalAdapter implements PersistenceService {
 					if (db.objectStoreNames.contains('nodes')) {
 						const nodeStore = tx.objectStore('nodes');
 						if (!nodeStore.indexNames.contains('path_idx')) {
-							console.log('[LocalAdapter] Creating "path_idx" index on existing "nodes" store (upgrade).');
 							nodeStore.createIndex('path_idx', 'path', { unique: true });
 						}
 					} else { console.warn('[LocalAdapter] Cannot add path_idx: "nodes" store does not exist.'); }
@@ -100,21 +91,17 @@ class LocalAdapter implements PersistenceService {
 					if (db.objectStoreNames.contains('edges')) {
 						const edgeStore = tx.objectStore('edges');
 						if (!edgeStore.indexNames.contains('source_idx')) {
-							console.log('[LocalAdapter] Creating "source_idx" index on existing "edges" store.');
 							edgeStore.createIndex('source_idx', 'source', { unique: false });
 						}
 						if (!edgeStore.indexNames.contains('target_idx')) {
-							console.log('[LocalAdapter] Creating "target_idx" index on existing "edges" store.');
 							edgeStore.createIndex('target_idx', 'target', { unique: false });
 						}
 					} else { console.warn('[LocalAdapter] Cannot add edge indexes: "edges" store does not exist.'); }
 				}
 				// Ensure 'assets' store exists
 				if (!db.objectStoreNames.contains('assets')) {
-					console.log('[LocalAdapter] Creating "assets" object store.');
 					db.createObjectStore('assets'); // Key is assetId (usually nodeId)
 				}
-				console.log('[LocalAdapter] DB upgrade complete.');
 			},
 			blocked() { console.error('[LocalAdapter] IDB blocked. Close other tabs accessing the DB.'); },
 			blocking() { console.warn('[LocalAdapter] IDB blocking. Connection will close.'); },
@@ -123,7 +110,6 @@ class LocalAdapter implements PersistenceService {
 
 		this.dbPromise.then(db => {
 			const endTime = performance.now();
-			console.log(`[LocalAdapter] DB connection established successfully in ${endTime - startTime}ms. DB Name: ${db.name}, Version: ${db.version}`);
 		}).catch(error => {
 			const endTime = performance.now();
 			console.error(`[LocalAdapter] DB connection failed after ${endTime - startTime}ms:`, error);
@@ -292,7 +278,6 @@ class LocalAdapter implements PersistenceService {
 		const tx = db.transaction('assets', 'readwrite');
 		await tx.objectStore('assets').put(assetData, assetId);
 		await tx.done;
-		console.log(`[LocalAdapter] Saved asset ${assetId}`);
 	}
 
 	async getAsset(assetId: string): Promise<AssetData | undefined> {
@@ -310,9 +295,7 @@ class LocalAdapter implements PersistenceService {
 		if (existingUrl) {
 			URL.revokeObjectURL(existingUrl);
 			this.objectUrlMap.delete(assetId);
-			console.log(`[LocalAdapter] Revoked and removed Object URL for asset ${assetId}`);
 		}
-		console.log(`[LocalAdapter] Deleted asset ${assetId}`);
 	}
 
 	/**
@@ -352,13 +335,11 @@ class LocalAdapter implements PersistenceService {
 	// Method to clean up all generated Object URLs
 	// Use arrow function syntax to ensure 'this' context is correct when used as event listener
 	private cleanupObjectUrls = (): void => {
-		console.log(`[LocalAdapter] Cleaning up ${this.objectUrlMap.size} Object URLs before unload...`);
 		this.objectUrlMap.forEach((url, nodeId) => {
 			URL.revokeObjectURL(url);
 			// console.log(`[LocalAdapter] Revoked Object URL for node ${nodeId}`);
 		});
 		this.objectUrlMap.clear();
-		console.log('[LocalAdapter] Object URL map cleared.');
 	};
 
 	// --- Context Methods ---
@@ -370,7 +351,6 @@ class LocalAdapter implements PersistenceService {
 		const focalNode = context.viewNodes.get(context.id);
 		// Access focal node state via the tween
 		const focalNodeState = focalNode?.state.current;
-		console.log("focalNode position", focalNodeState?.x, focalNodeState?.y);
 		if (!focalNodeState) throw new Error(`Focal node ${context.id} state not found in context being saved`);
 
 		// Convert ViewNodes (containing Tweens) to StorableViewNodes (relative positions)
@@ -419,8 +399,6 @@ class LocalAdapter implements PersistenceService {
 			// Use focal node's current state for calculation
 			let dx = (focalNodeState.x * absSettings.scale) + absSettings.posX;
 			let dy = (focalNodeState.y * absSettings.scale) + absSettings.posY;
-			console.log("absSettings", absSettings);
-			console.log("Relative viewport position dx and dy", dx, " ", dy);
 
 			storableViewportSettings = {
 				scale: absSettings.scale, // Scale is absolute

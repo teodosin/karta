@@ -15,12 +15,8 @@
 	const selectionBounds = derived(
 		[selectedNodeIds, currentViewNodes], // Depend on the stores
 		([$selectedNodeIds, $currentViewNodes]) => { // Get store values in callback
-			console.log('[SelectionBox Derived] Running...'); // DEBUG
-			console.log('[SelectionBox Derived] Selected IDs:', $selectedNodeIds); // DEBUG
-			console.log('[SelectionBox Derived] Current View Nodes:', $currentViewNodes); // DEBUG
 			const size = $selectedNodeIds.size;
 			if (size === 0) { // Handle empty selection
-				console.log('[SelectionBox Derived] Size is 0, returning null.'); // DEBUG
 				return null;
 			}
 
@@ -28,9 +24,7 @@
 			let nodesInData: { id: string; initialViewNode: ViewNode }[] = [];
 
 			$selectedNodeIds.forEach(id => {
-				console.log(`[SelectionBox Derived] Checking ID: ${id}`); // DEBUG
 				const viewNode = $currentViewNodes.get(id); // Use .get() on the Map value
-				console.log(`[SelectionBox Derived] Found viewNode for ${id}:`, viewNode); // DEBUG
 				if (viewNode) {
 					const state = viewNode.state.current;
 					const halfWidth = state.width / 2;
@@ -45,19 +39,16 @@
 
 			// Check if any valid nodes were found (might be empty if IDs exist but nodes don't)
 			if (nodesInData.length === 0) {
-				console.log('[SelectionBox Derived] nodesInData is empty, returning null.'); // DEBUG
 				return null;
 			}
 
 			// Always return bounds if at least one node is selected
 			const bounds = { minX, minY, maxX, maxY, width: maxX - minX, height: maxY - minY, nodesInData };
-			console.log('[SelectionBox Derived] Returning bounds:', bounds); // DEBUG
 			return bounds;
 		}
 	);
 
 	// Debug log for selectionBounds
-	$: console.log('[SelectionBox] selectionBounds:', $selectionBounds);
 
 	// Props to receive calculated values from the parent (Viewport)
 	export let inverseScale = 1;
@@ -88,7 +79,6 @@
 			const containsGhost = selectedIdsArray.some(id => !allNodesMap.has(id));
 
 			if (containsGhost) {
-				console.warn('[SelectionBox] Cannot start connection: Selection contains a ghost node.');
 				// Optionally provide user feedback here (e.g., flash the handle red)
 				return; // Prevent starting connection
 			}

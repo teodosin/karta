@@ -16,7 +16,6 @@ export async function createEdge(sourceId: NodeId, targetId: NodeId) {
     const newEdgeId: EdgeId = uuidv4();
 	const newEdge: KartaEdge = { id: newEdgeId, source: sourceId, target: targetId };
 	edges.update(e => e.set(newEdgeId, newEdge));
-	console.log(`Created edge ${newEdgeId} between ${sourceId} and ${targetId}`);
     if (localAdapter) {
         try { await localAdapter.saveEdge(newEdge); }
         catch (error) { console.error("Error saving edge:", error); }
@@ -28,7 +27,6 @@ export async function deleteEdge(edgeId: EdgeId) {
         e.delete(edgeId);
         return e;
     });
-    console.log(`Deleted edge ${edgeId}`);
     if (localAdapter) {
         try { await localAdapter.deleteEdge(edgeId); }
         catch (error) { console.error("Error deleting edge:", error); }

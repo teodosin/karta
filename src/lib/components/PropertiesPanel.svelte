@@ -80,7 +80,6 @@
 			return { r, g, b, a };
 		}
 
-		console.warn("Could not parse color string:", color);
 		return { r: 0, g: 0, b: 0, a: 1 }; // Fallback
 	}
 
@@ -170,7 +169,6 @@
 			const originalColorString = rgbToRgbaString(fillColorRgb);
 			const finalColorString = rgbToRgbaString(intermediateFillColorRgb);
 			if (originalColorString !== finalColorString) {
-				console.log(`Applying fill color change: ${finalColorString}`);
 				updateViewNodeAttribute(selectedViewNode.id, 'karta_fillColor', finalColorString);
 				fillColorRgb = { ...intermediateFillColorRgb }; // Update original state to match
 			}
@@ -185,7 +183,6 @@
 			const originalColorString = rgbToRgbaString(textColorRgb);
 			const finalColorString = rgbToRgbaString(intermediateTextColorRgb);
 			if (originalColorString !== finalColorString) {
-				console.log(`Applying text color change: ${finalColorString}`);
 				updateViewNodeAttribute(selectedViewNode.id, 'karta_textColor', finalColorString);
 				textColorRgb = { ...intermediateTextColorRgb }; // Update original state to match
 			}
@@ -203,7 +200,6 @@
 			if (AVAILABLE_FONTS.includes(selectedValue)) {
 				updateViewNodeAttribute(selectedViewNode.id, 'karta_font', selectedValue);
 			} else {
-				console.warn("Invalid font selected:", target.value);
 			}
 		}
 	}
@@ -295,7 +291,6 @@
 	function handleAttributeChange(key: string, value: any) {
 		if (!selectedDataNode) return;
 		// Update local temporary state first if needed, or directly call store action
-		console.log(`Updating data attribute ${key} to:`, value);
 		// Use the specific updateNodeAttributes for DataNode attributes
 		updateNodeAttributes(selectedDataNode.id, { [key]: value });
 		// Consider debouncing or saving on blur/enter instead of every keystroke for text inputs
@@ -325,7 +320,6 @@
 		const updateHeight = () => {
 			if (node) {
 				headerHeight = node.offsetHeight;
-				// console.log('Header height measured:', headerHeight); // Optional debug log
 			}
 		};
 
@@ -510,7 +504,7 @@
 			</span>
 			<div class="flex items-center gap-1">
 				<button
-					on:click={() => { console.log('Collapse button clicked!'); togglePropertiesPanelCollapsed(); }}
+					on:click={() => { togglePropertiesPanelCollapsed(); }}
 					class="p-1 rounded hover:bg-gray-300 dark:hover:bg-gray-600"
 					aria-label={$propertiesPanelCollapsed ? 'Expand Panel' : 'Collapse Panel'}
 					title={$propertiesPanelCollapsed ? 'Expand Panel' : 'Collapse Panel'}

@@ -30,7 +30,6 @@ export function centerViewOnCanvasPoint(canvasX: number, canvasY: number) {
 
     // Set duration to 0 for immediate jump, stopping any current tween
     viewTransform.set({ scale: targetScale, posX: targetPosX, posY: targetPosY }, { duration: 0 });
-    console.log(`[KartaStore] Centering view on canvas point (${canvasX}, ${canvasY}) at scale 1`);
 }
 
 /** Centers the viewport on the current focal node. */
@@ -43,7 +42,6 @@ export function centerOnFocalNode() {
     	const centerX = nodeState.x + nodeState.width / 2;
     	const centerY = nodeState.y + nodeState.height / 2;
     	centerViewOnCanvasPoint(centerX, centerY);
-    	console.log(`[KartaStore] Centering on focal node ${focalNodeId} at (${centerX}, ${centerY})`);
     } else {
     	console.warn(`[KartaStore] Cannot center on focal node: ViewNode ${focalNodeId} not found in current context.`);
     }
@@ -60,7 +58,6 @@ export function frameContext() {
     const nodesInContext = get(currentViewNodes);
 
     if (nodesInContext.size === 0) {
-    	console.log("[frameContext] No nodes in context to frame.");
     	// Optionally reset to default view? For now, do nothing.
     	// viewTransform.set({ ...DEFAULT_VIEWPORT_SETTINGS }, { duration: 0 });
     	return;
@@ -87,7 +84,6 @@ export function frameContext() {
     const boundsCenterY = minY + boundsHeight / 2;
 
     if (boundsWidth <= 0 || boundsHeight <= 0) {
-    	console.log("[frameContext] Bounding box has zero or negative dimensions, centering on first node.");
     	// Fallback: center on the first node found (or the focal node if it exists)
     	const firstNode = nodesInContext.values().next().value;
     	if (firstNode) {
@@ -108,7 +104,6 @@ export function frameContext() {
     const targetPosY = rect.height / 2 - boundsCenterY * targetScale;
 
     viewTransform.set({ scale: targetScale, posX: targetPosX, posY: targetPosY }, { duration: 0 });
-    console.log(`[KartaStore] Framing context. Bounds: (${minX.toFixed(1)}, ${minY.toFixed(1)}) to (${maxX.toFixed(1)}, ${maxY.toFixed(1)}). New transform: scale=${targetScale.toFixed(2)}, pos=(${targetPosX.toFixed(1)}, ${targetPosY.toFixed(1)})`);
 
 }
 

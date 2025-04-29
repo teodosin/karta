@@ -85,7 +85,6 @@ import NodeWrapper from './NodeWrapper.svelte';
     $: currentCtx = $contexts.get($currentContextId);
 
     // Debug log for selection size
-    $: console.log('[Viewport] Selected nodes count:', $selectedNodeIds.size);
 
 	// State for panning
 	let isPanning = false;
@@ -123,7 +122,6 @@ import NodeWrapper from './NodeWrapper.svelte';
 				resolve({ width: img.naturalWidth, height: img.naturalHeight });
 			};
 			img.onerror = (error) => {
-				console.error('[Viewport] Error loading image to get dimensions:', error);
 				// Fallback to default dimensions if loading fails
 				resolve({ width: 100, height: 100 }); // Or use registry defaults?
 			};
@@ -136,7 +134,6 @@ import NodeWrapper from './NodeWrapper.svelte';
 	// --- Connection Drag Handlers (Global Listeners) ---
 	function handleConnectionPointerMove(event: PointerEvent) {
 		if (!get(isConnecting) || !canvasContainer) return; // Check if connecting and container exists
-		// console.log('Global Connection Pointer Move'); // DEBUG
 		const rect = canvasContainer.getBoundingClientRect();
 		const { x: canvasX, y: canvasY } = screenToCanvasCoordinates(event.clientX, event.clientY, rect);
 		updateTempLinePosition(canvasX, canvasY);
@@ -144,7 +141,6 @@ import NodeWrapper from './NodeWrapper.svelte';
 
 	function handleConnectionPointerUp(event: PointerEvent) {
 		if (!get(isConnecting) || event.button !== 0) return; // Only primary button release
-		// console.log('Global Connection Pointer Up'); // DEBUG
 
 		let targetNodeId: string | null = null;
 		let currentElement: HTMLElement | null = event.target as HTMLElement;
@@ -164,7 +160,6 @@ import NodeWrapper from './NodeWrapper.svelte';
 
 		// Check if the target node is a ghost node
 		if (targetNodeId && !get(nodes).has(targetNodeId)) {
-			console.warn('[Viewport] Cannot connect: Target node is a ghost node.');
 			cancelConnectionProcess(); // Cancel if target is ghost
 		} else {
 			finishConnectionProcess(targetNodeId); // Proceed if target is valid or null (background)
@@ -175,7 +170,6 @@ import NodeWrapper from './NodeWrapper.svelte';
 
 // --- Event Handlers ---
 	function handleWheel(e: WheelEvent) {
-    // console.log(`handleWheel: deltaY=${e.deltaY}, deltaX=${e.deltaX}, deltaMode=${e.deltaMode}, ctrlKey=${e.ctrlKey}`); // DEBUG LOG removed
     e.preventDefault();
     if (!canvasContainer) return;
 
@@ -248,7 +242,6 @@ import NodeWrapper from './NodeWrapper.svelte';
 				canvasContainer.addEventListener('pointermove', handleElementPointerMove);
 				canvasContainer.addEventListener('pointerup', handleElementPointerUp);
 			} else {
-				console.error("handlePointerDown: canvasContainer not bound yet!");
 			}
 			return; // Don't delegate middle mouse
 		}
@@ -530,21 +523,17 @@ function handleKeyDown(e: KeyboardEvent) {
 			if (screenX === 0 && screenY === 0) {
 				screenX = rect.left + rect.width / 2;
 				screenY = rect.top + rect.height / 2;
-				console.log('Tab pressed: Cursor position unknown, using viewport center.');
 			} else {
-				console.log(`Tab pressed: Using cursor position (${screenX}, ${screenY})`);
 			}
 
 			// Calculate canvas coordinates
 			const { x: canvasX, y: canvasY } = screenToCanvasCoordinates(screenX, screenY, rect);
-			console.log(`Tab pressed: Calculated canvas coordinates (${canvasX}, ${canvasY})`);
 
 			// Open the menu
 			openCreateNodeMenu(screenX, screenY, canvasX, canvasY);
 			// DO NOT call e.preventDefault() here - it's handled globally
 			return; // Prevent further handling if menu is opened
 		} else {
-			console.log('[Viewport] Tab ignored for menu (input focused).');
 		}
 
 	} else if (e.key === 'f' || e.key === 'F') {
@@ -607,14 +596,11 @@ function handleKeyDown(e: KeyboardEvent) {
 				setSelectedNodes([nodeId]); // Clear existing and select only this node
 			}
 			// If the node is already selected, do nothing to the selection.
-			console.log('Context menu on node:', nodeId);
 		} else if (clickedOnEdge) { // Corrected typo here
 			const edgeId = (clickedOnEdge as HTMLElement).dataset.edgeId; // Corrected typo here
 			context = { type: 'edge', id: edgeId || 'unknown' }; // Use unknown if ID not found yet
-			console.log('Context menu on edge:', edgeId || 'unknown');
 		} else {
 			context = { type: 'background' };
-			console.log('Context menu on background');
 		}
 
 		openContextMenu({ x: e.clientX, y: e.clientY }, context);
@@ -654,11 +640,9 @@ function handleKeyDown(e: KeyboardEvent) {
     $: { // Reactive block for Svelte 4 effect simulation
     	if (typeof window !== 'undefined') { // Ensure runs only in browser
     		if ($isConnecting) {
-    			// console.log('Effect: Adding connection listeners'); // DEBUG
     			window.addEventListener('pointermove', handleConnectionPointerMove);
     			window.addEventListener('pointerup', handleConnectionPointerUp);
     		} else {
-    			// console.log('Effect: Removing connection listeners'); // DEBUG
     			window.removeEventListener('pointermove', handleConnectionPointerMove);
     			window.removeEventListener('pointerup', handleConnectionPointerUp);
     		}
@@ -688,14 +672,12 @@ async function handleDrop(e: DragEvent) {
  e.preventDefault();
  if (!e.dataTransfer || !canvasContainer) return;
 
- console.log('[Viewport] Drop event detected.');
  const rect = canvasContainer.getBoundingClientRect();
 
  for (const item of e.dataTransfer.items) {
   if (item.kind === 'file' && item.type.startsWith('image/')) {
    const file = item.getAsFile();
    if (file) {
-    console.log(`[Viewport] Dropped image file: ${file.name}`);
     try {
     		      // Create Object URL (must be revoked later if creation fails)
     		      const objectUrl = URL.createObjectURL(file);
@@ -703,11 +685,10 @@ async function handleDrop(e: DragEvent) {
     		      const { x: canvasX, y: canvasY } = screenToCanvasCoordinates(e.clientX, e.clientY, rect);
     		      // Get dimensions from the object URL
     		      const dimensions = await getImageDimensionsFromUrl(objectUrl);
-    		      console.log(`[Viewport] Creating image node via asset at canvas coords: (${canvasX}, ${canvasY}) with dimensions ${dimensions.width}x${dimensions.height}`);
     		      // Call the new store action, passing the Blob, Object URL, and dimensions
     		      createImageNodeWithAsset({ x: canvasX, y: canvasY }, file, objectUrl, assetName, dimensions.width, dimensions.height);
     } catch (error) {
-    	console.error('[Viewport] Error reading dropped file:', error);
+    	// console.error('[Viewport] Error reading dropped file:', error); // Keep error logs for now
     }
    }
   }
@@ -719,12 +700,10 @@ async function handlePaste(e: ClipboardEvent) {
  // Ignore paste events originating from inputs/textareas/contenteditables
  const target = e.target as HTMLElement;
  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
-  console.log('[Viewport] Paste event ignored (target is editable).');
   return;
  }
 
  if (!e.clipboardData || !canvasContainer) return;
- console.log('[Viewport] Paste event detected on viewport.');
 
  e.preventDefault(); // Handle paste ourselves
 
@@ -737,14 +716,12 @@ async function handlePaste(e: ClipboardEvent) {
   const coords = screenToCanvasCoordinates(lastScreenX, lastScreenY, rect);
   pasteCanvasX = coords.x;
   pasteCanvasY = coords.y;
-  console.log(`[Viewport] Using last cursor position for paste: (${pasteCanvasX}, ${pasteCanvasY})`);
  } else {
   const centerX = rect.left + rect.width / 2;
   const centerY = rect.top + rect.height / 2;
   const coords = screenToCanvasCoordinates(centerX, centerY, rect);
   pasteCanvasX = coords.x;
   pasteCanvasY = coords.y;
-  console.log(`[Viewport] Using viewport center for paste: (${pasteCanvasX}, ${pasteCanvasY})`);
  }
 
 
@@ -752,26 +729,22 @@ async function handlePaste(e: ClipboardEvent) {
   if (item.kind === 'file' && item.type.startsWith('image/')) {
    const file = item.getAsFile();
    if (file) {
-    console.log(`[Viewport] Pasted image file: ${file.name}`);
    try {
             // Create Object URL (must be revoked later if creation fails)
             const objectUrl = URL.createObjectURL(file);
             const assetName = file.name || 'Pasted Image';
             // Get dimensions from the object URL
             const dimensions = await getImageDimensionsFromUrl(objectUrl);
-            console.log(`[Viewport] Creating image node via asset from paste at canvas coords: (${pasteCanvasX}, ${pasteCanvasY}) with dimensions ${dimensions.width}x${dimensions.height}`);
             // Call the new store action, passing the Blob, Object URL, and dimensions
             createImageNodeWithAsset({ x: pasteCanvasX, y: pasteCanvasY }, file, objectUrl, assetName, dimensions.width, dimensions.height);
             return; // Handle first image found
     } catch (error) {
-    	console.error('[Viewport] Error reading pasted file:', error);
+    	// console.error('[Viewport] Error reading pasted file:', error); // Keep error logs for now
     }
    }
   } else if (item.kind === 'string' && item.type === 'text/plain') {
    item.getAsString(text => {
     if (text && text.trim().length > 0) {
-    	console.log(`[Viewport] Pasted text: "${text.substring(0, 50)}..."`);
-    	console.log(`[Viewport] Creating text node from paste at canvas coords: (${pasteCanvasX}, ${pasteCanvasY})`);
     	createTextNodeFromPaste({ x: pasteCanvasX, y: pasteCanvasY }, text);
     	return; // Handle first text found
     }
@@ -922,12 +895,10 @@ class="karta-viewport-container w-full h-screen overflow-hidden relative cursor-
 									async (idToDelete) => {
 										// Call the actual permanent deletion function with the received ID
 										await deleteDataNodePermanently(idToDelete);
-										console.log(`Initiated permanent deletion for node: ${idToDelete}`);
 									},
 									targetNodeId // Pass the targetNodeId here
 								);
 							} else {
-								console.error("Delete Permanently action triggered with undefined targetNodeId");
 							}
 						},
 						disabled: !targetNodeId || targetNodeId === $currentContextId // Disable if it's the focal node
@@ -980,7 +951,7 @@ class="karta-viewport-container w-full h-screen overflow-hidden relative cursor-
 						                  },
 						                  disabled: !screenPos // Disable if position is somehow missing
 						              },
-					// { label: 'Paste', action: () => console.warn('Paste action NYI from context menu.'), disabled: true } // Remove Paste item
+					// { label: 'Paste', action: () => console.warn('Paste action NYI from context menu.'), disabled: true }
 				];
 			}
 			return items;

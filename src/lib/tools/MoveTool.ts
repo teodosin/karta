@@ -25,7 +25,6 @@ export class MoveTool implements Tool {
     }
 
     activate() {
-        // console.log('MoveTool activated'); // Keep minimal logs
         this.isDragging = false;
         this.draggingNodeIds = null;
         this.initialMousePos = null;
@@ -35,7 +34,6 @@ export class MoveTool implements Tool {
     }
 
     deactivate() {
-        // console.log('MoveTool deactivated'); // Keep minimal logs
         this.removeWindowListeners();
         // Reset cursor if needed (handled below)
         // No specific node element styling to remove here anymore
@@ -56,7 +54,6 @@ export class MoveTool implements Tool {
         if (!nodeEl || !nodeEl.dataset.id) return; // Exit if not a node or no data-id
 
         const nodeId = nodeEl.dataset.id;
-        // console.log('MoveTool onPointerDown on node', nodeId); // Keep minimal logs
 
         const currentSelection = get(selectedNodeIds);
         const ctxId = get(currentContextId);
@@ -200,13 +197,11 @@ export class MoveTool implements Tool {
 
     // --- Helper methods for listeners - Use Pointer Events ---
     private addWindowListeners() {
-        // console.log("Adding window pointer listeners for MoveTool");
         window.addEventListener('pointermove', this.boundHandlePointerMove);
         window.addEventListener('pointerup', this.boundHandlePointerUp, { once: true });
     }
 
     private removeWindowListeners() {
-        // console.log("Removing window pointer listeners for MoveTool");
         window.removeEventListener('pointermove', this.boundHandlePointerMove);
         window.removeEventListener('pointerup', this.boundHandlePointerUp);
     }

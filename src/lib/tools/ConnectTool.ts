@@ -22,12 +22,10 @@ export class ConnectTool implements Tool {
     }
 
     activate() {
-        // console.log('ConnectTool activated');
         document.body.style.cursor = 'crosshair'; // Set cursor on activate
     }
 
     deactivate() {
-        // console.log('ConnectTool deactivated');
         if (get(isConnecting)) {
             cancelConnectionProcess(); // Cancel if connection was in progress
         }
@@ -44,7 +42,6 @@ export class ConnectTool implements Tool {
         if (!nodeEl || !nodeEl.dataset.id) return; // Exit if not a node
 
         const nodeId = nodeEl.dataset.id;
-        // console.log('ConnectTool onPointerDown on node', nodeId); // Keep this one?
         startConnectionProcess([nodeId]); // KartaStore handles the state
         this.addWindowListeners(); // Add listeners to track pointer movement and release
     }
@@ -52,7 +49,6 @@ export class ConnectTool implements Tool {
     // Replaces handleWindowMouseMove - Use PointerEvent
     private handlePointerMove(event: PointerEvent): void {
         if (!get(isConnecting)) return;
-        // console.log('ConnectTool handlePointerMove'); // Reduce noise
 
         // Need container rect for coordinate conversion
         const containerEl = document.querySelector('.w-full.h-screen.overflow-hidden') as HTMLElement; // Adjust selector if needed
@@ -68,7 +64,6 @@ export class ConnectTool implements Tool {
     // Replaces handleWindowMouseUp - Use PointerEvent
     private handlePointerUp(event: PointerEvent): void {
         if (!get(isConnecting) || event.button !== 0) return;
-        // console.log('ConnectTool handlePointerUp'); // Keep this one?
 
         let targetNodeId: NodeId | null = null;
         // Use event.target for pointerup, as it reflects the element where the pointer was released
@@ -103,13 +98,11 @@ export class ConnectTool implements Tool {
 
     // --- Helper methods for listeners - Use Pointer Events ---
     private addWindowListeners() {
-        // console.log("Adding window pointer listeners for ConnectTool");
         window.addEventListener('pointermove', this.boundHandlePointerMove);
         window.addEventListener('pointerup', this.boundHandlePointerUp, { once: true });
     }
 
     private removeWindowListeners() {
-        // console.log("Removing window pointer listeners for ConnectTool");
         window.removeEventListener('pointermove', this.boundHandlePointerMove);
         window.removeEventListener('pointerup', this.boundHandlePointerUp);
     }

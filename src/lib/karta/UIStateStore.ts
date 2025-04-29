@@ -32,13 +32,11 @@ export const confirmationDialogAction = writable<(() => void) | null>(null); // 
 export function openCreateNodeMenu(screenX: number, screenY: number, canvasX: number, canvasY: number) {
     createNodeMenuPosition.set({ screenX, screenY, canvasX, canvasY });
     isCreateNodeMenuOpen.set(true);
-    console.log(`[KartaStore] Opening create node menu at (${screenX}, ${screenY})`);
 }
 
 export function closeCreateNodeMenu() {
     isCreateNodeMenuOpen.set(false);
     createNodeMenuPosition.set(null);
-    console.log(`[KartaStore] Closing create node menu`);
 }
 
 export async function createNodeFromMenu(ntype: string) {
@@ -67,14 +65,12 @@ export function openContextMenu(position: { x: number; y: number }, context: Con
     contextMenuPosition.set(position);
     contextMenuContext.set(context);
     isContextMenuOpen.set(true);
-    console.log(`[KartaStore] Opening context menu at (${position.x}, ${position.y}) for context:`, context);
 }
 
 export function closeContextMenu() {
     isContextMenuOpen.set(false);
     contextMenuPosition.set(null);
     contextMenuContext.set(null);
-    console.log(`[KartaStore] Closing context menu`);
 }
 
 // Confirmation Dialog Actions
@@ -103,13 +99,11 @@ export const nodeSearchPosition = writable<{ screenX: number; screenY: number; c
 export function openNodeSearch(screenX: number, screenY: number, canvasX: number, canvasY: number) {
     nodeSearchPosition.set({ screenX, screenY, canvasX, canvasY });
     isNodeSearchOpen.set(true);
-    console.log(`[UIStateStore] Opening node search at screen (${screenX}, ${screenY}), canvas (${canvasX}, ${canvasY})`);
 }
 
 export function closeNodeSearch() {
     isNodeSearchOpen.set(false);
     nodeSearchPosition.set(null);
-    console.log(`[UIStateStore] Closing node search`);
 }
 
 
@@ -133,9 +127,7 @@ export function setPropertiesPanelSize(size: { width: number; height: number }) 
 }
 
 export function togglePropertiesPanelCollapsed() {
-    console.log('PANEL: ', get(propertiesPanelCollapsed));
     propertiesPanelCollapsed.update(collapsed => !collapsed);
-    console.log('PANEL: ', get(propertiesPanelCollapsed));
 }
 
 /** Signals that a rename should be initiated for the specified node. */
@@ -143,20 +135,16 @@ export function requestNodeRename(nodeId: NodeId) {
     // This function will likely need to interact with NodeStore to check if the node is a system node
     // For now, just setting the request ID.
     nodeRenameRequestId.set(nodeId);
-    console.log(`[KartaStore] Requested rename for node ${nodeId}`);
 }
 // --- Subscription to link selection changes to properties panel visibility ---
 import { selectedNodeIds } from './SelectionStore';
 
 selectedNodeIds.subscribe(selectedIds => {
-	console.log(`[UIStateStore Sub] selectedNodeIds changed. Size: ${selectedIds.size}`);
 	if (selectedIds.size === 1) {
 		const selectedId = selectedIds.values().next().value;
-		console.log(`[UIStateStore Sub] Exactly one node selected: ${selectedId}. Setting properties panel node and visibility to true.`);
 		setPropertiesPanelNode(selectedId ?? null); // Use nullish coalescing for type safety
 		setPropertiesPanelVisibility(true);
 	} else {
-		console.log(`[UIStateStore Sub] ${selectedIds.size} nodes selected. Setting properties panel node to null and visibility to false.`);
 		setPropertiesPanelNode(null);
 		setPropertiesPanelVisibility(false);
 	}
