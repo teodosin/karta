@@ -502,7 +502,8 @@ async function initializeStores() { // Remove export keyword here
             initialDataNode = await localAdapter.getNode(ROOT_NODE_ID);
             if (!initialDataNode) {
                 // If even the root is not in the DB, ensure it exists
-                initialDataNode = await _ensureDataNodeExists(ROOT_NODE_ID); // This creates and saves if needed
+                const ensuredNode = await _ensureDataNodeExists(ROOT_NODE_ID); // This creates and saves if needed
+                initialDataNode = ensuredNode === null ? undefined : ensuredNode;
                 if (!initialDataNode) {
                     throw new Error("CRITICAL: Root DataNode could not be found or created during initialization.");
                 }
