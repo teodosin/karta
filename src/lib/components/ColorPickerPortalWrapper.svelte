@@ -20,7 +20,7 @@
 		/* Base styles copied from example */
 		padding: 8px;
 		background-color: var(--cp-bg-color, white);
-		margin: 0 10px 10px;
+		margin: 0 10px 10px; /* Restore margin */
 		border: 1px solid var(--cp-border-color, black);
 		border-radius: 12px;
 		display: none;

@@ -72,10 +72,6 @@
 		a: 1,
 	};
 
-	// Intermediate state bound to the color pickers while they are open
-	let intermediateFillColorRgb = { ...fillColorRgb };
-	let intermediateTextColorRgb = { ...textColorRgb };
-
 	// State to control color picker pop-up visibility
 	let isFillPickerOpen = false;
 	let isTextColorPickerOpen = false;
@@ -214,17 +210,15 @@
 			// Only update intermediate state if the picker is not currently open,
 			// otherwise keep the user's intermediate selection
 			if (!isFillPickerOpen) {
-				intermediateFillColorRgb = { ...fillColorRgb };
+				// No intermediate state needed
 			}
 			if (!isTextColorPickerOpen) {
-				intermediateTextColorRgb = { ...textColorRgb };
+				// No intermediate state needed
 			}
 		} else {
 			// Reset when node changes or is not text
 			fillColorRgb = { r: 254, g: 249, b: 195, a: 1 }; // Reset original
 			textColorRgb = { r: 0, g: 0, b: 0, a: 1 }; // Reset original
-			intermediateFillColorRgb = { ...fillColorRgb }; // Reset intermediate
-			intermediateTextColorRgb = { ...textColorRgb }; // Reset intermediate
 			currentFont = "Nunito";
 			currentFontSize = 16; // Reset font size state
 			selectedFontValue = "Nunito"; // Reset binding state
@@ -232,50 +226,28 @@
 		}
 	}
 
-	// --- Apply Intermediate Color on Picker Close ---
-	let prevIsFillPickerOpen = isFillPickerOpen;
-	$: {
-		if (prevIsFillPickerOpen && !isFillPickerOpen && selectedViewNode) {
-			// Picker was just closed, apply the intermediate color if it differs from the original
-			const originalColorString = rgbToRgbaString(fillColorRgb); // Compare intermediate against the original color
-			const finalColorString = rgbToRgbaString(intermediateFillColorRgb);
-			if (originalColorString !== finalColorString) {
-				updateViewNodeAttribute(
-					selectedViewNode.id,
-					"karta_fillColor",
-					finalColorString,
-				);
-				// Update the 'original' state variable to reflect the committed change
-				fillColorRgb = { ...intermediateFillColorRgb };
-			}
-		}
-		prevIsFillPickerOpen = isFillPickerOpen; // Update previous state for next check
-	}
-
-	let prevIsTextColorPickerOpen = isTextColorPickerOpen;
-	$: {
-		if (
-			prevIsTextColorPickerOpen &&
-			!isTextColorPickerOpen &&
-			selectedViewNode
-		) {
-			// Picker was just closed, apply the intermediate color if it differs from the original
-			const originalColorString = rgbToRgbaString(textColorRgb); // Compare intermediate against the original color
-			const finalColorString = rgbToRgbaString(intermediateTextColorRgb);
-			if (originalColorString !== finalColorString) {
-				updateViewNodeAttribute(
-					selectedViewNode.id,
-					"karta_textColor",
-					finalColorString,
-				);
-				// Update the 'original' state variable to reflect the committed change
-				textColorRgb = { ...intermediateTextColorRgb };
-			}
-		}
-		prevIsTextColorPickerOpen = isTextColorPickerOpen; // Update previous state for next check
-	}
-
 	// --- Text Node Style Handlers ---
+	// Removed reactive blocks watching isOpen state
+
+	// Type for the data object provided by the 'onInput' prop
+	type ColorPickerInputData = {
+		hsv: { h: number; s: number; v: number; a: number } | null;
+		rgb: { r: number; g: number; b: number; a: number } | null;
+		hex: string | null;
+		// color: Colord | null; // Assuming Colord type might not be directly needed here
+	};
+
+	function handleColorInput(
+		attributeKey: "karta_fillColor" | "karta_textColor",
+		colorData: ColorPickerInputData, // Accept the data object directly
+	) {
+		if (selectedViewNode && colorData.rgb) { // Check if rgb is not null
+			const newColorString = rgbToRgbaString(colorData.rgb);
+			// Directly update the store on input event
+			updateViewNodeAttribute(selectedViewNode.id, attributeKey, newColorString);
+		}
+	}
+
 	function handleFontChange(event: Event) {
 		if (selectedViewNode) {
 			const target = event.target as HTMLSelectElement;
@@ -696,13 +668,15 @@
 											class="text-sm">Fill Color</label
 										>
 										<ColorPicker
-											bind:rgb={intermediateFillColorRgb}
+											bind:rgb={fillColorRgb}
 											bind:isOpen={isFillPickerOpen}
+											onInput={(data) => handleColorInput("karta_fillColor", data)}
 											position="responsive"
 											components={{
 												wrapper:
 													ColorPickerPortalWrapper,
 											}}
+											disableCloseClickOutside={true}
 										/>
 									</div>
 									<!-- Text Color -->
@@ -715,13 +689,15 @@
 										>
 										<!-- Color Swatch to open picker -->
 										<ColorPicker
-											bind:rgb={intermediateTextColorRgb}
+											bind:rgb={textColorRgb}
 											bind:isOpen={isTextColorPickerOpen}
+											onInput={(data) => handleColorInput("karta_textColor", data)}
 											position="responsive"
 											components={{
 												wrapper:
 													ColorPickerPortalWrapper,
 											}}
+											disableCloseClickOutside={true}
 										/>
 									</div>
 									<!-- Font -->
