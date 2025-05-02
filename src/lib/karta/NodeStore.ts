@@ -38,7 +38,7 @@ async function _ensureDataNodeExists(nodeId: NodeId): Promise<DataNode | null> {
                 createdAt: now,
                 modifiedAt: now,
                 path: defaultPath, // Set path correctly
-                attributes: { name: defaultName, ...(isRoot && { isSystemNode: true }) }, // Set name and system flag for root
+                attributes: { name: defaultName, ...(isRoot && { isSystemNode: true, karta_isNameVisible: false }) }, // Set name, system flag, and hide label for root
             };
             await localAdapter.saveNode(dataNode);
         }
@@ -491,7 +491,12 @@ export async function fetchAvailableContextDetails(): Promise<{ id: NodeId, name
 
        // --- Type Check ---
        let isValidAttribute = false;
-       if (dataNode.ntype === 'text' && ['karta_fillColor', 'karta_textColor', 'karta_font', 'karta_fontSize'].includes(attributeKey)) {
+       // Allow karta_isNameVisible for any node type
+       if (attributeKey === 'karta_isNameVisible') {
+           isValidAttribute = true;
+       }
+       // Check text-specific attributes
+       else if (dataNode.ntype === 'text' && ['karta_fillColor', 'karta_textColor', 'karta_font', 'karta_fontSize'].includes(attributeKey)) {
            isValidAttribute = true;
        }
        // Future: Add checks for other node types and their valid view attributes here

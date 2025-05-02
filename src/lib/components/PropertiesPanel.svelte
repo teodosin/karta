@@ -662,6 +662,33 @@
 						</div>
 					</section>
 
+					<!-- General View Properties Section -->
+					{#if selectedViewNode}
+					<section>
+						<h3
+							class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 mb-2"
+						>
+							View Properties (Context Specific)
+						</h3>
+						<div class="space-y-2">
+							<div class="flex items-center justify-between gap-2">
+								<label for="prop-view-isNameVisible" class="text-sm">Show Name Label</label>
+								<input
+									type="checkbox"
+									id="prop-view-isNameVisible"
+									checked={selectedViewNode?.attributes?.karta_isNameVisible ?? true}
+									on:change={(e) => {
+										if (selectedViewNode) {
+											updateViewNodeAttribute(selectedViewNode.id, 'karta_isNameVisible', (e.target as HTMLInputElement).checked);
+										}
+									}}
+									class="form-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+								/>
+							</div>
+						</div>
+					</section>
+					{/if}
+
 					<!-- Type Properties Section Removed -->
 
 					<!-- Text Node View Properties Section -->
@@ -672,23 +699,10 @@
 								<h3
 									class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 mb-2"
 								>
-									Node View Styles (Context Specific)
+									Text View Styles (Context Specific) <!-- Renamed Header -->
 								</h3>
 								<div class="space-y-2">
- 									<div class="flex items-center justify-between gap-2">
- 										<label for="prop-view-isNameVisible" class="text-sm">Show Name</label>
- 										<input
- 											type="checkbox"
- 											id="prop-view-isNameVisible"
- 											checked={selectedViewNode?.attributes?.karta_isNameVisible ?? true}
- 											on:change={(e) => {
- 												if (selectedViewNode) {
- 													updateViewNodeAttribute(selectedViewNode.id, 'karta_isNameVisible', (e.target as HTMLInputElement).checked);
- 												}
- 											}}
- 											class="form-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
- 										/>
- 									</div>
+										<!-- Show Name Label toggle removed from here -->
 									<!-- Fill Color -->
 									<div
 										class="flex items-center justify-between gap-2 relative"

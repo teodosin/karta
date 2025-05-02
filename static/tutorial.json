@@ -1,0 +1,142 @@
+{
+  "version": 1,
+  "exportedAt": "2025-05-02T19:23:59.272Z",
+  "nodes": [
+    {
+      "id": "00000000-0000-0000-0000-000000000000",
+      "ntype": "root",
+      "createdAt": 1746204542523,
+      "modifiedAt": 1746213457307,
+      "path": "/root",
+      "attributes": {
+        "name": "root",
+        "isSystemNode": true,
+        "karta_isNameVisible": false
+      },
+      "isSearchable": false
+    },
+    {
+      "id": "0404360b-ba53-48e3-9a5f-d5bedfa2c301",
+      "ntype": "text",
+      "createdAt": 1746204941858,
+      "modifiedAt": 1746213749206,
+      "path": "/Welcome To Karta",
+      "attributes": {
+        "name": "Welcome To Karta",
+        "text": "Welcome to Karta!\n\nPan the canvas with middle-mouse dragging or a touchpad. Zoom with the mouse wheel or by pinching.\n\nTo learn how to use this app, pan up to see the node above this one, then right click and select \"Enter Context\" to be taken to the guide.\n",
+        "karta_fontSize": 16,
+        "karta_fillColor": "rgba(255, 250, 196, 0)",
+        "karta_textColor": "rgba(190, 178, 178, 1)",
+        "karta_font": "Nunito",
+        "karta_isNameVisible": false
+      },
+      "isSearchable": false
+    },
+    {
+      "id": "a45d37a5-4acc-4132-9cba-45fd4589bacc",
+      "ntype": "Node",
+      "createdAt": 1746213760127,
+      "modifiedAt": 1746213779575,
+      "path": "/Tutorial - Hub",
+      "attributes": {
+        "name": "Tutorial - Hub"
+      },
+      "isSearchable": false
+    }
+  ],
+  "edges": [],
+  "contexts": [
+    {
+      "id": "00000000-0000-0000-0000-000000000000",
+      "viewNodes": [
+        [
+          "00000000-0000-0000-0000-000000000000",
+          {
+            "id": "00000000-0000-0000-0000-000000000000",
+            "relX": 0,
+            "relY": 0,
+            "width": 50,
+            "height": 50,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_isNameVisible": false
+            }
+          }
+        ],
+        [
+          "0404360b-ba53-48e3-9a5f-d5bedfa2c301",
+          {
+            "id": "0404360b-ba53-48e3-9a5f-d5bedfa2c301",
+            "relX": 1.958984375,
+            "relY": -239.017578125,
+            "width": 282.36328125,
+            "height": 255.66796874999997,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_fillColor": "rgba(255, 250, 196, 0)",
+              "karta_textColor": "rgba(190, 178, 178, 1)",
+              "karta_isNameVisible": false
+            }
+          }
+        ],
+        [
+          "a45d37a5-4acc-4132-9cba-45fd4589bacc",
+          {
+            "id": "a45d37a5-4acc-4132-9cba-45fd4589bacc",
+            "relX": -0.8515625,
+            "relY": -528.5546875,
+            "width": 100,
+            "height": 100,
+            "relScale": 1,
+            "rotation": 0
+          }
+        ]
+      ],
+      "viewportSettings": {
+        "scale": 1,
+        "relPosX": 452.72265625,
+        "relPosY": 717.07421875
+      }
+    },
+    {
+      "id": "a45d37a5-4acc-4132-9cba-45fd4589bacc",
+      "viewNodes": [
+        [
+          "a45d37a5-4acc-4132-9cba-45fd4589bacc",
+          {
+            "id": "a45d37a5-4acc-4132-9cba-45fd4589bacc",
+            "relX": 0,
+            "relY": 0,
+            "width": 100,
+            "height": 100,
+            "relScale": 1,
+            "rotation": 0
+          }
+        ],
+        [
+          "00000000-0000-0000-0000-000000000000",
+          {
+            "id": "00000000-0000-0000-0000-000000000000",
+            "relX": -3.44140625,
+            "relY": 204.984375,
+            "width": 50,
+            "height": 50,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_isNameVisible": false
+            }
+          }
+        ]
+      ],
+      "viewportSettings": {
+        "scale": 1,
+        "relPosX": 460.40625,
+        "relPosY": 563.4296875
+      }
+    }
+  ],
+  "assets": []
+}

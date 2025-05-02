@@ -14,10 +14,10 @@
 		return {
 			name: baseName,
 			text: '',
-			karta_fontSize: 16, // Default font size
-			karta_fillColor: '#FEF9C3', // Default tan post-it color
-			karta_textColor: '#000000', // Default black text
-			karta_font: 'Nunito'       // Default font (matches global default)
+			karta_fontSize: 16,
+			karta_fillColor: '#FEF9C320',
+			karta_textColor: '#DDDDDD',
+			karta_font: 'Nunito'
 		};
 	}
 

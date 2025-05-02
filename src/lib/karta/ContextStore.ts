@@ -2,7 +2,8 @@ import { writable, get, derived } from 'svelte/store';
 import { Tween } from 'svelte/motion';
 import { cubicOut } from 'svelte/easing';
 import { localAdapter } from '../util/LocalAdapter';
-import type { DataNode, KartaEdge, ViewNode, Context, NodeId, EdgeId, AbsoluteTransform, ViewportSettings, TweenableNodeState, StorableContext, StorableViewNode, StorableViewportSettings, Tool } from '../types/types'; // Added EdgeId and Tool
+// Import KartaExportData as well
+import type { DataNode, KartaEdge, ViewNode, Context, NodeId, EdgeId, AbsoluteTransform, ViewportSettings, TweenableNodeState, StorableContext, StorableViewNode, StorableViewportSettings, Tool, KartaExportData } from '../types/types';
 import { getDefaultViewNodeStateForType } from '$lib/node_types/registry';
 import { nodes, _ensureDataNodeExists } from './NodeStore'; // Assuming NodeStore exports these
 import { edges } from './EdgeStore'; // Assuming EdgeStore exports this
@@ -458,8 +459,33 @@ async function initializeStores() { // Remove export keyword here
         return;
     }
 
+    // ---> START: First Run Tutorial Import <---
     try {
-        // 0. Initialize stores to empty state
+        const rootNodeExists = await localAdapter.getNode(ROOT_NODE_ID);
+        if (!rootNodeExists) {
+            console.log("[initializeStores] First run detected (Root node not found). Importing tutorial data...");
+            try {
+                const response = await fetch('/tutorial.json'); // Fetch from static path relative to public/static
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch tutorial.json: ${response.statusText}`);
+                }
+                const tutorialData: KartaExportData = await response.json();
+                await localAdapter.importData(tutorialData); // importData clears DB first
+                console.log("[initializeStores] Tutorial data imported successfully.");
+            } catch (importError) {
+                console.error("[initializeStores] CRITICAL: Failed to import tutorial data on first run:", importError);
+                // Continue initialization even if tutorial import fails
+            }
+        }
+    } catch (checkError) {
+        console.error("[initializeStores] Error checking for root node before tutorial import:", checkError);
+        // Continue initialization even if the check failed
+    }
+    // ---> END: First Run Tutorial Import <---
+
+
+    try {
+        // 0. Initialize stores to empty state (Import might have already cleared, but this is safe)
         nodes.set(new Map());
         edges.set(new Map());
         contexts.set(new Map());
