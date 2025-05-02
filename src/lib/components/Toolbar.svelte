@@ -11,7 +11,7 @@
 </script>
 
 <!-- Position left, vertical layout, dark theme styles -->
-<div class="absolute top-1/2 left-2 transform -translate-y-1/2 z-50 flex flex-col gap-2 p-2 backdrop-blur-sm rounded-lg shadow-lg bg-gray-800/80">
+<div class="absolute top-1/2 left-2 transform -translate-y-1/2 z-50 flex flex-col gap-2 p-2 backdrop-blur-sm rounded-lg shadow-lg bg-gray-900/40">
     <!-- Tool Button Structure -->
     {#each [
         { tool: 'move', label: 'Move Tool', icon: MousePointer2, instance: MoveTool },
@@ -22,9 +22,9 @@
         <div class="relative group"> <!-- Container for tooltip positioning -->
             <button
                 type="button"
-                class="toolbar-button p-2 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-pink-700
+                class="toolbar-button p-2 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-orange-700
                        { $currentTool instanceof item.instance
-                           ? 'bg-pink-900 text-white'
+                           ? 'bg-wine text-white'
                            : 'text-gray-300 hover:bg-gray-700 hover:text-white'}"
                 on:click={() => setTool(item.tool as 'move' | 'connect' | 'context')}
                 aria-label={item.label}

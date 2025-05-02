@@ -5,14 +5,14 @@ export default {
     content: ['./src/**/*.{html,js,svelte,ts}'],
     darkMode: 'class', // Enable dark mode using the class strategy
     theme: {
-      // Removed custom colors block entirely for troubleshooting
       extend: {
         fontFamily: {
-          sans: ['Nunito Sans', ...defaultTheme.fontFamily.sans], // Corrected font name
+          sans: ['Nunito Sans', ...defaultTheme.fontFamily.sans],
         },
-        // No colors extended here anymore
+        colors: {
+          'wine': '#29151d',
+        },
       },
     },
     plugins: [],
   }
-  

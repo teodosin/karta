@@ -21,10 +21,10 @@
 	const genericNodePropertySchema: PropertyDefinition[] = []; // No type-specific properties
 
 	export const nodeTypeDef: Omit<NodeTypeDefinition, 'component'> = {
-		ntype: 'generic',
+		ntype: 'Node',
 		getDefaultAttributes,
 		getDefaultViewNodeState,
-		displayName: 'Generic',
+		displayName: 'Node',
 		// icon: Circle as IconComponent // Example
 		propertySchema: genericNodePropertySchema
 	};
@@ -43,7 +43,7 @@
 <!-- Generic Node Appearance: Simple Circle - Apply focus ring here -->
 <div
 	class={`
-		w-full h-full rounded-full bg-gradient-to-br from-blue-500 to-purple-600
+		w-full h-full rounded-full bg-wine
 		shadow-inner flex items-center justify-center pointer-events-auto
 		${dataNode.id === $currentContextId ? 'ring-4 ring-offset-2 ring-offset-gray-900 ring-orange-500' : ''}
 	`}

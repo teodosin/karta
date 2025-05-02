@@ -802,7 +802,7 @@
 	{/if}
 	<div
 		id="portal"
-		class="absolute top-0 left-0 z-50"
+		class="absolute top-20 left-0 z-50"
 	></div>
 </div>
 

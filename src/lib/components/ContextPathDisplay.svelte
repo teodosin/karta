@@ -72,7 +72,7 @@
 <!-- Bind the component's root element -->
 <div
 	bind:this={componentElement}
-	class="absolute bottom-2 left-2 p-1 text-sm rounded shadow bg-gray-800 text-gray-300 flex items-center z-20"
+	class="absolute bottom-2 left-2 px-3 py-1 text-sm rounded backdrop-blur-sm Fffshadow bg-gray-900/50 text-gray-300 flex items-center z-20"
 >
 	<!-- Undo Button -->
 	<button
@@ -105,7 +105,7 @@
 			aria-haspopup="true"
 			aria-expanded={showContextList}
 		>
-			<span class="bg-pink-900 p-1 px-2 rounded">Context</span>
+			<span class="bg-wine p-1 px-2 rounded">Context</span>
 			<span class="ml-2">{displayPath}</span>
 		</button>
 

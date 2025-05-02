@@ -49,7 +49,7 @@
 <!-- Root Node Appearance - Apply focus ring here -->
 <div
 	class={`
-		w-full h-full rounded-full border-2 border-dashed border-orange-400 bg-orange-800
+		w-full h-full rounded-full border-2 border-dashed border-orange-400 bg-wine
 		flex items-center justify-center p-2 pointer-events-auto
 		${dataNode.id === $currentContextId ? 'ring-4 ring-offset-2 ring-offset-gray-900 ring-orange-500' : ''}
 	`}

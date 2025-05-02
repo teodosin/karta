@@ -28,7 +28,7 @@ async function _ensureDataNodeExists(nodeId: NodeId): Promise<DataNode | null> {
             const isRoot = nodeId === ROOT_NODE_ID;
             const defaultName = isRoot ? 'root' : `node-${nodeId.substring(0, 8)}`;
             const defaultPath = isRoot ? '/root' : `/${defaultName}`;
-            const defaultNtype = isRoot ? 'root' : 'generic';
+            const defaultNtype = isRoot ? 'root' : 'node';
             if (isRoot) {
             }
 

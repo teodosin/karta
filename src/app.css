@@ -5,7 +5,6 @@
 
 @tailwind utilities;
 
-/* Removed :root block */
 html, body {
   margin: 0;
   padding: 0;
@@ -21,4 +20,8 @@ html, body {
   /* Ensure borders don't conflict with dark theme */
   border-color: theme('colors.gray.700'); /* Keep default border for now */
   font-family: 'Nunito', sans-serif;
+}
+
+@theme {
+  --color-wine: #33101a;
 }

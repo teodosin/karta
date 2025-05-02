@@ -44,7 +44,7 @@ async function _getFocalNodeInitialState(targetNodeId: NodeId, oldContext: Conte
     } else {
         // Node not visible in old context, calculate defaults
         const dataNode = await _ensureDataNodeExists(targetNodeId); // Ensure DataNode exists to get ntype
-        const defaultState: { width: number; height: number; scale: number; rotation: number; } = dataNode ? getDefaultViewNodeStateForType(dataNode.ntype) : getDefaultViewNodeStateForType('generic'); // Fallback to generic
+        const defaultState: { width: number; height: number; scale: number; rotation: number; } = dataNode ? getDefaultViewNodeStateForType(dataNode.ntype) : getDefaultViewNodeStateForType('node'); // Fallback to generic
 
         // Combine default placement with default dimensions/rotation
         return {

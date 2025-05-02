@@ -761,7 +761,7 @@ async function handlePaste(e: ClipboardEvent) {
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <div
 id="viewport"
-class="karta-viewport-container w-full h-screen overflow-hidden relative cursor-default bg-gray-800"
+class="karta-viewport-container w-full h-screen overflow-hidden relative cursor-default bg-gray-950"
 	bind:this={canvasContainer}
 	on:pointerdown={handlePointerDown}
 	on:pointermove={handleViewportPointerMove}
