@@ -21,6 +21,7 @@ export interface DataNode {
   modifiedAt: number; // Unix timestamp (ms)
   path: string; // Added: Represents the node's path (simplified for client)
   attributes: Record<string, any>; // Holds name, content, src, etc.
+ isSearchable?: boolean; // Added: Controls visibility in node search
 }
 
 // Represents the complete state needed for rendering and tweening a node's visual representation
@@ -30,7 +31,11 @@ export interface ViewNode {
   id: NodeId; // Same UUID as the corresponding DataNode
   state: Tween<TweenableNodeState>; // Tween manages core visual properties (position, size, rotation)
   // Generic view-specific attributes, interpreted by the node component
-  attributes?: Record<string, any>;
+  // Includes things like karta_fillColor, karta_textColor, karta_font, karta_fontSize, karta_isNameVisible
+  attributes?: Record<string, any> & {
+    karta_isNameVisible?: boolean;
+    // Add other known karta_ attributes here for better type checking if desired
+  };
 }
 
 // Represents an absolute transform in the canvas coordinate space
@@ -103,6 +108,22 @@ export interface AssetData {
     blob: Blob;
     mimeType: string;
     name: string; // Original filename or generated name
+}
+// --- Import/Export Types ---
+
+// Defines the structure for exported Karta data (JSON format)
+export interface KartaExportData {
+	version: number;
+	exportedAt: string; // ISO timestamp string
+	nodes: DataNode[];
+	edges: KartaEdge[];
+	contexts: StorableContext[];
+	assets: {
+		assetId: string;
+		mimeType: string;
+		name: string;
+		dataUrl: string; // Asset data encoded as Data URL
+	}[];
 }
 
 // Interface for defining editable properties for nodes in the Properties Panel

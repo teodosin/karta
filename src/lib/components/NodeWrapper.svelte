@@ -35,6 +35,8 @@
 	$: isRenamable = dataNode ? !dataNode.attributes?.isSystemNode : false; // Ghost nodes are not renamable
 	// Ghost state is determined by checking the global $nodes store
 	$: isGhost = !$nodes.has(viewNode.id);
+	// Determine if the name label should be visible
+	$: isNameVisible = viewNode.attributes?.karta_isNameVisible !== false; // Default to true if undefined
 
 	async function startEditing() {
 		// Can only edit if not a ghost and renamable
@@ -121,31 +123,33 @@
 				{/if}
 			</div>
 
-			<!-- External Label & Input - Render only if NOT ghost -->
-			<div
-				class="node-label absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full mt-1 px-1.5 py-0.5 bg-gray-700 bg-opacity-80 text-white text-xs rounded whitespace-nowrap pointer-events-auto"
-				class:cursor-text={isRenamable}
-				title={isRenamable ? 'Double-click to rename' : 'System node (cannot be renamed)'}
-			>
-				{#if isRenamable}
-					{#if isEditingName}
-						<input
-							bind:this={inputElementRef}
-							type="text"
-							bind:value={editedName}
-							on:keydown={handleKeyDown}
-							class="bg-gray-900 text-white text-xs p-0 border border-blue-500 rounded outline-none focus:ring-1 focus:ring-blue-400"
-							style:width="{Math.max(60, nodeName.length * 7 + 10)}px"
-							spellcheck="false"
-						/>
+			<!-- External Label & Input - Render only if NOT ghost AND isNameVisible is true -->
+			{#if isNameVisible}
+				<div
+					class="node-label absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full mt-1 px-1.5 py-0.5 bg-gray-700 bg-opacity-80 text-white text-xs rounded whitespace-nowrap pointer-events-auto"
+					class:cursor-text={isRenamable}
+					title={isRenamable ? 'Double-click to rename' : 'System node (cannot be renamed)'}
+				>
+					{#if isRenamable}
+						{#if isEditingName}
+							<input
+								bind:this={inputElementRef}
+								type="text"
+								bind:value={editedName}
+								on:keydown={handleKeyDown}
+								class="bg-gray-900 text-white text-xs p-0 border border-blue-500 rounded outline-none focus:ring-1 focus:ring-blue-400"
+								style:width="{Math.max(60, nodeName.length * 7 + 10)}px"
+								spellcheck="false"
+							/>
+						{:else}
+							<span on:dblclick={startEditing}>{nodeName}</span>
+						{/if}
 					{:else}
-						<span on:dblclick={startEditing}>{nodeName}</span>
+						<!-- Display name for non-renamable nodes, no interaction -->
+						<span>{nodeName}</span>
 					{/if}
-				{:else}
-					<!-- Display name for non-renamable nodes, no interaction -->
-					<span>{nodeName}</span>
-				{/if}
-			</div>
+				</div>
+			{/if}
 		{:else if isGhost}
 			<!-- Render a simple placeholder for ghost nodes -->
 			<div class="ghost-placeholder w-full h-full flex items-center justify-center text-gray-500 italic text-sm">

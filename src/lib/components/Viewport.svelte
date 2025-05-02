@@ -537,17 +537,23 @@ function handleKeyDown(e: KeyboardEvent) {
 		}
 
 	} else if (e.key === 'f' || e.key === 'F') {
-		// Handle both 'F' and 'Shift+F'
-		if (e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
-			// Shift+F: Frame Context
-			e.preventDefault();
-			frameContext();
-		} else if (!e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
-			// F (no modifiers): Center Focal Node
-			e.preventDefault();
-			centerOnFocalNode();
+		// --- ADD THIS CHECK ---
+		if (!isInputFocused) {
+			// --- Existing logic moves inside ---
+			// Handle both 'F' and 'Shift+F'
+			if (e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+				// Shift+F: Frame Context
+				e.preventDefault();
+				frameContext();
+			} else if (!e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+				// F (no modifiers): Center Focal Node
+				e.preventDefault();
+				centerOnFocalNode();
+			}
+			// Ignore if other modifiers are pressed (e.g., Ctrl+F for browser search)
+			// --- End of moved logic ---
 		}
-		// Ignore if other modifiers are pressed (e.g., Ctrl+F for browser search)
+		// --- END OF ADDED CHECK ---
 	}
 
 	// Delegate keydown events to the active tool (unless handled above)

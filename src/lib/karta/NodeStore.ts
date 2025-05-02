@@ -313,6 +313,45 @@ export async function updateNodeAttributes(nodeId: NodeId, newAttributes: Record
     } else {
     }
    }
+export async function updateNodeSearchableFlag(nodeId: NodeId, isSearchable: boolean): Promise<void> {
+    const currentNodes = get(nodes);
+    const dataNode = currentNodes.get(nodeId);
+
+    if (!dataNode) {
+        console.warn(`[updateNodeSearchableFlag] DataNode ${nodeId} not found in store.`);
+        return;
+    }
+
+    // Check if the value is actually changing
+    // Treat undefined as true for comparison purposes
+    const currentIsSearchable = dataNode.isSearchable ?? true;
+    if (currentIsSearchable === isSearchable) {
+        return; // No change needed
+    }
+
+    // Create updated node data immutably
+    const updatedNodeData: DataNode = {
+        ...dataNode,
+        isSearchable: isSearchable,
+        modifiedAt: Date.now(), // Update modified time
+    };
+
+    // Update the store
+    nodes.update(n => n.set(nodeId, updatedNodeData));
+
+    // Persist changes
+    if (localAdapter) {
+        try {
+            await localAdapter.saveNode(updatedNodeData);
+        } catch (error) {
+            console.error(`[updateNodeSearchableFlag] Error saving node ${nodeId} after searchable flag update:`, error);
+            // Optionally revert store update on save failure?
+            // nodes.update(n => n.set(nodeId, dataNode)); // Example revert
+        }
+    } else {
+        console.warn("[updateNodeSearchableFlag] LocalAdapter not initialized, persistence disabled.");
+    }
+}
 
 
 export async function fetchAvailableContextDetails(): Promise<{ id: NodeId, name: string, path: string }[]> {

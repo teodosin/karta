@@ -1,7 +1,7 @@
 import * as idb from 'idb';
 // Import Context, ViewNode, NodeId, and AbsoluteTransform
 // Also import ViewportSettings
-import type { DataNode, KartaEdge, Context, ViewNode, NodeId, AbsoluteTransform, ViewportSettings, StorableContext, StorableViewNode, StorableViewportSettings, AssetData } from '../types/types'; // Import Storable types & AssetData
+import type { DataNode, KartaEdge, Context, ViewNode, NodeId, AbsoluteTransform, ViewportSettings, StorableContext, StorableViewNode, StorableViewportSettings, AssetData, KartaExportData } from '../types/types'; // Import Storable types, AssetData & KartaExportData
 
 // Removed local definitions for StorableViewNode, StorableViewportSettings, StorableContext
 // They are now imported from types.ts
@@ -49,59 +49,33 @@ class LocalAdapter implements PersistenceService {
 	constructor() {
 		const startTime = performance.now();
 
-		// DB Version 6: Added path_idx index to nodes store
-		this.dbPromise = idb.openDB<KartaDB>('karta-db', 6, {
+		// DB Version 1: Initial schema with all stores and indexes
+		this.dbPromise = idb.openDB<KartaDB>('karta-db', 1, { // Set version to 1
 			upgrade(db, oldVersion, newVersion, tx, event) {
-				// Ensure 'nodes' store exists and has its indexes
+				// Create 'nodes' store with indexes if it doesn't exist
 				if (!db.objectStoreNames.contains('nodes')) {
 					const nodeStore = db.createObjectStore('nodes', { keyPath: 'id' });
-					// Add path index if it doesn't exist
-					if (!nodeStore.indexNames.contains('path_idx')) {
-						nodeStore.createIndex('path_idx', 'path', { unique: true }); // Path should be unique
-					}
+					nodeStore.createIndex('path_idx', 'path', { unique: true });
+					nodeStore.createIndex('isSearchable_idx', 'isSearchable', { unique: false }); // Add isSearchable index
 				}
 
-				// Ensure 'edges' store exists and has its indexes
+				// Create 'edges' store with indexes if it doesn't exist
 				if (!db.objectStoreNames.contains('edges')) {
 					const edgeStore = db.createObjectStore('edges', { keyPath: 'id' });
-					// Create indexes immediately after store creation if they don't exist
-					if (!edgeStore.indexNames.contains('source_idx')) {
-						edgeStore.createIndex('source_idx', 'source', { unique: false });
-					}
-					if (!edgeStore.indexNames.contains('target_idx')) {
-						edgeStore.createIndex('target_idx', 'target', { unique: false });
-					}
+					edgeStore.createIndex('source_idx', 'source', { unique: false });
+					edgeStore.createIndex('target_idx', 'target', { unique: false });
 				}
 
-				// Ensure 'contexts' store exists
+				// Create 'contexts' store if it doesn't exist
 				if (!db.objectStoreNames.contains('contexts')) {
 					db.createObjectStore('contexts', { keyPath: 'id' });
 				}
-				// Add path index if upgrading from v1, v2, v3, v4, or v5 (where nodes store exists but path_idx might not)
-				if (oldVersion >= 1 && oldVersion < 6) {
-					if (db.objectStoreNames.contains('nodes')) {
-						const nodeStore = tx.objectStore('nodes');
-						if (!nodeStore.indexNames.contains('path_idx')) {
-							nodeStore.createIndex('path_idx', 'path', { unique: true });
-						}
-					} else { console.warn('[LocalAdapter] Cannot add path_idx: "nodes" store does not exist.'); }
-				}
-				// Add edge indexes if upgrading from v1, v2, or v3
-				if (oldVersion >= 1 && oldVersion < 4) {
-					if (db.objectStoreNames.contains('edges')) {
-						const edgeStore = tx.objectStore('edges');
-						if (!edgeStore.indexNames.contains('source_idx')) {
-							edgeStore.createIndex('source_idx', 'source', { unique: false });
-						}
-						if (!edgeStore.indexNames.contains('target_idx')) {
-							edgeStore.createIndex('target_idx', 'target', { unique: false });
-						}
-					} else { console.warn('[LocalAdapter] Cannot add edge indexes: "edges" store does not exist.'); }
-				}
-				// Ensure 'assets' store exists
+
+				// Create 'assets' store if it doesn't exist
 				if (!db.objectStoreNames.contains('assets')) {
 					db.createObjectStore('assets'); // Key is assetId (usually nodeId)
 				}
+				// Removed all oldVersion checks
 			},
 			blocked() { console.error('[LocalAdapter] IDB blocked. Close other tabs accessing the DB.'); },
 			blocking() { console.warn('[LocalAdapter] IDB blocking. Connection will close.'); },
@@ -177,20 +151,25 @@ class LocalAdapter implements PersistenceService {
 	}
 
 	/**
-	 * Retrieves all unique node paths using the path_idx index keys.
-	 * @returns A promise that resolves with an array of node paths.
+	 * Retrieves all unique node paths for searchable nodes.
+	 * Uses the isSearchable index and filters based on the isSearchable flag.
+	 * @returns A promise that resolves with an array of searchable node paths.
 	 */
 	async getAllNodePaths(): Promise<string[]> {
 		try {
 			const db = await this.dbPromise;
 			const tx = db.transaction('nodes', 'readonly');
-			const index = tx.objectStore('nodes').index('path_idx');
+			const index = tx.objectStore('nodes').index('isSearchable_idx'); // Use the new index
 			const paths: string[] = [];
-			let cursor = await index.openKeyCursor();
+			let cursor = await index.openCursor(); // Open cursor on the index (provides key and value)
 			while (cursor) {
-				// cursor.key will be the path string
-				if (cursor.key != null) { // Ensure path is not null/undefined
-					paths.push(cursor.key as string);
+				// cursor.key is the isSearchable value (true, false, or undefined)
+				// cursor.value is the DataNode object
+				if (cursor.key !== false) { // Check if isSearchable is not explicitly false
+					const node = cursor.value as DataNode;
+					if (node && node.path) { // Ensure node and path exist
+						paths.push(node.path);
+					}
 				}
 				cursor = await cursor.continue();
 			}
@@ -439,6 +418,187 @@ class LocalAdapter implements PersistenceService {
 			return []; // Return empty array on error
 		}
 	}
+// --- Export/Import Methods ---
+
+	/**
+	 * Helper function to convert Blob to Data URL.
+	 * @param blob The Blob to convert.
+	 * @returns A promise that resolves with the Data URL string.
+	 */
+	private async blobToDataURL(blob: Blob): Promise<string> {
+		return new Promise((resolve, reject) => {
+			const reader = new FileReader();
+			reader.onload = () => resolve(reader.result as string);
+			reader.onerror = (error) => reject(error);
+			reader.readAsDataURL(blob);
+		});
+	}
+
+	/**
+	 * Retrieves all data required for export.
+	 * Fetches nodes, edges, contexts, and assets, converting assets to Data URLs.
+	 * @returns A promise that resolves with the structured export data.
+	 */
+	async getExportData(): Promise<KartaExportData> {
+		try {
+			const db = await this.dbPromise;
+			const tx = db.transaction(['nodes', 'edges', 'contexts', 'assets'], 'readonly');
+
+			const nodes = await tx.objectStore('nodes').getAll();
+			const edges = await tx.objectStore('edges').getAll();
+			const contexts = await tx.objectStore('contexts').getAll();
+			const assetKeys = await tx.objectStore('assets').getAllKeys();
+			const assetDataPromises = assetKeys.map(key => tx.objectStore('assets').get(key));
+			const assetDataValues = await Promise.all(assetDataPromises);
+
+			await tx.done; // Complete the read transaction
+
+			// Convert assets to the export format with Data URLs
+			const exportAssets = await Promise.all(
+				assetKeys.map(async (key, index) => {
+					const asset = assetDataValues[index];
+					if (!asset || !asset.blob) {
+						console.warn(`[LocalAdapter] Asset data or blob missing for key ${key} during export.`);
+						return null; // Skip assets without blobs
+					}
+					const dataUrl = await this.blobToDataURL(asset.blob);
+					return {
+						assetId: key as string,
+						mimeType: asset.mimeType,
+						name: asset.name,
+						dataUrl: dataUrl
+					};
+				})
+			);
+
+			// Filter out any null assets (where blob was missing)
+			const filteredAssets = exportAssets.filter(asset => asset !== null) as KartaExportData['assets'];
+
+			const exportData: KartaExportData = {
+				version: 1,
+				exportedAt: new Date().toISOString(),
+				nodes: nodes,
+				edges: edges,
+				contexts: contexts,
+				assets: filteredAssets
+			};
+
+			return exportData;
+
+		} catch (error) {
+			console.error("[LocalAdapter] Error getting export data:", error);
+			throw error; // Re-throw the error to be handled by the caller
+		}
+	}
+/**
+	 * Helper function to convert Data URL string back to Blob.
+	 * @param dataUrl The Data URL string.
+	 * @returns A Blob object or null if conversion fails.
+	 */
+	private dataURLtoBlob(dataUrl: string): Blob | null {
+		try {
+			const arr = dataUrl.split(',');
+			if (arr.length < 2) return null;
+			const mimeMatch = arr[0].match(/:(.*?);/);
+			if (!mimeMatch || mimeMatch.length < 2) return null;
+			const mime = mimeMatch[1];
+			const bstr = atob(arr[1]);
+			let n = bstr.length;
+			const u8arr = new Uint8Array(n);
+			while (n--) {
+				u8arr[n] = bstr.charCodeAt(n);
+			}
+			return new Blob([u8arr], { type: mime });
+		} catch (error) {
+			console.error("[LocalAdapter] Error converting Data URL to Blob:", error);
+			return null;
+		}
+	}
+
+	/**
+	 * Imports data from a KartaExportData object.
+	 * Clears existing database content and replaces it with the imported data.
+	 * @param data The KartaExportData object to import.
+	 * @returns A promise that resolves when the import is complete.
+	 */
+	async importData(data: KartaExportData): Promise<void> {
+		// Basic validation
+		if (!data || data.version !== 1 || !Array.isArray(data.nodes) || !Array.isArray(data.edges) || !Array.isArray(data.contexts) || !Array.isArray(data.assets)) {
+			throw new Error("Invalid import data format or version.");
+		}
+
+		console.log("[LocalAdapter] Starting data import...");
+		const db = await this.dbPromise;
+		const tx = db.transaction(['nodes', 'edges', 'contexts', 'assets'], 'readwrite');
+
+		try {
+			const nodeStore = tx.objectStore('nodes');
+			const edgeStore = tx.objectStore('edges');
+			const contextStore = tx.objectStore('contexts');
+			const assetStore = tx.objectStore('assets');
+
+			// Clear existing data
+			console.log("[LocalAdapter] Clearing existing data...");
+			await Promise.all([
+				nodeStore.clear(),
+				edgeStore.clear(),
+				contextStore.clear(),
+				assetStore.clear()
+			]);
+			console.log("[LocalAdapter] Existing data cleared.");
+
+			// Import assets
+			console.log(`[LocalAdapter] Importing ${data.assets.length} assets...`);
+			const assetImportPromises = data.assets.map(asset => {
+				const blob = this.dataURLtoBlob(asset.dataUrl);
+				if (blob) {
+					const assetData: AssetData = {
+						blob: blob,
+						mimeType: asset.mimeType,
+						name: asset.name
+					};
+					return assetStore.put(assetData, asset.assetId);
+				} else {
+					console.warn(`[LocalAdapter] Failed to convert Data URL to Blob for asset ${asset.assetId}. Skipping.`);
+					return Promise.resolve(); // Skip problematic assets
+				}
+			});
+			await Promise.all(assetImportPromises);
+			console.log("[LocalAdapter] Assets imported.");
+
+			// Import nodes
+			console.log(`[LocalAdapter] Importing ${data.nodes.length} nodes...`);
+			const nodeImportPromises = data.nodes.map(node => nodeStore.put(node));
+			await Promise.all(nodeImportPromises);
+			console.log("[LocalAdapter] Nodes imported.");
+
+			// Import edges
+			console.log(`[LocalAdapter] Importing ${data.edges.length} edges...`);
+			const edgeImportPromises = data.edges.map(edge => edgeStore.put(edge));
+			await Promise.all(edgeImportPromises);
+			console.log("[LocalAdapter] Edges imported.");
+
+			// Import contexts
+			console.log(`[LocalAdapter] Importing ${data.contexts.length} contexts...`);
+			const contextImportPromises = data.contexts.map(context => contextStore.put(context));
+			await Promise.all(contextImportPromises);
+			console.log("[LocalAdapter] Contexts imported.");
+
+			await tx.done;
+			console.log("[LocalAdapter] Data import completed successfully.");
+
+			// Clear Object URL cache after import as old URLs are invalid
+			this.cleanupObjectUrls();
+
+		} catch (error) {
+			console.error("[LocalAdapter] Error during data import:", error);
+			// Attempt to abort the transaction on error
+			if (tx.abort) {
+				tx.abort();
+			}
+			throw error; // Re-throw the error
+		}
+	}
 
 	// getContexts needs similar conversion logic for viewportSettings
 	// Removed unused getContexts function
@@ -449,7 +609,7 @@ interface KartaDB extends idb.DBSchema {
 	nodes: {
 		key: string;
 		value: DataNode;
-		indexes: { 'path_idx': string }; // Define only the path index
+		indexes: { 'path_idx': string; 'isSearchable_idx': any }; // Changed boolean to any for isSearchable index type
 	};
 	edges: {
 		key: string;

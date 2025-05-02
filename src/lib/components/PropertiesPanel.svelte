@@ -14,7 +14,8 @@
 		nodes,
 		updateNodeAttributes,
 		updateViewNodeAttribute,
-	} from "$lib/karta/NodeStore"; // Import new action
+		updateNodeSearchableFlag
+	} from "$lib/karta/NodeStore";
 	import { contexts, currentContextId } from "$lib/karta/ContextStore"; // Import context stores
 	import { getNodeTypeDef } from "$lib/node_types/registry"; // To get property schema
 	import type {
@@ -594,6 +595,21 @@
 						>
 							Attributes
 						</h3>
+ 						<!-- Add isSearchable toggle here -->
+ 						<div class="flex items-center justify-between gap-2">
+ 							<label for="prop-isSearchable" class="text-sm">Searchable</label>
+ 							<input
+ 								type="checkbox"
+ 								id="prop-isSearchable"
+ 								checked={selectedDataNode?.isSearchable ?? true}
+ 								on:change={(e) => {
+ 									if (selectedDataNode) {
+ 										updateNodeSearchableFlag(selectedDataNode.id, (e.target as HTMLInputElement).checked);
+ 									}
+ 								}}
+ 								class="form-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+ 							/>
+ 						</div>
 						<div class="space-y-2">
 							{#each Object.entries(selectedDataNode.attributes) as [key, value]}
 								<!-- Only show attributes NOT defined in the type-specific schema, and not internal flags or view defaults, and not the old fontSize -->
@@ -656,9 +672,23 @@
 								<h3
 									class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 mb-2"
 								>
-									Text View Styles (Context Specific)
+									Node View Styles (Context Specific)
 								</h3>
 								<div class="space-y-2">
+ 									<div class="flex items-center justify-between gap-2">
+ 										<label for="prop-view-isNameVisible" class="text-sm">Show Name</label>
+ 										<input
+ 											type="checkbox"
+ 											id="prop-view-isNameVisible"
+ 											checked={selectedViewNode?.attributes?.karta_isNameVisible ?? true}
+ 											on:change={(e) => {
+ 												if (selectedViewNode) {
+ 													updateViewNodeAttribute(selectedViewNode.id, 'karta_isNameVisible', (e.target as HTMLInputElement).checked);
+ 												}
+ 											}}
+ 											class="form-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+ 										/>
+ 									</div>
 									<!-- Fill Color -->
 									<div
 										class="flex items-center justify-between gap-2 relative"
