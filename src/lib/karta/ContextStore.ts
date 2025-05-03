@@ -479,6 +479,7 @@ async function initializeStores() { // Remove export keyword here
        }
       
        // ---> START: Populate Available Contexts Map <---
+       console.log("[initializeStores] Attempting to populate availableContextsMap..."); // ADDED LOG
        try {
         const pathsMap = await localAdapter.getAllContextPaths();
         availableContextsMap.set(pathsMap);

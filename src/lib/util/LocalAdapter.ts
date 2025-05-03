@@ -431,23 +431,30 @@ class LocalAdapter implements PersistenceService {
 	}
 
 	async getAllContextPaths(): Promise<Map<NodeId, string>> {
+		console.log("[LocalAdapter::getAllContextPaths] Starting..."); // ADDED LOG
 		try {
 			const contextIds = await this.getAllContextIds();
+			console.log(`[LocalAdapter::getAllContextPaths] Found ${contextIds.length} context IDs.`); // ADDED LOG
 			if (contextIds.length === 0) {
+				console.log("[LocalAdapter::getAllContextPaths] No context IDs found, returning empty map."); // ADDED LOG
 				return new Map();
 			}
 			const nodesMap = await this.getDataNodesByIds(contextIds);
+			console.log(`[LocalAdapter::getAllContextPaths] Fetched ${nodesMap.size} nodes corresponding to context IDs.`); // ADDED LOG
 			const pathsMap = new Map<NodeId, string>();
 			for (const [nodeId, nodeData] of nodesMap.entries()) {
 				if (nodeData?.path) { // Ensure nodeData and path exist
 					pathsMap.set(nodeId, nodeData.path);
 				} else {
-					console.warn(`[LocalAdapter] Node data or path missing for context ID ${nodeId} while getting all paths.`);
+					// ENHANCED LOG
+					console.warn(`[LocalAdapter::getAllContextPaths] Node data or path missing for context ID ${nodeId}. Node data found: ${!!nodeData}`);
 				}
 			}
+			console.log(`[LocalAdapter::getAllContextPaths] Successfully built paths map with ${pathsMap.size} entries.`); // ADDED LOG
 			return pathsMap;
 		} catch (error) {
-			console.error("[LocalAdapter] Error getting all context paths:", error);
+			// MODIFIED LOG to include full error object
+			console.error("[LocalAdapter::getAllContextPaths] Error getting all context paths:", error);
 			return new Map(); // Return empty map on error
 		}
 	}
