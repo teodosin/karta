@@ -7,7 +7,7 @@
 -->
 <script lang="ts">
 	import type { DataNode, ViewNode } from '$lib/types/types';
-	import { currentContextId, currentViewNodes } from '$lib/karta/ContextStore';
+	import { currentContextId, currentViewNodes } from '$lib/karta/ContextStore'; // Remove contexts import
 	import { nodes, updateNodeAttributes } from '$lib/karta/NodeStore'; // Import nodes store
 	import { selectedNodeIds } from '$lib/karta/SelectionStore';
 	import { nodeRenameRequestId } from '$lib/karta/UIStateStore';
@@ -37,6 +37,7 @@
 	$: isGhost = !$nodes.has(viewNode.id);
 	// Determine if the name label should be visible
 	$: isNameVisible = viewNode.attributes?.karta_isNameVisible !== false; // Default to true if undefined
+	// Remove hasContext calculation
 
 	async function startEditing() {
 		// Can only edit if not a ghost and renamable
@@ -116,6 +117,7 @@
 			<!-- Inner container for the specific node type component - Render only if NOT ghost -->
 			<div class="node-content relative w-full h-full pointer-events-auto">
 				{#if NodeComponent}
+					<!-- Remove hasContext prop -->
 					<svelte:component this={NodeComponent} {dataNode} {viewNode} />
 				{:else}
 					<!-- Fallback rendering if component not found -->

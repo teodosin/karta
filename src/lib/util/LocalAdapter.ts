@@ -56,7 +56,7 @@ class LocalAdapter implements PersistenceService {
 				if (!db.objectStoreNames.contains('nodes')) {
 					const nodeStore = db.createObjectStore('nodes', { keyPath: 'id' });
 					nodeStore.createIndex('path_idx', 'path', { unique: true });
-					nodeStore.createIndex('isSearchable_idx', 'isSearchable', { unique: false }); // Add isSearchable index
+					// Removed isSearchable_idx creation
 				}
 
 				// Create 'edges' store with indexes if it doesn't exist
@@ -159,17 +159,14 @@ class LocalAdapter implements PersistenceService {
 		try {
 			const db = await this.dbPromise;
 			const tx = db.transaction('nodes', 'readonly');
-			const index = tx.objectStore('nodes').index('isSearchable_idx'); // Use the new index
+			const index = tx.objectStore('nodes').index('path_idx'); // Use the path index
 			const paths: string[] = [];
-			let cursor = await index.openCursor(); // Open cursor on the index (provides key and value)
+			// Open a key cursor on the index to iterate only through keys (paths)
+			let cursor = await index.openKeyCursor();
 			while (cursor) {
-				// cursor.key is the isSearchable value (true, false, or undefined)
-				// cursor.value is the DataNode object
-				if (cursor.key !== false) { // Check if isSearchable is not explicitly false
-					const node = cursor.value as DataNode;
-					if (node && node.path) { // Ensure node and path exist
-						paths.push(node.path);
-					}
+				// cursor.key is the path string
+				if (typeof cursor.key === 'string') { // Ensure the key is a string
+					paths.push(cursor.key);
 				}
 				cursor = await cursor.continue();
 			}

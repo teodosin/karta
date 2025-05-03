@@ -37,21 +37,30 @@
 <script lang="ts">
 	// INSTANCE SCRIPT (runs for each component instance)
 	import type { DataNode, ViewNode } from '$lib/types/types';
-	import { currentContextId } from '$lib/karta/ContextStore'; // Corrected import
+	import { currentContextId, contexts } from '$lib/karta/ContextStore'; // Import contexts
 	// Import BrainCog again for the template
 	import { BrainCog } from 'lucide-svelte';
 
 	export let dataNode: DataNode;
 	export let viewNode: ViewNode;
+	// Check if context exists for this node
+	$: hasContext = $contexts.has(viewNode.id);
 
 	// Instance-specific logic here (if any)...
+
+	// Determine ring classes based on focal state and context existence
+	$: ringClasses = dataNode.id === $currentContextId
+		? 'ring-4 ring-offset-2 ring-offset-gray-900 ring-orange-500' // Focal highlight
+		: hasContext
+			? 'ring-1 ring-orange-500 ring-opacity-20' // Context outline (dimmer)
+			: ''; // No ring
 </script>
 <!-- Root Node Appearance - Apply focus ring here -->
 <div
 	class={`
 		w-full h-full rounded-full border-2 border-dashed border-orange-400 bg-wine
 		flex items-center justify-center p-2 pointer-events-auto
-		${dataNode.id === $currentContextId ? 'ring-4 ring-offset-2 ring-offset-gray-900 ring-orange-500' : ''}
+		${ringClasses}
 	`}
 	title={`Root Node: ${dataNode?.attributes?.name ?? dataNode.id}`}
 >

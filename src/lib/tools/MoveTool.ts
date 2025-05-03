@@ -65,6 +65,18 @@ export class MoveTool implements Tool {
             return;
         }
 
+        // Check if an input element is focused
+        const activeEl = document.activeElement;
+        const isInputFocused = activeEl && (
+            activeEl.tagName === 'INPUT' ||
+            activeEl.tagName === 'TEXTAREA' ||
+            (activeEl instanceof HTMLElement && activeEl.isContentEditable)
+        );
+        if (isInputFocused) {
+            // If an input is focused, don't initiate drag, allow text selection
+            return;
+        }
+
         this.isDragging = true;
         this.clickedNodeElement = nodeEl; // Store for cursor style
         this.initialNodePositions = new Map();

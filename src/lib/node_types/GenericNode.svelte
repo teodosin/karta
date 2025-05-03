@@ -33,19 +33,28 @@
 <script lang="ts">
 	// INSTANCE SCRIPT
 	import type { DataNode, ViewNode } from '$lib/types/types';
-	import { currentContextId } from '$lib/karta/ContextStore'; // Corrected import
+	import { currentContextId, contexts } from '$lib/karta/ContextStore'; // Import contexts
 
 	export let dataNode: DataNode;
 	export let viewNode: ViewNode;
+	// Check if context exists for this node
+	$: hasContext = $contexts.has(viewNode.id);
 
 	// Instance logic...
+
+	// Determine ring classes based on focal state and context existence
+	$: ringClasses = dataNode.id === $currentContextId
+		? 'ring-4 ring-offset-2 ring-offset-gray-900 ring-orange-500' // Focal highlight
+		: hasContext
+			? 'ring-1 ring-orange-500 ring-opacity-20' // Context outline (dimmer)
+			: ''; // No ring
 </script>
 <!-- Generic Node Appearance: Simple Circle - Apply focus ring here -->
 <div
 	class={`
 		w-full h-full rounded-full bg-wine
 		shadow-inner flex items-center justify-center pointer-events-auto
-		${dataNode.id === $currentContextId ? 'ring-4 ring-offset-2 ring-offset-gray-900 ring-orange-500' : ''}
+		${ringClasses}
 	`}
 	title={`Generic Node: ${dataNode?.attributes?.name ?? dataNode.id}`}
 >

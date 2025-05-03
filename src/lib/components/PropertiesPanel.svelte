@@ -13,8 +13,7 @@
 	import {
 		nodes,
 		updateNodeAttributes,
-		updateViewNodeAttribute,
-		updateNodeSearchableFlag
+		updateViewNodeAttribute
 	} from "$lib/karta/NodeStore";
 	import { contexts, currentContextId } from "$lib/karta/ContextStore"; // Import context stores
 	import { getNodeTypeDef } from "$lib/node_types/registry"; // To get property schema
@@ -595,21 +594,6 @@
 						>
 							Attributes
 						</h3>
- 						<!-- Add isSearchable toggle here -->
- 						<div class="flex items-center justify-between gap-2">
- 							<label for="prop-isSearchable" class="text-sm">Searchable</label>
- 							<input
- 								type="checkbox"
- 								id="prop-isSearchable"
- 								checked={selectedDataNode?.isSearchable ?? true}
- 								on:change={(e) => {
- 									if (selectedDataNode) {
- 										updateNodeSearchableFlag(selectedDataNode.id, (e.target as HTMLInputElement).checked);
- 									}
- 								}}
- 								class="form-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
- 							/>
- 						</div>
 						<div class="space-y-2">
 							{#each Object.entries(selectedDataNode.attributes) as [key, value]}
 								<!-- Only show attributes NOT defined in the type-specific schema, and not internal flags or view defaults, and not the old fontSize -->

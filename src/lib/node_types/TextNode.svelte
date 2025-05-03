@@ -44,12 +44,14 @@
 	// INSTANCE SCRIPT
 	import type { DataNode, ViewNode, AvailableFont } from '$lib/types/types'; // Import AvailableFont
 	import { updateNodeAttributes } from '$lib/karta/NodeStore'; // Corrected import
-	import { currentContextId } from '$lib/karta/ContextStore'; // Corrected import
+	import { currentContextId, contexts } from '$lib/karta/ContextStore'; // Import contexts
 	import { tick, onDestroy } from 'svelte'; // Import onDestroy
 	import { AVAILABLE_FONTS } from '$lib/types/types'; // Import AVAILABLE_FONTS
 
 	export let dataNode: DataNode;
 	export let viewNode: ViewNode;
+	// Check if context exists for this node
+	$: hasContext = $contexts.has(viewNode.id);
 
 	// Type assertion for dataNode attributes - assumes NodeWrapper ensures correct ntype/attributes
 	$: dataNodeAttributes = dataNode.attributes as { text?: string; karta_fontSize?: number; name: string; karta_fillColor?: string; karta_textColor?: string; karta_font?: AvailableFont };
@@ -70,6 +72,12 @@
 	$: effectiveFont = viewNodeAttributes?.karta_font ?? dataNodeAttributes?.karta_font ?? FALLBACK_FONT;
 	$: effectiveFontSize = viewNodeAttributes?.karta_fontSize ?? dataNodeAttributes?.karta_fontSize ?? FALLBACK_FONT_SIZE;
 
+	// Determine ring classes based on focal state and context existence
+	$: ringClasses = dataNode.id === $currentContextId
+		? 'ring-4 ring-offset-2 ring-offset-gray-900 ring-orange-500 rounded' // Focal highlight
+		: hasContext
+			? 'ring-1 ring-orange-500 ring-opacity-20 rounded' // Context outline (dimmer)
+			: 'rounded shadow-md'; // Default rounded corners and shadow
 
 	let isEditing = false;
 	let editedText = '';
@@ -161,7 +169,7 @@
 	class={`
 		w-full h-full p-2 pr-0 overflow-hidden
 		flex items-center justify-center pointer-events-auto
-		${dataNode.id === $currentContextId ? 'ring-4 ring-offset-2 ring-offset-gray-900 ring-orange-500 rounded' : 'rounded shadow-md'}
+		${ringClasses}
 	`}
 	style:background-color={effectiveFillColor}
 	style:color={effectiveTextColor}

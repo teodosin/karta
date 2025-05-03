@@ -194,4 +194,35 @@
 		background-color: #1e3a8a; /* Tailwind blue-900 */
 		color: #dbeafe; /* Tailwind blue-100 */
 	}
+
+	/* Custom Scrollbar for Search Results List (using CSS pseudo-elements) */
+	ul::-webkit-scrollbar {
+		width: 3px; /* 3px width */
+	}
+
+	ul::-webkit-scrollbar-track {
+		background: transparent; /* Transparent track */
+	}
+
+	ul::-webkit-scrollbar-thumb {
+		/* Using Tailwind gray-500 with opacity for thumb */
+		background-color: rgba(107, 114, 128, 0.5); /* gray-500 @ 50% */
+		border-radius: 3px;
+	}
+
+	ul::-webkit-scrollbar-thumb:hover {
+		/* Using Tailwind gray-600 with opacity for hover */
+		background-color: rgba(75, 85, 99, 0.7); /* gray-600 @ 70% */
+	}
+
+	/* Dark mode scrollbar thumb */
+	:global(.dark) ul::-webkit-scrollbar-thumb {
+		/* Using Tailwind gray-400 with opacity for dark mode thumb */
+		background-color: rgba(156, 163, 175, 0.5); /* gray-400 @ 50% */
+	}
+
+	:global(.dark) ul::-webkit-scrollbar-thumb:hover {
+		/* Using Tailwind gray-500 with opacity for dark mode hover */
+		background-color: rgba(107, 114, 128, 0.7); /* gray-500 @ 70% */
+	}
 </style>

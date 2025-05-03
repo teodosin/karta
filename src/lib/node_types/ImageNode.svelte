@@ -38,12 +38,14 @@
 <script lang="ts">
 	// INSTANCE SCRIPT
 	import type { DataNode, ViewNode } from '$lib/types/types';
-	import { currentContextId } from '$lib/karta/ContextStore'; // Corrected import
+	import { currentContextId, contexts } from '$lib/karta/ContextStore'; // Import contexts
 	import { onMount } from 'svelte';
 	import { localAdapter } from '$lib/util/LocalAdapter'; // Import localAdapter
 
 	export let dataNode: DataNode;
 	export let viewNode: ViewNode;
+	// Check if context exists for this node
+	$: hasContext = $contexts.has(viewNode.id);
 
 	// Type assertion for attributes
 	$: attributes = dataNode.attributes as { src?: string | null; alt?: string; name: string; assetId?: string | null }; // Add assetId type, allow null src
@@ -105,12 +107,18 @@
 		fetchImageUrl(assetId);
 	}
 
+	// Determine ring classes based on focal state and context existence
+	$: ringClasses = dataNode.id === $currentContextId
+		? 'ring-4 ring-offset-2 ring-offset-gray-900 ring-orange-500 rounded' // Focal highlight
+		: hasContext
+			? 'ring-1 ring-orange-500 ring-opacity-20 rounded' // Context outline (dimmer)
+			: 'rounded shadow-md'; // Default rounded corners and shadow
 </script>
 
 <div
 	class={`
 		w-full h-full bg-gray-700 flex items-center justify-center overflow-hidden pointer-events-auto
-		${dataNode.id === $currentContextId ? 'ring-4 ring-offset-2 ring-offset-gray-900 ring-orange-500 rounded' : 'rounded shadow-md'}
+		${ringClasses}
 	`}
 	title={`Image Node: ${attributes?.name ?? dataNode.id}`}
 >
