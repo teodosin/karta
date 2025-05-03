@@ -503,6 +503,12 @@ async function initializeStores() { // Remove export keyword here
                 const tutorialData: KartaExportData = await response.json();
                 await localAdapter.importData(tutorialData); // importData clears DB first
                 console.log("[initializeStores] Tutorial data imported successfully.");
+
+                // Re-populate availableContextsMap after tutorial import
+                const updatedPathsMap = await localAdapter.getAllContextPaths();
+                availableContextsMap.set(updatedPathsMap);
+                console.log(`[initializeStores] Re-populated availableContextsMap after tutorial import with ${updatedPathsMap.size} entries.`);
+
             } catch (importError) {
                 console.error("[initializeStores] CRITICAL: Failed to import tutorial data on first run:", importError);
                 // Continue initialization even if tutorial import fails
