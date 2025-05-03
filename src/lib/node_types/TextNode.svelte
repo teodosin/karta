@@ -208,6 +208,8 @@
 		/* font-family is now set via inline style */
 		/* line-height: 1.4; */ /* Removed as leading-tight is used */
 		transition: background-color 0.2s ease, color 0.2s ease; /* Add transitions */
+		scrollbar-width: thin; /* Make scrollbar thinner in Firefox */
+		scrollbar-color: rgba(0,0,0,0.2) transparent;
 	}
 	/* Add scrollbar styling if desired */
 	div::-webkit-scrollbar {
