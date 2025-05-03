@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "exportedAt": "2025-05-02T20:38:50.568Z",
+  "exportedAt": "2025-05-03T15:10:26.638Z",
   "nodes": [
     {
       "id": "00000000-0000-0000-0000-000000000000",
@@ -19,11 +19,11 @@
       "id": "0404360b-ba53-48e3-9a5f-d5bedfa2c301",
       "ntype": "text",
       "createdAt": 1746204941858,
-      "modifiedAt": 1746217274351,
+      "modifiedAt": 1746248793890,
       "path": "/Welcome To Karta",
       "attributes": {
         "name": "Welcome To Karta",
-        "text": "Pan the canvas with middle-mouse dragging or a touchpad. Zoom with the mouse wheel or by pinching.\n\nTo learn how to use this app, look down to see the node called \"Guide - Hub\", then right click and select \"Enter Context\" to be taken to the guide.\n",
+        "text": "Pan the canvas with middle-mouse dragging or a touchpad. Zoom with the mouse wheel or by pinching.\n\nTo learn how to use this app, look down to see the node called \"Guide - Hub\", then right click and select \"Enter Context\" to be taken to the guide.\n\nFeedback and thoughts are greatly appreciated! See the top left menu for contact details.\n",
         "karta_fontSize": 16,
         "karta_fillColor": "rgba(255, 250, 196, 0)",
         "karta_textColor": "rgba(190, 178, 178, 1)",
@@ -33,15 +33,214 @@
       "isSearchable": false
     },
     {
+      "id": "107ce265-4ce3-476d-b8ba-375aac51a8b5",
+      "ntype": "image",
+      "createdAt": 1746276707516,
+      "modifiedAt": 1746276707529,
+      "path": "/karta_logo.png",
+      "attributes": {
+        "alt": "karta_logo.png",
+        "name": "karta_logo.png",
+        "src": "blob:http://localhost:5173/faca71ba-f2b6-4853-b51f-356387f6cd6d",
+        "assetId": "107ce265-4ce3-476d-b8ba-375aac51a8b5"
+      }
+    },
+    {
+      "id": "12b24079-338f-4c6e-9164-3b191012a708",
+      "ntype": "text",
+      "createdAt": 1746268941285,
+      "modifiedAt": 1746272069137,
+      "path": "/Guide - Data and View",
+      "attributes": {
+        "name": "Guide - Data and View",
+        "text": "The most important thing to know about nodes is that the contents and the presentation of them are separate.\n\nThe content of each node is unique, but they can have many different Instances.\n\nThis gives you the freedom to reuse nodes in different contexts, and navigate between them through the associations you create yourself. \n",
+        "karta_fontSize": 16,
+        "karta_fillColor": "rgba(55, 4, 35, 1)",
+        "karta_textColor": "rgba(221, 221, 221, 1)",
+        "karta_font": "Nunito",
+        "karta_isNameVisible": false
+      }
+    },
+    {
+      "id": "12f68432-3b7c-471a-aff8-d71eb1d8d4d9",
+      "ntype": "text",
+      "createdAt": 1746277632092,
+      "modifiedAt": 1746278565161,
+      "path": "/Guide - Edges Explicitly Connect",
+      "attributes": {
+        "name": "Guide - Edges Explicitly Connect",
+        "text": "The lines between nodes are called Edges. They exist in the content layer, so they are Context-independent.\n\nThey are used to connect nodes together in a more explicit way. Use edges to say \"these nodes belong together\".\n",
+        "karta_fontSize": 16,
+        "karta_fillColor": "rgba(55, 4, 35, 1)",
+        "karta_textColor": "rgba(221, 221, 221, 1)",
+        "karta_font": "Nunito",
+        "karta_isNameVisible": false
+      }
+    },
+    {
+      "id": "39a2492d-5aa4-44b9-9108-f77ef29061c3",
+      "ntype": "text",
+      "createdAt": 1746250500823,
+      "modifiedAt": 1746264010842,
+      "path": "/Guide - Relativity Intro",
+      "attributes": {
+        "name": "Guide - Relativity Intro",
+        "text": "Here's the fun part:\n\nNode instances can have different sizes and colors depending on the context they're in. It's all relative.\n\nTry this out. In this context there's a node called \"Guide - Relativity\". Enter it's context to see what we're talking about.",
+        "karta_fontSize": 16,
+        "karta_fillColor": "rgba(255, 250, 196, 0)",
+        "karta_textColor": "rgba(221, 221, 221, 1)",
+        "karta_font": "Nunito",
+        "karta_isNameVisible": false
+      }
+    },
+    {
+      "id": "3ee2048b-09f6-4e04-a44a-925731c0e8de",
+      "ntype": "text",
+      "createdAt": 1746284820298,
+      "modifiedAt": 1746284922981,
+      "path": "/Guide - End",
+      "attributes": {
+        "name": "Guide - End",
+        "text": "That's the end of the guide!\n\nHere, the root node. Move to its Context to begin your own web of ideas.",
+        "karta_fontSize": 16,
+        "karta_fillColor": "rgba(255, 250, 196, 0)",
+        "karta_textColor": "rgba(221, 221, 221, 1)",
+        "karta_font": "Nunito",
+        "karta_isNameVisible": false
+      }
+    },
+    {
+      "id": "41491580-b3bf-42dd-9f44-9fa89d758fc8",
+      "ntype": "text",
+      "createdAt": 1746283647702,
+      "modifiedAt": 1746284129477,
+      "path": "/Guide - Native Version",
+      "attributes": {
+        "name": "Guide - Native Version",
+        "text": "The full vision of Karta is to act as a file browser. \n\nKarta would then be a native application you could download, with access to some section of a user's folders and files.\n\nSame features as here in the web version (and the usual file browsing features), but with the ability to navigate contexts of any folder or file and connect any of them to any other. ",
+        "karta_fontSize": 16,
+        "karta_fillColor": "rgba(255, 250, 196, 0)",
+        "karta_textColor": "rgba(221, 221, 221, 1)",
+        "karta_font": "Nunito",
+        "karta_isNameVisible": false
+      }
+    },
+    {
+      "id": "45f863f7-dd80-4df7-8250-f2c5ba3001cc",
+      "ntype": "text",
+      "createdAt": 1746284311553,
+      "modifiedAt": 1746284470992,
+      "path": "/Guide - Exporting Standalone Apps",
+      "attributes": {
+        "name": "Guide - Exporting Standalone Apps",
+        "text": "It would be cool to be able to export these networks as standalone read-only applications you could host on a website. At least I want to do it for my own website.\n\nHowever, to do this, and to allow others to use these exports however they wish, even commercially, the licensing needs to be tackled.",
+        "karta_fontSize": 16,
+        "karta_fillColor": "rgba(255, 250, 196, 0)",
+        "karta_textColor": "rgba(221, 221, 221, 1)",
+        "karta_font": "Nunito",
+        "karta_isNameVisible": false
+      }
+    },
+    {
+      "id": "46b1be18-2ed0-4e34-b154-a81b5356f3d2",
+      "ntype": "text",
+      "createdAt": 1746276796320,
+      "modifiedAt": 1746276862663,
+      "path": "/Guide - Creating Nodes Heading",
+      "attributes": {
+        "name": "Guide - Creating Nodes Heading",
+        "text": "Creating Nodes",
+        "karta_fontSize": 52,
+        "karta_fillColor": "rgba(55, 4, 35, 1)",
+        "karta_textColor": "rgba(221, 221, 221, 1)",
+        "karta_font": "Bodoni Moda",
+        "karta_isNameVisible": false
+      }
+    },
+    {
+      "id": "496638d4-0d66-4edc-a703-46a3dda41ea4",
+      "ntype": "text",
+      "createdAt": 1746249181440,
+      "modifiedAt": 1746265678966,
+      "path": "/Guide - Context Fundamentals",
+      "attributes": {
+        "name": "Guide - Context Fundamentals",
+        "text": "In Karta, we're always looking at the network from the point of view of some node. This point of view is called that node's Context. That node is called that context's Focal Node. You can tell what the focal is based on the thick bright outline it has. \n\nAny node can have a context that you can enter, and that context can contain any other nodes. Nodes that appear in multiple contexts are referencing the same underlying node, which means that we don't have to duplicate nodes to put them in multiple places.",
+        "karta_fontSize": 16,
+        "karta_fillColor": "rgba(255, 250, 196, 0)",
+        "karta_textColor": "rgba(221, 221, 221, 1)",
+        "karta_font": "Nunito",
+        "karta_isNameVisible": false
+      }
+    },
+    {
+      "id": "5667157e-373b-4ade-8cba-c5c79710b65a",
+      "ntype": "Node",
+      "createdAt": 1746250729953,
+      "modifiedAt": 1746250737676,
+      "path": "/Guide - Relativity",
+      "attributes": {
+        "name": "Guide - Relativity"
+      }
+    },
+    {
+      "id": "59a171af-58da-401b-9201-0d686a50d051",
+      "ntype": "text",
+      "createdAt": 1746281408363,
+      "modifiedAt": 1746283008845,
+      "path": "/Guide - Motivation for Karta",
+      "attributes": {
+        "name": "Guide - Motivation for Karta",
+        "text": "Karta's purpose is to help with managing complex creative projects.\n\nWorldbuilding, moodboards, concept organisation, inter-project connections, real world references, and so on. It fills a need that wasn't quite fulfilled with existing tools, however mature they may be.\n\nFile systems are rigid and awkward to explore. You can only go up and down in the hierarchy of folders. Files can't exist in multiple places at the same time.\n\nWhiteboarding apps inherit the limitations of physical whiteboards. One 2D surface per canvas. Siloed and static.\n\nThe idea was to put all of one's work in the same place, turning every individual piece into a node. Then one may connect nodes to any others, connecting them by relevance. The end result is an interconnected web of work and ideas that you navigate intuitively along lines of association, where each view transitions smoothly to the next. Nodes are unique but can be used in many ways, so there's no duplication, and no enforced hierarchy.\n\nWhile a decent start, there's a couple other steps until this app meets these needs properly. To read more on those, head over to the roadmap. \n",
+        "karta_fontSize": 16,
+        "karta_fillColor": "rgba(255, 250, 196, 0)",
+        "karta_textColor": "rgba(221, 221, 221, 1)",
+        "karta_font": "Georgia",
+        "karta_isNameVisible": false
+      }
+    },
+    {
+      "id": "5ed3276c-f6c4-44f4-956e-40cb1989b88c",
+      "ntype": "text",
+      "createdAt": 1746280108875,
+      "modifiedAt": 1746283391943,
+      "path": "/Guide - Karta Feedback",
+      "attributes": {
+        "name": "Guide - Karta Feedback",
+        "text": "Thanks for taking the tour!\n\nThis app is an MVP, a minimal viable product. It's the least that could be done to showcase the idea, be fun to play with, and in some cases even useful.\n\nThere's plenty of things to add and improve from this point. If you have ideas, suggestions or general feedback, do please send them by email. \n\nkarta@teodosin.com\n\nI will be posting updates, mostly on Bluesky. Follow me there @teodosin.bsky.social. \n\nFor future plans, proceed to the roadmap. If you're interested in the \"why\" of this app, pan down to read the motivations.\n",
+        "karta_fontSize": 16,
+        "karta_fillColor": "rgba(255, 250, 196, 0)",
+        "karta_textColor": "rgba(221, 221, 221, 1)",
+        "karta_font": "Georgia",
+        "karta_isNameVisible": false
+      }
+    },
+    {
       "id": "68464f10-474b-49fd-a1af-f5188cd187ad",
       "ntype": "text",
       "createdAt": 1746217989880,
-      "modifiedAt": 1746218195179,
+      "modifiedAt": 1746272608414,
       "path": "/Guide - Contexts",
       "attributes": {
         "name": "Guide - Contexts",
         "text": "Contexts",
         "karta_fontSize": 48,
+        "karta_fillColor": "rgba(150, 145, 87, 0.96)",
+        "karta_textColor": "rgba(29, 2, 2, 1)",
+        "karta_font": "Bodoni Moda",
+        "karta_isNameVisible": false
+      }
+    },
+    {
+      "id": "69b01297-e652-4e9d-ae04-dbc92247aab4",
+      "ntype": "text",
+      "createdAt": 1746248635774,
+      "modifiedAt": 1746248719522,
+      "path": "/Welcome To Karta - Heading",
+      "attributes": {
+        "name": "Welcome To Karta - Heading",
+        "text": "Welcome to Karta!",
+        "karta_fontSize": 28,
         "karta_fillColor": "rgba(255, 250, 196, 0)",
         "karta_textColor": "rgba(221, 221, 221, 1)",
         "karta_font": "Bodoni Moda",
@@ -49,16 +248,16 @@
       }
     },
     {
-      "id": "6970c7e5-d6c3-4cdc-aa17-0afdcaea1ec4",
+      "id": "6eafc486-d47f-4f8f-b73d-90fe9212cb54",
       "ntype": "text",
-      "createdAt": 1746215250256,
-      "modifiedAt": 1746215291005,
-      "path": "/Text",
+      "createdAt": 1746284236851,
+      "modifiedAt": 1746284289673,
+      "path": "/Guide - Exporting Standalone Apps Heading",
       "attributes": {
-        "name": "Text",
-        "text": "Welcome to Karta!",
-        "karta_fontSize": 27,
-        "karta_fillColor": "rgba(254, 249, 195, 0)",
+        "name": "Guide - Exporting Standalone Apps Heading",
+        "text": "Exporting Standalone Apps",
+        "karta_fontSize": 32,
+        "karta_fillColor": "rgba(255, 250, 196, 0)",
         "karta_textColor": "rgba(221, 221, 221, 1)",
         "karta_font": "Bodoni Moda",
         "karta_isNameVisible": false
@@ -68,11 +267,11 @@
       "id": "7256c99f-93bf-4675-8078-7393b49ac640",
       "ntype": "text",
       "createdAt": 1746215363735,
-      "modifiedAt": 1746218233905,
+      "modifiedAt": 1746248455867,
       "path": "/Guide - View Navigation",
       "attributes": {
         "name": "Guide - View Navigation",
-        "text": "To navigate within a context:\n\n* Panning - drag with middle-mouse pressed, or two-finger drag with a touchpad.\n* Zooming - use scroll wheel, or two-finger pinch with a touchpad. \n* Center the focal node - from the background's right-click menu, or by pressing \"F\"\n* Frame the current view contents - from the background's right-click menu, or by pressing Shift + \"F\"",
+        "text": "To navigate within a context:\n\n* Panning - drag with middle-mouse pressed, or two-finger drag with a touchpad.\n\n* Zooming - use scroll wheel, or two-finger pinch with a touchpad. \n\n* Center the focal node - from the background's right-click menu, or by pressing \"F\"\n\n* Frame the current view contents - from the background's right-click menu, or by pressing Shift + \"F\"",
         "karta_fontSize": 12,
         "karta_fillColor": "rgba(94, 94, 85, 0.07)",
         "karta_textColor": "rgba(221, 221, 221, 1)",
@@ -80,6 +279,70 @@
         "karta_isNameVisible": false
       },
       "isSearchable": true
+    },
+    {
+      "id": "76a07465-39de-4b16-ac82-f36d805d84c4",
+      "ntype": "text",
+      "createdAt": 1746283604737,
+      "modifiedAt": 1746283640505,
+      "path": "/Guide - Native Version Heading",
+      "attributes": {
+        "name": "Guide - Native Version Heading",
+        "text": "Native Version",
+        "karta_fontSize": 32,
+        "karta_fillColor": "rgba(255, 250, 196, 0)",
+        "karta_textColor": "rgba(221, 221, 221, 1)",
+        "karta_font": "Bodoni Moda",
+        "karta_isNameVisible": false
+      }
+    },
+    {
+      "id": "786e75f1-addd-4090-8422-83e98468207f",
+      "ntype": "text",
+      "createdAt": 1746283366947,
+      "modifiedAt": 1746284052247,
+      "path": "/Guide - Roadmap Intro",
+      "attributes": {
+        "name": "Guide - Roadmap Intro",
+        "text": "In addition the standard quality-of-life improvements and bug fixes, there are a few larger steps that will be taken next. \n\nThese are near-term and quite likely to happen, despite other obligations.\n\nAnd of course, if there's interest from users, we can dream bigger. But let's stay here for now. ",
+        "karta_fontSize": 16,
+        "karta_fillColor": "rgba(255, 250, 196, 0)",
+        "karta_textColor": "rgba(221, 221, 221, 1)",
+        "karta_font": "Nunito",
+        "karta_isNameVisible": false
+      }
+    },
+    {
+      "id": "7d8e17b5-6314-4eb4-8719-06b0a3b9368f",
+      "ntype": "text",
+      "createdAt": 1746279302319,
+      "modifiedAt": 1746279603501,
+      "path": "/Guide - Deleting Edges",
+      "attributes": {
+        "name": "Guide - Deleting Edges",
+        "text": "To delete edges, select one or more edges and right-click to find the option to delete them.\n\nMulti-select with Shift pressed, because box select doesn't select edges yet.\n\nBear in mind that deleting an edge will delete it permanently from all Contexts. Adding it back adds it back to all of them too, though. And the nodes added to Contexts in this way will remain there. So deleting edges is less dangerous than deleting nodes. ",
+        "karta_fontSize": 16,
+        "karta_fillColor": "rgba(55, 4, 35, 1)",
+        "karta_textColor": "rgba(221, 221, 221, 1)",
+        "karta_font": "Nunito",
+        "karta_isNameVisible": false
+      }
+    },
+    {
+      "id": "80ebe1a9-96b5-423f-815e-def8cb609b15",
+      "ntype": "text",
+      "createdAt": 1746272099453,
+      "modifiedAt": 1746275378047,
+      "path": "/Guide - Moving and Scaling Nodes",
+      "attributes": {
+        "name": "Guide - Moving and Scaling Nodes",
+        "text": "Move nodes with the Move tool selected on the Tool bar to the left. \n\nDrag a node to move it. \n\nDrag on the background to box select multiple nodes. \n\nHold shift to add or remove from the current selection. \n\nDrag on the handles in the corners of your selection to resize.",
+        "karta_fontSize": 24,
+        "karta_fillColor": "rgba(55, 4, 35, 1)",
+        "karta_textColor": "rgba(221, 221, 221, 1)",
+        "karta_font": "Nunito",
+        "karta_isNameVisible": false
+      }
     },
     {
       "id": "814242b1-9a2f-46dd-8abd-07493c7a1734",
@@ -99,43 +362,127 @@
       "isSearchable": true
     },
     {
+      "id": "8626d7c7-acca-4daa-8ba8-c0d847171284",
+      "ntype": "Node",
+      "createdAt": 1746264223603,
+      "modifiedAt": 1746264305857,
+      "path": "/Guide - SmallRelativity3",
+      "attributes": {
+        "name": "Guide - SmallRelativity3",
+        "karta_isNameVisible": false
+      }
+    },
+    {
+      "id": "894c2c17-0aa7-43a2-b687-e5580e64ad5d",
+      "ntype": "Node",
+      "createdAt": 1746264225708,
+      "modifiedAt": 1746264308336,
+      "path": "/Guide - SmallRelativity4",
+      "attributes": {
+        "name": "Guide - SmallRelativity4",
+        "karta_isNameVisible": false
+      }
+    },
+    {
       "id": "8c83a0e7-6796-4526-a84b-f5a9dd298bb8",
       "ntype": "text",
       "createdAt": 1746218044790,
-      "modifiedAt": 1746218111006,
-      "path": "/Guide - Node Properties",
+      "modifiedAt": 1746276125278,
+      "path": "/Guide - Node Properties Heading",
       "attributes": {
-        "name": "Guide - Node Properties",
+        "name": "Guide - Node Properties Heading",
         "text": "Node Properties",
-        "karta_fontSize": 16,
-        "karta_fillColor": "rgba(254, 249, 195, 0.12549019607843137)",
+        "karta_fontSize": 92,
+        "karta_fillColor": "rgba(55, 4, 35, 1)",
         "karta_textColor": "rgba(221, 221, 221, 1)",
-        "karta_font": "Nunito"
+        "karta_font": "Bodoni Moda",
+        "karta_isNameVisible": false
       }
     },
     {
       "id": "9066a675-ea6d-497e-817c-fd52d54733ad",
       "ntype": "text",
       "createdAt": 1746218025436,
-      "modifiedAt": 1746218104647,
-      "path": "/Guide - Edges",
+      "modifiedAt": 1746277503284,
+      "path": "/Guide - Edges Heading",
       "attributes": {
-        "name": "Guide - Edges",
+        "name": "Guide - Edges Heading",
         "text": "Edges",
-        "karta_fontSize": 16,
-        "karta_fillColor": "rgba(254, 249, 195, 0.12549019607843137)",
+        "karta_fontSize": 150,
+        "karta_fillColor": "rgba(255, 250, 196, 0)",
         "karta_textColor": "rgba(221, 221, 221, 1)",
-        "karta_font": "Nunito"
+        "karta_font": "Bodoni Moda",
+        "karta_isNameVisible": false
+      }
+    },
+    {
+      "id": "91310d03-943f-4440-9357-183760e2c0aa",
+      "ntype": "text",
+      "createdAt": 1746271748608,
+      "modifiedAt": 1746276132331,
+      "path": "/Guide - Node Properties",
+      "attributes": {
+        "name": "Guide - Node Properties",
+        "text": "On the top right of the screen by default, you'll find the Properties Panel. \n\nBy default it is collapsed, but you can expand it by clicking the icon on the right side of it.\n\nTurning off the Pin will make the Panel invisible when no nodes or multiple nodes are selected.\n\nFrom the Panel you can edit a node's Attributes. Its name, whether its name label is visible, and if its a text node, its color and font settings. Try it! Edit any of the nodes that exist in the Guide. ",
+        "karta_fontSize": 32,
+        "karta_fillColor": "rgba(55, 4, 35, 1)",
+        "karta_textColor": "rgba(221, 221, 221, 1)",
+        "karta_font": "Nunito",
+        "karta_isNameVisible": false
+      }
+    },
+    {
+      "id": "9501580b-1562-4e94-aeeb-8240b8447304",
+      "ntype": "Node",
+      "createdAt": 1746264221500,
+      "modifiedAt": 1746264304016,
+      "path": "/Guide - SmallRelativity2",
+      "attributes": {
+        "name": "Guide - SmallRelativity2",
+        "karta_isNameVisible": false
+      }
+    },
+    {
+      "id": "971bb683-8e81-4ff5-8fb0-d7f783fefbf9",
+      "ntype": "text",
+      "createdAt": 1746276874193,
+      "modifiedAt": 1746277356354,
+      "path": "/Guide - Creating Nodes",
+      "attributes": {
+        "name": "Guide - Creating Nodes",
+        "text": "To create a new node, right-click on the background and select \"Create Node Here\". You will be prompted to select from a few types of nodes. You can also press Tab to directly open this list.\n\nImages created this way will be just empty frames. To actually add an image to a Context, paste a copied image or drag a file into the window. \n\nText nodes will be empty at first. All the headings and text paragraphs you've seen so far are just Text nodes. That should give you an idea of what you can do with them.\n\nA basic Node is just a filled rounded rectangle. Use them when you don't need any other features, just a point in conceptual space and a name for it.\n\nYou can also bring nodes into a Context by searching for them. Right-click on the background to find the search function. Any existing node can be found there.",
+        "karta_fontSize": 16,
+        "karta_fillColor": "rgba(55, 4, 35, 1)",
+        "karta_textColor": "rgba(221, 221, 221, 1)",
+        "karta_font": "Nunito",
+        "karta_isNameVisible": false
+      }
+    },
+    {
+      "id": "9dbab416-5bee-45ca-bf11-2ecdd771c7ea",
+      "ntype": "text",
+      "createdAt": 1746278572202,
+      "modifiedAt": 1746278991971,
+      "path": "/Guide - What Edges Do",
+      "attributes": {
+        "name": "Guide - What Edges Do",
+        "text": "Two nodes connected by an edge are always present in each other's Contexts. Even if you remove one from the other's Context, it will appear there again when you leave and come back.\n\nThis is true for any number of connections, and is a convenient way to carry nodes to other contexts. Connect a bunch of nodes to another, enter the latter's context, and all those nodes will be there.",
+        "karta_fontSize": 16,
+        "karta_fillColor": "rgba(55, 4, 35, 1)",
+        "karta_textColor": "rgba(221, 221, 221, 1)",
+        "karta_font": "Nunito",
+        "karta_isNameVisible": false
       }
     },
     {
       "id": "a45d37a5-4acc-4132-9cba-45fd4589bacc",
       "ntype": "Node",
       "createdAt": 1746213760127,
-      "modifiedAt": 1746217009311,
+      "modifiedAt": 1746249049097,
       "path": "/Guide - Hub",
       "attributes": {
-        "name": "Guide - Hub"
+        "name": "Guide - Hub",
+        "karta_isNameVisible": true
       },
       "isSearchable": true
     },
@@ -143,26 +490,134 @@
       "id": "a5b242ea-22ce-40bd-ac62-6a62f6fc154b",
       "ntype": "text",
       "createdAt": 1746217309699,
-      "modifiedAt": 1746217838358,
+      "modifiedAt": 1746248241418,
       "path": "/Guide - Move to Topics",
       "attributes": {
         "name": "Guide - Move to Topics",
-        "text": "To the right are the topics of this guide. Move to any of their contexts to learn more about their respective topics.\n\nThe text blocks you're seeing, like the titles on the right, are also nodes, and can have their own contexts.",
+        "text": "To the right are the topics of this guide. Move to any of their contexts to learn more about their respective topics.",
         "karta_fontSize": 14,
-        "karta_fillColor": "rgba(254, 249, 195, 0.12549019607843137)",
+        "karta_fillColor": "rgba(255, 250, 196, 0)",
         "karta_textColor": "rgba(221, 221, 221, 1)",
-        "karta_font": "Nunito"
+        "karta_font": "Nunito",
+        "karta_isNameVisible": false
+      }
+    },
+    {
+      "id": "a61279fa-79d2-4ede-90a3-c760fb72eaf6",
+      "ntype": "text",
+      "createdAt": 1746271882041,
+      "modifiedAt": 1746275369720,
+      "path": "/Guide - Moving and Scaling Nodes Heading",
+      "attributes": {
+        "name": "Guide - Moving and Scaling Nodes Heading",
+        "text": "Moving and Scaling Nodes",
+        "karta_fontSize": 64,
+        "karta_fillColor": "rgba(55, 4, 35, 1)",
+        "karta_textColor": "rgba(221, 221, 221, 1)",
+        "karta_font": "Bodoni Moda",
+        "karta_isNameVisible": false
       }
     },
     {
       "id": "a6da7767-8a4a-4cd8-a328-54649cc703e4",
       "ntype": "text",
       "createdAt": 1746215866650,
-      "modifiedAt": 1746216566663,
+      "modifiedAt": 1746249853559,
       "path": "/Guide - Karta in a Nutshell",
       "attributes": {
         "name": "Guide - Karta in a Nutshell",
-        "text": "Karta in a Nutshell\n\nKarta can be thought of as a note-taking tool, similar to many canvases you may be familiar with.\n\nIn Karta, every text note and image is a node in a network. ",
+        "text": "Karta can be thought of as a note-taking tool, similar to many canvases you may be familiar with.\n\nIn Karta, every text note and image is a node in a network. They're not tied to any particular location or canvas, but can be referenced anywhere. No information gets duplicated. Since they can appear in many places, we can navigate our collection of nodes intuitively through the associations and connections they make. ",
+        "karta_fontSize": 16,
+        "karta_fillColor": "rgba(255, 250, 196, 0)",
+        "karta_textColor": "rgba(221, 221, 221, 1)",
+        "karta_font": "Nunito",
+        "karta_isNameVisible": false
+      }
+    },
+    {
+      "id": "b225b978-e381-4e7f-9d4a-355619c5acd0",
+      "ntype": "text",
+      "createdAt": 1746283954204,
+      "modifiedAt": 1746284011830,
+      "path": "/Guide - Open Source Heading",
+      "attributes": {
+        "name": "Guide - Open Source Heading",
+        "text": "Open Source",
+        "karta_fontSize": 32,
+        "karta_fillColor": "rgba(255, 250, 196, 0)",
+        "karta_textColor": "rgba(221, 221, 221, 1)",
+        "karta_font": "Bodoni Moda",
+        "karta_isNameVisible": false
+      }
+    },
+    {
+      "id": "bf51f81a-f5fe-4a74-aaa7-470e0fd09428",
+      "ntype": "Node",
+      "createdAt": 1746264219108,
+      "modifiedAt": 1746264264027,
+      "path": "/Guide - SmallRelativity",
+      "attributes": {
+        "name": "Guide - SmallRelativity",
+        "karta_isNameVisible": false
+      }
+    },
+    {
+      "id": "bfbad7f8-b921-4633-bfed-cf89f38fffc6",
+      "ntype": "text",
+      "createdAt": 1746279001792,
+      "modifiedAt": 1746279216029,
+      "path": "/Guide - Creating Edges",
+      "attributes": {
+        "name": "Guide - Creating Edges",
+        "text": "You can create edges by selecting one or more nodes and dragging from the red circle on the bottom of the selection. End the drag on a node to connect all selected nodes to that one. \n\nTry it! Connect this node to another one in this context. ",
+        "karta_fontSize": 16,
+        "karta_fillColor": "rgba(55, 4, 35, 1)",
+        "karta_textColor": "rgba(221, 221, 221, 1)",
+        "karta_font": "Nunito",
+        "karta_isNameVisible": false
+      }
+    },
+    {
+      "id": "c181a23d-c031-42d6-bfbb-4a32c34bdda6",
+      "ntype": "text",
+      "createdAt": 1746272642305,
+      "modifiedAt": 1746275980591,
+      "path": "/Guide - Removing and Deleting Nodes Heading",
+      "attributes": {
+        "name": "Guide - Removing and Deleting Nodes Heading",
+        "text": "Removing and Deleting Nodes",
+        "karta_fontSize": 78,
+        "karta_fillColor": "rgba(55, 4, 35, 1)",
+        "karta_textColor": "rgba(221, 221, 221, 1)",
+        "karta_font": "Bodoni Moda",
+        "karta_isNameVisible": false
+      }
+    },
+    {
+      "id": "c8659488-76e5-4597-9346-980978e48342",
+      "ntype": "text",
+      "createdAt": 1746265489996,
+      "modifiedAt": 1746268890095,
+      "path": "/Guide - More on Contexts",
+      "attributes": {
+        "name": "Guide - More on Contexts",
+        "text": "Nodes don't have contexts by default. You can tell which nodes have contexts based on the dim outline that they have.\n\nWhen you enter the context of a node that doesn't yet have one, it is automatically created. The previous focal node will be added so you can get back easily.\n\nYou can also navigation buttons on the bottom left to go back, forward, or choose any existing context to go to.",
+        "karta_fontSize": 16,
+        "karta_fillColor": "rgba(255, 250, 196, 0)",
+        "karta_textColor": "rgba(221, 221, 221, 1)",
+        "karta_font": "Nunito",
+        "karta_isNameVisible": false
+      }
+    },
+    {
+      "id": "cdacb6ec-9c3c-4599-bad8-77b3b7705406",
+      "ntype": "text",
+      "createdAt": 1746284087164,
+      "modifiedAt": 1746284778673,
+      "path": "/Guide - Open Source",
+      "attributes": {
+        "name": "Guide - Open Source",
+        "text": "The old parts of Karta are already open-source under the GPL-3 license. The intention is not to ask for money for anyone to just download and use the app. The editor and its forks should remain free, hence the choice of license.\n\nFor exports though, the GPL-3 license is too restrictive. If you make and publish a network for Karta, you should be able to use it commercially. So some thinking is needed to separate out the necessary runtime and license it more liberally than the editor.\n\nI don't want to rush this process. If Karta is useful to people other than me, it'll be worth it to do this well and set up the app for long-term progress. \n\nGet in touch if you have thoughts :)",
         "karta_fontSize": 16,
         "karta_fillColor": "rgba(255, 250, 196, 0)",
         "karta_textColor": "rgba(221, 221, 221, 1)",
@@ -174,26 +629,91 @@
       "id": "d89ac747-7d03-479d-b8cb-8f60beb6d95a",
       "ntype": "text",
       "createdAt": 1746218017684,
-      "modifiedAt": 1746218099996,
-      "path": "/Guide - Nodes",
+      "modifiedAt": 1746273318976,
+      "path": "/Guide - Nodes Heading",
       "attributes": {
-        "name": "Guide - Nodes",
+        "name": "Guide - Nodes Heading",
         "text": "Nodes",
-        "karta_fontSize": 16,
-        "karta_fillColor": "rgba(254, 249, 195, 0.12549019607843137)",
+        "karta_fontSize": 48,
+        "karta_fillColor": "rgba(255, 250, 196, 0)",
         "karta_textColor": "rgba(221, 221, 221, 1)",
-        "karta_font": "Nunito"
+        "karta_font": "Bodoni Moda",
+        "karta_isNameVisible": false
+      }
+    },
+    {
+      "id": "e243aef2-92a4-42f6-809a-07c5118b4bb0",
+      "ntype": "text",
+      "createdAt": 1746272704456,
+      "modifiedAt": 1746275997016,
+      "path": "/Guide - Removing and Deleting Nodes",
+      "attributes": {
+        "name": "Guide - Removing and Deleting Nodes",
+        "text": "There are two ways to get rid of a node. These correspond to the data and instance separation.\n\nTo simply remove a node from just the current context, right-click on a node and select \"Remove from Context\". This will remove that node from the current context, but it will still remain in other contexts, and you can still bring it back by searching for it.\n\nThe other, more permanent solution is to Delete Permanently. This will remove the core data of a node. It will not be searchable anymore and any instances that reference it in other contexts will simply show a ghost. This will also delete that node's Context if it exists. \n\nBe careful. Karta doesn't yet have undo-redo!",
+        "karta_fontSize": 28,
+        "karta_fillColor": "rgba(55, 4, 35, 1)",
+        "karta_textColor": "rgba(221, 221, 221, 1)",
+        "karta_font": "Nunito",
+        "karta_isNameVisible": false
+      }
+    },
+    {
+      "id": "e9372ca1-2b06-4486-a376-6f9ca6c2c389",
+      "ntype": "text",
+      "createdAt": 1746248309545,
+      "modifiedAt": 1746248569599,
+      "path": "/Guide - Roadmap",
+      "attributes": {
+        "name": "Guide - Roadmap",
+        "text": "Roadmap",
+        "karta_fontSize": 48,
+        "karta_fillColor": "rgba(255, 250, 196, 0)",
+        "karta_textColor": "rgba(221, 221, 221, 1)",
+        "karta_font": "Bodoni Moda",
+        "karta_isNameVisible": false
+      }
+    },
+    {
+      "id": "f2fcbf13-215c-43d0-8f9f-08808570ddc0",
+      "ntype": "text",
+      "createdAt": 1746263753491,
+      "modifiedAt": 1746265272817,
+      "path": "/Guide - See How They Changed?",
+      "attributes": {
+        "name": "Guide - See How They Changed?",
+        "text": "See how the text nodes changed shapes, and how the title changed colours? \n\n",
+        "karta_fontSize": 16,
+        "karta_fillColor": "rgba(255, 250, 196, 0)",
+        "karta_textColor": "rgba(221, 221, 221, 1)",
+        "karta_font": "Nunito",
+        "karta_isNameVisible": false
+      }
+    },
+    {
+      "id": "f58e0d9a-1af6-494f-a8bf-637341efa060",
+      "ntype": "text",
+      "createdAt": 1746277515126,
+      "modifiedAt": 1746277608944,
+      "path": "/Guide - Rough Around The Edges",
+      "attributes": {
+        "name": "Guide - Rough Around The Edges",
+        "text": "Excuse the size of the heading. This app is a bit rough around the edges. ",
+        "karta_fontSize": 16,
+        "karta_fillColor": "rgba(55, 4, 35, 1)",
+        "karta_textColor": "rgba(221, 221, 221, 1)",
+        "karta_font": "Nunito",
+        "karta_isNameVisible": false
       }
     },
     {
       "id": "fb3d5643-d54b-4024-8420-5d6832a44a4a",
       "ntype": "text",
       "createdAt": 1746217857521,
-      "modifiedAt": 1746218196501,
+      "modifiedAt": 1746247019691,
       "path": "/Guide - What is Karta",
       "attributes": {
         "name": "Guide - What is Karta",
-        "text": "What is Karta?",
+        "text": "Why make this?",
         "karta_fontSize": 48,
         "karta_fillColor": "rgba(255, 250, 196, 0)",
         "karta_textColor": "rgba(221, 221, 221, 1)",
@@ -204,9 +724,59 @@
   ],
   "edges": [
     {
+      "id": "332078ba-ed57-49ba-8874-b7f6ae82a15b",
+      "source": "c181a23d-c031-42d6-bfbb-4a32c34bdda6",
+      "target": "e243aef2-92a4-42f6-809a-07c5118b4bb0"
+    },
+    {
+      "id": "39c01a52-4a60-470a-b4ed-6b43727cf962",
+      "source": "bfbad7f8-b921-4633-bfed-cf89f38fffc6",
+      "target": "9dbab416-5bee-45ca-bf11-2ecdd771c7ea"
+    },
+    {
       "id": "6101732d-eb51-4a62-a348-00207e21ce0e",
       "source": "a45d37a5-4acc-4132-9cba-45fd4589bacc",
       "target": "00000000-0000-0000-0000-000000000000"
+    },
+    {
+      "id": "711c4a21-9d30-4422-b625-ff2943b6e837",
+      "source": "8c83a0e7-6796-4526-a84b-f5a9dd298bb8",
+      "target": "91310d03-943f-4440-9357-183760e2c0aa"
+    },
+    {
+      "id": "73f58d1f-5d25-4bbf-8074-5c914c87779a",
+      "source": "107ce265-4ce3-476d-b8ba-375aac51a8b5",
+      "target": "971bb683-8e81-4ff5-8fb0-d7f783fefbf9"
+    },
+    {
+      "id": "7fc23323-d042-4b1c-af2d-9909acb0601a",
+      "source": "12f68432-3b7c-471a-aff8-d71eb1d8d4d9",
+      "target": "9dbab416-5bee-45ca-bf11-2ecdd771c7ea"
+    },
+    {
+      "id": "87844996-4f7d-455c-aa4b-5516e2f6922b",
+      "source": "d89ac747-7d03-479d-b8cb-8f60beb6d95a",
+      "target": "9066a675-ea6d-497e-817c-fd52d54733ad"
+    },
+    {
+      "id": "a5a6825f-73d8-44a2-9d89-cdefc5315aeb",
+      "source": "46b1be18-2ed0-4e34-b154-a81b5356f3d2",
+      "target": "971bb683-8e81-4ff5-8fb0-d7f783fefbf9"
+    },
+    {
+      "id": "dc9a0832-4a61-4eb5-96d6-53c9042b8266",
+      "source": "f58e0d9a-1af6-494f-a8bf-637341efa060",
+      "target": "12f68432-3b7c-471a-aff8-d71eb1d8d4d9"
+    },
+    {
+      "id": "e7382c95-3082-4518-b55f-9eda12c6ea57",
+      "source": "a61279fa-79d2-4ede-90a3-c760fb72eaf6",
+      "target": "80ebe1a9-96b5-423f-815e-def8cb609b15"
+    },
+    {
+      "id": "e8646123-2436-428f-abe7-4f76e773b9bd",
+      "source": "f58e0d9a-1af6-494f-a8bf-637341efa060",
+      "target": "9066a675-ea6d-497e-817c-fd52d54733ad"
     }
   ],
   "contexts": [
@@ -232,10 +802,10 @@
           "0404360b-ba53-48e3-9a5f-d5bedfa2c301",
           {
             "id": "0404360b-ba53-48e3-9a5f-d5bedfa2c301",
-            "relX": 5.18359375,
-            "relY": -147.435546875,
-            "width": 285.3046875,
-            "height": 219.83984374999997,
+            "relX": 6.890625,
+            "relY": -205.2421875,
+            "width": 292.0234375,
+            "height": 273.32031249999994,
             "relScale": 1,
             "rotation": 0,
             "attributes": {
@@ -258,19 +828,19 @@
           }
         ],
         [
-          "6970c7e5-d6c3-4cdc-aa17-0afdcaea1ec4",
+          "69b01297-e652-4e9d-ae04-dbc92247aab4",
           {
-            "id": "6970c7e5-d6c3-4cdc-aa17-0afdcaea1ec4",
-            "relX": -6.25390625,
-            "relY": -288.029296875,
-            "width": 248.296875,
-            "height": 48.74609375,
+            "id": "69b01297-e652-4e9d-ae04-dbc92247aab4",
+            "relX": 0.8828125,
+            "relY": -379.578125,
+            "width": 259.1171875,
+            "height": 50.32812500000001,
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(254, 249, 195, 0)",
+              "karta_fillColor": "rgba(255, 250, 196, 0)",
               "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_fontSize": 27,
+              "karta_fontSize": 28,
               "karta_font": "Bodoni Moda",
               "karta_isNameVisible": false
             }
@@ -279,8 +849,566 @@
       ],
       "viewportSettings": {
         "scale": 1,
-        "relPosX": 502.3984375,
-        "relPosY": 527.078125
+        "relPosX": 444.1171875,
+        "relPosY": 532.16015625
+      }
+    },
+    {
+      "id": "5667157e-373b-4ade-8cba-c5c79710b65a",
+      "viewNodes": [
+        [
+          "5667157e-373b-4ade-8cba-c5c79710b65a",
+          {
+            "id": "5667157e-373b-4ade-8cba-c5c79710b65a",
+            "relX": 0,
+            "relY": 0,
+            "width": 100,
+            "height": 100,
+            "relScale": 1,
+            "rotation": 0
+          }
+        ],
+        [
+          "68464f10-474b-49fd-a1af-f5188cd187ad",
+          {
+            "id": "68464f10-474b-49fd-a1af-f5188cd187ad",
+            "relX": 255.04726236097986,
+            "relY": -259.8603515625,
+            "width": 251.34636579241024,
+            "height": 82.46093749999996,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_fillColor": "rgba(150, 145, 87, 0.96)",
+              "karta_textColor": "rgba(29, 2, 2, 1)",
+              "karta_isNameVisible": false
+            }
+          }
+        ],
+        [
+          "496638d4-0d66-4edc-a703-46a3dda41ea4",
+          {
+            "id": "496638d4-0d66-4edc-a703-46a3dda41ea4",
+            "relX": 622.6082153879574,
+            "relY": 29.527669822251028,
+            "width": 996.9923371365453,
+            "height": 134.04362089450203,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_fillColor": "rgba(255, 250, 196, 0)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_isNameVisible": false
+            }
+          }
+        ],
+        [
+          "a6da7767-8a4a-4cd8-a328-54649cc703e4",
+          {
+            "id": "a6da7767-8a4a-4cd8-a328-54649cc703e4",
+            "relX": 529.5866561946846,
+            "relY": -126.61669921875011,
+            "width": 815.3593749999991,
+            "height": 120.67871093750026,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_fontSize": 16,
+              "karta_fillColor": "rgba(255, 250, 196, 0)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_font": "Nunito",
+              "karta_isNameVisible": false
+            }
+          }
+        ],
+        [
+          "f2fcbf13-215c-43d0-8f9f-08808570ddc0",
+          {
+            "id": "f2fcbf13-215c-43d0-8f9f-08808570ddc0",
+            "relX": 268.2564096059168,
+            "relY": 170.49566780735358,
+            "width": 284.75576315375054,
+            "height": 121.91566935789069,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_fillColor": "rgba(255, 250, 196, 0)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_isNameVisible": false
+            }
+          }
+        ],
+        [
+          "d89ac747-7d03-479d-b8cb-8f60beb6d95a",
+          {
+            "id": "d89ac747-7d03-479d-b8cb-8f60beb6d95a",
+            "relX": 239.1945414754864,
+            "relY": 548.3613855440581,
+            "width": 219.30445647646815,
+            "height": 76.24739691795088,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_fontSize": 48,
+              "karta_fillColor": "rgba(255, 250, 196, 0)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_font": "Bodoni Moda",
+              "karta_isNameVisible": false
+            }
+          }
+        ],
+        [
+          "bf51f81a-f5fe-4a74-aaa7-470e0fd09428",
+          {
+            "id": "bf51f81a-f5fe-4a74-aaa7-470e0fd09428",
+            "relX": -1.279595211890637,
+            "relY": 147.77517487241244,
+            "width": 67.44921104132719,
+            "height": 67.44921104132719,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_isNameVisible": false
+            }
+          }
+        ],
+        [
+          "9501580b-1562-4e94-aeeb-8240b8447304",
+          {
+            "id": "9501580b-1562-4e94-aeeb-8240b8447304",
+            "relX": 1.6841248067939887,
+            "relY": 240.92025985772239,
+            "width": 67.44921104132719,
+            "height": 67.44921104132719,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_isNameVisible": false
+            }
+          }
+        ],
+        [
+          "8626d7c7-acca-4daa-8ba8-c0d847171284",
+          {
+            "id": "8626d7c7-acca-4daa-8ba8-c0d847171284",
+            "relX": 1.818967044610872,
+            "relY": 333.9473578849422,
+            "width": 67.44921104132719,
+            "height": 67.44921104132719,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_isNameVisible": false
+            }
+          }
+        ],
+        [
+          "894c2c17-0aa7-43a2-b687-e5580e64ad5d",
+          {
+            "id": "894c2c17-0aa7-43a2-b687-e5580e64ad5d",
+            "relX": 3.375271206081379,
+            "relY": 423.3955181834385,
+            "width": 67.44921104132719,
+            "height": 67.44921104132719,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_isNameVisible": false
+            }
+          }
+        ],
+        [
+          "c8659488-76e5-4597-9346-980978e48342",
+          {
+            "id": "c8659488-76e5-4597-9346-980978e48342",
+            "relX": 354.5027772057415,
+            "relY": 326.20685789401364,
+            "width": 451.9199981689454,
+            "height": 240.91061706542976,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_fillColor": "rgba(255, 250, 196, 0)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_isNameVisible": false
+            }
+          }
+        ]
+      ],
+      "viewportSettings": {
+        "scale": 0.9329446064139938,
+        "relPosX": 231.73284457345176,
+        "relPosY": 394.0061563447796
+      }
+    },
+    {
+      "id": "68464f10-474b-49fd-a1af-f5188cd187ad",
+      "viewNodes": [
+        [
+          "68464f10-474b-49fd-a1af-f5188cd187ad",
+          {
+            "id": "68464f10-474b-49fd-a1af-f5188cd187ad",
+            "relX": 0,
+            "relY": 0,
+            "width": 339.171875,
+            "height": 72.47656249999999,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_fillColor": "rgba(255, 250, 196, 0)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_isNameVisible": false
+            }
+          }
+        ],
+        [
+          "a45d37a5-4acc-4132-9cba-45fd4589bacc",
+          {
+            "id": "a45d37a5-4acc-4132-9cba-45fd4589bacc",
+            "relX": -283.3215332031232,
+            "relY": -1.3046875,
+            "width": 100,
+            "height": 100,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_isNameVisible": true
+            }
+          }
+        ],
+        [
+          "496638d4-0d66-4edc-a703-46a3dda41ea4",
+          {
+            "id": "496638d4-0d66-4edc-a703-46a3dda41ea4",
+            "relX": 30.125662667411234,
+            "relY": 438.8867187500009,
+            "width": 393.5000000000004,
+            "height": 218.39062500000026,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_fillColor": "rgba(255, 250, 196, 0)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_isNameVisible": false
+            }
+          }
+        ],
+        [
+          "a6da7767-8a4a-4cd8-a328-54649cc703e4",
+          {
+            "id": "a6da7767-8a4a-4cd8-a328-54649cc703e4",
+            "relX": 36.373709542411234,
+            "relY": 179.4609375000009,
+            "width": 416.9179687500002,
+            "height": 199.39843750000023,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_fontSize": 16,
+              "karta_fillColor": "rgba(255, 250, 196, 0)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_font": "Nunito",
+              "karta_isNameVisible": false
+            }
+          }
+        ],
+        [
+          "39a2492d-5aa4-44b9-9108-f77ef29061c3",
+          {
+            "id": "39a2492d-5aa4-44b9-9108-f77ef29061c3",
+            "relX": 27.20279407302678,
+            "relY": 677.9372864659263,
+            "width": 391.3710596862316,
+            "height": 205.23785418185165,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_fillColor": "rgba(255, 250, 196, 0)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_isNameVisible": false
+            }
+          }
+        ],
+        [
+          "5667157e-373b-4ade-8cba-c5c79710b65a",
+          {
+            "id": "5667157e-373b-4ade-8cba-c5c79710b65a",
+            "relX": -281.0686732700897,
+            "relY": 434.8222656250009,
+            "width": 100,
+            "height": 100,
+            "relScale": 1,
+            "rotation": 0
+          }
+        ],
+        [
+          "d89ac747-7d03-479d-b8cb-8f60beb6d95a",
+          {
+            "id": "d89ac747-7d03-479d-b8cb-8f60beb6d95a",
+            "relX": -58.42392693171951,
+            "relY": 1245.89379611174,
+            "width": 203.14452311536888,
+            "height": 75.194710537276,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_fontSize": 48,
+              "karta_fillColor": "rgba(55, 4, 35, 1)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_font": "Bodoni Moda",
+              "karta_isNameVisible": false
+            }
+          }
+        ]
+      ],
+      "viewportSettings": {
+        "scale": 0.9378906250000001,
+        "relPosX": 641.0569720949444,
+        "relPosY": 299.0348336356019
+      }
+    },
+    {
+      "id": "8626d7c7-acca-4daa-8ba8-c0d847171284",
+      "viewNodes": [
+        [
+          "8626d7c7-acca-4daa-8ba8-c0d847171284",
+          {
+            "id": "8626d7c7-acca-4daa-8ba8-c0d847171284",
+            "relX": 0,
+            "relY": 0,
+            "width": 192.17930029154508,
+            "height": 795.7673885880881,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_isNameVisible": false
+            }
+          }
+        ],
+        [
+          "5667157e-373b-4ade-8cba-c5c79710b65a",
+          {
+            "id": "5667157e-373b-4ade-8cba-c5c79710b65a",
+            "relX": 240.77119452155853,
+            "relY": -190.90900544750798,
+            "width": 100,
+            "height": 100,
+            "relScale": 1,
+            "rotation": 0
+          }
+        ],
+        [
+          "9501580b-1562-4e94-aeeb-8240b8447304",
+          {
+            "id": "9501580b-1562-4e94-aeeb-8240b8447304",
+            "relX": -638.3631820074968,
+            "relY": -357.127759266972,
+            "width": 898.1351520199914,
+            "height": 382.5864223240316,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_isNameVisible": false
+            }
+          }
+        ],
+        [
+          "894c2c17-0aa7-43a2-b687-e5580e64ad5d",
+          {
+            "id": "894c2c17-0aa7-43a2-b687-e5580e64ad5d",
+            "relX": -399.36953352769683,
+            "relY": 365.6580591420243,
+            "width": 510.3790087463557,
+            "height": 967.9935443565179,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_isNameVisible": false
+            }
+          }
+        ],
+        [
+          "bf51f81a-f5fe-4a74-aaa7-470e0fd09428",
+          {
+            "id": "bf51f81a-f5fe-4a74-aaa7-470e0fd09428",
+            "relX": 67.93679716784618,
+            "relY": -639.3752603082048,
+            "width": 583.8171595168669,
+            "height": 332.5937109537693,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_isNameVisible": false
+            }
+          }
+        ]
+      ],
+      "viewportSettings": {
+        "scale": 0.5359375000000001,
+        "relPosX": 588.935546875,
+        "relPosY": 436.25139508928567
+      }
+    },
+    {
+      "id": "9066a675-ea6d-497e-817c-fd52d54733ad",
+      "viewNodes": [
+        [
+          "9066a675-ea6d-497e-817c-fd52d54733ad",
+          {
+            "id": "9066a675-ea6d-497e-817c-fd52d54733ad",
+            "relX": 0,
+            "relY": 0,
+            "width": 437.0709228515631,
+            "height": 224.65560477120619,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_fillColor": "rgba(255, 250, 196, 0)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_isNameVisible": false
+            }
+          }
+        ],
+        [
+          "a45d37a5-4acc-4132-9cba-45fd4589bacc",
+          {
+            "id": "a45d37a5-4acc-4132-9cba-45fd4589bacc",
+            "relX": -329.6016932896191,
+            "relY": -17.68218994140625,
+            "width": 100,
+            "height": 100,
+            "relScale": 1,
+            "rotation": 0
+          }
+        ],
+        [
+          "f58e0d9a-1af6-494f-a8bf-637341efa060",
+          {
+            "id": "f58e0d9a-1af6-494f-a8bf-637341efa060",
+            "relX": -73.25248500279031,
+            "relY": 189.08896309988904,
+            "width": 299.8091517857146,
+            "height": 60.77232142857143,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_fillColor": "rgba(55, 4, 35, 1)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_isNameVisible": false
+            }
+          }
+        ],
+        [
+          "d89ac747-7d03-479d-b8cb-8f60beb6d95a",
+          {
+            "id": "d89ac747-7d03-479d-b8cb-8f60beb6d95a",
+            "relX": 388.0974033900684,
+            "relY": -76.65964181082563,
+            "width": 171.93750000000023,
+            "height": 79.75390625,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_fontSize": 48,
+              "karta_fillColor": "rgba(255, 250, 196, 0)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_font": "Bodoni Moda",
+              "karta_isNameVisible": false
+            }
+          }
+        ],
+        [
+          "12f68432-3b7c-471a-aff8-d71eb1d8d4d9",
+          {
+            "id": "12f68432-3b7c-471a-aff8-d71eb1d8d4d9",
+            "relX": 197.81224714006657,
+            "relY": 389.3833269391753,
+            "width": 333.53906250000074,
+            "height": 175.6601562500001,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_fillColor": "rgba(55, 4, 35, 1)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_isNameVisible": false
+            }
+          }
+        ],
+        [
+          "9dbab416-5bee-45ca-bf11-2ecdd771c7ea",
+          {
+            "id": "9dbab416-5bee-45ca-bf11-2ecdd771c7ea",
+            "relX": -240.15503801618343,
+            "relY": 646.5117449079253,
+            "width": 340.16113281250017,
+            "height": 242.44238281250034,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_fillColor": "rgba(55, 4, 35, 1)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_isNameVisible": false
+            }
+          }
+        ],
+        [
+          "bfbad7f8-b921-4633-bfed-cf89f38fffc6",
+          {
+            "id": "bfbad7f8-b921-4633-bfed-cf89f38fffc6",
+            "relX": 235.30638776506657,
+            "relY": 914.1338152204253,
+            "width": 354.8476562500018,
+            "height": 182.3955078124999,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_fillColor": "rgba(55, 4, 35, 1)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_isNameVisible": false
+            }
+          }
+        ],
+        [
+          "7d8e17b5-6314-4eb4-8719-06b0a3b9368f",
+          {
+            "id": "7d8e17b5-6314-4eb4-8719-06b0a3b9368f",
+            "relX": -276.47252546038,
+            "relY": 1174.1700177873909,
+            "width": 361.5979352678578,
+            "height": 262.962053571429,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_fillColor": "rgba(55, 4, 35, 1)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_isNameVisible": false
+            }
+          }
+        ],
+        [
+          "fb3d5643-d54b-4024-8420-5d6832a44a4a",
+          {
+            "id": "fb3d5643-d54b-4024-8420-5d6832a44a4a",
+            "relX": 1.066676548549367,
+            "relY": 1520.7906232561409,
+            "width": 399.3085937500009,
+            "height": 96.20312500000011,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_fontSize": 48,
+              "karta_fillColor": "rgba(255, 250, 196, 0)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_font": "Bodoni Moda",
+              "karta_isNameVisible": false
+            }
+          }
+        ]
+      ],
+      "viewportSettings": {
+        "scale": 0.9999999999999984,
+        "relPosX": 695.8451886858256,
+        "relPosY": 331.71718924386096
       }
     },
     {
@@ -317,10 +1445,10 @@
           "7256c99f-93bf-4675-8078-7393b49ac640",
           {
             "id": "7256c99f-93bf-4675-8078-7393b49ac640",
-            "relX": -223.9521484375,
-            "relY": -183.99462890625,
-            "width": 277.673828125,
-            "height": 193.6123046875,
+            "relX": 312.43272181919656,
+            "relY": 18.875209263393117,
+            "width": 310.6393694196427,
+            "height": 222.50432477678572,
             "relScale": 1,
             "rotation": 0,
             "attributes": {
@@ -335,8 +1463,8 @@
           "814242b1-9a2f-46dd-8abd-07493c7a1734",
           {
             "id": "814242b1-9a2f-46dd-8abd-07493c7a1734",
-            "relX": -225.2080078125,
-            "relY": 52.53857421875,
+            "relX": 684.455810546875,
+            "relY": 26.00927734375,
             "width": 269.740234375,
             "height": 164.7568359375,
             "relScale": 1,
@@ -353,16 +1481,17 @@
           "a5b242ea-22ce-40bd-ac62-6a62f6fc154b",
           {
             "id": "a5b242ea-22ce-40bd-ac62-6a62f6fc154b",
-            "relX": -0.6123046874999716,
-            "relY": 279.22607421875,
-            "width": 264.150390625,
-            "height": 188.7646484375,
+            "relX": 1045.0287039620534,
+            "relY": 16.101981026785325,
+            "width": 267.0012555803571,
+            "height": 75.81529017857144,
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(254, 249, 195, 0.12549019607843137)",
+              "karta_fillColor": "rgba(255, 250, 196, 0)",
               "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_fontSize": 14
+              "karta_fontSize": 14,
+              "karta_isNameVisible": false
             }
           }
         ],
@@ -370,10 +1499,10 @@
           "fb3d5643-d54b-4024-8420-5d6832a44a4a",
           {
             "id": "fb3d5643-d54b-4024-8420-5d6832a44a4a",
-            "relX": 452.236328125,
-            "relY": -173.6650390625,
-            "width": 344.8671875,
-            "height": 80.09375000000001,
+            "relX": 1460.102783203126,
+            "relY": 125.782958984375,
+            "width": 362.65234375,
+            "height": 76.47265625000001,
             "relScale": 1,
             "rotation": 0,
             "attributes": {
@@ -389,8 +1518,8 @@
           "68464f10-474b-49fd-a1af-f5188cd187ad",
           {
             "id": "68464f10-474b-49fd-a1af-f5188cd187ad",
-            "relX": 450.314453125,
-            "relY": -94.5400390625,
+            "relX": 1452.259033203125,
+            "relY": -190.0322265625,
             "width": 339.171875,
             "height": 72.47656249999999,
             "relScale": 1,
@@ -408,15 +1537,18 @@
           "d89ac747-7d03-479d-b8cb-8f60beb6d95a",
           {
             "id": "d89ac747-7d03-479d-b8cb-8f60beb6d95a",
-            "relX": 341.87890625,
-            "relY": 144.4697265625,
-            "width": 119.40234375,
-            "height": 42.08203125,
+            "relX": 1359.2777273995534,
+            "relY": -86.48273577008968,
+            "width": 158.13699776785734,
+            "height": 75.64048549107146,
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(254, 249, 195, 0.12549019607843137)",
-              "karta_textColor": "rgba(221, 221, 221, 1)"
+              "karta_fillColor": "rgba(255, 250, 196, 0)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_fontSize": 48,
+              "karta_font": "Bodoni Moda",
+              "karta_isNameVisible": false
             }
           }
         ],
@@ -424,15 +1556,111 @@
           "9066a675-ea6d-497e-817c-fd52d54733ad",
           {
             "id": "9066a675-ea6d-497e-817c-fd52d54733ad",
-            "relX": 341.189453125,
-            "relY": 247.4052734375,
-            "width": 120,
-            "height": 80,
+            "relX": 1354.9847586495534,
+            "relY": 22.584647042410325,
+            "width": 153.64481026785722,
+            "height": 83.10923549107147,
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(254, 249, 195, 0.12549019607843137)",
-              "karta_textColor": "rgba(221, 221, 221, 1)"
+              "karta_fillColor": "rgba(255, 250, 196, 0)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_fontSize": 48,
+              "karta_font": "Bodoni Moda",
+              "karta_isNameVisible": false
+            }
+          }
+        ],
+        [
+          "e9372ca1-2b06-4486-a376-6f9ca6c2c389",
+          {
+            "id": "e9372ca1-2b06-4486-a376-6f9ca6c2c389",
+            "relX": 1394.9150739397319,
+            "relY": 230.77549525669656,
+            "width": 234.3232421874999,
+            "height": 83.3330078125,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_fillColor": "rgba(255, 250, 196, 0)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_fontSize": 48,
+              "karta_font": "Bodoni Moda",
+              "karta_isNameVisible": false
+            }
+          }
+        ]
+      ],
+      "viewportSettings": {
+        "scale": 0.9999999999999984,
+        "relPosX": 316.144090302138,
+        "relPosY": 468.97291284677885
+      }
+    },
+    {
+      "id": "d89ac747-7d03-479d-b8cb-8f60beb6d95a",
+      "viewNodes": [
+        [
+          "d89ac747-7d03-479d-b8cb-8f60beb6d95a",
+          {
+            "id": "d89ac747-7d03-479d-b8cb-8f60beb6d95a",
+            "relX": 0,
+            "relY": 0,
+            "width": 158.13699776785734,
+            "height": 75.64048549107146,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_fillColor": "rgba(55, 4, 35, 1)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_isNameVisible": false
+            }
+          }
+        ],
+        [
+          "a45d37a5-4acc-4132-9cba-45fd4589bacc",
+          {
+            "id": "a45d37a5-4acc-4132-9cba-45fd4589bacc",
+            "relX": -231.97621248206178,
+            "relY": -3.696218062420485,
+            "width": 219.21728266501873,
+            "height": 219.21728266501873,
+            "relScale": 1,
+            "rotation": 0
+          }
+        ],
+        [
+          "12b24079-338f-4c6e-9164-3b191012a708",
+          {
+            "id": "12b24079-338f-4c6e-9164-3b191012a708",
+            "relX": 78.3622610909606,
+            "relY": 206.4676264548798,
+            "width": 316.96360560825906,
+            "height": 264.23432517538293,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_fillColor": "rgba(55, 4, 35, 1)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_isNameVisible": false
+            }
+          }
+        ],
+        [
+          "91310d03-943f-4440-9357-183760e2c0aa",
+          {
+            "id": "91310d03-943f-4440-9357-183760e2c0aa",
+            "relX": -2402.577103387699,
+            "relY": 1104.6595553137086,
+            "width": 817.1055488590946,
+            "height": 674.6194208333878,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_fillColor": "rgba(55, 4, 35, 1)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_isNameVisible": false,
+              "karta_fontSize": 32
             }
           }
         ],
@@ -440,25 +1668,504 @@
           "8c83a0e7-6796-4526-a84b-f5a9dd298bb8",
           {
             "id": "8c83a0e7-6796-4526-a84b-f5a9dd298bb8",
-            "relX": 429.921875,
-            "relY": 370.3623046875,
-            "width": 190.97265625,
-            "height": 66.7421875,
+            "relX": -2401.1459812340236,
+            "relY": 601.9088190678394,
+            "width": 828.6047347303007,
+            "height": 226.64443043614264,
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(254, 249, 195, 0.12549019607843137)",
-              "karta_textColor": "rgba(221, 221, 221, 1)"
+              "karta_fontSize": 92,
+              "karta_fillColor": "rgba(55, 4, 35, 1)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_font": "Bodoni Moda",
+              "karta_isNameVisible": false
+            }
+          }
+        ],
+        [
+          "a61279fa-79d2-4ede-90a3-c760fb72eaf6",
+          {
+            "id": "a61279fa-79d2-4ede-90a3-c760fb72eaf6",
+            "relX": -343.9096940358613,
+            "relY": 1102.1637967891002,
+            "width": 506.95179735557394,
+            "height": 179.21649749356206,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_fillColor": "rgba(55, 4, 35, 1)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_fontSize": 64,
+              "karta_font": "Bodoni Moda",
+              "karta_isNameVisible": false
+            }
+          }
+        ],
+        [
+          "80ebe1a9-96b5-423f-815e-def8cb609b15",
+          {
+            "id": "80ebe1a9-96b5-423f-815e-def8cb609b15",
+            "relX": -305.3778436492221,
+            "relY": 1436.2958681479176,
+            "width": 603.2554435210715,
+            "height": 411.3313635222838,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_fillColor": "rgba(55, 4, 35, 1)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_isNameVisible": false,
+              "karta_fontSize": 24
+            }
+          }
+        ],
+        [
+          "c181a23d-c031-42d6-bfbb-4a32c34bdda6",
+          {
+            "id": "c181a23d-c031-42d6-bfbb-4a32c34bdda6",
+            "relX": -1300.819665578888,
+            "relY": 1227.0934335747588,
+            "width": 592.4590582258847,
+            "height": 233.9126175082541,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_fillColor": "rgba(55, 4, 35, 1)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_font": "Bodoni Moda",
+              "karta_fontSize": 78,
+              "karta_isNameVisible": false
+            }
+          }
+        ],
+        [
+          "e243aef2-92a4-42f6-809a-07c5118b4bb0",
+          {
+            "id": "e243aef2-92a4-42f6-809a-07c5118b4bb0",
+            "relX": -1263.6622893972735,
+            "relY": 1715.9570549104556,
+            "width": 667.4386475060222,
+            "height": 675.6036789660903,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_fillColor": "rgba(55, 4, 35, 1)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_isNameVisible": false,
+              "karta_fontSize": 28
+            }
+          }
+        ],
+        [
+          "107ce265-4ce3-476d-b8ba-375aac51a8b5",
+          {
+            "id": "107ce265-4ce3-476d-b8ba-375aac51a8b5",
+            "relX": 830.5475761114603,
+            "relY": 773.5793467436615,
+            "width": 274.93615755340034,
+            "height": 274.93615755340034,
+            "relScale": 1,
+            "rotation": 0
+          }
+        ],
+        [
+          "46b1be18-2ed0-4e34-b154-a81b5356f3d2",
+          {
+            "id": "46b1be18-2ed0-4e34-b154-a81b5356f3d2",
+            "relX": 366.4462860064514,
+            "relY": 574.3307158432572,
+            "width": 434.1434107804558,
+            "height": 93.35150271982701,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_fillColor": "rgba(55, 4, 35, 1)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_fontSize": 52,
+              "karta_isNameVisible": false,
+              "karta_font": "Bodoni Moda"
+            }
+          }
+        ],
+        [
+          "971bb683-8e81-4ff5-8fb0-d7f783fefbf9",
+          {
+            "id": "971bb683-8e81-4ff5-8fb0-d7f783fefbf9",
+            "relX": 367.19001858192314,
+            "relY": 860.9432065880101,
+            "width": 430.2833101840968,
+            "height": 445.86246590858616,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_fillColor": "rgba(55, 4, 35, 1)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_isNameVisible": false
+            }
+          }
+        ],
+        [
+          "9066a675-ea6d-497e-817c-fd52d54733ad",
+          {
+            "id": "9066a675-ea6d-497e-817c-fd52d54733ad",
+            "relX": -2836.542837906227,
+            "relY": -121.95364123713352,
+            "width": 522.2402269552504,
+            "height": 246.40869162871138,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_fontSize": 150,
+              "karta_fillColor": "rgba(255, 250, 196, 0)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_font": "Bodoni Moda",
+              "karta_isNameVisible": false
             }
           }
         ]
       ],
       "viewportSettings": {
-        "scale": 1,
-        "relPosX": 221.701171875,
-        "relPosY": 498.4501953125
+        "scale": 1.1294139203629736,
+        "relPosX": 665.3556048903588,
+        "relPosY": 265.45059601991034
+      }
+    },
+    {
+      "id": "e9372ca1-2b06-4486-a376-6f9ca6c2c389",
+      "viewNodes": [
+        [
+          "e9372ca1-2b06-4486-a376-6f9ca6c2c389",
+          {
+            "id": "e9372ca1-2b06-4486-a376-6f9ca6c2c389",
+            "relX": 0,
+            "relY": 0,
+            "width": 234.3232421874999,
+            "height": 83.3330078125,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_fillColor": "rgba(255, 250, 196, 0)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_isNameVisible": false
+            }
+          }
+        ],
+        [
+          "a45d37a5-4acc-4132-9cba-45fd4589bacc",
+          {
+            "id": "a45d37a5-4acc-4132-9cba-45fd4589bacc",
+            "relX": -223.22894287109375,
+            "relY": 656.7212698800249,
+            "width": 105.9669886997731,
+            "height": 1426.8157958984416,
+            "relScale": 1,
+            "rotation": 0
+          }
+        ],
+        [
+          "fb3d5643-d54b-4024-8420-5d6832a44a4a",
+          {
+            "id": "fb3d5643-d54b-4024-8420-5d6832a44a4a",
+            "relX": -89.08647809709873,
+            "relY": -151.79570661272282,
+            "width": 388.3828125,
+            "height": 76.42578125,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_fontSize": 48,
+              "karta_fillColor": "rgba(255, 250, 196, 0)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_font": "Bodoni Moda",
+              "karta_isNameVisible": false
+            }
+          }
+        ],
+        [
+          "786e75f1-addd-4090-8422-83e98468207f",
+          {
+            "id": "786e75f1-addd-4090-8422-83e98468207f",
+            "relX": 38.79438127790036,
+            "relY": 183.86640276227808,
+            "width": 323.75390625000097,
+            "height": 216.13281250000048,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_fillColor": "rgba(255, 250, 196, 0)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_isNameVisible": false
+            }
+          }
+        ],
+        [
+          "76a07465-39de-4b16-ac82-f36d805d84c4",
+          {
+            "id": "76a07465-39de-4b16-ac82-f36d805d84c4",
+            "relX": 19.8353969028999,
+            "relY": 346.8761683872781,
+            "width": 287.68750000000085,
+            "height": 58.51171875,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_fillColor": "rgba(255, 250, 196, 0)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_fontSize": 32,
+              "karta_font": "Bodoni Moda",
+              "karta_isNameVisible": false
+            }
+          }
+        ],
+        [
+          "41491580-b3bf-42dd-9f44-9fa89d758fc8",
+          {
+            "id": "41491580-b3bf-42dd-9f44-9fa89d758fc8",
+            "relX": 62.86860002790036,
+            "relY": 496.83710588727854,
+            "width": 366.5898437500009,
+            "height": 228.86328125000043,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_fillColor": "rgba(255, 250, 196, 0)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_isNameVisible": false
+            }
+          }
+        ],
+        [
+          "b225b978-e381-4e7f-9d4a-355619c5acd0",
+          {
+            "id": "b225b978-e381-4e7f-9d4a-355619c5acd0",
+            "relX": 69.59711565290036,
+            "relY": 975.901559012279,
+            "width": 368.7343750000006,
+            "height": 58.40625000000001,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_fillColor": "rgba(255, 250, 196, 0)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_isNameVisible": false,
+              "karta_fontSize": 32,
+              "karta_font": "Bodoni Moda"
+            }
+          }
+        ],
+        [
+          "cdacb6ec-9c3c-4599-bad8-77b3b7705406",
+          {
+            "id": "cdacb6ec-9c3c-4599-bad8-77b3b7705406",
+            "relX": 90.79546247209646,
+            "relY": 1201.6639229910752,
+            "width": 405.14669363839414,
+            "height": 361.47785295759013,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_fillColor": "rgba(255, 250, 196, 0)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_isNameVisible": false
+            }
+          }
+        ],
+        [
+          "6eafc486-d47f-4f8f-b73d-90fe9212cb54",
+          {
+            "id": "6eafc486-d47f-4f8f-b73d-90fe9212cb54",
+            "relX": 87.83149065290036,
+            "relY": 684.5656215122781,
+            "width": 418.37500000000097,
+            "height": 54.890625,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_fillColor": "rgba(255, 250, 196, 0)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_isNameVisible": false,
+              "karta_fontSize": 32,
+              "karta_font": "Bodoni Moda"
+            }
+          }
+        ],
+        [
+          "45f863f7-dd80-4df7-8250-f2c5ba3001cc",
+          {
+            "id": "45f863f7-dd80-4df7-8250-f2c5ba3001cc",
+            "relX": 84.33539690290036,
+            "relY": 822.9914027622781,
+            "width": 402.2187500000005,
+            "height": 184.11718750000043,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_fillColor": "rgba(255, 250, 196, 0)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_isNameVisible": false
+            }
+          }
+        ],
+        [
+          "3ee2048b-09f6-4e04-a44a-925731c0e8de",
+          {
+            "id": "3ee2048b-09f6-4e04-a44a-925731c0e8de",
+            "relX": 5.444722078282211,
+            "relY": 1524.1792017099851,
+            "width": 226.0561224489793,
+            "height": 118.99362244897948,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_fillColor": "rgba(255, 250, 196, 0)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_isNameVisible": false
+            }
+          }
+        ],
+        [
+          "00000000-0000-0000-0000-000000000000",
+          {
+            "id": "00000000-0000-0000-0000-000000000000",
+            "relX": 6.313105369098594,
+            "relY": 1660.3372453962102,
+            "width": 50,
+            "height": 50,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_isNameVisible": true
+            }
+          }
+        ]
+      ],
+      "viewportSettings": {
+        "scale": 0.9999999999999984,
+        "relPosX": 428.0618946309014,
+        "relPosY": 251.71158272879262
+      }
+    },
+    {
+      "id": "fb3d5643-d54b-4024-8420-5d6832a44a4a",
+      "viewNodes": [
+        [
+          "fb3d5643-d54b-4024-8420-5d6832a44a4a",
+          {
+            "id": "fb3d5643-d54b-4024-8420-5d6832a44a4a",
+            "relX": 0,
+            "relY": 0,
+            "width": 362.65234375,
+            "height": 76.47265625000001,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_fillColor": "rgba(255, 250, 196, 0)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_isNameVisible": false
+            }
+          }
+        ],
+        [
+          "a45d37a5-4acc-4132-9cba-45fd4589bacc",
+          {
+            "id": "a45d37a5-4acc-4132-9cba-45fd4589bacc",
+            "relX": -316.0656738281232,
+            "relY": 2.599853515625,
+            "width": 100,
+            "height": 100,
+            "relScale": 1,
+            "rotation": 0
+          }
+        ],
+        [
+          "9066a675-ea6d-497e-817c-fd52d54733ad",
+          {
+            "id": "9066a675-ea6d-497e-817c-fd52d54733ad",
+            "relX": 6.579816545759968,
+            "relY": -169.52069963727627,
+            "width": 449.0898437500009,
+            "height": 130.3515625000001,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_fontSize": 150,
+              "karta_fillColor": "rgba(255, 250, 196, 0)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_font": "Bodoni Moda",
+              "karta_isNameVisible": false
+            }
+          }
+        ],
+        [
+          "5ed3276c-f6c4-44f4-956e-40cb1989b88c",
+          {
+            "id": "5ed3276c-f6c4-44f4-956e-40cb1989b88c",
+            "relX": 8.748192487444612,
+            "relY": 297.83239534339236,
+            "width": 473.7547206333704,
+            "height": 377.7374399613363,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_fillColor": "rgba(255, 250, 196, 0)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_font": "Georgia",
+              "karta_isNameVisible": false
+            }
+          }
+        ],
+        [
+          "59a171af-58da-401b-9201-0d686a50d051",
+          {
+            "id": "59a171af-58da-401b-9201-0d686a50d051",
+            "relX": 6.016134207588038,
+            "relY": 882.6277305135941,
+            "width": 458.6689836774599,
+            "height": 581.9639327068705,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_fillColor": "rgba(255, 250, 196, 0)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_font": "Georgia",
+              "karta_isNameVisible": false
+            }
+          }
+        ],
+        [
+          "e9372ca1-2b06-4486-a376-6f9ca6c2c389",
+          {
+            "id": "e9372ca1-2b06-4486-a376-6f9ca6c2c389",
+            "relX": 455.1451067243297,
+            "relY": 266.75915527343795,
+            "width": 277.4921875,
+            "height": 78.390625,
+            "relScale": 1,
+            "rotation": 0,
+            "attributes": {
+              "karta_fontSize": 48,
+              "karta_fillColor": "rgba(255, 250, 196, 0)",
+              "karta_textColor": "rgba(221, 221, 221, 1)",
+              "karta_font": "Bodoni Moda",
+              "karta_isNameVisible": false
+            }
+          }
+        ]
+      ],
+      "viewportSettings": {
+        "scale": 0.9329446064139938,
+        "relPosX": 659.1652778139319,
+        "relPosY": 329.3879445227426
       }
     }
   ],
-  "assets": []
+  "assets": [
+    {
+      "assetId": "107ce265-4ce3-476d-b8ba-375aac51a8b5",
+      "mimeType": "image/png",
+      "name": "karta_logo.png",
+      "dataUrl": "data:image/png;base64,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"
+    }
+  ]
 }

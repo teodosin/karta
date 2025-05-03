@@ -117,7 +117,7 @@
 
 <div
 	class={`
-		w-full h-full bg-gray-700 flex items-center justify-center overflow-hidden pointer-events-auto
+		w-full h-full bg-transparent flex items-center justify-center overflow-hidden pointer-events-auto
 		${ringClasses}
 	`}
 	title={`Image Node: ${attributes?.name ?? dataNode.id}`}
