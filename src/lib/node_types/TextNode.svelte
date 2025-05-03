@@ -44,14 +44,14 @@
 	// INSTANCE SCRIPT
 	import type { DataNode, ViewNode, AvailableFont } from '$lib/types/types'; // Import AvailableFont
 	import { updateNodeAttributes } from '$lib/karta/NodeStore'; // Corrected import
-	import { currentContextId, contexts } from '$lib/karta/ContextStore'; // Import contexts
+	import { currentContextId, availableContextsMap } from '$lib/karta/ContextStore'; // Import availableContextsMap
 	import { tick, onDestroy } from 'svelte'; // Import onDestroy
 	import { AVAILABLE_FONTS } from '$lib/types/types'; // Import AVAILABLE_FONTS
 
 	export let dataNode: DataNode;
 	export let viewNode: ViewNode;
-	// Check if context exists for this node
-	$: hasContext = $contexts.has(viewNode.id);
+	// Check if context exists for this node using the new map
+	$: hasContext = $availableContextsMap.has(viewNode.id);
 
 	// Type assertion for dataNode attributes - assumes NodeWrapper ensures correct ntype/attributes
 	$: dataNodeAttributes = dataNode.attributes as { text?: string; karta_fontSize?: number; name: string; karta_fillColor?: string; karta_textColor?: string; karta_font?: AvailableFont };
@@ -76,7 +76,7 @@
 	$: ringClasses = dataNode.id === $currentContextId
 		? 'ring-4 ring-offset-2 ring-offset-gray-900 ring-orange-500 rounded' // Focal highlight
 		: hasContext
-			? 'ring-1 ring-orange-500 ring-opacity-20 rounded' // Context outline (dimmer)
+			? 'ring-2 ring-orange-500/50 rounded' // Use border for context outline
 			: 'rounded shadow-md'; // Default rounded corners and shadow
 
 	let isEditing = false;

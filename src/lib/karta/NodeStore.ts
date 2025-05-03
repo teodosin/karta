@@ -6,8 +6,8 @@ import type { DataNode, NodeId, AssetData, AbsoluteTransform, ViewportSettings, 
 import { v4 as uuidv4 } from 'uuid';
 import { getDefaultAttributesForType, getDefaultViewNodeStateForType } from '$lib/node_types/registry';
 import { Tween } from 'svelte/motion';
-// Import removeViewNodeFromContext as well
-import { currentContextId, contexts, ROOT_NODE_ID, removeViewNodeFromContext } from './ContextStore';
+// Import removeViewNodeFromContext and availableContextsMap as well
+import { currentContextId, contexts, ROOT_NODE_ID, removeViewNodeFromContext, availableContextsMap } from './ContextStore';
 import { viewTransform, centerViewOnCanvasPoint } from './ViewportStore'; // Import centering function
 
 export const nodes = writable<Map<NodeId, DataNode>>(new Map());
@@ -439,8 +439,24 @@ export async function fetchAvailableContextDetails(): Promise<{ id: NodeId, name
    
     	// 6. Delete the DataNode from persistence
     	await localAdapter.deleteNode(nodeId);
-   
-    	// 7. Remove the ViewNode from the *current* context
+    
+    	// 7. Delete the corresponding Context (if it exists) and update the map
+    	try {
+    		await localAdapter.deleteContext(nodeId);
+    		// If context deletion was successful, remove from the map
+    		availableContextsMap.update(map => {
+    			if (map.has(nodeId)) {
+    				map.delete(nodeId);
+    				console.log(`[NodeStore] Removed context ${nodeId} from availableContextsMap.`);
+    			}
+    			return map;
+    		});
+    	} catch (contextDeleteError) {
+    		// Log error, but continue node deletion process
+    		console.error(`[deleteDataNodePermanently] Error deleting context for node ${nodeId}:`, contextDeleteError);
+    	}
+    
+    	// 8. Remove the ViewNode from the *current* context
     	const currentCtxId = get(currentContextId);
     	if (currentCtxId) {
     		await removeViewNodeFromContext(currentCtxId, nodeId);

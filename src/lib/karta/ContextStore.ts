@@ -27,6 +27,9 @@ const NODE_TWEEN_OPTIONS = { duration: NODE_TWEEN_DURATION, easing: cubicOut };
 export const contexts = writable<Map<NodeId, Context>>(new Map());
 export const currentContextId = writable<NodeId>(ROOT_NODE_ID);
 
+// Store for available contexts (ID -> Path)
+export const availableContextsMap = writable<Map<NodeId, string>>(new Map());
+
 // Derived Store for Current Context's ViewNodes
 export const currentViewNodes = derived(
 	[currentContextId, contexts],
@@ -183,9 +186,25 @@ async function _loadAndProcessContext(
 
     // Save immediately if it was newly created or defaults were added
     if (contextWasCreated && localAdapter) {
-        await localAdapter.saveContext(finalContext);
+    	try {
+    		await localAdapter.saveContext(finalContext);
+    		// After successful save of a NEW context, update the map
+    		const focalDataNode = get(nodes).get(contextId); // Get node from store
+    		if (focalDataNode?.path) {
+    			availableContextsMap.update(map => {
+    				map.set(contextId, focalDataNode.path);
+    				return map;
+    			});
+    			console.log(`[ContextStore] Added new context ${contextId} (${focalDataNode.path}) to availableContextsMap.`);
+    		} else {
+    			console.warn(`[ContextStore] Could not find path for newly created context ${contextId} to update map.`);
+    		}
+    	} catch (error) {
+    		console.error(`[ContextStore] Error saving newly created context ${contextId}:`, error);
+    		// Should we still return the context even if saving failed? Yes, probably.
+    	}
     }
-
+   
     return { finalContext, wasCreated: contextWasCreated };
 }
 
@@ -457,9 +476,21 @@ async function initializeStores() { // Remove export keyword here
         viewTransform.set(DEFAULT_VIEWPORT_SETTINGS, { duration: 0 });
         setTool('move');
         return;
-    }
-
-    // ---> START: First Run Tutorial Import <---
+       }
+      
+       // ---> START: Populate Available Contexts Map <---
+       try {
+        const pathsMap = await localAdapter.getAllContextPaths();
+        availableContextsMap.set(pathsMap);
+        console.log(`[initializeStores] Populated availableContextsMap with ${pathsMap.size} entries.`);
+       } catch (error) {
+        console.error("[initializeStores] Error populating availableContextsMap:", error);
+        // Continue initialization even if this fails
+       }
+       // ---> END: Populate Available Contexts Map <---
+      
+      
+       // ---> START: First Run Tutorial Import <---
     try {
         const rootNodeExists = await localAdapter.getNode(ROOT_NODE_ID);
         if (!rootNodeExists) {

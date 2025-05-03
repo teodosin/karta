@@ -37,14 +37,14 @@
 <script lang="ts">
 	// INSTANCE SCRIPT (runs for each component instance)
 	import type { DataNode, ViewNode } from '$lib/types/types';
-	import { currentContextId, contexts } from '$lib/karta/ContextStore'; // Import contexts
+	import { currentContextId, availableContextsMap } from '$lib/karta/ContextStore'; // Import availableContextsMap
 	// Import BrainCog again for the template
 	import { BrainCog } from 'lucide-svelte';
 
 	export let dataNode: DataNode;
 	export let viewNode: ViewNode;
-	// Check if context exists for this node
-	$: hasContext = $contexts.has(viewNode.id);
+	// Check if context exists for this node using the new map
+	$: hasContext = $availableContextsMap.has(viewNode.id);
 
 	// Instance-specific logic here (if any)...
 
@@ -52,8 +52,8 @@
 	$: ringClasses = dataNode.id === $currentContextId
 		? 'ring-4 ring-offset-2 ring-offset-gray-900 ring-orange-500' // Focal highlight
 		: hasContext
-			? 'ring-1 ring-orange-500 ring-opacity-20' // Context outline (dimmer)
-			: ''; // No ring
+			? 'ring-2 ring-orange-500/50' // Use border for context outline
+			: ''; // No border/ring
 </script>
 <!-- Root Node Appearance - Apply focus ring here -->
 <div

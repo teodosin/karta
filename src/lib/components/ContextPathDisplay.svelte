@@ -1,15 +1,16 @@
 <script lang="ts">
 	import { nodes } from '$lib/karta/NodeStore';
-	import { currentContextId, switchContext } from '$lib/karta/ContextStore';
-	import { fetchAvailableContextDetails } from '$lib/karta/NodeStore';
+	import { currentContextId, switchContext, availableContextsMap } from '$lib/karta/ContextStore'; // Import availableContextsMap
+	import { get } from 'svelte/store'; // Import get
+	// Remove fetchAvailableContextDetails import
 	import { historyStack, futureStack, undoContextSwitch, redoContextSwitch } from '$lib/karta/HistoryStore';
 	import type { NodeId, DataNode } from '$lib/types/types';
 	import { onMount, onDestroy } from 'svelte'; // Import onMount and onDestroy
 
  let displayPath: string = '/'; // Default path
  let showContextList = false;
- let availableContexts: { id: NodeId; name: string; path: string }[] = [];
- let isLoadingList = false;
+ let availableContexts: { id: NodeId; path: string }[] = []; // Removed 'name' from type
+ // Remove isLoadingList
  let componentElement: HTMLElement; // Reference to the main component div for click outside
 
  // Reactively determine the path to display
@@ -23,21 +24,17 @@
   }
  }
 
- async function toggleContextList() {
-  if (showContextList) {
-   showContextList = false;
-  } else {
-   isLoadingList = true;
-   showContextList = true; // Show list immediately with loading state
-   try {
-    availableContexts = await fetchAvailableContextDetails();
-   } catch (error) {
-    // console.error('Error fetching context list:', error); // Keep error logs for now
-    availableContexts = []; // Clear list on error
-   } finally {
-    isLoadingList = false;
-   }
-  }
+ function toggleContextList() {
+ 	if (showContextList) {
+ 		showContextList = false;
+ 	} else {
+ 		// Populate directly from the store
+ 		const contextsMap = get(availableContextsMap);
+ 		availableContexts = Array.from(contextsMap.entries())
+ 			.map(([id, path]: [NodeId, string]) => ({ id, path })) // Add explicit types
+ 			.sort((a: { path: string }, b: { path: string }) => a.path.localeCompare(b.path)); // Add explicit types
+ 		showContextList = true;
+ 	}
  }
 
  function handleContextSelect(id: NodeId) {
@@ -112,12 +109,11 @@
 		<!-- Drop-up Context List (Now a sibling, positioned relative to the container) -->
 		{#if showContextList}
 			<div
-				class="absolute bottom-full left-0 mb-1 w-64 max-h-48 overflow-y-auto rounded border border-gray-600 bg-gray-700 shadow-lg z-30"
+				class="absolute bottom-full left-0 mb-1 w-64 max-h-96 overflow-y-auto rounded border border-gray-600 bg-gray-700 shadow-lg z-30"
 				role="listbox"
 			>
-				{#if isLoadingList}
-					<div class="px-2 py-1 text-gray-400">Loading...</div>
-				{:else if availableContexts.length === 0}
+				<!-- Remove loading state -->
+				{#if availableContexts.length === 0}
 					<div class="px-2 py-1 text-gray-400">No contexts found.</div>
 				{:else}
 					{#each availableContexts as ctx (ctx.id)}
@@ -127,7 +123,7 @@
 							on:click|stopPropagation={() => handleContextSelect(ctx.id)}
 							title={ctx.path}
 						>
-							{ctx.name} <span class="text-xs text-gray-400">({ctx.path})</span>
+							{ctx.path}
 						</button>
 					{/each}
 				{/if}
@@ -135,3 +131,36 @@
 		{/if}
 	</div>
 </div>
+
+<style>
+	/* Custom Scrollbar for Context List Dropdown */
+	div[role="listbox"]::-webkit-scrollbar {
+		width: 3px; /* 3px width */
+	}
+
+	div[role="listbox"]::-webkit-scrollbar-track {
+		background: transparent; /* Transparent track */
+	}
+
+	div[role="listbox"]::-webkit-scrollbar-thumb {
+		/* Using Tailwind gray-500 with opacity for thumb */
+		background-color: rgba(107, 114, 128, 0.5); /* gray-500 @ 50% */
+		border-radius: 3px;
+	}
+
+	div[role="listbox"]::-webkit-scrollbar-thumb:hover {
+		/* Using Tailwind gray-600 with opacity for hover */
+		background-color: rgba(75, 85, 99, 0.7); /* gray-600 @ 70% */
+	}
+
+	/* Dark mode scrollbar thumb */
+	:global(.dark) div[role="listbox"]::-webkit-scrollbar-thumb {
+		/* Using Tailwind gray-400 with opacity for dark mode thumb */
+		background-color: rgba(156, 163, 175, 0.5); /* gray-400 @ 50% */
+	}
+
+	:global(.dark) div[role="listbox"]::-webkit-scrollbar-thumb:hover {
+		/* Using Tailwind gray-500 with opacity for dark mode hover */
+		background-color: rgba(107, 114, 128, 0.7); /* gray-500 @ 70% */
+	}
+</style>

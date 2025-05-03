@@ -33,7 +33,9 @@ interface PersistenceService {
 	saveContext(context: Context): Promise<void>;
 	// getContext returns the StorableContext read from DB
 	getContext(contextId: NodeId): Promise<StorableContext | undefined>;
-	getAllContextIds(): Promise<NodeId[]>; // Added this method
+	getAllContextIds(): Promise<NodeId[]>;
+	deleteContext(contextId: NodeId): Promise<void>; // Added this method
+	getAllContextPaths(): Promise<Map<NodeId, string>>; // Added this method
 
 	// Asset methods
 	saveAsset(assetId: string, assetData: AssetData): Promise<void>; // Added this method
@@ -415,6 +417,41 @@ class LocalAdapter implements PersistenceService {
 			return []; // Return empty array on error
 		}
 	}
+
+	async deleteContext(contextId: NodeId): Promise<void> {
+		try {
+			const db = await this.dbPromise;
+			const tx = db.transaction('contexts', 'readwrite');
+			await tx.objectStore('contexts').delete(contextId);
+			await tx.done;
+		} catch (error) {
+			console.error(`[LocalAdapter] Error deleting context ${contextId}:`, error);
+			throw error; // Re-throw error to be handled by caller
+		}
+	}
+
+	async getAllContextPaths(): Promise<Map<NodeId, string>> {
+		try {
+			const contextIds = await this.getAllContextIds();
+			if (contextIds.length === 0) {
+				return new Map();
+			}
+			const nodesMap = await this.getDataNodesByIds(contextIds);
+			const pathsMap = new Map<NodeId, string>();
+			for (const [nodeId, nodeData] of nodesMap.entries()) {
+				if (nodeData?.path) { // Ensure nodeData and path exist
+					pathsMap.set(nodeId, nodeData.path);
+				} else {
+					console.warn(`[LocalAdapter] Node data or path missing for context ID ${nodeId} while getting all paths.`);
+				}
+			}
+			return pathsMap;
+		} catch (error) {
+			console.error("[LocalAdapter] Error getting all context paths:", error);
+			return new Map(); // Return empty map on error
+		}
+	}
+
 // --- Export/Import Methods ---
 
 	/**
@@ -602,6 +639,7 @@ class LocalAdapter implements PersistenceService {
 }
 
 // Define database schema (for TypeScript type checking)
+// TODO: Update PersistenceService interface definition to include deleteContext and getAllContextPaths
 interface KartaDB extends idb.DBSchema {
 	nodes: {
 		key: string;

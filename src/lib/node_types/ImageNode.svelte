@@ -38,14 +38,14 @@
 <script lang="ts">
 	// INSTANCE SCRIPT
 	import type { DataNode, ViewNode } from '$lib/types/types';
-	import { currentContextId, contexts } from '$lib/karta/ContextStore'; // Import contexts
+	import { currentContextId, availableContextsMap } from '$lib/karta/ContextStore'; // Import availableContextsMap
 	import { onMount } from 'svelte';
 	import { localAdapter } from '$lib/util/LocalAdapter'; // Import localAdapter
 
 	export let dataNode: DataNode;
 	export let viewNode: ViewNode;
-	// Check if context exists for this node
-	$: hasContext = $contexts.has(viewNode.id);
+	// Check if context exists for this node using the new map
+	$: hasContext = $availableContextsMap.has(viewNode.id);
 
 	// Type assertion for attributes
 	$: attributes = dataNode.attributes as { src?: string | null; alt?: string; name: string; assetId?: string | null }; // Add assetId type, allow null src
@@ -111,7 +111,7 @@
 	$: ringClasses = dataNode.id === $currentContextId
 		? 'ring-4 ring-offset-2 ring-offset-gray-900 ring-orange-500 rounded' // Focal highlight
 		: hasContext
-			? 'ring-1 ring-orange-500 ring-opacity-20 rounded' // Context outline (dimmer)
+			? 'ring-2 ring-orange-500/50 rounded' // Use border for context outline
 			: 'rounded shadow-md'; // Default rounded corners and shadow
 </script>
 
