@@ -1,4 +1,4 @@
-import { writable, get, derived } from 'svelte/store';
+    import { writable, get, derived } from 'svelte/store';
 import { Tween } from 'svelte/motion';
 import { cubicOut } from 'svelte/easing';
 import { localAdapter } from '../util/LocalAdapter';
@@ -478,19 +478,6 @@ async function initializeStores() { // Remove export keyword here
         return;
        }
       
-       // ---> START: Populate Available Contexts Map <---
-       console.log("[initializeStores] Attempting to populate availableContextsMap..."); // ADDED LOG
-       try {
-        const pathsMap = await localAdapter.getAllContextPaths();
-        availableContextsMap.set(pathsMap);
-        console.log(`[initializeStores] Populated availableContextsMap with ${pathsMap.size} entries.`);
-       } catch (error) {
-        console.error("[initializeStores] Error populating availableContextsMap:", error);
-        // Continue initialization even if this fails
-       }
-       // ---> END: Populate Available Contexts Map <---
-      
-      
        // ---> START: First Run Tutorial Import <---
     try {
         const rootNodeExists = await localAdapter.getNode(ROOT_NODE_ID);
@@ -505,15 +492,6 @@ async function initializeStores() { // Remove export keyword here
                 await localAdapter.importData(tutorialData); // importData clears DB first
                 console.log("[initializeStores] Tutorial data imported successfully.");
 
-                try {
-                    // Re-populate availableContextsMap after tutorial import
-                    const updatedPathsMap = await localAdapter.getAllContextPaths();
-                    availableContextsMap.set(updatedPathsMap);
-                    console.log(`[initializeStores] Re-populated availableContextsMap after tutorial import with ${updatedPathsMap.size} entries.`);
-                } catch (mapUpdateError) {
-                    console.error("[initializeStores] Error updating availableContextsMap after tutorial import:", mapUpdateError);
-                }
-
             } catch (importError) {
                 console.error("[initializeStores] CRITICAL: Failed to import tutorial data on first run:", importError);
                 // Continue initialization even if tutorial import fails
@@ -525,6 +503,17 @@ async function initializeStores() { // Remove export keyword here
     }
     // ---> END: First Run Tutorial Import <---
 
+// ---> START: Populate Available Contexts Map <---
+       console.log("[initializeStores] Attempting to populate availableContextsMap..."); // ADDED LOG
+       try {
+        const pathsMap = await localAdapter.getAllContextPaths();
+        availableContextsMap.set(pathsMap);
+        console.log(`[initializeStores] Populated availableContextsMap with ${pathsMap.size} entries.`);
+       } catch (error) {
+        console.error("[initializeStores] Error populating availableContextsMap:", error);
+        // Continue initialization even if this fails
+       }
+       // ---> END: Populate Available Contexts Map <---
 
     try {
         // 0. Initialize stores to empty state (Import might have already cleared, but this is safe)
