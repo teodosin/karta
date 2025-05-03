@@ -504,10 +504,14 @@ async function initializeStores() { // Remove export keyword here
                 await localAdapter.importData(tutorialData); // importData clears DB first
                 console.log("[initializeStores] Tutorial data imported successfully.");
 
-                // Re-populate availableContextsMap after tutorial import
-                const updatedPathsMap = await localAdapter.getAllContextPaths();
-                availableContextsMap.set(updatedPathsMap);
-                console.log(`[initializeStores] Re-populated availableContextsMap after tutorial import with ${updatedPathsMap.size} entries.`);
+                try {
+                    // Re-populate availableContextsMap after tutorial import
+                    const updatedPathsMap = await localAdapter.getAllContextPaths();
+                    availableContextsMap.set(updatedPathsMap);
+                    console.log(`[initializeStores] Re-populated availableContextsMap after tutorial import with ${updatedPathsMap.size} entries.`);
+                } catch (mapUpdateError) {
+                    console.error("[initializeStores] Error updating availableContextsMap after tutorial import:", mapUpdateError);
+                }
 
             } catch (importError) {
                 console.error("[initializeStores] CRITICAL: Failed to import tutorial data on first run:", importError);
