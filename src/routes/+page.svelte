@@ -8,7 +8,7 @@
 </script>
 
 <div class="w-full min-h-screen bg-gray-100 flex flex-col relative">
-+	<AppMenu />
+	<AppMenu />
 	<Toolbar />
 	<Viewport />
 	<ContextPathDisplay />
