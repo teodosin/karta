@@ -1,39 +1,55 @@
 use uuid::Uuid;
 
+use crate::prelude::Attribute;
 
+use super::node::DataNode;
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct ViewNode {
-    uuid: Uuid,
+    pub uuid: Uuid,
 
-    position: (f32, f32),
-    scale: (f32, f32),
-    rotation: f32,
-    rounded: f32,
+    pub is_name_visible: bool,
+
+    pub relX: f32,
+    pub relY: f32,
+    pub width: f32,
+    pub height: f32,
+    pub relScale: f32,
+    pub rotation: f32,
+
+    pub attributes: Vec<Attribute>,
 }
 
 impl ViewNode {
-    pub fn new(uuid: Uuid) -> Self {
-        Self {
-            uuid,
-            position: (0.0, 0.0),
-            scale: (1.0, 1.0),
-            rotation: 0.0,
-            rounded: 0.0,
-        }
-    }
-
-    pub fn scaled(&self, scale: (f32, f32)) -> Self {
-        Self {
-            uuid: self.uuid,
-            position: self.position,
-            scale,
-            rotation: self.rotation,
-            rounded: self.rounded,
-        }
-    }
-
     pub fn uuid(&self) -> Uuid {
         self.uuid
+    }
+
+    pub fn from_data_node(data_node: DataNode) -> Self {
+        let viewnode_attributes: Vec<Attribute> = Vec::new();
+
+        Self {
+            uuid: data_node.uuid().unwrap(),
+            is_name_visible: true,
+            relX: 0.0,
+            relY: 0.0,
+            width: 200.0,
+            height: 200.0,
+            relScale: 1.0,
+            rotation: 0.0,
+            attributes: viewnode_attributes,
+        }
+    }
+
+    pub fn sized(mut self, width: f32, height: f32) -> Self {
+        self.width = width;
+        self.height = height;
+        self
+    }
+
+    pub fn positioned(mut self, relX: f32, relY: f32) -> Self {
+        self.relX = relX;
+        self.relY = relY;
+        self
     }
 }

@@ -30,8 +30,7 @@ pub struct DataNode {
     ntype: NodeTypeId,
     alive: bool, 
 
-
-    // attributes: Vec<Attribute>,
+    attributes: Vec<Attribute>,
 }
 
 impl DbUserValue for DataNode {
@@ -82,9 +81,9 @@ impl DbUserValue for DataNode {
         values.push(DbKeyValue::from(("ntype", self.ntype.clone())));
         values.push(DbKeyValue::from(("alive", self.alive)));
 
-        // for attr in &self.attributes {
-        //     values.push(attr.into());
-        // }
+        for attr in &self.attributes {
+            values.push(attr.into());
+        }
 
         values
     }
@@ -108,7 +107,7 @@ impl DataNode {
             ntype,
             alive: true,
 
-            // attributes: Vec::new(),
+            attributes: Vec::new(),
         }
     }
 
@@ -156,9 +155,9 @@ impl DataNode {
         self.modified_time.clone()
     }
 
-    // pub fn attributes(&self) -> Vec<Attribute> {
-    //     self.attributes.clone()
-    // }
+    pub fn attributes(&self) -> Vec<Attribute> {
+        self.attributes.clone()
+    }
 }
 
 impl TryFrom<DbElement> for DataNode {
@@ -179,9 +178,9 @@ impl TryFrom<DbElement> for DataNode {
         let nphys = value.values.iter().find(|v| v.key == "nphys".into());
         let alive = value.values.iter().find(|v| v.key == "alive".into());
 
-        // let attrs: Vec<Attribute> = rest.iter().map(|v| {
-        //     Attribute::try_from(*v).unwrap()
-        // }).collect();
+        let attrs: Vec<Attribute> = rest.iter().map(|v| {
+            Attribute::try_from(*v).unwrap()
+        }).collect();
 
         let uuid = match uuid {
             Some(v) => Some(Uuid::from_str(v.value.clone().to_string().as_str()).unwrap()),
@@ -198,7 +197,7 @@ impl TryFrom<DbElement> for DataNode {
             name: name.unwrap().value.clone().to_string(),
             ntype: NodeTypeId::try_from(ntype.unwrap().value.clone())?,
             alive: alive.unwrap().value.to_bool().unwrap(),
-            // attributes: attrs,
+            attributes: attrs,
         };
 
         Ok(node)
