@@ -21,7 +21,7 @@ export interface DataNode {
   modifiedAt: number; // Unix timestamp (ms)
   path: string; // Added: Represents the node's path (simplified for client)
   attributes: Record<string, any>; // Holds name, content, src, etc.
- isSearchable?: boolean; // Added: Controls visibility in node search
+  isSearchable?: boolean; // Added: Controls visibility in node search
 }
 
 // Represents the complete state needed for rendering and tweening a node's visual representation
@@ -33,8 +33,8 @@ export interface ViewNode {
   // Generic view-specific attributes, interpreted by the node component
   // Includes things like karta_fillColor, karta_textColor, karta_font, karta_fontSize, karta_isNameVisible
   attributes?: Record<string, any> & {
-    karta_isNameVisible?: boolean;
-    // Add other known karta_ attributes here for better type checking if desired
+  karta_isNameVisible?: boolean;
+  // Add other known karta_ attributes here for better type checking if desired
   };
 }
 
