@@ -2,7 +2,7 @@ use std::{error::Error, ops::Index, path::PathBuf};
 
 use crate::prelude::{DataNode, NodePath, NodeTypeId};
 
-fn destructure_file_path(
+pub fn destructure_file_path(
     path: &PathBuf,
     include_self: bool,
 ) -> Result<Vec<DataNode>, Box<dyn Error>> {

@@ -17,6 +17,7 @@ pub trait GraphNodes {
 
     /// Opens the connections of a particular node.
     /// Takes in the path to the node relative to the root of the graph.
+    /// Doesn't include the node for the input path.
     ///
     /// TODO: Add filter argument when Filter is implemented.
     /// Note that possibly Filter could have a condition that nodes

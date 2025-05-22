@@ -4,7 +4,7 @@ use agdb::{DbElement, DbId, QueryBuilder};
 use uuid::Uuid;
 
 use crate::{
-    elements::{self, edge::Edge, node_path::NodeHandle},
+    elements::{self, edge::Edge, node, node_path::NodeHandle},
     graph_traits::graph_node::GraphNodes,
     prelude::{DataNode, GraphCore, GraphEdge, NodePath, NodeTypeId},
 };
@@ -35,6 +35,29 @@ impl GraphNodes for GraphAgdb {
                 Ok(node.unwrap())
             }
             Err(_err) => {
+                // If node isn't indexed, but a file or dir exists for its path,
+                // create a new node for it.
+                match handle {
+                    NodeHandle::Path(path) => {
+                        let full_path = path.full(&self.root_path);
+                        if full_path.exists() {
+                            if full_path.is_dir() {
+                                let node = DataNode::new(path, NodeTypeId::dir_type());
+                                return Ok(node)
+                            } else if full_path.is_file() {
+                                let node = DataNode::new(path, NodeTypeId::file_type());
+                                return Ok(node)
+                            } else {
+                                return Err("Node not found".into())
+                            }
+                        } else {
+                            return Err("Node not found".into())
+                        }
+                    }
+                    NodeHandle::Uuid(_id) => {
+                        return Err("Node not found".into())
+                    }
+                }
                 return Err("Could not open node".into());
             }
         }
