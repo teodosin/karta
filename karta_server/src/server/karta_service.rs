@@ -2,11 +2,7 @@ use std::{path::PathBuf, sync::Arc};
 
 use tokio::sync::RwLock;
 
-use crate::prelude::*;
-
-
-
-
+use crate::{context::context_db::ContextDb, prelude::*};
 
 
 pub struct KartaService {
@@ -15,8 +11,6 @@ pub struct KartaService {
 }
 
 impl KartaService {
-
-
     pub fn new(
         name: &str,
         root_path: PathBuf,

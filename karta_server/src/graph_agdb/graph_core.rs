@@ -125,7 +125,7 @@ impl GraphCore for GraphAgdb {
 
         // Indexes for faster lookup based on attributes
         giraphe.db.exec_mut(QueryBuilder::insert().index("uuid").query());
-
+        giraphe.db.exec_mut(QueryBuilder::insert().index("ntype").query());
 
         return giraphe;
     }
