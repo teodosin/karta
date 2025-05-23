@@ -63,14 +63,26 @@ export function getNodeComponent(ntype: string): NodeTypeComponent | undefined {
 // Function to get default attributes for a type
 export function getDefaultAttributesForType(ntype: string): Record<string, any> {
 	const definition = nodeTypeRegistry[ntype]?.definition;
+	let typeSpecificAttributes: Record<string, any> = { name: `New ${ntype}` };
+
 	if (definition?.getDefaultAttributes) {
-		// Generate a base name suggestion
 		const baseName = definition.displayName || ntype.charAt(0).toUpperCase() + ntype.slice(1);
-		return definition.getDefaultAttributes(baseName);
+		typeSpecificAttributes = definition.getDefaultAttributes(baseName);
+	} else {
+		console.warn(`getDefaultAttributes function missing for ntype: ${ntype}, using basic name default.`);
 	}
-	// Fallback if function missing
-	console.warn(`getDefaultAttributes function missing for ntype: ${ntype}`);
-	return { name: `New ${ntype}` };
+
+	// Define common view defaults
+	const defaultViewNodeState = getDefaultViewNodeStateForType(ntype); // Already handles fallback
+	const commonViewDefaults: Record<string, any> = {
+		view_width: defaultViewNodeState.width,
+		view_height: defaultViewNodeState.height,
+		view_isNameVisible: ntype !== 'root' // True for all except root
+	};
+	
+	// Merge common defaults with type-specific attributes
+	// Type-specific attributes can override common ones if there's a name clash (e.g. if a type *really* needed to define its own view_width)
+	return { ...commonViewDefaults, ...typeSpecificAttributes };
 }
 
 // Function to get default view state for a type

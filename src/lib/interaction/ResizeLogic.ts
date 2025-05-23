@@ -1,5 +1,5 @@
 import type { ViewNode, NodeId, TweenableNodeState } from '$lib/types/types';
-import { nodes } from '$lib/karta/NodeStore'; // Import nodes store
+import { nodes, updateViewNodeAttribute } from '$lib/karta/NodeStore'; // Import nodes store and updateViewNodeAttribute
 import { contexts, currentContextId } from '$lib/karta/ContextStore';
 import { viewTransform, screenToCanvasCoordinates } from '$lib/karta/ViewportStore';
 import { get } from 'svelte/store';
@@ -156,8 +156,31 @@ function handlePointerUp(event: PointerEvent) {
 	event.stopPropagation();
 	window.removeEventListener('pointermove', handlePointerMove);
 	window.removeEventListener('pointerup', handlePointerUp);
+	// isResizing will be set to false after attribute updates
+
+	// --- Update DataNode attributes with the final dimensions ---
+	const contextId = get(currentContextId);
+	const currentCtx = get(contexts).get(contextId);
+
+	if (currentCtx && initialNodesData.size > 0) {
+		initialNodesData.forEach((_, nodeId) => { // Use nodeId from the keys of the map
+			const viewNode = currentCtx.viewNodes.get(nodeId);
+			if (viewNode) {
+				const finalWidth = viewNode.state.current.width;
+				const finalHeight = viewNode.state.current.height;
+				
+				// Call updateViewNodeAttribute to save these back to DataNode (and ViewNode.attributes)
+				// These calls are async but we don't need to await them here;
+				// the resize gesture is complete from the user's perspective.
+				updateViewNodeAttribute(nodeId, 'view_width', finalWidth);
+				updateViewNodeAttribute(nodeId, 'view_height', finalHeight);
+			}
+		});
+	}
+	// --- End attribute update ---
+
 	isResizing = false;
-	initialNodesData.clear(); // Use clear() for Map
+	initialNodesData.clear();
 	draggedHandle = null;
 	viewportContainerRect = null;
 }

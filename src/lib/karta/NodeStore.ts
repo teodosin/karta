@@ -85,10 +85,10 @@ export async function createNodeAtPosition(
     const initialState: TweenableNodeState = {
         x: canvasX,
         y: canvasY,
-        width: initialWidth ?? defaultViewState.width, // Use provided width or default
-        height: initialHeight ?? defaultViewState.height, // Use provided height or default
-        scale: defaultViewState.scale, // Keep default scale
-        rotation: defaultViewState.rotation // Keep default rotation
+        width: initialWidth ?? newNodeData.attributes.view_width, // Use provided width or default from DataNode attributes
+        height: initialHeight ?? newNodeData.attributes.view_height, // Use provided height or default from DataNode attributes
+        scale: defaultViewState.scale, // Keep default scale (scale is not managed as a view_ attribute yet)
+        rotation: defaultViewState.rotation // Keep default rotation (rotation is not managed as a view_ attribute yet)
     };
 
     // 3. Create the new ViewNode containing the Tween
@@ -524,41 +524,27 @@ export async function fetchAvailableContextDetails(): Promise<{ id: NodeId, name
        }
  
        // --- Determine if updates are needed (compare with original values) ---
-       // Only check ViewNode for updates, as DataNode attributes (defaults) are not changed here.
        const needsViewNodeUpdate = viewNode.attributes?.[attributeKey] !== attributeValue;
- 
-       // --- Trigger Store Updates & Persistence (using immutable patterns) ---
+       let needsDataNodeUpdate = false;
+       
+       // Determine if DataNode also needs update (only for view_ and viewtype_ attributes)
+       if (attributeKey.startsWith('view_') || attributeKey.startsWith('viewtype_')) {
+           needsDataNodeUpdate = dataNode.attributes?.[attributeKey] !== attributeValue;
+       }
+
+       // --- Update ViewNode (Context Specific) ---
        if (needsViewNodeUpdate) {
            contexts.update(ctxMap => {
-               // Get the original context and viewNodes map again inside update
                const originalContext = ctxMap.get(currentCtxId);
-               if (!originalContext) return ctxMap; // Should not happen based on earlier checks, but safe
+               if (!originalContext) return ctxMap;
                const originalViewNode = originalContext.viewNodes.get(viewNodeId);
-               if (!originalViewNode) return ctxMap; // Should not happen
+               if (!originalViewNode) return ctxMap;
 
-               // Create new attributes object immutably
-               const newViewAttributes = {
-                   ...(originalViewNode.attributes ?? {}), // Ensure attributes object exists
-                   [attributeKey]: attributeValue
-               };
-
-               // Create new ViewNode object immutably
-               const newViewNode = {
-                   ...originalViewNode,
-                   attributes: newViewAttributes
-               };
-
-               // Create new viewNodes map immutably
-               const newViewNodes = new Map(originalContext.viewNodes);
-               newViewNodes.set(viewNodeId, newViewNode);
-
-               // Create new context object immutably
-               const newContext = {
-                   ...originalContext,
-                   viewNodes: newViewNodes
-               };
-
-               // Create new top-level map immutably
+               const newViewAttributes = { ...(originalViewNode.attributes ?? {}), [attributeKey]: attributeValue };
+               const newViewNode = { ...originalViewNode, attributes: newViewAttributes };
+               const newViewNodes = new Map(originalContext.viewNodes).set(viewNodeId, newViewNode);
+               const newContext = { ...originalContext, viewNodes: newViewNodes };
+               
                const newCtxMap = new Map(ctxMap);
                newCtxMap.set(currentCtxId, newContext);
                return newCtxMap;
@@ -566,23 +552,54 @@ export async function fetchAvailableContextDetails(): Promise<{ id: NodeId, name
 
            if (localAdapter) {
                try {
-                   // Save the entire context as ViewNode attributes changed
                    const updatedContext = get(contexts).get(currentCtxId);
                    if (updatedContext) {
                        await localAdapter.saveContext(updatedContext);
-                   } else {
-                        console.error(`[updateViewNodeAttribute] Failed to get updated context ${currentCtxId} for saving.`);
                    }
                } catch (error) {
-                   console.error(`[updateViewNodeAttribute] Error saving context ${currentCtxId} after view attribute update:`, error);
-                   // Consider rollback? For now, just log.
+                   console.error(`[updateViewNodeAttribute] Error saving context ${currentCtxId} for ViewNode update:`, error);
                }
            }
        }
- 
-       // Only log if a ViewNode update occurred.
-       if (needsViewNodeUpdate) {
+
+       // --- Update DataNode (Global Default for this node instance) ---
+       if (needsDataNodeUpdate) { // This condition now correctly checks if a view_ or viewtype_ attribute changed
+            nodes.update(nodeMap => {
+                const originalDataNode = nodeMap.get(dataNodeId); // dataNode is already available from outer scope
+                if (!originalDataNode) return nodeMap;
+
+                const newDataAttributes = {
+                    ...(originalDataNode.attributes ?? {}),
+                    [attributeKey]: attributeValue // Update the specific view_ or viewtype_ attribute
+                };
+
+                const updatedDataNode: DataNode = {
+                    ...originalDataNode,
+                    attributes: newDataAttributes,
+                    modifiedAt: Date.now()
+                };
+                
+                const newNodeMap = new Map(nodeMap);
+                newNodeMap.set(dataNodeId, updatedDataNode);
+                return newNodeMap;
+            });
+
+            if (localAdapter) {
+                try {
+                    const updatedDataNode = get(nodes).get(dataNodeId);
+                    if (updatedDataNode) {
+                        await localAdapter.saveNode(updatedDataNode);
+                    }
+                } catch (error) {
+                    console.error(`[updateViewNodeAttribute] Error saving DataNode ${dataNodeId} for attribute default update:`, error);
+                }
+            }
+       }
+       
+       if (needsViewNodeUpdate || needsDataNodeUpdate) {
+           // console.log(`[updateViewNodeAttribute] Updated ${attributeKey} for ${viewNodeId}. ViewNode updated: ${needsViewNodeUpdate}, DataNode updated: ${needsDataNodeUpdate}`);
        } else {
+           // console.log(`[updateViewNodeAttribute] No update needed for ${attributeKey} on ${viewNodeId}.`);
        }
    }
 // --- Node Search Action ---
@@ -667,10 +684,10 @@ export async function addExistingNodeToCurrentContext(path: string, position: { 
         const initialState: TweenableNodeState = {
             x: position.x,
             y: position.y,
-            width: defaultViewState.width,
-            height: defaultViewState.height,
-            scale: defaultViewState.scale,
-            rotation: defaultViewState.rotation
+            width: dataNode.attributes.view_width ?? defaultViewState.width, // Prioritize DataNode's stored default
+            height: dataNode.attributes.view_height ?? defaultViewState.height, // Prioritize DataNode's stored default
+            scale: defaultViewState.scale, // Scale is not yet a view_ attribute
+            rotation: defaultViewState.rotation // Rotation is not yet a view_ attribute
         };
 
         // 8b. Create new ViewNode with Tween, copying relevant view-related default attributes from DataNode
