@@ -7,27 +7,27 @@
 -->
 <script lang="ts">
 	import { get } from 'svelte/store';
-	import { onMount, onDestroy } from 'svelte'; // Added onDestroy
-	import { // Svelte 4: Use imports
+	import { onMount, onDestroy } from 'svelte';
+	import {
 		contexts,
 		currentContextId,
-		currentViewNodes, // Store for node states in current context
-		switchContext, // Action for 'Enter Context'
-		removeViewNodeFromContext, // Action for 'Remove from Context'
+		currentViewNodes,
+		switchContext,
+		removeViewNodeFromContext,
 	} from '$lib/karta/ContextStore';
 	import {
-		viewTransform, // Keep the Tween object
+		viewTransform,
 		screenToCanvasCoordinates,
-		centerViewOnCanvasPoint, // Action for 'Center View' (used by centerOnFocalNode)
-		centerOnFocalNode, // Action for shortcut 'F'
-		frameContext // <-- Import action for menu/shortcut 'Shift+F'
+		centerViewOnCanvasPoint,
+		centerOnFocalNode,
+		frameContext
 	} from '$lib/karta/ViewportStore';
 	import {
 		currentTool,
 		cancelConnectionProcess,
-		isConnecting, // Import connection state
-		updateTempLinePosition, // Import action
-		finishConnectionProcess // Import action
+		isConnecting,
+		updateTempLinePosition,
+		finishConnectionProcess
 	} from '$lib/karta/ToolStore';
 	import {
 		isCreateNodeMenuOpen,
@@ -40,12 +40,12 @@
 		openContextMenu,
 		closeContextMenu,
 		type ContextMenuContextType,
-		requestNodeRename, // Action for 'Rename'
-		isConfirmationDialogOpen, // Import confirmation dialog state
-		confirmationDialogMessage, // Import confirmation dialog message store
-		confirmationDialogAction, // Import confirmation dialog action store
-		openConfirmationDialog, // Import action to open dialog
-		         openNodeSearch // Import node search action
+		requestNodeRename,
+		isConfirmationDialogOpen,
+		confirmationDialogMessage,
+		confirmationDialogAction,
+		openConfirmationDialog,
+		         openNodeSearch
 	} from '$lib/karta/UIStateStore';
 	import {
 		selectedNodeIds,
@@ -54,25 +54,24 @@
 		toggleSelection
 	} from '$lib/karta/SelectionStore';
 	import {
-		selectedEdgeIds, // Import edge selection store
-		clearEdgeSelection, // Import edge selection actions
+		selectedEdgeIds,
+		clearEdgeSelection,
 		setSelectedEdges,
 		toggleEdgeSelection
-	} from '$lib/karta/EdgeSelectionStore'; // Import the edge selection store
+	} from '$lib/karta/EdgeSelectionStore';
 	import {
-		nodes, // To get DataNode (Imported for ghost check)
+		nodes,
 		createTextNodeFromPaste,
 		createImageNodeWithAsset,
-		deleteDataNodePermanently // Import the new deletion function
+		deleteDataNodePermanently
 	} from '$lib/karta/NodeStore';
-import { deleteEdge } from '$lib/karta/EdgeStore'; // Import deleteEdge action
-import NodeWrapper from './NodeWrapper.svelte';
+	import { deleteEdge } from '$lib/karta/EdgeStore';
+	import NodeWrapper from './NodeWrapper.svelte';
 	import EdgeLayer from './EdgeLayer.svelte';
-	import CreateNodeMenu from './CreateNodeMenu.svelte'; // Import the menu component
-	import ContextMenu from './ContextMenu.svelte'; // Import the context menu component
-	import SelectionBox from './SelectionBox.svelte'; // Import the selection box component
-	import ConfirmationDialog from './ConfirmationDialog.svelte'; // Import the confirmation dialog component
-	// Removed Toolbar and ContextPathDisplay imports
+	import CreateNodeMenu from './CreateNodeMenu.svelte';
+	import ContextMenu from './ContextMenu.svelte';
+	import SelectionBox from './SelectionBox.svelte';
+	import ConfirmationDialog from './ConfirmationDialog.svelte';
 
 	let canvasContainer: HTMLElement;
 
