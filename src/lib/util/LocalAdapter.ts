@@ -1,14 +1,20 @@
 import * as idb from 'idb';
-// Import Context, ViewNode, NodeId, and AbsoluteTransform
-// Also import ViewportSettings
-import type { DataNode, KartaEdge, Context, ViewNode, NodeId, AbsoluteTransform, ViewportSettings, StorableContext, StorableViewNode, StorableViewportSettings, AssetData, KartaExportData } from '../types/types'; // Import Storable types, AssetData & KartaExportData
+import type { 
+	DataNode,
+	KartaEdge,
+	Context,
+	NodeId,
+	StorableContext,
+	StorableViewNode,
+	StorableViewportSettings,
+	AssetData,
+	KartaExportData
+} from '../types/types';
 import type { PersistenceService } from './PersistenceService';
 
-// Removed local definitions for StorableViewNode, StorableViewportSettings, StorableContext
-// They are now imported from types.ts
 
-// Define default transform for root context
-const ROOT_TRANSFORM: AbsoluteTransform = { x: 0, y: 0, scale: 1 }; // Rotation removed
+// Define default transform for root context, not needed anymore?
+// const ROOT_TRANSFORM: AbsoluteTransform = { x: 0, y: 0, scale: 1 };
 
 class LocalAdapter implements PersistenceService {
 	private dbPromise: Promise<idb.IDBPDatabase<KartaDB>>;
@@ -425,7 +431,7 @@ class LocalAdapter implements PersistenceService {
 		}
 	}
 
-// --- Export/Import Methods ---
+	// --- Export/Import Methods ---
 
 	/**
 	 * Helper function to convert Blob to Data URL.
@@ -497,11 +503,11 @@ class LocalAdapter implements PersistenceService {
 			throw error; // Re-throw the error to be handled by the caller
 		}
 	}
-/**
-	 * Helper function to convert Data URL string back to Blob.
-	 * @param dataUrl The Data URL string.
-	 * @returns A Blob object or null if conversion fails.
-	 */
+	/**
+		 * Helper function to convert Data URL string back to Blob.
+		 * @param dataUrl The Data URL string.
+		 * @returns A Blob object or null if conversion fails.
+		 */
 	private dataURLtoBlob(dataUrl: string): Blob | null {
 		try {
 			const arr = dataUrl.split(',');
