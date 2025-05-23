@@ -11,7 +11,7 @@
       "attributes": {
         "name": "root",
         "isSystemNode": true,
-        "karta_isNameVisible": true
+        "view_isNameVisible": true
       },
       "isSearchable": false
     },
@@ -23,12 +23,12 @@
       "path": "/Welcome To Karta",
       "attributes": {
         "name": "Welcome To Karta",
-        "text": "Pan the canvas with middle-mouse dragging or a touchpad. Zoom with the mouse wheel or by pinching.\n\nTo learn how to use this app, look down to see the node called \"Guide - Hub\", then right click and select \"Enter Context\" to be taken to the guide.\n\nFeedback and thoughts are greatly appreciated! See the top left menu for contact details.\n",
-        "karta_fontSize": 16,
-        "karta_fillColor": "rgba(255, 250, 196, 0)",
-        "karta_textColor": "rgba(190, 178, 178, 1)",
-        "karta_font": "Nunito",
-        "karta_isNameVisible": false
+        "type_text": "Pan the canvas with middle-mouse dragging or a touchpad. Zoom with the mouse wheel or by pinching.\n\nTo learn how to use this app, look down to see the node called \"Guide - Hub\", then right click and select \"Enter Context\" to be taken to the guide.\n\nFeedback and thoughts are greatly appreciated! See the top left menu for contact details.\n",
+        "viewtype_fontSize": 16,
+        "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+        "viewtype_textColor": "rgba(190, 178, 178, 1)",
+        "viewtype_font": "Nunito",
+        "view_isNameVisible": false
       },
       "isSearchable": false
     },
@@ -39,10 +39,11 @@
       "modifiedAt": 1746276707529,
       "path": "/karta_logo.png",
       "attributes": {
-        "alt": "karta_logo.png",
         "name": "karta_logo.png",
-        "src": "blob:http://localhost:5173/faca71ba-f2b6-4853-b51f-356387f6cd6d",
-        "assetId": "107ce265-4ce3-476d-b8ba-375aac51a8b5"
+        "type_alt": "karta_logo.png",
+        "type_src": "blob:http://localhost:5173/faca71ba-f2b6-4853-b51f-356387f6cd6d",
+        "type_assetId": "107ce265-4ce3-476d-b8ba-375aac51a8b5",
+        "view_isNameVisible": true
       }
     },
     {
@@ -53,12 +54,12 @@
       "path": "/Guide - Data and View",
       "attributes": {
         "name": "Guide - Data and View",
-        "text": "The most important thing to know about nodes is that the contents and the presentation of them are separate.\n\nThe content of each node is unique, but they can have many different Instances.\n\nThis gives you the freedom to reuse nodes in different contexts, and navigate between them through the associations you create yourself. \n",
-        "karta_fontSize": 16,
-        "karta_fillColor": "rgba(55, 4, 35, 1)",
-        "karta_textColor": "rgba(221, 221, 221, 1)",
-        "karta_font": "Nunito",
-        "karta_isNameVisible": false
+        "type_text": "The most important thing to know about nodes is that the contents and the presentation of them are separate.\n\nThe content of each node is unique, but they can have many different Instances.\n\nThis gives you the freedom to reuse nodes in different contexts, and navigate between them through the associations you create yourself. \n",
+        "viewtype_fontSize": 16,
+        "viewtype_fillColor": "rgba(55, 4, 35, 1)",
+        "viewtype_textColor": "rgba(221, 221, 221, 1)",
+        "viewtype_font": "Nunito",
+        "view_isNameVisible": false
       }
     },
     {
@@ -69,12 +70,12 @@
       "path": "/Guide - Edges Explicitly Connect",
       "attributes": {
         "name": "Guide - Edges Explicitly Connect",
-        "text": "The lines between nodes are called Edges. They exist in the content layer, so they are Context-independent.\n\nThey are used to connect nodes together in a more explicit way. Use edges to say \"these nodes belong together\".\n",
-        "karta_fontSize": 16,
-        "karta_fillColor": "rgba(55, 4, 35, 1)",
-        "karta_textColor": "rgba(221, 221, 221, 1)",
-        "karta_font": "Nunito",
-        "karta_isNameVisible": false
+        "type_text": "The lines between nodes are called Edges. They exist in the content layer, so they are Context-independent.\n\nThey are used to connect nodes together in a more explicit way. Use edges to say \"these nodes belong together\".\n",
+        "viewtype_fontSize": 16,
+        "viewtype_fillColor": "rgba(55, 4, 35, 1)",
+        "viewtype_textColor": "rgba(221, 221, 221, 1)",
+        "viewtype_font": "Nunito",
+        "view_isNameVisible": false
       }
     },
     {
@@ -85,12 +86,12 @@
       "path": "/Guide - Relativity Intro",
       "attributes": {
         "name": "Guide - Relativity Intro",
-        "text": "Here's the fun part:\n\nNode instances can have different sizes and colors depending on the context they're in. It's all relative.\n\nTry this out. In this context there's a node called \"Guide - Relativity\". Enter it's context to see what we're talking about.",
-        "karta_fontSize": 16,
-        "karta_fillColor": "rgba(255, 250, 196, 0)",
-        "karta_textColor": "rgba(221, 221, 221, 1)",
-        "karta_font": "Nunito",
-        "karta_isNameVisible": false
+        "type_text": "Here's the fun part:\n\nNode instances can have different sizes and colors depending on the context they're in. It's all relative.\n\nTry this out. In this context there's a node called \"Guide - Relativity\". Enter it's context to see what we're talking about.",
+        "viewtype_fontSize": 16,
+        "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+        "viewtype_textColor": "rgba(221, 221, 221, 1)",
+        "viewtype_font": "Nunito",
+        "view_isNameVisible": false
       }
     },
     {
@@ -101,12 +102,12 @@
       "path": "/Guide - End",
       "attributes": {
         "name": "Guide - End",
-        "text": "That's the end of the guide!\n\nHere, the root node. Move to its Context to begin your own web of ideas.",
-        "karta_fontSize": 16,
-        "karta_fillColor": "rgba(255, 250, 196, 0)",
-        "karta_textColor": "rgba(221, 221, 221, 1)",
-        "karta_font": "Nunito",
-        "karta_isNameVisible": false
+        "type_text": "That's the end of the guide!\n\nHere, the root node. Move to its Context to begin your own web of ideas.",
+        "viewtype_fontSize": 16,
+        "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+        "viewtype_textColor": "rgba(221, 221, 221, 1)",
+        "viewtype_font": "Nunito",
+        "view_isNameVisible": false
       }
     },
     {
@@ -117,12 +118,12 @@
       "path": "/Guide - Native Version",
       "attributes": {
         "name": "Guide - Native Version",
-        "text": "The full vision of Karta is to act as a file browser. \n\nKarta would then be a native application you could download, with access to some section of a user's folders and files.\n\nSame features as here in the web version (and the usual file browsing features), but with the ability to navigate contexts of any folder or file and connect any of them to any other. ",
-        "karta_fontSize": 16,
-        "karta_fillColor": "rgba(255, 250, 196, 0)",
-        "karta_textColor": "rgba(221, 221, 221, 1)",
-        "karta_font": "Nunito",
-        "karta_isNameVisible": false
+        "type_text": "The full vision of Karta is to act as a file browser. \n\nKarta would then be a native application you could download, with access to some section of a user's folders and files.\n\nSame features as here in the web version (and the usual file browsing features), but with the ability to navigate contexts of any folder or file and connect any of them to any other. ",
+        "viewtype_fontSize": 16,
+        "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+        "viewtype_textColor": "rgba(221, 221, 221, 1)",
+        "viewtype_font": "Nunito",
+        "view_isNameVisible": false
       }
     },
     {
@@ -133,12 +134,12 @@
       "path": "/Guide - Exporting Standalone Apps",
       "attributes": {
         "name": "Guide - Exporting Standalone Apps",
-        "text": "It would be cool to be able to export these networks as standalone read-only applications you could host on a website. At least I want to do it for my own website.\n\nHowever, to do this, and to allow others to use these exports however they wish, even commercially, the licensing needs to be tackled.",
-        "karta_fontSize": 16,
-        "karta_fillColor": "rgba(255, 250, 196, 0)",
-        "karta_textColor": "rgba(221, 221, 221, 1)",
-        "karta_font": "Nunito",
-        "karta_isNameVisible": false
+        "type_text": "It would be cool to be able to export these networks as standalone read-only applications you could host on a website. At least I want to do it for my own website.\n\nHowever, to do this, and to allow others to use these exports however they wish, even commercially, the licensing needs to be tackled.",
+        "viewtype_fontSize": 16,
+        "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+        "viewtype_textColor": "rgba(221, 221, 221, 1)",
+        "viewtype_font": "Nunito",
+        "view_isNameVisible": false
       }
     },
     {
@@ -149,12 +150,12 @@
       "path": "/Guide - Creating Nodes Heading",
       "attributes": {
         "name": "Guide - Creating Nodes Heading",
-        "text": "Creating Nodes",
-        "karta_fontSize": 52,
-        "karta_fillColor": "rgba(55, 4, 35, 1)",
-        "karta_textColor": "rgba(221, 221, 221, 1)",
-        "karta_font": "Bodoni Moda",
-        "karta_isNameVisible": false
+        "type_text": "Creating Nodes",
+        "viewtype_fontSize": 52,
+        "viewtype_fillColor": "rgba(55, 4, 35, 1)",
+        "viewtype_textColor": "rgba(221, 221, 221, 1)",
+        "viewtype_font": "Bodoni Moda",
+        "view_isNameVisible": false
       }
     },
     {
@@ -165,12 +166,12 @@
       "path": "/Guide - Context Fundamentals",
       "attributes": {
         "name": "Guide - Context Fundamentals",
-        "text": "In Karta, we're always looking at the network from the point of view of some node. This point of view is called that node's Context. That node is called that context's Focal Node. You can tell what the focal is based on the thick bright outline it has. \n\nAny node can have a context that you can enter, and that context can contain any other nodes. Nodes that appear in multiple contexts are referencing the same underlying node, which means that we don't have to duplicate nodes to put them in multiple places.",
-        "karta_fontSize": 16,
-        "karta_fillColor": "rgba(255, 250, 196, 0)",
-        "karta_textColor": "rgba(221, 221, 221, 1)",
-        "karta_font": "Nunito",
-        "karta_isNameVisible": false
+        "type_text": "In Karta, we're always looking at the network from the point of view of some node. This point of view is called that node's Context. That node is called that context's Focal Node. You can tell what the focal is based on the thick bright outline it has. \n\nAny node can have a context that you can enter, and that context can contain any other nodes. Nodes that appear in multiple contexts are referencing the same underlying node, which means that we don't have to duplicate nodes to put them in multiple places.",
+        "viewtype_fontSize": 16,
+        "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+        "viewtype_textColor": "rgba(221, 221, 221, 1)",
+        "viewtype_font": "Nunito",
+        "view_isNameVisible": false
       }
     },
     {
@@ -180,7 +181,8 @@
       "modifiedAt": 1746250737676,
       "path": "/Guide - Relativity",
       "attributes": {
-        "name": "Guide - Relativity"
+        "name": "Guide - Relativity",
+        "view_isNameVisible": true
       }
     },
     {
@@ -191,12 +193,12 @@
       "path": "/Guide - Motivation for Karta",
       "attributes": {
         "name": "Guide - Motivation for Karta",
-        "text": "Karta's purpose is to help with managing complex creative projects.\n\nWorldbuilding, moodboards, concept organisation, inter-project connections, real world references, and so on. It fills a need that wasn't quite fulfilled with existing tools, however mature they may be.\n\nFile systems are rigid and awkward to explore. You can only go up and down in the hierarchy of folders. Files can't exist in multiple places at the same time.\n\nWhiteboarding apps inherit the limitations of physical whiteboards. One 2D surface per canvas. Siloed and static.\n\nThe idea was to put all of one's work in the same place, turning every individual piece into a node. Then one may connect nodes to any others, connecting them by relevance. The end result is an interconnected web of work and ideas that you navigate intuitively along lines of association, where each view transitions smoothly to the next. Nodes are unique but can be used in many ways, so there's no duplication, and no enforced hierarchy.\n\nWhile a decent start, there's a couple other steps until this app meets these needs properly. To read more on those, head over to the roadmap. \n",
-        "karta_fontSize": 16,
-        "karta_fillColor": "rgba(255, 250, 196, 0)",
-        "karta_textColor": "rgba(221, 221, 221, 1)",
-        "karta_font": "Georgia",
-        "karta_isNameVisible": false
+        "type_text": "Karta's purpose is to help with managing complex creative projects.\n\nWorldbuilding, moodboards, concept organisation, inter-project connections, real world references, and so on. It fills a need that wasn't quite fulfilled with existing tools, however mature they may be.\n\nFile systems are rigid and awkward to explore. You can only go up and down in the hierarchy of folders. Files can't exist in multiple places at the same time.\n\nWhiteboarding apps inherit the limitations of physical whiteboards. One 2D surface per canvas. Siloed and static.\n\nThe idea was to put all of one's work in the same place, turning every individual piece into a node. Then one may connect nodes to any others, connecting them by relevance. The end result is an interconnected web of work and ideas that you navigate intuitively along lines of association, where each view transitions smoothly to the next. Nodes are unique but can be used in many ways, so there's no duplication, and no enforced hierarchy.\n\nWhile a decent start, there's a couple other steps until this app meets these needs properly. To read more on those, head over to the roadmap. \n",
+        "viewtype_fontSize": 16,
+        "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+        "viewtype_textColor": "rgba(221, 221, 221, 1)",
+        "viewtype_font": "Georgia",
+        "view_isNameVisible": false
       }
     },
     {
@@ -207,12 +209,12 @@
       "path": "/Guide - Karta Feedback",
       "attributes": {
         "name": "Guide - Karta Feedback",
-        "text": "Thanks for taking the tour!\n\nThis app is an MVP, a minimal viable product. It's the least that could be done to showcase the idea, be fun to play with, and in some cases even useful.\n\nThere's plenty of things to add and improve from this point. If you have ideas, suggestions or general feedback, do please send them by email. \n\nkarta@teodosin.com\n\nI will be posting updates, mostly on Bluesky. Follow me there @teodosin.bsky.social. \n\nFor future plans, proceed to the roadmap. If you're interested in the \"why\" of this app, pan down to read the motivations.\n",
-        "karta_fontSize": 16,
-        "karta_fillColor": "rgba(255, 250, 196, 0)",
-        "karta_textColor": "rgba(221, 221, 221, 1)",
-        "karta_font": "Georgia",
-        "karta_isNameVisible": false
+        "type_text": "Thanks for taking the tour!\n\nThis app is an MVP, a minimal viable product. It's the least that could be done to showcase the idea, be fun to play with, and in some cases even useful.\n\nThere's plenty of things to add and improve from this point. If you have ideas, suggestions or general feedback, do please send them by email. \n\nkarta@teodosin.com\n\nI will be posting updates, mostly on Bluesky. Follow me there @teodosin.bsky.social. \n\nFor future plans, proceed to the roadmap. If you're interested in the \"why\" of this app, pan down to read the motivations.\n",
+        "viewtype_fontSize": 16,
+        "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+        "viewtype_textColor": "rgba(221, 221, 221, 1)",
+        "viewtype_font": "Georgia",
+        "view_isNameVisible": false
       }
     },
     {
@@ -223,12 +225,12 @@
       "path": "/Guide - Contexts",
       "attributes": {
         "name": "Guide - Contexts",
-        "text": "Contexts",
-        "karta_fontSize": 48,
-        "karta_fillColor": "rgba(150, 145, 87, 0.96)",
-        "karta_textColor": "rgba(29, 2, 2, 1)",
-        "karta_font": "Bodoni Moda",
-        "karta_isNameVisible": false
+        "type_text": "Contexts",
+        "viewtype_fontSize": 48,
+        "viewtype_fillColor": "rgba(150, 145, 87, 0.96)",
+        "viewtype_textColor": "rgba(29, 2, 2, 1)",
+        "viewtype_font": "Bodoni Moda",
+        "view_isNameVisible": false
       }
     },
     {
@@ -239,12 +241,12 @@
       "path": "/Welcome To Karta - Heading",
       "attributes": {
         "name": "Welcome To Karta - Heading",
-        "text": "Welcome to Karta!",
-        "karta_fontSize": 28,
-        "karta_fillColor": "rgba(255, 250, 196, 0)",
-        "karta_textColor": "rgba(221, 221, 221, 1)",
-        "karta_font": "Bodoni Moda",
-        "karta_isNameVisible": false
+        "type_text": "Welcome to Karta!",
+        "viewtype_fontSize": 28,
+        "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+        "viewtype_textColor": "rgba(221, 221, 221, 1)",
+        "viewtype_font": "Bodoni Moda",
+        "view_isNameVisible": false
       }
     },
     {
@@ -255,12 +257,12 @@
       "path": "/Guide - Exporting Standalone Apps Heading",
       "attributes": {
         "name": "Guide - Exporting Standalone Apps Heading",
-        "text": "Exporting Standalone Apps",
-        "karta_fontSize": 32,
-        "karta_fillColor": "rgba(255, 250, 196, 0)",
-        "karta_textColor": "rgba(221, 221, 221, 1)",
-        "karta_font": "Bodoni Moda",
-        "karta_isNameVisible": false
+        "type_text": "Exporting Standalone Apps",
+        "viewtype_fontSize": 32,
+        "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+        "viewtype_textColor": "rgba(221, 221, 221, 1)",
+        "viewtype_font": "Bodoni Moda",
+        "view_isNameVisible": false
       }
     },
     {
@@ -271,12 +273,12 @@
       "path": "/Guide - View Navigation",
       "attributes": {
         "name": "Guide - View Navigation",
-        "text": "To navigate within a context:\n\n* Panning - drag with middle-mouse pressed, or two-finger drag with a touchpad.\n\n* Zooming - use scroll wheel, or two-finger pinch with a touchpad. \n\n* Center the focal node - from the background's right-click menu, or by pressing \"F\"\n\n* Frame the current view contents - from the background's right-click menu, or by pressing Shift + \"F\"",
-        "karta_fontSize": 12,
-        "karta_fillColor": "rgba(94, 94, 85, 0.07)",
-        "karta_textColor": "rgba(221, 221, 221, 1)",
-        "karta_font": "Nunito",
-        "karta_isNameVisible": false
+        "type_text": "To navigate within a context:\n\n* Panning - drag with middle-mouse pressed, or two-finger drag with a touchpad.\n\n* Zooming - use scroll wheel, or two-finger pinch with a touchpad. \n\n* Center the focal node - from the background's right-click menu, or by pressing \"F\"\n\n* Frame the current view contents - from the background's right-click menu, or by pressing Shift + \"F\"",
+        "viewtype_fontSize": 12,
+        "viewtype_fillColor": "rgba(94, 94, 85, 0.07)",
+        "viewtype_textColor": "rgba(221, 221, 221, 1)",
+        "viewtype_font": "Nunito",
+        "view_isNameVisible": false
       },
       "isSearchable": true
     },
@@ -288,12 +290,12 @@
       "path": "/Guide - Native Version Heading",
       "attributes": {
         "name": "Guide - Native Version Heading",
-        "text": "Native Version",
-        "karta_fontSize": 32,
-        "karta_fillColor": "rgba(255, 250, 196, 0)",
-        "karta_textColor": "rgba(221, 221, 221, 1)",
-        "karta_font": "Bodoni Moda",
-        "karta_isNameVisible": false
+        "type_text": "Native Version",
+        "viewtype_fontSize": 32,
+        "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+        "viewtype_textColor": "rgba(221, 221, 221, 1)",
+        "viewtype_font": "Bodoni Moda",
+        "view_isNameVisible": false
       }
     },
     {
@@ -304,12 +306,12 @@
       "path": "/Guide - Roadmap Intro",
       "attributes": {
         "name": "Guide - Roadmap Intro",
-        "text": "In addition the standard quality-of-life improvements and bug fixes, there are a few larger steps that will be taken next. \n\nThese are near-term and quite likely to happen, despite other obligations.\n\nAnd of course, if there's interest from users, we can dream bigger. But let's stay here for now. ",
-        "karta_fontSize": 16,
-        "karta_fillColor": "rgba(255, 250, 196, 0)",
-        "karta_textColor": "rgba(221, 221, 221, 1)",
-        "karta_font": "Nunito",
-        "karta_isNameVisible": false
+        "type_text": "In addition the standard quality-of-life improvements and bug fixes, there are a few larger steps that will be taken next. \n\nThese are near-term and quite likely to happen, despite other obligations.\n\nAnd of course, if there's interest from users, we can dream bigger. But let's stay here for now. ",
+        "viewtype_fontSize": 16,
+        "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+        "viewtype_textColor": "rgba(221, 221, 221, 1)",
+        "viewtype_font": "Nunito",
+        "view_isNameVisible": false
       }
     },
     {
@@ -320,12 +322,12 @@
       "path": "/Guide - Deleting Edges",
       "attributes": {
         "name": "Guide - Deleting Edges",
-        "text": "To delete edges, select one or more edges and right-click to find the option to delete them.\n\nMulti-select with Shift pressed, because box select doesn't select edges yet.\n\nBear in mind that deleting an edge will delete it permanently from all Contexts. Adding it back adds it back to all of them too, though. And the nodes added to Contexts in this way will remain there. So deleting edges is less dangerous than deleting nodes. ",
-        "karta_fontSize": 16,
-        "karta_fillColor": "rgba(55, 4, 35, 1)",
-        "karta_textColor": "rgba(221, 221, 221, 1)",
-        "karta_font": "Nunito",
-        "karta_isNameVisible": false
+        "type_text": "To delete edges, select one or more edges and right-click to find the option to delete them.\n\nMulti-select with Shift pressed, because box select doesn't select edges yet.\n\nBear in mind that deleting an edge will delete it permanently from all Contexts. Adding it back adds it back to all of them too, though. And the nodes added to Contexts in this way will remain there. So deleting edges is less dangerous than deleting nodes. ",
+        "viewtype_fontSize": 16,
+        "viewtype_fillColor": "rgba(55, 4, 35, 1)",
+        "viewtype_textColor": "rgba(221, 221, 221, 1)",
+        "viewtype_font": "Nunito",
+        "view_isNameVisible": false
       }
     },
     {
@@ -336,12 +338,12 @@
       "path": "/Guide - Moving and Scaling Nodes",
       "attributes": {
         "name": "Guide - Moving and Scaling Nodes",
-        "text": "Move nodes with the Move tool selected on the Tool bar to the left. \n\nDrag a node to move it. \n\nDrag on the background to box select multiple nodes. \n\nHold shift to add or remove from the current selection. \n\nDrag on the handles in the corners of your selection to resize.",
-        "karta_fontSize": 24,
-        "karta_fillColor": "rgba(55, 4, 35, 1)",
-        "karta_textColor": "rgba(221, 221, 221, 1)",
-        "karta_font": "Nunito",
-        "karta_isNameVisible": false
+        "type_text": "Move nodes with the Move tool selected on the Tool bar to the left. \n\nDrag a node to move it. \n\nDrag on the background to box select multiple nodes. \n\nHold shift to add or remove from the current selection. \n\nDrag on the handles in the corners of your selection to resize.",
+        "viewtype_fontSize": 24,
+        "viewtype_fillColor": "rgba(55, 4, 35, 1)",
+        "viewtype_textColor": "rgba(221, 221, 221, 1)",
+        "viewtype_font": "Nunito",
+        "view_isNameVisible": false
       }
     },
     {
@@ -352,12 +354,12 @@
       "path": "/Guide - Navigating Between Contexts",
       "attributes": {
         "name": "Guide - Navigating Between Contexts",
-        "text": "Navigating between contexts:\n\nRight-click on a node and press \"Enter Context\" to see the node network from that node's point of view.\n\nYou can also use the Context Tool from the Tool Bar on the left of the screen to make all node clicks change between contexts.",
-        "karta_fontSize": 12,
-        "karta_fillColor": "rgba(255, 250, 196, 0)",
-        "karta_textColor": "rgba(221, 221, 221, 1)",
-        "karta_font": "Nunito",
-        "karta_isNameVisible": false
+        "type_text": "Navigating between contexts:\n\nRight-click on a node and press \"Enter Context\" to see the node network from that node's point of view.\n\nYou can also use the Context Tool from the Tool Bar on the left of the screen to make all node clicks change between contexts.",
+        "viewtype_fontSize": 12,
+        "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+        "viewtype_textColor": "rgba(221, 221, 221, 1)",
+        "viewtype_font": "Nunito",
+        "view_isNameVisible": false
       },
       "isSearchable": true
     },
@@ -369,7 +371,7 @@
       "path": "/Guide - SmallRelativity3",
       "attributes": {
         "name": "Guide - SmallRelativity3",
-        "karta_isNameVisible": false
+        "view_isNameVisible": false
       }
     },
     {
@@ -380,7 +382,7 @@
       "path": "/Guide - SmallRelativity4",
       "attributes": {
         "name": "Guide - SmallRelativity4",
-        "karta_isNameVisible": false
+        "view_isNameVisible": false
       }
     },
     {
@@ -391,12 +393,12 @@
       "path": "/Guide - Node Properties Heading",
       "attributes": {
         "name": "Guide - Node Properties Heading",
-        "text": "Node Properties",
-        "karta_fontSize": 92,
-        "karta_fillColor": "rgba(55, 4, 35, 1)",
-        "karta_textColor": "rgba(221, 221, 221, 1)",
-        "karta_font": "Bodoni Moda",
-        "karta_isNameVisible": false
+        "type_text": "Node Properties",
+        "viewtype_fontSize": 92,
+        "viewtype_fillColor": "rgba(55, 4, 35, 1)",
+        "viewtype_textColor": "rgba(221, 221, 221, 1)",
+        "viewtype_font": "Bodoni Moda",
+        "view_isNameVisible": false
       }
     },
     {
@@ -407,12 +409,12 @@
       "path": "/Guide - Edges Heading",
       "attributes": {
         "name": "Guide - Edges Heading",
-        "text": "Edges",
-        "karta_fontSize": 150,
-        "karta_fillColor": "rgba(255, 250, 196, 0)",
-        "karta_textColor": "rgba(221, 221, 221, 1)",
-        "karta_font": "Bodoni Moda",
-        "karta_isNameVisible": false
+        "type_text": "Edges",
+        "viewtype_fontSize": 150,
+        "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+        "viewtype_textColor": "rgba(221, 221, 221, 1)",
+        "viewtype_font": "Bodoni Moda",
+        "view_isNameVisible": false
       }
     },
     {
@@ -423,12 +425,12 @@
       "path": "/Guide - Node Properties",
       "attributes": {
         "name": "Guide - Node Properties",
-        "text": "On the top right of the screen by default, you'll find the Properties Panel. \n\nBy default it is collapsed, but you can expand it by clicking the icon on the right side of it.\n\nTurning off the Pin will make the Panel invisible when no nodes or multiple nodes are selected.\n\nFrom the Panel you can edit a node's Attributes. Its name, whether its name label is visible, and if its a text node, its color and font settings. Try it! Edit any of the nodes that exist in the Guide. ",
-        "karta_fontSize": 32,
-        "karta_fillColor": "rgba(55, 4, 35, 1)",
-        "karta_textColor": "rgba(221, 221, 221, 1)",
-        "karta_font": "Nunito",
-        "karta_isNameVisible": false
+        "type_text": "On the top right of the screen by default, you'll find the Properties Panel. \n\nBy default it is collapsed, but you can expand it by clicking the icon on the right side of it.\n\nTurning off the Pin will make the Panel invisible when no nodes or multiple nodes are selected.\n\nFrom the Panel you can edit a node's Attributes. Its name, whether its name label is visible, and if its a text node, its color and font settings. Try it! Edit any of the nodes that exist in the Guide. ",
+        "viewtype_fontSize": 32,
+        "viewtype_fillColor": "rgba(55, 4, 35, 1)",
+        "viewtype_textColor": "rgba(221, 221, 221, 1)",
+        "viewtype_font": "Nunito",
+        "view_isNameVisible": false
       }
     },
     {
@@ -439,7 +441,7 @@
       "path": "/Guide - SmallRelativity2",
       "attributes": {
         "name": "Guide - SmallRelativity2",
-        "karta_isNameVisible": false
+        "view_isNameVisible": false
       }
     },
     {
@@ -450,12 +452,12 @@
       "path": "/Guide - Creating Nodes",
       "attributes": {
         "name": "Guide - Creating Nodes",
-        "text": "To create a new node, right-click on the background and select \"Create Node Here\". You will be prompted to select from a few types of nodes. You can also press Tab to directly open this list.\n\nImages created this way will be just empty frames. To actually add an image to a Context, paste a copied image or drag a file into the window. \n\nText nodes will be empty at first. All the headings and text paragraphs you've seen so far are just Text nodes. That should give you an idea of what you can do with them.\n\nA basic Node is just a filled rounded rectangle. Use them when you don't need any other features, just a point in conceptual space and a name for it.\n\nYou can also bring nodes into a Context by searching for them. Right-click on the background to find the search function. Any existing node can be found there.",
-        "karta_fontSize": 16,
-        "karta_fillColor": "rgba(55, 4, 35, 1)",
-        "karta_textColor": "rgba(221, 221, 221, 1)",
-        "karta_font": "Nunito",
-        "karta_isNameVisible": false
+        "type_text": "To create a new node, right-click on the background and select \"Create Node Here\". You will be prompted to select from a few types of nodes. You can also press Tab to directly open this list.\n\nImages created this way will be just empty frames. To actually add an image to a Context, paste a copied image or drag a file into the window. \n\nText nodes will be empty at first. All the headings and text paragraphs you've seen so far are just Text nodes. That should give you an idea of what you can do with them.\n\nA basic Node is just a filled rounded rectangle. Use them when you don't need any other features, just a point in conceptual space and a name for it.\n\nYou can also bring nodes into a Context by searching for them. Right-click on the background to find the search function. Any existing node can be found there.",
+        "viewtype_fontSize": 16,
+        "viewtype_fillColor": "rgba(55, 4, 35, 1)",
+        "viewtype_textColor": "rgba(221, 221, 221, 1)",
+        "viewtype_font": "Nunito",
+        "view_isNameVisible": false
       }
     },
     {
@@ -466,12 +468,12 @@
       "path": "/Guide - What Edges Do",
       "attributes": {
         "name": "Guide - What Edges Do",
-        "text": "Two nodes connected by an edge are always present in each other's Contexts. Even if you remove one from the other's Context, it will appear there again when you leave and come back.\n\nThis is true for any number of connections, and is a convenient way to carry nodes to other contexts. Connect a bunch of nodes to another, enter the latter's context, and all those nodes will be there.",
-        "karta_fontSize": 16,
-        "karta_fillColor": "rgba(55, 4, 35, 1)",
-        "karta_textColor": "rgba(221, 221, 221, 1)",
-        "karta_font": "Nunito",
-        "karta_isNameVisible": false
+        "type_text": "Two nodes connected by an edge are always present in each other's Contexts. Even if you remove one from the other's Context, it will appear there again when you leave and come back.\n\nThis is true for any number of connections, and is a convenient way to carry nodes to other contexts. Connect a bunch of nodes to another, enter the latter's context, and all those nodes will be there.",
+        "viewtype_fontSize": 16,
+        "viewtype_fillColor": "rgba(55, 4, 35, 1)",
+        "viewtype_textColor": "rgba(221, 221, 221, 1)",
+        "viewtype_font": "Nunito",
+        "view_isNameVisible": false
       }
     },
     {
@@ -482,7 +484,7 @@
       "path": "/Guide - Hub",
       "attributes": {
         "name": "Guide - Hub",
-        "karta_isNameVisible": true
+        "view_isNameVisible": true
       },
       "isSearchable": true
     },
@@ -494,12 +496,12 @@
       "path": "/Guide - Move to Topics",
       "attributes": {
         "name": "Guide - Move to Topics",
-        "text": "To the right are the topics of this guide. Move to any of their contexts to learn more about their respective topics.",
-        "karta_fontSize": 14,
-        "karta_fillColor": "rgba(255, 250, 196, 0)",
-        "karta_textColor": "rgba(221, 221, 221, 1)",
-        "karta_font": "Nunito",
-        "karta_isNameVisible": false
+        "type_text": "To the right are the topics of this guide. Move to any of their contexts to learn more about their respective topics.",
+        "viewtype_fontSize": 14,
+        "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+        "viewtype_textColor": "rgba(221, 221, 221, 1)",
+        "viewtype_font": "Nunito",
+        "view_isNameVisible": false
       }
     },
     {
@@ -510,12 +512,12 @@
       "path": "/Guide - Moving and Scaling Nodes Heading",
       "attributes": {
         "name": "Guide - Moving and Scaling Nodes Heading",
-        "text": "Moving and Scaling Nodes",
-        "karta_fontSize": 64,
-        "karta_fillColor": "rgba(55, 4, 35, 1)",
-        "karta_textColor": "rgba(221, 221, 221, 1)",
-        "karta_font": "Bodoni Moda",
-        "karta_isNameVisible": false
+        "type_text": "Moving and Scaling Nodes",
+        "viewtype_fontSize": 64,
+        "viewtype_fillColor": "rgba(55, 4, 35, 1)",
+        "viewtype_textColor": "rgba(221, 221, 221, 1)",
+        "viewtype_font": "Bodoni Moda",
+        "view_isNameVisible": false
       }
     },
     {
@@ -526,12 +528,12 @@
       "path": "/Guide - Karta in a Nutshell",
       "attributes": {
         "name": "Guide - Karta in a Nutshell",
-        "text": "Karta can be thought of as a note-taking tool, similar to many canvases you may be familiar with.\n\nIn Karta, every text note and image is a node in a network. They're not tied to any particular location or canvas, but can be referenced anywhere. No information gets duplicated. Since they can appear in many places, we can navigate our collection of nodes intuitively through the associations and connections they make. ",
-        "karta_fontSize": 16,
-        "karta_fillColor": "rgba(255, 250, 196, 0)",
-        "karta_textColor": "rgba(221, 221, 221, 1)",
-        "karta_font": "Nunito",
-        "karta_isNameVisible": false
+        "type_text": "Karta can be thought of as a note-taking tool, similar to many canvases you may be familiar with.\n\nIn Karta, every text note and image is a node in a network. They're not tied to any particular location or canvas, but can be referenced anywhere. No information gets duplicated. Since they can appear in many places, we can navigate our collection of nodes intuitively through the associations and connections they make. ",
+        "viewtype_fontSize": 16,
+        "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+        "viewtype_textColor": "rgba(221, 221, 221, 1)",
+        "viewtype_font": "Nunito",
+        "view_isNameVisible": false
       }
     },
     {
@@ -542,12 +544,12 @@
       "path": "/Guide - Open Source Heading",
       "attributes": {
         "name": "Guide - Open Source Heading",
-        "text": "Open Source",
-        "karta_fontSize": 32,
-        "karta_fillColor": "rgba(255, 250, 196, 0)",
-        "karta_textColor": "rgba(221, 221, 221, 1)",
-        "karta_font": "Bodoni Moda",
-        "karta_isNameVisible": false
+        "type_text": "Open Source",
+        "viewtype_fontSize": 32,
+        "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+        "viewtype_textColor": "rgba(221, 221, 221, 1)",
+        "viewtype_font": "Bodoni Moda",
+        "view_isNameVisible": false
       }
     },
     {
@@ -558,7 +560,7 @@
       "path": "/Guide - SmallRelativity",
       "attributes": {
         "name": "Guide - SmallRelativity",
-        "karta_isNameVisible": false
+        "view_isNameVisible": false
       }
     },
     {
@@ -569,12 +571,12 @@
       "path": "/Guide - Creating Edges",
       "attributes": {
         "name": "Guide - Creating Edges",
-        "text": "You can create edges by selecting one or more nodes and dragging from the red circle on the bottom of the selection. End the drag on a node to connect all selected nodes to that one. \n\nTry it! Connect this node to another one in this context. ",
-        "karta_fontSize": 16,
-        "karta_fillColor": "rgba(55, 4, 35, 1)",
-        "karta_textColor": "rgba(221, 221, 221, 1)",
-        "karta_font": "Nunito",
-        "karta_isNameVisible": false
+        "type_text": "You can create edges by selecting one or more nodes and dragging from the red circle on the bottom of the selection. End the drag on a node to connect all selected nodes to that one. \n\nTry it! Connect this node to another one in this context. ",
+        "viewtype_fontSize": 16,
+        "viewtype_fillColor": "rgba(55, 4, 35, 1)",
+        "viewtype_textColor": "rgba(221, 221, 221, 1)",
+        "viewtype_font": "Nunito",
+        "view_isNameVisible": false
       }
     },
     {
@@ -585,12 +587,12 @@
       "path": "/Guide - Removing and Deleting Nodes Heading",
       "attributes": {
         "name": "Guide - Removing and Deleting Nodes Heading",
-        "text": "Removing and Deleting Nodes",
-        "karta_fontSize": 78,
-        "karta_fillColor": "rgba(55, 4, 35, 1)",
-        "karta_textColor": "rgba(221, 221, 221, 1)",
-        "karta_font": "Bodoni Moda",
-        "karta_isNameVisible": false
+        "type_text": "Removing and Deleting Nodes",
+        "viewtype_fontSize": 78,
+        "viewtype_fillColor": "rgba(55, 4, 35, 1)",
+        "viewtype_textColor": "rgba(221, 221, 221, 1)",
+        "viewtype_font": "Bodoni Moda",
+        "view_isNameVisible": false
       }
     },
     {
@@ -601,12 +603,12 @@
       "path": "/Guide - More on Contexts",
       "attributes": {
         "name": "Guide - More on Contexts",
-        "text": "Nodes don't have contexts by default. You can tell which nodes have contexts based on the dim outline that they have.\n\nWhen you enter the context of a node that doesn't yet have one, it is automatically created. The previous focal node will be added so you can get back easily.\n\nYou can also navigation buttons on the bottom left to go back, forward, or choose any existing context to go to.",
-        "karta_fontSize": 16,
-        "karta_fillColor": "rgba(255, 250, 196, 0)",
-        "karta_textColor": "rgba(221, 221, 221, 1)",
-        "karta_font": "Nunito",
-        "karta_isNameVisible": false
+        "type_text": "Nodes don't have contexts by default. You can tell which nodes have contexts based on the dim outline that they have.\n\nWhen you enter the context of a node that doesn't yet have one, it is automatically created. The previous focal node will be added so you can get back easily.\n\nYou can also navigation buttons on the bottom left to go back, forward, or choose any existing context to go to.",
+        "viewtype_fontSize": 16,
+        "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+        "viewtype_textColor": "rgba(221, 221, 221, 1)",
+        "viewtype_font": "Nunito",
+        "view_isNameVisible": false
       }
     },
     {
@@ -617,12 +619,12 @@
       "path": "/Guide - Open Source",
       "attributes": {
         "name": "Guide - Open Source",
-        "text": "The old parts of Karta are already open-source under the GPL-3 license. The intention is not to ask for money for anyone to just download and use the app. The editor and its forks should remain free, hence the choice of license.\n\nFor exports though, the GPL-3 license is too restrictive. If you make and publish a network for Karta, you should be able to use it commercially. So some thinking is needed to separate out the necessary runtime and license it more liberally than the editor.\n\nI don't want to rush this process. If Karta is useful to people other than me, it'll be worth it to do this well and set up the app for long-term progress. \n\nGet in touch if you have thoughts :)",
-        "karta_fontSize": 16,
-        "karta_fillColor": "rgba(255, 250, 196, 0)",
-        "karta_textColor": "rgba(221, 221, 221, 1)",
-        "karta_font": "Nunito",
-        "karta_isNameVisible": false
+        "type_text": "The old parts of Karta are already open-source under the GPL-3 license. The intention is not to ask for money for anyone to just download and use the app. The editor and its forks should remain free, hence the choice of license.\n\nFor exports though, the GPL-3 license is too restrictive. If you make and publish a network for Karta, you should be able to use it commercially. So some thinking is needed to separate out the necessary runtime and license it more liberally than the editor.\n\nI don't want to rush this process. If Karta is useful to people other than me, it'll be worth it to do this well and set up the app for long-term progress. \n\nGet in touch if you have thoughts :)",
+        "viewtype_fontSize": 16,
+        "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+        "viewtype_textColor": "rgba(221, 221, 221, 1)",
+        "viewtype_font": "Nunito",
+        "view_isNameVisible": false
       }
     },
     {
@@ -633,12 +635,12 @@
       "path": "/Guide - Nodes Heading",
       "attributes": {
         "name": "Guide - Nodes Heading",
-        "text": "Nodes",
-        "karta_fontSize": 48,
-        "karta_fillColor": "rgba(255, 250, 196, 0)",
-        "karta_textColor": "rgba(221, 221, 221, 1)",
-        "karta_font": "Bodoni Moda",
-        "karta_isNameVisible": false
+        "type_text": "Nodes",
+        "viewtype_fontSize": 48,
+        "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+        "viewtype_textColor": "rgba(221, 221, 221, 1)",
+        "viewtype_font": "Bodoni Moda",
+        "view_isNameVisible": false
       }
     },
     {
@@ -649,12 +651,12 @@
       "path": "/Guide - Removing and Deleting Nodes",
       "attributes": {
         "name": "Guide - Removing and Deleting Nodes",
-        "text": "There are two ways to get rid of a node. These correspond to the data and instance separation.\n\nTo simply remove a node from just the current context, right-click on a node and select \"Remove from Context\". This will remove that node from the current context, but it will still remain in other contexts, and you can still bring it back by searching for it.\n\nThe other, more permanent solution is to Delete Permanently. This will remove the core data of a node. It will not be searchable anymore and any instances that reference it in other contexts will simply show a ghost. This will also delete that node's Context if it exists. \n\nBe careful. Karta doesn't yet have undo-redo!",
-        "karta_fontSize": 28,
-        "karta_fillColor": "rgba(55, 4, 35, 1)",
-        "karta_textColor": "rgba(221, 221, 221, 1)",
-        "karta_font": "Nunito",
-        "karta_isNameVisible": false
+        "type_text": "There are two ways to get rid of a node. These correspond to the data and instance separation.\n\nTo simply remove a node from just the current context, right-click on a node and select \"Remove from Context\". This will remove that node from the current context, but it will still remain in other contexts, and you can still bring it back by searching for it.\n\nThe other, more permanent solution is to Delete Permanently. This will remove the core data of a node. It will not be searchable anymore and any instances that reference it in other contexts will simply show a ghost. This will also delete that node's Context if it exists. \n\nBe careful. Karta doesn't yet have undo-redo!",
+        "viewtype_fontSize": 28,
+        "viewtype_fillColor": "rgba(55, 4, 35, 1)",
+        "viewtype_textColor": "rgba(221, 221, 221, 1)",
+        "viewtype_font": "Nunito",
+        "view_isNameVisible": false
       }
     },
     {
@@ -665,12 +667,12 @@
       "path": "/Guide - Roadmap",
       "attributes": {
         "name": "Guide - Roadmap",
-        "text": "Roadmap",
-        "karta_fontSize": 48,
-        "karta_fillColor": "rgba(255, 250, 196, 0)",
-        "karta_textColor": "rgba(221, 221, 221, 1)",
-        "karta_font": "Bodoni Moda",
-        "karta_isNameVisible": false
+        "type_text": "Roadmap",
+        "viewtype_fontSize": 48,
+        "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+        "viewtype_textColor": "rgba(221, 221, 221, 1)",
+        "viewtype_font": "Bodoni Moda",
+        "view_isNameVisible": false
       }
     },
     {
@@ -681,12 +683,12 @@
       "path": "/Guide - See How They Changed?",
       "attributes": {
         "name": "Guide - See How They Changed?",
-        "text": "See how the text nodes changed shapes, and how the title changed colours? \n\n",
-        "karta_fontSize": 16,
-        "karta_fillColor": "rgba(255, 250, 196, 0)",
-        "karta_textColor": "rgba(221, 221, 221, 1)",
-        "karta_font": "Nunito",
-        "karta_isNameVisible": false
+        "type_text": "See how the text nodes changed shapes, and how the title changed colours? \n\n",
+        "viewtype_fontSize": 16,
+        "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+        "viewtype_textColor": "rgba(221, 221, 221, 1)",
+        "viewtype_font": "Nunito",
+        "view_isNameVisible": false
       }
     },
     {
@@ -697,12 +699,12 @@
       "path": "/Guide - Rough Around The Edges",
       "attributes": {
         "name": "Guide - Rough Around The Edges",
-        "text": "Excuse the size of the heading. This app is a bit rough around the edges. ",
-        "karta_fontSize": 16,
-        "karta_fillColor": "rgba(55, 4, 35, 1)",
-        "karta_textColor": "rgba(221, 221, 221, 1)",
-        "karta_font": "Nunito",
-        "karta_isNameVisible": false
+        "type_text": "Excuse the size of the heading. This app is a bit rough around the edges. ",
+        "viewtype_fontSize": 16,
+        "viewtype_fillColor": "rgba(55, 4, 35, 1)",
+        "viewtype_textColor": "rgba(221, 221, 221, 1)",
+        "viewtype_font": "Nunito",
+        "view_isNameVisible": false
       }
     },
     {
@@ -713,12 +715,12 @@
       "path": "/Guide - What is Karta",
       "attributes": {
         "name": "Guide - What is Karta",
-        "text": "Why make this?",
-        "karta_fontSize": 48,
-        "karta_fillColor": "rgba(255, 250, 196, 0)",
-        "karta_textColor": "rgba(221, 221, 221, 1)",
-        "karta_font": "Bodoni Moda",
-        "karta_isNameVisible": false
+        "type_text": "Why make this?",
+        "viewtype_fontSize": 48,
+        "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+        "viewtype_textColor": "rgba(221, 221, 221, 1)",
+        "viewtype_font": "Bodoni Moda",
+        "view_isNameVisible": false
       }
     }
   ],
@@ -794,7 +796,7 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_isNameVisible": false
+              "view_isNameVisible": false
             }
           }
         ],
@@ -809,9 +811,9 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(255, 250, 196, 0)",
-              "karta_textColor": "rgba(190, 178, 178, 1)",
-              "karta_isNameVisible": false
+              "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+              "viewtype_textColor": "rgba(190, 178, 178, 1)",
+              "view_isNameVisible": false
             }
           }
         ],
@@ -824,7 +826,8 @@
             "width": 100,
             "height": 100,
             "relScale": 1,
-            "rotation": 0
+            "rotation": 0,
+            "attributes": {}
           }
         ],
         [
@@ -838,11 +841,11 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(255, 250, 196, 0)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_fontSize": 28,
-              "karta_font": "Bodoni Moda",
-              "karta_isNameVisible": false
+              "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "viewtype_fontSize": 28,
+              "viewtype_font": "Bodoni Moda",
+              "view_isNameVisible": false
             }
           }
         ]
@@ -865,7 +868,8 @@
             "width": 100,
             "height": 100,
             "relScale": 1,
-            "rotation": 0
+            "rotation": 0,
+            "attributes": {}
           }
         ],
         [
@@ -879,9 +883,9 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(150, 145, 87, 0.96)",
-              "karta_textColor": "rgba(29, 2, 2, 1)",
-              "karta_isNameVisible": false
+              "viewtype_fillColor": "rgba(150, 145, 87, 0.96)",
+              "viewtype_textColor": "rgba(29, 2, 2, 1)",
+              "view_isNameVisible": false
             }
           }
         ],
@@ -896,9 +900,9 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(255, 250, 196, 0)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_isNameVisible": false
+              "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "view_isNameVisible": false
             }
           }
         ],
@@ -913,11 +917,11 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fontSize": 16,
-              "karta_fillColor": "rgba(255, 250, 196, 0)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_font": "Nunito",
-              "karta_isNameVisible": false
+              "viewtype_fontSize": 16,
+              "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "viewtype_font": "Nunito",
+              "view_isNameVisible": false
             }
           }
         ],
@@ -932,9 +936,9 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(255, 250, 196, 0)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_isNameVisible": false
+              "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "view_isNameVisible": false
             }
           }
         ],
@@ -949,11 +953,11 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fontSize": 48,
-              "karta_fillColor": "rgba(255, 250, 196, 0)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_font": "Bodoni Moda",
-              "karta_isNameVisible": false
+              "viewtype_fontSize": 48,
+              "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "viewtype_font": "Bodoni Moda",
+              "view_isNameVisible": false
             }
           }
         ],
@@ -968,7 +972,7 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_isNameVisible": false
+              "view_isNameVisible": false
             }
           }
         ],
@@ -983,7 +987,7 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_isNameVisible": false
+              "view_isNameVisible": false
             }
           }
         ],
@@ -998,7 +1002,7 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_isNameVisible": false
+              "view_isNameVisible": false
             }
           }
         ],
@@ -1013,7 +1017,7 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_isNameVisible": false
+              "view_isNameVisible": false
             }
           }
         ],
@@ -1028,9 +1032,9 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(255, 250, 196, 0)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_isNameVisible": false
+              "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "view_isNameVisible": false
             }
           }
         ]
@@ -1055,9 +1059,9 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(255, 250, 196, 0)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_isNameVisible": false
+              "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "view_isNameVisible": false
             }
           }
         ],
@@ -1072,7 +1076,7 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_isNameVisible": true
+              "view_isNameVisible": true
             }
           }
         ],
@@ -1087,9 +1091,9 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(255, 250, 196, 0)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_isNameVisible": false
+              "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "view_isNameVisible": false
             }
           }
         ],
@@ -1104,11 +1108,11 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fontSize": 16,
-              "karta_fillColor": "rgba(255, 250, 196, 0)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_font": "Nunito",
-              "karta_isNameVisible": false
+              "viewtype_fontSize": 16,
+              "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "viewtype_font": "Nunito",
+              "view_isNameVisible": false
             }
           }
         ],
@@ -1123,9 +1127,9 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(255, 250, 196, 0)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_isNameVisible": false
+              "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "view_isNameVisible": false
             }
           }
         ],
@@ -1138,7 +1142,8 @@
             "width": 100,
             "height": 100,
             "relScale": 1,
-            "rotation": 0
+            "rotation": 0,
+            "attributes": {}
           }
         ],
         [
@@ -1152,11 +1157,11 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fontSize": 48,
-              "karta_fillColor": "rgba(55, 4, 35, 1)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_font": "Bodoni Moda",
-              "karta_isNameVisible": false
+              "viewtype_fontSize": 48,
+              "viewtype_fillColor": "rgba(55, 4, 35, 1)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "viewtype_font": "Bodoni Moda",
+              "view_isNameVisible": false
             }
           }
         ]
@@ -1181,7 +1186,7 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_isNameVisible": false
+              "view_isNameVisible": false
             }
           }
         ],
@@ -1194,7 +1199,8 @@
             "width": 100,
             "height": 100,
             "relScale": 1,
-            "rotation": 0
+            "rotation": 0,
+            "attributes": {}
           }
         ],
         [
@@ -1208,7 +1214,7 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_isNameVisible": false
+              "view_isNameVisible": false
             }
           }
         ],
@@ -1223,7 +1229,7 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_isNameVisible": false
+              "view_isNameVisible": false
             }
           }
         ],
@@ -1238,7 +1244,7 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_isNameVisible": false
+              "view_isNameVisible": false
             }
           }
         ]
@@ -1263,9 +1269,9 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(255, 250, 196, 0)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_isNameVisible": false
+              "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "view_isNameVisible": false
             }
           }
         ],
@@ -1278,7 +1284,8 @@
             "width": 100,
             "height": 100,
             "relScale": 1,
-            "rotation": 0
+            "rotation": 0,
+            "attributes": {}
           }
         ],
         [
@@ -1292,9 +1299,9 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(55, 4, 35, 1)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_isNameVisible": false
+              "viewtype_fillColor": "rgba(55, 4, 35, 1)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "view_isNameVisible": false
             }
           }
         ],
@@ -1309,11 +1316,11 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fontSize": 48,
-              "karta_fillColor": "rgba(255, 250, 196, 0)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_font": "Bodoni Moda",
-              "karta_isNameVisible": false
+              "viewtype_fontSize": 48,
+              "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "viewtype_font": "Bodoni Moda",
+              "view_isNameVisible": false
             }
           }
         ],
@@ -1328,9 +1335,9 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(55, 4, 35, 1)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_isNameVisible": false
+              "viewtype_fillColor": "rgba(55, 4, 35, 1)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "view_isNameVisible": false
             }
           }
         ],
@@ -1345,9 +1352,9 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(55, 4, 35, 1)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_isNameVisible": false
+              "viewtype_fillColor": "rgba(55, 4, 35, 1)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "view_isNameVisible": false
             }
           }
         ],
@@ -1362,9 +1369,9 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(55, 4, 35, 1)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_isNameVisible": false
+              "viewtype_fillColor": "rgba(55, 4, 35, 1)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "view_isNameVisible": false
             }
           }
         ],
@@ -1379,9 +1386,9 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(55, 4, 35, 1)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_isNameVisible": false
+              "viewtype_fillColor": "rgba(55, 4, 35, 1)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "view_isNameVisible": false
             }
           }
         ],
@@ -1396,11 +1403,11 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fontSize": 48,
-              "karta_fillColor": "rgba(255, 250, 196, 0)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_font": "Bodoni Moda",
-              "karta_isNameVisible": false
+              "viewtype_fontSize": 48,
+              "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "viewtype_font": "Bodoni Moda",
+              "view_isNameVisible": false
             }
           }
         ]
@@ -1423,7 +1430,8 @@
             "width": 100,
             "height": 100,
             "relScale": 1,
-            "rotation": 0
+            "rotation": 0,
+            "attributes": {}
           }
         ],
         [
@@ -1437,7 +1445,7 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_isNameVisible": true
+              "view_isNameVisible": true
             }
           }
         ],
@@ -1452,10 +1460,10 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(94, 94, 85, 0.07)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_isNameVisible": false,
-              "karta_fontSize": 12
+              "viewtype_fillColor": "rgba(94, 94, 85, 0.07)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "view_isNameVisible": false,
+              "viewtype_fontSize": 12
             }
           }
         ],
@@ -1470,10 +1478,10 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(255, 250, 196, 0)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_isNameVisible": false,
-              "karta_fontSize": 12
+              "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "view_isNameVisible": false,
+              "viewtype_fontSize": 12
             }
           }
         ],
@@ -1488,10 +1496,10 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(255, 250, 196, 0)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_fontSize": 14,
-              "karta_isNameVisible": false
+              "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "viewtype_fontSize": 14,
+              "view_isNameVisible": false
             }
           }
         ],
@@ -1506,11 +1514,11 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(255, 250, 196, 0)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_fontSize": 48,
-              "karta_font": "Bodoni Moda",
-              "karta_isNameVisible": false
+              "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "viewtype_fontSize": 48,
+              "viewtype_font": "Bodoni Moda",
+              "view_isNameVisible": false
             }
           }
         ],
@@ -1525,11 +1533,11 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(255, 250, 196, 0)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_fontSize": 48,
-              "karta_font": "Bodoni Moda",
-              "karta_isNameVisible": false
+              "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "viewtype_fontSize": 48,
+              "viewtype_font": "Bodoni Moda",
+              "view_isNameVisible": false
             }
           }
         ],
@@ -1544,11 +1552,11 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(255, 250, 196, 0)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_fontSize": 48,
-              "karta_font": "Bodoni Moda",
-              "karta_isNameVisible": false
+              "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "viewtype_fontSize": 48,
+              "viewtype_font": "Bodoni Moda",
+              "view_isNameVisible": false
             }
           }
         ],
@@ -1563,11 +1571,11 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(255, 250, 196, 0)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_fontSize": 48,
-              "karta_font": "Bodoni Moda",
-              "karta_isNameVisible": false
+              "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "viewtype_fontSize": 48,
+              "viewtype_font": "Bodoni Moda",
+              "view_isNameVisible": false
             }
           }
         ],
@@ -1582,11 +1590,11 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(255, 250, 196, 0)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_fontSize": 48,
-              "karta_font": "Bodoni Moda",
-              "karta_isNameVisible": false
+              "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "viewtype_fontSize": 48,
+              "viewtype_font": "Bodoni Moda",
+              "view_isNameVisible": false
             }
           }
         ]
@@ -1611,9 +1619,9 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(55, 4, 35, 1)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_isNameVisible": false
+              "viewtype_fillColor": "rgba(55, 4, 35, 1)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "view_isNameVisible": false
             }
           }
         ],
@@ -1626,7 +1634,8 @@
             "width": 219.21728266501873,
             "height": 219.21728266501873,
             "relScale": 1,
-            "rotation": 0
+            "rotation": 0,
+            "attributes": {}
           }
         ],
         [
@@ -1640,9 +1649,9 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(55, 4, 35, 1)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_isNameVisible": false
+              "viewtype_fillColor": "rgba(55, 4, 35, 1)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "view_isNameVisible": false
             }
           }
         ],
@@ -1657,10 +1666,10 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(55, 4, 35, 1)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_isNameVisible": false,
-              "karta_fontSize": 32
+              "viewtype_fillColor": "rgba(55, 4, 35, 1)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "view_isNameVisible": false,
+              "viewtype_fontSize": 32
             }
           }
         ],
@@ -1675,11 +1684,11 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fontSize": 92,
-              "karta_fillColor": "rgba(55, 4, 35, 1)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_font": "Bodoni Moda",
-              "karta_isNameVisible": false
+              "viewtype_fontSize": 92,
+              "viewtype_fillColor": "rgba(55, 4, 35, 1)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "viewtype_font": "Bodoni Moda",
+              "view_isNameVisible": false
             }
           }
         ],
@@ -1694,11 +1703,11 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(55, 4, 35, 1)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_fontSize": 64,
-              "karta_font": "Bodoni Moda",
-              "karta_isNameVisible": false
+              "viewtype_fillColor": "rgba(55, 4, 35, 1)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "viewtype_fontSize": 64,
+              "viewtype_font": "Bodoni Moda",
+              "view_isNameVisible": false
             }
           }
         ],
@@ -1713,10 +1722,10 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(55, 4, 35, 1)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_isNameVisible": false,
-              "karta_fontSize": 24
+              "viewtype_fillColor": "rgba(55, 4, 35, 1)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "view_isNameVisible": false,
+              "viewtype_fontSize": 24
             }
           }
         ],
@@ -1731,11 +1740,11 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(55, 4, 35, 1)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_font": "Bodoni Moda",
-              "karta_fontSize": 78,
-              "karta_isNameVisible": false
+              "viewtype_fillColor": "rgba(55, 4, 35, 1)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "viewtype_font": "Bodoni Moda",
+              "viewtype_fontSize": 78,
+              "view_isNameVisible": false
             }
           }
         ],
@@ -1750,10 +1759,10 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(55, 4, 35, 1)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_isNameVisible": false,
-              "karta_fontSize": 28
+              "viewtype_fillColor": "rgba(55, 4, 35, 1)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "view_isNameVisible": false,
+              "viewtype_fontSize": 28
             }
           }
         ],
@@ -1766,7 +1775,8 @@
             "width": 274.93615755340034,
             "height": 274.93615755340034,
             "relScale": 1,
-            "rotation": 0
+            "rotation": 0,
+            "attributes": {}
           }
         ],
         [
@@ -1780,11 +1790,11 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(55, 4, 35, 1)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_fontSize": 52,
-              "karta_isNameVisible": false,
-              "karta_font": "Bodoni Moda"
+              "viewtype_fillColor": "rgba(55, 4, 35, 1)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "viewtype_fontSize": 52,
+              "view_isNameVisible": false,
+              "viewtype_font": "Bodoni Moda"
             }
           }
         ],
@@ -1799,9 +1809,9 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(55, 4, 35, 1)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_isNameVisible": false
+              "viewtype_fillColor": "rgba(55, 4, 35, 1)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "view_isNameVisible": false
             }
           }
         ],
@@ -1816,11 +1826,11 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fontSize": 150,
-              "karta_fillColor": "rgba(255, 250, 196, 0)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_font": "Bodoni Moda",
-              "karta_isNameVisible": false
+              "viewtype_fontSize": 150,
+              "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "viewtype_font": "Bodoni Moda",
+              "view_isNameVisible": false
             }
           }
         ]
@@ -1845,9 +1855,9 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(255, 250, 196, 0)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_isNameVisible": false
+              "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "view_isNameVisible": false
             }
           }
         ],
@@ -1860,7 +1870,8 @@
             "width": 105.9669886997731,
             "height": 1426.8157958984416,
             "relScale": 1,
-            "rotation": 0
+            "rotation": 0,
+            "attributes": {}
           }
         ],
         [
@@ -1874,11 +1885,11 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fontSize": 48,
-              "karta_fillColor": "rgba(255, 250, 196, 0)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_font": "Bodoni Moda",
-              "karta_isNameVisible": false
+              "viewtype_fontSize": 48,
+              "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "viewtype_font": "Bodoni Moda",
+              "view_isNameVisible": false
             }
           }
         ],
@@ -1893,9 +1904,9 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(255, 250, 196, 0)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_isNameVisible": false
+              "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "view_isNameVisible": false
             }
           }
         ],
@@ -1910,11 +1921,11 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(255, 250, 196, 0)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_fontSize": 32,
-              "karta_font": "Bodoni Moda",
-              "karta_isNameVisible": false
+              "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "viewtype_fontSize": 32,
+              "viewtype_font": "Bodoni Moda",
+              "view_isNameVisible": false
             }
           }
         ],
@@ -1929,9 +1940,9 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(255, 250, 196, 0)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_isNameVisible": false
+              "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "view_isNameVisible": false
             }
           }
         ],
@@ -1946,11 +1957,11 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(255, 250, 196, 0)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_isNameVisible": false,
-              "karta_fontSize": 32,
-              "karta_font": "Bodoni Moda"
+              "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "view_isNameVisible": false,
+              "viewtype_fontSize": 32,
+              "viewtype_font": "Bodoni Moda"
             }
           }
         ],
@@ -1965,9 +1976,9 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(255, 250, 196, 0)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_isNameVisible": false
+              "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "view_isNameVisible": false
             }
           }
         ],
@@ -1982,11 +1993,11 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(255, 250, 196, 0)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_isNameVisible": false,
-              "karta_fontSize": 32,
-              "karta_font": "Bodoni Moda"
+              "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "view_isNameVisible": false,
+              "viewtype_fontSize": 32,
+              "viewtype_font": "Bodoni Moda"
             }
           }
         ],
@@ -2001,9 +2012,9 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(255, 250, 196, 0)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_isNameVisible": false
+              "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "view_isNameVisible": false
             }
           }
         ],
@@ -2018,9 +2029,9 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(255, 250, 196, 0)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_isNameVisible": false
+              "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "view_isNameVisible": false
             }
           }
         ],
@@ -2035,7 +2046,7 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_isNameVisible": true
+              "view_isNameVisible": true
             }
           }
         ]
@@ -2060,9 +2071,9 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(255, 250, 196, 0)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_isNameVisible": false
+              "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "view_isNameVisible": false
             }
           }
         ],
@@ -2075,7 +2086,8 @@
             "width": 100,
             "height": 100,
             "relScale": 1,
-            "rotation": 0
+            "rotation": 0,
+            "attributes": {}
           }
         ],
         [
@@ -2089,11 +2101,11 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fontSize": 150,
-              "karta_fillColor": "rgba(255, 250, 196, 0)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_font": "Bodoni Moda",
-              "karta_isNameVisible": false
+              "viewtype_fontSize": 150,
+              "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "viewtype_font": "Bodoni Moda",
+              "view_isNameVisible": false
             }
           }
         ],
@@ -2108,10 +2120,10 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(255, 250, 196, 0)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_font": "Georgia",
-              "karta_isNameVisible": false
+              "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "viewtype_font": "Georgia",
+              "view_isNameVisible": false
             }
           }
         ],
@@ -2126,10 +2138,10 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fillColor": "rgba(255, 250, 196, 0)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_font": "Georgia",
-              "karta_isNameVisible": false
+              "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "viewtype_font": "Georgia",
+              "view_isNameVisible": false
             }
           }
         ],
@@ -2144,11 +2156,11 @@
             "relScale": 1,
             "rotation": 0,
             "attributes": {
-              "karta_fontSize": 48,
-              "karta_fillColor": "rgba(255, 250, 196, 0)",
-              "karta_textColor": "rgba(221, 221, 221, 1)",
-              "karta_font": "Bodoni Moda",
-              "karta_isNameVisible": false
+              "viewtype_fontSize": 48,
+              "viewtype_fillColor": "rgba(255, 250, 196, 0)",
+              "viewtype_textColor": "rgba(221, 221, 221, 1)",
+              "viewtype_font": "Bodoni Moda",
+              "view_isNameVisible": false
             }
           }
         ]

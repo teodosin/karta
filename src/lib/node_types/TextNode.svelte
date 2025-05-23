@@ -12,12 +12,12 @@
 
 	function getDefaultAttributes(baseName = 'Text'): Record<string, any> {
 		return {
-			name: baseName,
-			text: '',
-			karta_fontSize: 16,
-			karta_fillColor: '#FEF9C320',
-			karta_textColor: '#DDDDDD',
-			karta_font: 'Nunito'
+			name: baseName, // Stays unprefixed
+			type_text: '', // Core content attribute
+			viewtype_fontSize: 16, // Type-specific view default
+			viewtype_fillColor: '#FEF9C320', // Type-specific view default
+			viewtype_textColor: '#DDDDDD', // Type-specific view default
+			viewtype_font: 'Nunito' // Type-specific view default
 		};
 	}
 
@@ -54,11 +54,25 @@
 	$: hasContext = $availableContextsMap.has(viewNode.id);
 
 	// Type assertion for dataNode attributes - assumes NodeWrapper ensures correct ntype/attributes
-	$: dataNodeAttributes = dataNode.attributes as { text?: string; karta_fontSize?: number; name: string; karta_fillColor?: string; karta_textColor?: string; karta_font?: AvailableFont };
-	$: textContent = dataNodeAttributes?.text ?? '';
+	$: dataNodeAttributes = dataNode.attributes as {
+		name: string;
+		type_text?: string;
+		viewtype_fontSize?: number;
+		viewtype_fillColor?: string;
+		viewtype_textColor?: string;
+		viewtype_font?: AvailableFont;
+		// Add other potential view_* generic defaults if TextNode uses them
+	};
+	$: textContent = dataNodeAttributes?.type_text ?? '';
 
-	// Type assertion for viewNode attributes
-	$: viewNodeAttributes = viewNode.attributes as { karta_fontSize?: number; karta_fillColor?: string; karta_textColor?: string; karta_font?: AvailableFont } | undefined;
+	// Type assertion for viewNode attributes (overrides)
+	$: viewNodeAttributes = viewNode.attributes as {
+		viewtype_fontSize?: number;
+		viewtype_fillColor?: string;
+		viewtype_textColor?: string;
+		viewtype_font?: AvailableFont;
+		// Add other potential view_* generic overrides if TextNode uses them
+	} | undefined;
 
 	// --- Define Fallbacks ---
 	const FALLBACK_FILL_COLOR = '#FEF9C3'; // Default tan post-it color (Tailwind yellow-100)
@@ -67,10 +81,10 @@
 	const FALLBACK_FONT_SIZE = 16; // Default font size
 
 	// --- Reactive Effective Styles ---
-	$: effectiveFillColor = viewNodeAttributes?.karta_fillColor ?? dataNodeAttributes?.karta_fillColor ?? FALLBACK_FILL_COLOR;
-	$: effectiveTextColor = viewNodeAttributes?.karta_textColor ?? dataNodeAttributes?.karta_textColor ?? FALLBACK_TEXT_COLOR;
-	$: effectiveFont = viewNodeAttributes?.karta_font ?? dataNodeAttributes?.karta_font ?? FALLBACK_FONT;
-	$: effectiveFontSize = viewNodeAttributes?.karta_fontSize ?? dataNodeAttributes?.karta_fontSize ?? FALLBACK_FONT_SIZE;
+	$: effectiveFillColor = viewNodeAttributes?.viewtype_fillColor ?? dataNodeAttributes?.viewtype_fillColor ?? FALLBACK_FILL_COLOR;
+	$: effectiveTextColor = viewNodeAttributes?.viewtype_textColor ?? dataNodeAttributes?.viewtype_textColor ?? FALLBACK_TEXT_COLOR;
+	$: effectiveFont = viewNodeAttributes?.viewtype_font ?? dataNodeAttributes?.viewtype_font ?? FALLBACK_FONT;
+	$: effectiveFontSize = viewNodeAttributes?.viewtype_fontSize ?? dataNodeAttributes?.viewtype_fontSize ?? FALLBACK_FONT_SIZE;
 
 	// Determine ring classes based on focal state and context existence
 	$: ringClasses = dataNode.id === $currentContextId
@@ -96,8 +110,8 @@
 
 	function handleTextSubmit() {
 		if (isEditing && editedText !== textContent) {
-			// Only update the 'text' attribute on the DataNode
-			updateNodeAttributes(dataNode.id, { text: editedText });
+			// Only update the 'type_text' attribute on the DataNode
+			updateNodeAttributes(dataNode.id, { type_text: editedText });
 		}
 		isEditing = false;
 		removeClickListener(); // Remove listener after submit

@@ -1,3 +1,4 @@
+console.log('[LocalAdapter.ts] Module script executing - TOP OF FILE'); // New top-level log
 import * as idb from 'idb';
 import type { 
 	DataNode,
@@ -21,47 +22,65 @@ class LocalAdapter implements PersistenceService {
 	private objectUrlMap = new Map<string, string>(); // Tracks generated Object URLs { nodeId: objectUrl }
 
 	constructor() {
+		console.log('[LocalAdapter constructor] START'); // New constructor log
 		const startTime = performance.now();
 
-		// DB Version 1: Initial schema with all stores and indexes
-		this.dbPromise = idb.openDB<KartaDB>('karta-db', 1, { // Set version to 1
-			upgrade(db, oldVersion, newVersion, tx, event) {
-				// Create 'nodes' store with indexes if it doesn't exist
-				if (!db.objectStoreNames.contains('nodes')) {
-					const nodeStore = db.createObjectStore('nodes', { keyPath: 'id' });
-					nodeStore.createIndex('path_idx', 'path', { unique: true });
-					// Removed isSearchable_idx creation
+		// DB Version 2: Attribute prefix refactor
+		this.dbPromise = idb.openDB<KartaDB>('karta-db-debugtest', 2, { // CHANGED DB NAME FOR DEBUGGING
+			async upgrade(db, oldVersion, newVersion, tx, event) {
+				console.log('[LocalAdapter.upgrade] START (Restoring Schema Creation)', { oldVersion, newVersion, currentDbVersion: db.version });
+
+				// Schema creation for version 1 (if db is new or oldVersion is 0)
+				if (oldVersion < 1) {
+					console.log('[LocalAdapter.upgrade] Applying schema for v1...');
+					if (!db.objectStoreNames.contains('nodes')) {
+						const nodeStore = db.createObjectStore('nodes', { keyPath: 'id' });
+						nodeStore.createIndex('path_idx', 'path', { unique: true });
+						console.log('[LocalAdapter.upgrade] "nodes" store created.');
+					}
+					if (!db.objectStoreNames.contains('edges')) {
+						const edgeStore = db.createObjectStore('edges', { keyPath: 'id' });
+						edgeStore.createIndex('source_idx', 'source', { unique: false });
+						edgeStore.createIndex('target_idx', 'target', { unique: false });
+						console.log('[LocalAdapter.upgrade] "edges" store created.');
+					}
+					if (!db.objectStoreNames.contains('contexts')) {
+						db.createObjectStore('contexts', { keyPath: 'id' });
+						console.log('[LocalAdapter.upgrade] "contexts" store created.');
+					}
+					if (!db.objectStoreNames.contains('assets')) {
+						db.createObjectStore('assets');
+						console.log('[LocalAdapter.upgrade] "assets" store created.');
+					}
+					console.log('[LocalAdapter.upgrade] Schema for v1 applied.');
 				}
 
-				// Create 'edges' store with indexes if it doesn't exist
-				if (!db.objectStoreNames.contains('edges')) {
-					const edgeStore = db.createObjectStore('edges', { keyPath: 'id' });
-					edgeStore.createIndex('source_idx', 'source', { unique: false });
-					edgeStore.createIndex('target_idx', 'target', { unique: false });
+				// Migration for version 2 (attribute prefix refactor) - STILL SKIPPED for now
+				// This block would contain the actual data transformation if we were upgrading from v1.
+				// For a new DB (oldVersion = 0), this specific migration logic isn't strictly needed yet,
+				// but the schema from oldVersion < 1 is.
+				if (oldVersion < 2 && oldVersion >= 1) {
+					 console.log('[LocalAdapter.upgrade] Migrating data from v1 to v2 (SKIPPED FOR DEBUG)');
+					 // Actual migration logic would go here.
+				} else if (oldVersion === 0 && newVersion === 2) {
+					console.log('[LocalAdapter.upgrade] New database created at v2. No data migration needed from v1.');
 				}
-
-				// Create 'contexts' store if it doesn't exist
-				if (!db.objectStoreNames.contains('contexts')) {
-					db.createObjectStore('contexts', { keyPath: 'id' });
-				}
-
-				// Create 'assets' store if it doesn't exist
-				if (!db.objectStoreNames.contains('assets')) {
-					db.createObjectStore('assets'); // Key is assetId (usually nodeId)
-				}
-				// Removed all oldVersion checks
+				console.log('[LocalAdapter.upgrade] END (Restored Schema Creation)');
 			},
 			blocked() { console.error('[LocalAdapter] IDB blocked. Close other tabs accessing the DB.'); },
 			blocking() { console.warn('[LocalAdapter] IDB blocking. Connection will close.'); },
 			terminated() { console.warn('[LocalAdapter] IDB connection terminated unexpectedly.'); }
 		});
+		console.log('[LocalAdapter constructor] idb.openDB called.'); // Log after openDB call
 
 		this.dbPromise.then(db => {
 			const endTime = performance.now();
+			console.log(`[LocalAdapter] DB PROMISE RESOLVED successfully after ${endTime - startTime}ms. DB version: ${db.version}`);
 		}).catch(error => {
 			const endTime = performance.now();
-			console.error(`[LocalAdapter] DB connection failed after ${endTime - startTime}ms:`, error);
+			console.error(`[LocalAdapter] DB PROMISE REJECTED after ${endTime - startTime}ms:`, error);
 		});
+		console.log('[LocalAdapter constructor] END'); // End of constructor log
 	}
 
 	async saveNode(node: DataNode): Promise<void> {

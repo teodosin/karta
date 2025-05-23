@@ -13,7 +13,10 @@
 	// BrainCog is imported in instance script
 
 	function getDefaultAttributes(baseName = 'Root'): Record<string, any> {
-		return { name: baseName };
+		return {
+			name: baseName,
+			view_isNameVisible: false // Generic view default, root name is usually hidden
+		};
 	}
 
 	function getDefaultViewNodeState(): Omit<TweenableNodeState, 'x' | 'y'> {

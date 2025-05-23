@@ -36,7 +36,8 @@
 	// Ghost state is determined by checking the global $nodes store
 	$: isGhost = !$nodes.has(viewNode.id);
 	// Determine if the name label should be visible
-	$: isNameVisible = viewNode.attributes?.karta_isNameVisible !== false; // Default to true if undefined
+	// Check ViewNode override, then DataNode default, then fallback to true
+	$: isNameVisible = viewNode.attributes?.view_isNameVisible ?? dataNode?.attributes?.view_isNameVisible ?? true;
 	// Remove hasContext calculation
 
 	async function startEditing() {

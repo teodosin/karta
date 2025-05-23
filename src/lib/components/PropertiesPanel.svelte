@@ -186,18 +186,18 @@
 
 			// Get effective colors and font
 			const effectiveFillColor =
-				viewAttrs?.karta_fillColor ??
-				dataAttrs?.karta_fillColor ??
+				viewAttrs?.viewtype_fillColor ??
+				dataAttrs?.viewtype_fillColor ??
 				FALLBACK_FILL_COLOR;
 			const effectiveTextColor =
-				viewAttrs?.karta_textColor ??
-				dataAttrs?.karta_textColor ??
+				viewAttrs?.viewtype_textColor ??
+				dataAttrs?.viewtype_textColor ??
 				FALLBACK_TEXT_COLOR;
 			currentFont =
-				viewAttrs?.karta_font ?? dataAttrs?.karta_font ?? FALLBACK_FONT;
+				viewAttrs?.viewtype_font ?? dataAttrs?.viewtype_font ?? FALLBACK_FONT;
 			currentFontSize =
-				viewAttrs?.karta_fontSize ??
-				dataAttrs?.karta_fontSize ??
+				viewAttrs?.viewtype_fontSize ??
+				dataAttrs?.viewtype_fontSize ??
 				FALLBACK_FONT_SIZE; // Calculate effective font size
 
 			// Update local state for bindings based on calculated effective values
@@ -238,7 +238,7 @@
 	};
 
 	function handleColorInput(
-		attributeKey: "karta_fillColor" | "karta_textColor",
+		attributeKey: "viewtype_fillColor" | "viewtype_textColor",
 		colorData: ColorPickerInputData, // Accept the data object directly
 	) {
 		if (selectedViewNode && colorData.rgb) { // Check if rgb is not null
@@ -256,7 +256,7 @@
 			if (AVAILABLE_FONTS.includes(selectedValue)) {
 				updateViewNodeAttribute(
 					selectedViewNode.id,
-					"karta_font",
+					"viewtype_font",
 					selectedValue,
 				);
 			} else {
@@ -597,7 +597,7 @@
 						<div class="space-y-2">
 							{#each Object.entries(selectedDataNode.attributes) as [key, value]}
 								<!-- Only show attributes NOT defined in the type-specific schema, and not internal flags or view defaults, and not the old fontSize -->
-								{#if key !== "isSystemNode" && key !== "fontSize" && !key.startsWith("karta_") && !typeSpecificKeys.has(key)}
+								{#if !key.startsWith("type_") && !key.startsWith("view_") && !key.startsWith("viewtype_") && !typeSpecificKeys.has(key) && key !== "isSystemNode"}
 									<div
 										class="flex items-center justify-between gap-2"
 									>
@@ -660,10 +660,10 @@
 								<input
 									type="checkbox"
 									id="prop-view-isNameVisible"
-									checked={selectedViewNode?.attributes?.karta_isNameVisible ?? true}
+									checked={selectedViewNode?.attributes?.view_isNameVisible ?? selectedDataNode?.attributes?.view_isNameVisible ?? true}
 									on:change={(e) => {
 										if (selectedViewNode) {
-											updateViewNodeAttribute(selectedViewNode.id, 'karta_isNameVisible', (e.target as HTMLInputElement).checked);
+											updateViewNodeAttribute(selectedViewNode.id, 'view_isNameVisible', (e.target as HTMLInputElement).checked);
 										}
 									}}
 									class="form-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
@@ -698,7 +698,7 @@
 										<ColorPicker
 											bind:rgb={fillColorRgb}
 											bind:isOpen={isFillPickerOpen}
-											onInput={(data) => handleColorInput("karta_fillColor", data)}
+											onInput={(data) => handleColorInput("viewtype_fillColor", data)}
 											position="responsive"
 											components={{
 												wrapper:
@@ -719,7 +719,7 @@
 										<ColorPicker
 											bind:rgb={textColorRgb}
 											bind:isOpen={isTextColorPickerOpen}
-											onInput={(data) => handleColorInput("karta_textColor", data)}
+											onInput={(data) => handleColorInput("viewtype_textColor", data)}
 											position="responsive"
 											components={{
 												wrapper:
@@ -764,7 +764,7 @@
 												if (selectedViewNode) {
 													updateViewNodeAttribute(
 														selectedViewNode.id,
-														"karta_fontSize",
+														"viewtype_fontSize",
 														parseFloat(
 															(
 																e.target as HTMLInputElement

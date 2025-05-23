@@ -41,11 +41,8 @@
 		closeContextMenu,
 		type ContextMenuContextType,
 		requestNodeRename,
-		isConfirmationDialogOpen,
-		confirmationDialogMessage,
-		confirmationDialogAction,
 		openConfirmationDialog,
-		         openNodeSearch
+		openNodeSearch
 	} from '$lib/karta/UIStateStore';
 	import {
 		selectedNodeIds,

@@ -11,7 +11,10 @@
 	// Optional: import icon like Circle from 'lucide-svelte';
 
 	function getDefaultAttributes(baseName = 'Node'): Record<string, any> {
-		return { name: baseName };
+		return {
+			name: baseName,
+			view_isNameVisible: true // Generic view default
+		};
 	}
 
 	function getDefaultViewNodeState(): Omit<TweenableNodeState, 'x' | 'y'> {

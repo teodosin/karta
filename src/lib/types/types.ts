@@ -20,7 +20,7 @@ export interface DataNode {
   createdAt: number; // Unix timestamp (ms)
   modifiedAt: number; // Unix timestamp (ms)
   path: string; // Added: Represents the node's path (simplified for client)
-  attributes: Record<string, any>; // Holds name, content, src, etc.
+  attributes: Record<string, any>; // Holds core data (e.g., type_text), view defaults (e.g., view_isNameVisible, viewtype_fontSize), and other attributes.
   isSearchable?: boolean; // Added: Controls visibility in node search
 }
 
@@ -30,12 +30,9 @@ export interface DataNode {
 export interface ViewNode {
   id: NodeId; // Same UUID as the corresponding DataNode
   state: Tween<TweenableNodeState>; // Tween manages core visual properties (position, size, rotation)
-  // Generic view-specific attributes, interpreted by the node component
-  // Includes things like karta_fillColor, karta_textColor, karta_font, karta_fontSize, karta_isNameVisible
-  attributes?: Record<string, any> & {
-  karta_isNameVisible?: boolean;
-  // Add other known karta_ attributes here for better type checking if desired
-  };
+  // Holds context-specific attribute overrides (e.g., view_isNameVisible, viewtype_fontSize)
+  // and custom user-defined attributes (unprefixed).
+  attributes?: Record<string, any>;
 }
 
 // Represents an absolute transform in the canvas coordinate space
@@ -84,7 +81,8 @@ export interface StorableViewNode {
     height: number;
     relScale: number;
     rotation: number;
-    // Generic view-specific attributes for storage
+    // Holds context-specific attribute overrides for storage (e.g., view_isNameVisible, viewtype_fontSize)
+    // and custom user-defined attributes (unprefixed).
     attributes?: Record<string, any>;
 }
 

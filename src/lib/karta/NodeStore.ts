@@ -38,7 +38,7 @@ async function _ensureDataNodeExists(nodeId: NodeId): Promise<DataNode | null> {
                 createdAt: now,
                 modifiedAt: now,
                 path: defaultPath, // Set path correctly
-                attributes: { name: defaultName, ...(isRoot && { isSystemNode: true, karta_isNameVisible: false }) }, // Set name, system flag, and hide label for root
+                attributes: { name: defaultName, ...(isRoot && { isSystemNode: true, view_isNameVisible: false }) }, // Set name, system flag, and hide label for root
             };
             await localAdapter.saveNode(dataNode);
         }
@@ -73,7 +73,11 @@ export async function createNodeAtPosition(
 	const newNodeData: DataNode = {
 		id: newNodeId, ntype: ntype, createdAt: now, modifiedAt: now,
         path: `/${finalName}`, // Simple path for now
-		attributes: { ...attributes, name: finalName },
+		attributes: {
+		          ...getDefaultAttributesForType(ntype), // Get new prefixed defaults
+		          ...attributes, // Apply user-provided attributes (can override defaults)
+		          name: finalName // Ensure name is set (unprefixed)
+		      },
 	};
 
     // 2. Get default view state based on ntype and create initial state for the ViewNode's tween
@@ -506,26 +510,23 @@ export async function fetchAvailableContextDetails(): Promise<{ id: NodeId, name
        }
 
        // --- Type Check ---
-       let isValidAttribute = false;
-       // Allow karta_isNameVisible for any node type
-       if (attributeKey === 'karta_isNameVisible') {
-           isValidAttribute = true;
+       let isValidAttribute = true; // Assume valid by default
+       if (attributeKey.startsWith('type_')) {
+           isValidAttribute = false;
+           console.error(`[updateViewNodeAttribute] Attribute key "${attributeKey}" starts with 'type_' and cannot be set on a ViewNode.`);
        }
-       // Check text-specific attributes
-       else if (dataNode.ntype === 'text' && ['karta_fillColor', 'karta_textColor', 'karta_font', 'karta_fontSize'].includes(attributeKey)) {
-           isValidAttribute = true;
-       }
-       // Future: Add checks for other node types and their valid view attributes here
-
+       // Add more specific validation for known view_* and viewtype_* attributes if needed,
+       // or ensure the component handles unknown attributes gracefully.
+       // For now, allow any unprefixed, view_*, or viewtype_* attribute.
+ 
        if (!isValidAttribute) {
-           console.error(`[updateViewNodeAttribute] Attribute key "${attributeKey}" is not valid for node type "${dataNode.ntype}"`);
            return;
        }
-
+ 
        // --- Determine if updates are needed (compare with original values) ---
+       // Only check ViewNode for updates, as DataNode attributes (defaults) are not changed here.
        const needsViewNodeUpdate = viewNode.attributes?.[attributeKey] !== attributeValue;
-       const needsDataNodeUpdate = dataNode.attributes?.[attributeKey] !== attributeValue;
-
+ 
        // --- Trigger Store Updates & Persistence (using immutable patterns) ---
        if (needsViewNodeUpdate) {
            contexts.update(ctxMap => {
@@ -578,48 +579,9 @@ export async function fetchAvailableContextDetails(): Promise<{ id: NodeId, name
                }
            }
        }
-
-       if (needsDataNodeUpdate) {
-            nodes.update(nodeMap => {
-                // Get original DataNode again inside update
-                const originalDataNode = nodeMap.get(dataNodeId);
-                if (!originalDataNode) return nodeMap; // Should not happen
-
-                // Create new attributes object immutably
-                const newDataAttributes = {
-                    ...(originalDataNode.attributes ?? {}), // Ensure attributes object exists
-                    [attributeKey]: attributeValue
-                };
-
-                // Create new DataNode object immutably
-                const newDataNode = {
-                    ...originalDataNode,
-                    attributes: newDataAttributes,
-                    modifiedAt: Date.now() // Update modified time
-                };
-
-                // Create new top-level map immutably
-                const newNodeMap = new Map(nodeMap);
-                newNodeMap.set(dataNodeId, newDataNode);
-                return newNodeMap;
-            });
-
-            if (localAdapter) {
-                try {
-                    const updatedDataNode = get(nodes).get(dataNodeId);
-                    if (updatedDataNode) {
-                        await localAdapter.saveNode(updatedDataNode);
-                    } else {
-                        console.error(`[updateViewNodeAttribute] Failed to get updated data node ${dataNodeId} for saving.`);
-                    }
-                } catch (error) {
-                    console.error(`[updateViewNodeAttribute] Error saving node ${dataNodeId} after data attribute update:`, error);
-                    // Consider rollback? For now, just log.
-                }
-            }
-       }
-
-       if (needsViewNodeUpdate || needsDataNodeUpdate) {
+ 
+       // Only log if a ViewNode update occurred.
+       if (needsViewNodeUpdate) {
        } else {
        }
    }
@@ -711,11 +673,13 @@ export async function addExistingNodeToCurrentContext(path: string, position: { 
             rotation: defaultViewState.rotation
         };
 
-        // 8b. Create new ViewNode with Tween, copying relevant karta_* attributes from dataNode.attributes
+        // 8b. Create new ViewNode with Tween, copying relevant view-related default attributes from DataNode
         const viewAttributes: Record<string, any> = {};
         if (dataNode.attributes) {
             for (const key in dataNode.attributes) {
-                if (key.startsWith('karta_')) {
+                // Copy view-related defaults (now prefixed with view_ or viewtype_)
+                // to the ViewNode's attributes.
+                if (key.startsWith('view_') || key.startsWith('viewtype_')) {
                     viewAttributes[key] = dataNode.attributes[key];
                 }
             }

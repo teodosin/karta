@@ -12,7 +12,13 @@
 
 	function getDefaultAttributes(baseName = 'Image'): Record<string, any> {
 		// Initialize src as null or undefined to trigger lazy loading
-		return { name: baseName, src: null, alt: '', assetId: null };
+		return {
+			name: baseName, // Stays unprefixed
+			type_src: null, // Core content attribute (will hold Object URL)
+			type_alt: '', // Core content attribute
+			type_assetId: null, // ID to fetch the actual asset blob
+			view_isNameVisible: true // Generic view default
+		};
 	}
 
 	function getDefaultViewNodeState(): Omit<TweenableNodeState, 'x' | 'y'> {
@@ -20,9 +26,9 @@
 	}
 
 	const imageNodePropertySchema: PropertyDefinition[] = [
-		// Make src read-only for now as it's managed internally via Object URLs
-		{ key: 'src', label: 'Image URL (Read-Only)', type: 'string' }, // Consider making this read-only or hiding it
-		{ key: 'alt', label: 'Alt Text', type: 'string' }
+		// Make type_src read-only as it's managed internally via Object URLs
+		{ key: 'type_src', label: 'Image URL (Read-Only)', type: 'string' },
+		{ key: 'type_alt', label: 'Alt Text', type: 'string' }
 	];
 
 	export const nodeTypeDef: Omit<NodeTypeDefinition, 'component'> = {
@@ -48,12 +54,18 @@
 	$: hasContext = $availableContextsMap.has(viewNode.id);
 
 	// Type assertion for attributes
-	$: attributes = dataNode.attributes as { src?: string | null; alt?: string; name: string; assetId?: string | null }; // Add assetId type, allow null src
-	$: altText = attributes?.alt || `Image for ${attributes?.name ?? dataNode.id}`;
-	$: assetId = attributes?.assetId; // Reactive variable for assetId
+	$: attributes = dataNode.attributes as {
+		name: string;
+		type_src?: string | null;
+		type_alt?: string;
+		type_assetId?: string | null;
+		view_isNameVisible?: boolean;
+	};
+	$: altText = attributes?.type_alt || `Image for ${attributes?.name ?? dataNode.id}`;
+	$: assetId = attributes?.type_assetId; // Reactive variable for assetId
 
 	// Local state for the image URL and loading status
-	let imageUrl: string | null = attributes?.src || null; // Initialize with src if present (might be cached URL from adapter)
+	let imageUrl: string | null = attributes?.type_src || null; // Initialize with type_src if present
 	let isLoading = false;
 
 	// Placeholder image (e.g., SVG or data URI) if src is empty
