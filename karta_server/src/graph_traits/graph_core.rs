@@ -36,7 +36,7 @@ mod tests {
     use directories::ProjectDirs;
 
     use crate::{
-        elements::{node, node_path::{NodeHandle, NodePath}}, graph_agdb::GraphAgdb, graph_traits::{graph_core::GraphCore, graph_edge::GraphEdge, graph_node::GraphNodes, StoragePath}, prelude::NodeTypeId, utils::utils::TestContext
+        elements::{node, node_path::{NodeHandle, NodePath}}, graph_agdb::GraphAgdb, graph_traits::{graph_core::GraphCore, graph_edge::GraphEdge, graph_node::GraphNodes, StoragePath}, prelude::NodeTypeId, utils::utils::KartaServiceTestContext
     };
 
     /// Add a node to the db, then create a new graph with the same name.
@@ -45,17 +45,17 @@ mod tests {
     fn graph_with_same_name_exists__use_the_existing_and_dont_create_new() {
         let func_name = "graph_with_same_name_exists__use_the_existing_and_dont_create_new";
 
-        let mut first = TestContext::new(func_name);
+        let mut first = KartaServiceTestContext::new(func_name);
 
         let node_path = NodePath::new(PathBuf::from("test"));
 
         let node = node::DataNode::new(&node_path.clone(), NodeTypeId::virtual_generic());
 
-        first.graph.insert_nodes(vec![node.clone()]);
+        first.get_graph_db_mut().insert_nodes(vec![node.clone()]);
 
-        let mut second = TestContext::new(func_name);
+        let mut second = KartaServiceTestContext::new(func_name);
 
-        let root_node_result = second.graph.open_node(&NodeHandle::Path(node_path));
+        let root_node_result = second.get_graph_db().open_node(&NodeHandle::Path(node_path));
 
         // println!("Root node result: {:#?}", root_node_result);
 
@@ -65,9 +65,9 @@ mod tests {
     #[test]
     fn create_graph_db_file_in_custom_storage_directory() {
         let func_name = "create_graph_db_file_in_custom_storage_directory";
-        let mut ctx = TestContext::custom_storage(func_name);
+        let mut ctx = KartaServiceTestContext::custom_storage(func_name);
 
-        let storage = ctx.graph.storage_path();
+        let storage = ctx.get_graph_db().storage_path();
 
         assert_eq!(storage.exists(), true);
 
@@ -78,17 +78,17 @@ mod tests {
         );
 
         assert_eq!(
-            ctx.graph.user_root_dirpath().exists(),
+            ctx.get_graph_db().user_root_dirpath().exists(),
             true,
             "Graph was not created in storage directory"
         );
 
         assert_eq!(
-            ctx.graph.storage_path(),
+            ctx.get_graph_db().storage_path(),
             storage.clone()
         );
 
-        let root_node_result = ctx.graph.open_node(&NodeHandle::Path(NodePath::root()));
+        let root_node_result = ctx.get_graph_db().open_node(&NodeHandle::Path(NodePath::root()));
 
         assert_eq!(root_node_result.is_ok(), true);
 
@@ -102,7 +102,7 @@ mod tests {
     /// Test whether the db creates attributes/settings/etc. nodes when the db is first created.
     fn creating_new_graph_creates_archetype_nodes() {
         let func_name = "creating_new_graph_creates_archetype_nodes";
-        let mut ctx = TestContext::new(func_name);
+        let mut ctx = KartaServiceTestContext::new(func_name);
         
         let atypes = crate::elements::nodetype::ARCHETYPES;
 
@@ -111,7 +111,7 @@ mod tests {
             // println!("Atype as buf {:?}", path.buf());
             // println!("looking for achetype node {:?}", path.alias());
 
-            let node = ctx.graph.open_node(&NodeHandle::Path(path.clone()));
+            let node = ctx.get_graph_db().open_node(&NodeHandle::Path(path.clone()));
             assert_eq!(node.is_ok(), true, "Node {} not found", path.alias());
 
             if path != NodePath::root() {
@@ -119,10 +119,10 @@ mod tests {
 
                 assert_eq!(parent_path, NodePath::root(), "Node {} is not a child of root", path.alias());
 
-                let parent_node = ctx.graph.open_node(&NodeHandle::Path(parent_path.clone()));
+                let parent_node = ctx.get_graph_db().open_node(&NodeHandle::Path(parent_path.clone()));
                 assert_eq!(parent_node.is_ok(), true, "Parent of node {} not found", path.alias());
 
-                let edge = ctx.graph.get_edge_strict(&parent_path, &path);
+                let edge = ctx.get_graph_db().get_edge_strict(&parent_path, &path);
                 assert_eq!(edge.is_ok(), true, "Edge not found");
             }
         });

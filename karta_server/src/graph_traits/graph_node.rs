@@ -39,7 +39,7 @@ mod tests {
     use crate::{
         elements::{
             self, attribute::{Attribute, RESERVED_NODE_ATTRS}, node, node_path::{NodeHandle, NodePath}, nodetype::ARCHETYPES
-        }, graph_agdb::GraphAgdb, graph_traits::graph_edge::GraphEdge, prelude::{DataNode, NodeTypeId}, utils::utils::TestContext
+        }, graph_agdb::GraphAgdb, graph_traits::graph_edge::GraphEdge, prelude::{DataNode, NodeTypeId}, utils::utils::KartaServiceTestContext
     };
     use agdb::QueryBuilder;
 
@@ -54,11 +54,11 @@ mod tests {
     #[test]
     fn opening_root_node_connections__returns_vector_of_nodes() {
         let func_name = "opening_root_node_connections__returns_vector_of_nodes";
-        let mut ctx = TestContext::new(func_name);
+        let ctx = KartaServiceTestContext::new(func_name); // No mut needed if only reading
 
         let root_path = NodePath::root();
 
-        let connections = ctx.graph.open_node_connections(&root_path);
+        let connections = ctx.get_graph_db().open_node_connections(&root_path);
 
         // Archetypes includes the root, but the source node is excluded from the function so
         // so the length should be one less than the number of archetypes
@@ -84,48 +84,48 @@ mod tests {
     #[test]
     fn inserting_node__node_is_inserted() {
         let func_name = "inserting_node__node_is_inserted";
-        let mut ctx = TestContext::new(func_name);
+        let mut ctx = KartaServiceTestContext::new(func_name);
 
         let path = NodePath::new(PathBuf::from("test"));
 
         let node = DataNode::new(&path, NodeTypeId::virtual_generic());
 
-        ctx.graph.insert_nodes(vec![node]);
+        ctx.get_graph_db_mut().insert_nodes(vec![node]);
 
-        ctx.graph.open_node(&NodeHandle::Path(path)).expect("Node should exist");
+        ctx.get_graph_db().open_node(&NodeHandle::Path(path)).expect("Node should exist");
     }
 
     #[test]
     fn inserting_modified_same_node__updates_node() {
         let func_name = "inserting_modified_same_node__updates_node";
-        let mut ctx = TestContext::new(func_name);
+        let mut ctx = KartaServiceTestContext::new(func_name);
 
         let path = NodePath::new(PathBuf::from("test"));
 
         let node = DataNode::new(&path, NodeTypeId::virtual_generic());
 
-        ctx.graph.insert_nodes(vec![node.clone()]);
+        ctx.get_graph_db_mut().insert_nodes(vec![node.clone()]);
 
         let root_path = NodePath::user_root();
-        let root_connections = ctx.graph.open_node_connections(&root_path);
+        let root_connections = ctx.get_graph_db().open_node_connections(&root_path);
 
         let mut mod_node = node.clone();
         mod_node.set_name("testerer");
         
-        ctx.graph.insert_nodes(vec![mod_node]);
-        let second_connections = ctx.graph.open_node_connections(&root_path);
+        ctx.get_graph_db_mut().insert_nodes(vec![mod_node]);
+        let second_connections = ctx.get_graph_db().open_node_connections(&root_path);
 
         assert_eq!(root_connections.len(), second_connections.len());
 
         // Check the name too
-        let mod_node = ctx.graph.open_node(&NodeHandle::Path(path)).unwrap();
+        let mod_node = ctx.get_graph_db().open_node(&NodeHandle::Path(path)).unwrap();
         assert_eq!(mod_node.name(), "testerer");
     }
 
     #[test]
     fn inserting_long_path__creates_intermediate_nodes() {
         let func_name = "inserting_long_path__creates_intermediate_nodes";
-        let mut ctx = TestContext::new(func_name);
+        let mut ctx = KartaServiceTestContext::new(func_name);
 
         let first = NodePath::new(PathBuf::from("one"));
         let second = NodePath::new(PathBuf::from("one/two"));
@@ -133,32 +133,32 @@ mod tests {
 
         let third_node = DataNode::new(&third, NodeTypeId::virtual_generic());
 
-        ctx.graph.insert_nodes(vec![third_node]);
+        ctx.get_graph_db_mut().insert_nodes(vec![third_node]);
 
-        let second_node = ctx.graph.open_node(&NodeHandle::Path(second));
+        let second_node = ctx.get_graph_db().open_node(&NodeHandle::Path(second));
         assert!(second_node.is_ok());
 
-        let first_node = ctx.graph.open_node(&NodeHandle::Path(first));
+        let first_node = ctx.get_graph_db().open_node(&NodeHandle::Path(first));
         assert!(first_node.is_ok());
 
-        println!("{:#?}", ctx.graph.get_all_aliases());
+        println!("{:#?}", ctx.get_graph_db().get_all_aliases());
     }
 
     #[test]
     fn uuid__can_be_used_to_find_node() {
         let func_name = "uuid__can_be_used_to_find_node";
-        let mut ctx = TestContext::new(func_name);
+        let mut ctx = KartaServiceTestContext::new(func_name);
 
         let path = NodePath::new(PathBuf::from("test"));
 
         let node = DataNode::new(&path, NodeTypeId::virtual_generic());
         
-        ctx.graph.insert_nodes(vec![node]);
+        ctx.get_graph_db_mut().insert_nodes(vec![node]);
         
-        let found_by_path = ctx.graph.open_node(&NodeHandle::Path(path)).expect("Node should exist");
+        let found_by_path = ctx.get_graph_db().open_node(&NodeHandle::Path(path)).expect("Node should exist");
         let uuid = found_by_path.uuid().expect("Node should have a uuid");
 
-        let found_by_uuid = ctx.graph.open_node(&NodeHandle::Uuid(uuid)).expect("Node should exist");
+        let found_by_uuid = ctx.get_graph_db().open_node(&NodeHandle::Uuid(uuid)).expect("Node should exist");
         
         assert_eq!(found_by_path, found_by_uuid);
     }
