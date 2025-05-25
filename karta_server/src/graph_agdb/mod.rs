@@ -19,7 +19,7 @@ pub struct GraphAgdb {
 
     /// Path to the root directory of the graph.
     /// All paths are relative to this root.
-    root_path: std::path::PathBuf,
+    vault_fs_path: std::path::PathBuf,
 
     /// Path to the where the db is stored in the file system.
     /// Includes the name of the directory.  

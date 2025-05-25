@@ -41,7 +41,7 @@ pub async fn open_context_from_fs_path(
         }
     };
     
-    let vault_path = PathBuf::from(karta_service.root_path());
+    let vault_path = karta_service.vault_fs_path().clone();
     let processed_api_path = path_segments.trim_start_matches('/');
 
     let node_path_to_open: NodePath;
