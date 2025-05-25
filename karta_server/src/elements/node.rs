@@ -5,20 +5,20 @@ use uuid::Uuid;
 
 use super::{attribute::Attribute, node_path::NodePath, nodetype::NodeTypeId, SysTime};
 
-/// The universal node type. 
-/// Nodes loaded for users of this crate should be in this type. 
-/// 
+/// The universal node type.
+/// Nodes loaded for users of this crate should be in this type.
+///
 /// bevy_karta_client destructures this type into components on an entity
-/// to be then later used by bevy_karta_ui. 
-/// 
-/// How exactly the other direction, the saving of data, should work, is, 
+/// to be then later used by bevy_karta_ui.
+///
+/// How exactly the other direction, the saving of data, should work, is,
 /// as of writing this, undetermined. Likely in most cases Graph's methods will
 /// be used directly to make modifictions rather than creating a Node instance.
 #[derive(Debug, PartialEq, Clone, serde::Serialize, serde::Deserialize)]
 pub struct DataNode {
     /// The id of the node in the database.
     db_id: Option<DbId>,
-    uuid: Option<Uuid>,
+    uuid: Uuid,
     created_time: SysTime,
     modified_time: SysTime,
     /// The path of the node relative to the root of the graph.
@@ -28,7 +28,7 @@ pub struct DataNode {
     name: String,
 
     ntype: NodeTypeId,
-    alive: bool, 
+    alive: bool,
 
     attributes: Vec<Attribute>,
 }
@@ -42,7 +42,7 @@ impl DbUserValue for DataNode {
             None => None,
         }
     }
-    
+
     fn db_keys() -> Vec<DbValue> {
         let mut keys = Vec::new();
         keys.push(DbValue::from("uuid"));
@@ -70,11 +70,17 @@ impl DbUserValue for DataNode {
 
     fn to_db_values(&self) -> Vec<DbKeyValue> {
         let mut values = Vec::new();
-        if let Some(uuid) = &self.uuid {
-            values.push(DbKeyValue::from(("uuid", uuid.to_string())));
-        }
-        values.push(DbKeyValue::from(("created_time", self.created_time.clone())));
-        values.push(DbKeyValue::from(("modified_time", self.modified_time.clone())));
+
+        values.push(DbKeyValue::from(("uuid", self.uuid.to_string())));
+
+        values.push(DbKeyValue::from((
+            "created_time",
+            self.created_time.clone(),
+        )));
+        values.push(DbKeyValue::from((
+            "modified_time",
+            self.modified_time.clone(),
+        )));
 
         values.push(DbKeyValue::from(("path", self.path.clone())));
         values.push(DbKeyValue::from(("name", self.name.clone())));
@@ -89,16 +95,22 @@ impl DbUserValue for DataNode {
     }
 }
 
-/// Implementation block for node. 
+/// Implementation block for node.
 impl DataNode {
     pub fn new(path: &NodePath, ntype: NodeTypeId) -> Self {
-
+        // Uuid generation is based on the path and creation time.
         let now = SysTime(SystemTime::now());
+        let mut combined: String = path.name();
+        combined.push_str(&now.0.elapsed().unwrap().as_millis().to_string());
+
+        // Hash the combined string
+        let hash = blake3::hash(combined.as_bytes());
+        let uuid = Uuid::new_v5(&Uuid::NAMESPACE_URL, hash.as_bytes());
 
         DataNode {
             db_id: None,
             // Note: The Uuid gets set when the node is inserted into the database.
-            uuid: None,
+            uuid,
             created_time: now.clone(),
             modified_time: now,
 
@@ -111,24 +123,19 @@ impl DataNode {
         }
     }
 
-    /// Perhaps it would be better to update this through Graph? Opportunity for bulk 
+    /// Perhaps it would be better to update this through Graph? Opportunity for bulk
     /// insertion?
     pub fn update_modified_time(&mut self) {
         self.modified_time = SysTime(SystemTime::now());
     }
-    
+
     pub fn id(&self) -> Option<DbId> {
         self.db_id
     }
 
-
-    pub fn uuid(&self) -> Option<Uuid> {
+    pub fn uuid(&self) -> Uuid {
         self.uuid.clone()
     }
-    pub fn set_uuid(&mut self, uuid: Uuid) {
-        self.uuid = Some(uuid);
-    }
-
 
     pub fn name(&self) -> String {
         self.name.clone()
@@ -137,11 +144,9 @@ impl DataNode {
         self.name = name.to_owned();
     }
 
-
     pub fn path(&self) -> NodePath {
         self.path.clone()
     }
-
 
     pub fn ntype_name(&self) -> NodeTypeId {
         self.ntype.clone()
@@ -166,26 +171,31 @@ impl TryFrom<DbElement> for DataNode {
     fn try_from(value: DbElement) -> Result<Self, Self::Error> {
         // let fixed: [&str; 6] = ["path", "ntype", "nphys", "alive", "created_time", "modified_time"];
         let fixed = super::attribute::RESERVED_NODE_ATTRS;
-        let rest = value.values.iter().filter(|v|!fixed.contains(&v.key.string().unwrap().as_str())).collect::<Vec<_>>();
+        let rest = value
+            .values
+            .iter()
+            .filter(|v| !fixed.contains(&v.key.string().unwrap().as_str()))
+            .collect::<Vec<_>>();
 
         let db_id = value.id;
         let uuid = value.values.iter().find(|v| v.key == "uuid".into());
         let created_time = value.values.iter().find(|v| v.key == "created_time".into());
-        let modified_time = value.values.iter().find(|v| v.key == "modified_time".into());
+        let modified_time = value
+            .values
+            .iter()
+            .find(|v| v.key == "modified_time".into());
         let path = value.values.iter().find(|v| v.key == "path".into());
         let name = value.values.iter().find(|v| v.key == "name".into());
         let ntype = value.values.iter().find(|v| v.key == "ntype".into());
         let nphys = value.values.iter().find(|v| v.key == "nphys".into());
         let alive = value.values.iter().find(|v| v.key == "alive".into());
 
-        let attrs: Vec<Attribute> = rest.iter().map(|v| {
-            Attribute::try_from(*v).unwrap()
-        }).collect();
+        let attrs: Vec<Attribute> = rest
+            .iter()
+            .map(|v| Attribute::try_from(*v).unwrap())
+            .collect();
 
-        let uuid = match uuid {
-            Some(v) => Some(Uuid::from_str(v.value.clone().to_string().as_str()).unwrap()),
-            None => None,
-        };
+        let uuid = Uuid::from_str(uuid.unwrap().value.clone().to_string().as_str()).unwrap();
 
         let node = DataNode {
             db_id: Some(db_id),

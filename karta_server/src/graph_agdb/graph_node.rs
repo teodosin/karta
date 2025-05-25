@@ -191,22 +191,6 @@ impl GraphNodes for GraphAgdb {
                 }
             }
 
-
-
-            // Setting a better uuid on insert to db
-            let full_path = self.root_path.join(npath.buf());
-            let created_time: SystemTime = match full_path.exists() {
-                true => full_path.metadata().unwrap().created().unwrap(),
-                false => SystemTime::now(),
-            };
-            // Combine name and creation time
-            let mut combined: String = npath.name();
-            combined.push_str(&created_time.elapsed().unwrap().as_millis().to_string());
-
-            // Hash the combined string
-            let hash = blake3::hash(combined.as_bytes());
-            node.set_uuid(Uuid::new_v5(&Uuid::NAMESPACE_URL, hash.as_bytes()));
-
             let node_query = self.db.exec_mut(
                 &QueryBuilder::insert()
                     .nodes()

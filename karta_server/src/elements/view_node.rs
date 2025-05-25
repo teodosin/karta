@@ -29,7 +29,7 @@ impl ViewNode {
         let viewnode_attributes: Vec<Attribute> = Vec::new();
 
         Self {
-            uuid: data_node.uuid().unwrap(),
+            uuid: data_node.uuid(),
             is_name_visible: true,
             relX: 0.0,
             relY: 0.0,
