@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ContextSettings {
     zoom_scale: f32,
     view_rel_pos_x: f32,
