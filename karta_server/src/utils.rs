@@ -20,8 +20,9 @@ pub mod utils {
         context::context_db::ContextDb, // For KartaServiceTestContext helpers
         graph_agdb::GraphAgdb,
         graph_traits::{graph_core::GraphCore, Graph},
-        server::karta_service::KartaService,
+        server::karta_service::KartaService
     };
+    use std::sync::{Arc, RwLock}; // Added Arc and RwLock
 
     #[derive(Serialize, Deserialize, Debug, Clone)]
     struct PerfReport {
@@ -34,7 +35,7 @@ pub mod utils {
     // KartaServiceTestContext for testing KartaService instances
     pub struct KartaServiceTestContext {
         pub test_name: String,
-        pub karta_service: KartaService,
+        pub service_arc: Arc<RwLock<KartaService>>, // Changed field name and type
         pub vault_root_path: PathBuf, // The root of the temporary vault for this service instance
         measure_perf: bool,
         start_time: std::time::Instant,
@@ -60,15 +61,16 @@ pub mod utils {
             // It will create it if it doesn't exist within the vault_root_path.
             let karta_internal_storage_dir = vault_root_path.join(".karta");
 
-            let karta_service = KartaService::new(
+            let service_instance = KartaService::new(
                 &name,                      // Name for the agdb database file, etc.
                 vault_root_path.clone(),    // This is the root of the user's vault.
                 karta_internal_storage_dir, // This is where .karta internal files go.
             );
+            let service_arc = Arc::new(RwLock::new(service_instance));
 
             Self {
                 test_name: name,
-                karta_service,
+                service_arc, // Updated field
                 vault_root_path,
                 measure_perf: false,
                 start_time: std::time::Instant::now(),
@@ -95,12 +97,13 @@ pub mod utils {
 
             let karta_internal_storage_dir = vault_root_path.join(".karta");
 
-            let karta_service =
+            let service_instance =
                 KartaService::new(&name, vault_root_path.clone(), karta_internal_storage_dir);
+            let service_arc = Arc::new(RwLock::new(service_instance));
 
             Self {
                 test_name: name,
-                karta_service,
+                service_arc, // Updated field
                 vault_root_path,
                 measure_perf: false,
                 start_time: std::time::Instant::now(),
@@ -112,28 +115,53 @@ pub mod utils {
             self
         }
 
-        pub fn get_service(&self) -> &KartaService {
-            &self.karta_service
-        }
-
-        pub fn get_graph_db(&self) -> &GraphAgdb {
-            self.karta_service.data()
-        }
-
-        pub fn get_context_db(&self) -> &ContextDb {
-            self.karta_service.view()
-        }
-
-        pub fn get_graph_db_mut(&mut self) -> &mut GraphAgdb {
-            self.karta_service.data_mut()
-        }
-
-        pub fn get_context_db_mut(&mut self) -> &mut ContextDb {
-            self.karta_service.view_mut()
-        }
-
         pub fn get_vault_root(&self) -> &PathBuf {
             &self.vault_root_path
+        }
+
+        // New closure-based accessors
+        pub fn with_service<F, R>(&self, operation: F) -> R
+        where
+            F: FnOnce(&KartaService) -> R,
+        {
+            let service_guard = self.service_arc.read().unwrap_or_else(|e| panic!("Failed to acquire read lock on KartaService: {}", e));
+            operation(&*service_guard)
+        }
+
+        pub fn with_service_mut<F, R>(&self, operation: F) -> R
+        where
+            F: FnOnce(&mut KartaService) -> R,
+        {
+            let mut service_guard = self.service_arc.write().unwrap_or_else(|e| panic!("Failed to acquire write lock on KartaService: {}", e));
+            operation(&mut *service_guard)
+        }
+
+        pub fn with_graph_db<F, R>(&self, operation: F) -> R
+        where
+            F: FnOnce(&GraphAgdb) -> R,
+        {
+            self.with_service(|s| operation(s.data()))
+        }
+        
+        pub fn with_graph_db_mut<F, R>(&self, operation: F) -> R
+        where
+            F: FnOnce(&mut GraphAgdb) -> R,
+        {
+            self.with_service_mut(|s| operation(s.data_mut()))
+        }
+
+        pub fn with_context_db<F, R>(&self, operation: F) -> R
+        where
+            F: FnOnce(&ContextDb) -> R,
+        {
+            self.with_service(|s| operation(s.view()))
+        }
+
+        pub fn with_context_db_mut<F, R>(&self, operation: F) -> R
+        where
+            F: FnOnce(&mut ContextDb) -> R,
+        {
+            self.with_service_mut(|s| operation(s.view_mut()))
         }
 
         pub fn create_file_in_vault(
@@ -165,7 +193,7 @@ pub mod utils {
 
             if self.measure_perf {
                 let elapsed = self.start_time.elapsed().as_millis();
-                let db_size = self.karta_service.data().db().size();
+                let db_size = self.with_service(|s| s.data().db().size()); // Updated access
                 let commit = match Repository::open(".") {
                     Ok(repo) => repo
                         .head()
