@@ -86,7 +86,7 @@ impl KartaService {
            
         let focal_handle: NodeHandle = NodeHandle::Path(path.clone());
         let focal_node = self.data().open_node(&focal_handle)?;
-        let focal_uuid = focal_node.uuid().unwrap();
+        let focal_uuid = focal_node.uuid();
 
         finaldatanodes.push(focal_node);
 

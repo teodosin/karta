@@ -156,7 +156,7 @@ mod tests {
         ctx.get_graph_db_mut().insert_nodes(vec![node]);
         
         let found_by_path = ctx.get_graph_db().open_node(&NodeHandle::Path(path)).expect("Node should exist");
-        let uuid = found_by_path.uuid().expect("Node should have a uuid");
+        let uuid = found_by_path.uuid();
 
         let found_by_uuid = ctx.get_graph_db().open_node(&NodeHandle::Uuid(uuid)).expect("Node should exist");
         

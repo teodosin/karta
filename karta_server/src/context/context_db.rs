@@ -45,7 +45,7 @@ impl ContextDb {
         let gap: f32 = 24.0;
 
         let focalNode = dataNodes
-            .iter().find(|node| node.uuid() == Some(focal));
+            .iter().find(|node| node.uuid() == focal);
         
         if focalNode.is_none() {
             panic!("Focal node not found in dataNodes");
@@ -62,7 +62,7 @@ impl ContextDb {
 
         // Iterate over the datanodes.
         dataNodes.iter().enumerate()
-            .filter(|(_, node)| node.uuid() != Some(focal))
+            .filter(|(_, node)| node.uuid() != focal)
             .for_each(|(i, node)| {
                 // Calculate the position of the node.
                 let column = i % grid_columns;
