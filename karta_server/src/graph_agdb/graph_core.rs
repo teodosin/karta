@@ -21,7 +21,7 @@ impl GraphCore for GraphAgdb {
     }
 
     fn vault_dirpath(&self) -> PathBuf {
-        let path = self.root_path.clone();
+        let path = self.vault_fs_path.clone();
         // println!("root_path: {:?}", path);
         path
     }
@@ -32,7 +32,7 @@ impl GraphCore for GraphAgdb {
 
     /// Gets the name of the root directory without the full path
     fn root_name(&self) -> String {
-        self.root_path
+        self.vault_fs_path
             .file_name()
             .unwrap()
             .to_str()
@@ -49,7 +49,7 @@ impl GraphCore for GraphAgdb {
     /// Creates the db at the storage_path, or initialises the db if it already exists there.
     ///
     /// TODO: Add error handling.
-    fn new(name: &str, root_path: PathBuf, storage_dir: PathBuf) -> Self {
+    fn new(name: &str, vault_fs_path: PathBuf, storage_dir: PathBuf) -> Self {
         if !storage_dir.exists() {
             std::fs::create_dir_all(&storage_dir).expect("Failed to create storage path");
         }
@@ -63,7 +63,7 @@ impl GraphCore for GraphAgdb {
         let mut giraphe = GraphAgdb {
             name: name.to_string(),
             db,
-            root_path: root_path.into(),
+            vault_fs_path: vault_fs_path.into(),
             storage_path: storage_dir,
         };
 

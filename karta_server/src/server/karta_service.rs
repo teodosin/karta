@@ -6,7 +6,7 @@ use crate::{context::{context::Context, context_db::ContextDb}, elements::node_p
 
 
 pub struct KartaService {
-    root_path: PathBuf,
+    vault_fs_path: PathBuf,
     storage_dir: PathBuf,
     data: GraphAgdb,
     view: ContextDb,
@@ -15,7 +15,7 @@ pub struct KartaService {
 impl KartaService {
     pub fn new(
         name: &str,
-        root_path: PathBuf,
+        vault_fs_path: PathBuf,
         storage_dir: PathBuf,
     ) -> Self {
 
@@ -30,25 +30,25 @@ impl KartaService {
 
         let data = GraphAgdb::new(
             name,
-            root_path.clone(),
+            vault_fs_path.clone(),
             storage_dir.clone(),
         );
         let view = ContextDb::new(
                 name.to_owned(),
-                root_path.clone(),
+                vault_fs_path.clone(),
                 storage_dir.clone(),
         );
 
         Self {
-            root_path,
+            vault_fs_path,
             storage_dir,
             data,
             view
         }
     }
 
-    pub fn root_path(&self) -> &PathBuf {
-        &self.root_path
+    pub fn vault_fs_path(&self) -> &PathBuf {
+        &self.vault_fs_path
     }
 
     pub fn storage_path(&self) -> &PathBuf {
@@ -119,9 +119,9 @@ impl KartaService {
         }
 
         // --- Existing logic for vault and other FS-related paths ---
-        let absolute_path = path.full(self.root_path());
-        let fs_nodes_from_destructure = fs_reader::destructure_file_path(self.root_path(), &absolute_path, true)
-            .map_err(|e| format!("Failed to destructure path {:?} with root {:?}: {}", absolute_path, self.root_path(), e))?;
+        let absolute_path = path.full(self.vault_fs_path());
+        let fs_nodes_from_destructure = fs_reader::destructure_file_path(self.vault_fs_path(), &absolute_path, true)
+            .map_err(|e| format!("Failed to destructure path {:?} with root {:?}: {}", absolute_path, self.vault_fs_path(), e))?;
 
         let mut focal_fs_datanode: Option<DataNode> = None;
         let mut child_fs_datanodes: Vec<DataNode> = Vec::new();
