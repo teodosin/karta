@@ -84,6 +84,41 @@ impl KartaService {
     pub fn open_context_from_path(&self, path: NodePath)
         -> Result<(Vec<DataNode>, Vec<Edge>, Context), Box<dyn Error>> {
 
+        if path == NodePath::root() {
+            let focal_node = self.data().open_node(&NodeHandle::Path(NodePath::root()))
+                .map_err(|e| format!("Failed to open virtual root node: {}", e))?;
+            
+            let mut datanodes_for_context = vec![focal_node.clone()];
+            let mut edges_for_context = Vec::new();
+
+            // Get children (primarily user_root) and their edges from the database
+            let db_child_connections = self.data().open_node_connections(&NodePath::root());
+            for (child_node, edge) in db_child_connections {
+                // For the virtual root's context, we are primarily interested in user_root as its direct child.
+                if child_node.path() == NodePath::user_root() {
+                    if !datanodes_for_context.iter().any(|n| n.path() == child_node.path()) {
+                        datanodes_for_context.push(child_node);
+                    }
+                    edges_for_context.push(edge);
+                }
+                // Potentially include other direct virtual children of NodePath::root() if defined later.
+            }
+            
+            // Ensure user_root is included if not found via connections (e.g. if connections only returns non-archetype)
+            if !datanodes_for_context.iter().any(|n| n.path() == NodePath::user_root()) {
+                let user_root_node = self.data().open_node(&NodeHandle::Path(NodePath::user_root()))
+                    .map_err(|e| format!("Failed to open user_root node: {}", e))?;
+                datanodes_for_context.push(user_root_node);
+                // If the edge was also missing, this implies it should be created or is an error.
+                // For now, assume open_node_connections is the source of truth for edges.
+                // A robust solution might involve self.data().get_edge_strict() if the edge is critical and might be missed.
+            }
+
+            let context = self.view.generate_context(focal_node.uuid(), datanodes_for_context.clone());
+            return Ok((datanodes_for_context, edges_for_context, context));
+        }
+
+        // --- Existing logic for user_root and other FS-related paths ---
         let absolute_path = path.full(self.root_path());
         let fs_nodes_from_destructure = fs_reader::destructure_file_path(self.root_path(), &absolute_path, true)
             .map_err(|e| format!("Failed to destructure path {:?} with root {:?}: {}", absolute_path, self.root_path(), e))?;
@@ -136,6 +171,12 @@ impl KartaService {
                 None => {
                     final_datanodes_map.insert(fs_child_node.path().clone(), fs_child_node.clone());
                 }
+            }
+        }
+// Include other DB-connected nodes not present in FS (e.g., parents, other virtual links)
+        for (db_node_path, db_node_data) in db_child_datanodes_map.iter() {
+            if !final_datanodes_map.contains_key(db_node_path) {
+                final_datanodes_map.insert(db_node_path.clone(), db_node_data.clone());
             }
         }
         
@@ -208,6 +249,8 @@ mod tests {
             datanode_uuids.iter().collect::<std::collections::HashSet<_>>(),
             "ViewNode UUIDs should match DataNode UUIDs"
         );
+
+        println!("Datanodes amount: {}", datanodes.len());
         
         let expected_dir_path = NodePath::user_root().join("test_dir".into());
         let expected_file_path = NodePath::user_root().join("test_file.txt".into());
@@ -221,6 +264,7 @@ mod tests {
         assert!(test_file_node.is_some(), "test_file.txt DataNode not found");
         assert!(karta_dir_node.is_none(), ".karta directory should be ignored and not appear as a DataNode");
 
+assert!(datanodes.iter().any(|n| n.path() == NodePath::root()), "NodePath::root() not found in datanodes when opening user_root context");
         let test_dir_node = test_dir_node.unwrap();
         let test_file_node = test_file_node.unwrap();
 

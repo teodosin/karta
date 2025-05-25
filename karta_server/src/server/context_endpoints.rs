@@ -42,28 +42,37 @@ pub async fn open_context_from_fs_path(
     };
     
     let vault_path = PathBuf::from(karta_service.root_path());
-    let mut relative_path_str_mut = path_segments.trim_start_matches('/');
-    if relative_path_str_mut == "." {
-        relative_path_str_mut = "";
-    }
-    let relative_path_str = relative_path_str_mut; // Re-assign to non-mut or use directly
-    
-    let joined_path = vault_path.join(relative_path_str);
+    let processed_api_path = path_segments.trim_start_matches('/');
 
-    // Simplified security check:
-    if !joined_path.starts_with(&vault_path) {
-        if relative_path_str.contains("..") {
-             return Err(box_error_to_response("Path traversal attempt with '..' detected.".into()));
-        }
-        return Err(box_error_to_response("Path appears to be outside the vault.".into()));
-    }
-    // TODO: Implement robust path canonicalization and security checks.
+    let node_path_to_open: NodePath;
 
-    let node_path_to_open = if relative_path_str.is_empty() {
-        NodePath::user_root()
+    if processed_api_path == "root" {
+        node_path_to_open = NodePath::root();
+        // For NodePath::root(), filesystem-based security checks are not applicable in the same way.
+        // It's a virtual node. We proceed directly to opening it.
     } else {
-        NodePath::from(relative_path_str.to_string())
-    };
+        // Handle user_root and other relative paths
+        let mut path_for_fs_check = processed_api_path;
+        if path_for_fs_check == "." || path_for_fs_check.is_empty() {
+            path_for_fs_check = ""; // Canonical empty path for user_root for FS checks
+            node_path_to_open = NodePath::user_root();
+        } else {
+            // For any other path, it's relative to user_root
+            // NodePath::from will prepend user_root if it's not an absolute-like path
+            node_path_to_open = NodePath::from(path_for_fs_check.to_string());
+        }
+
+        // Security check for paths that relate to the filesystem vault
+        let joined_path = vault_path.join(path_for_fs_check);
+        if !joined_path.starts_with(&vault_path) {
+            if path_for_fs_check.contains("..") {
+                return Err(box_error_to_response("Path traversal attempt with '..' detected.".into()));
+            }
+            return Err(box_error_to_response(format!("Path '{}' appears to be outside the vault.", processed_api_path).into()));
+        }
+        // TODO: Implement robust path canonicalization and security checks for FS paths.
+    }
+
     // Call the synchronous KartaService method directly.
     // Drop the read lock before calling a potentially blocking operation if KartaService methods were to become async
     // and required `&mut self`. For a read operation with `&self`, holding the read lock is fine.
@@ -83,29 +92,29 @@ mod tests {
     use axum::{
         body::Body,
         http::{Request, StatusCode},
-        Router, // Added Router here
+        Router, 
     };
-    use tower::ServiceExt; // For `oneshot`
+    use tower::ServiceExt;
     use serde_json::Value;
-    use std::sync::{Arc, RwLock}; // Added Arc here
+    use std::sync::{Arc, RwLock};
 
     // Helper to build a router for testing this specific endpoint
-    fn test_router_for_context_endpoints(app_state: AppState) -> Router { // Renamed to avoid potential conflict if super has test_router
+    fn test_router_for_context_endpoints(app_state: AppState) -> Router {
         Router::new()
-            .route("/ctx/{*path_segments}", get(open_context_from_fs_path)) // Corrected wildcard syntax
+            .route("/ctx/{*path_segments}", get(open_context_from_fs_path))
             .with_state(app_state)
     }
 
     #[tokio::test]
     async fn test_open_root_context_api() {
-        let test_ctx = KartaServiceTestContext::new("api_open_root_ctx"); // Shortened name slightly
+        let test_ctx = KartaServiceTestContext::new("api_open_root_ctx");
         test_ctx.create_file_in_vault("fileA.txt", b"content of file A").unwrap();
         test_ctx.create_dir_in_vault("dir1").unwrap();
         test_ctx.create_file_in_vault("dir1/fileB.txt", b"content of file B").unwrap();
 
         // KartaService from KartaServiceTestContext is not Arc<RwLock<KartaService>>
         // We need to wrap it.
-        let app_state_service = test_ctx.service_arc.clone(); // Use the Arc from KartaServiceTestContext and clone it
+        let app_state_service = test_ctx.service_arc.clone();
 
         let app_state = AppState {
             service: app_state_service,
@@ -135,19 +144,20 @@ mod tests {
 
         // Nodes checks
         let nodes_array = body_json.as_array().unwrap()[0].as_array().expect("Nodes element should be an array");
-        assert_eq!(nodes_array.len(), 3, "Expected 3 nodes in the root context (user_root, fileA.txt, dir1)");
+        assert_eq!(nodes_array.len(), 4, "Expected 4 nodes in user_root context: root, user_root, fileA.txt, dir1");
 
         let has_node_with_path = |nodes: &Vec<Value>, target_path: &str| -> bool {
             nodes.iter().any(|n| n.get("path").and_then(|p| p.as_str()) == Some(target_path))
         };
 
+assert!(has_node_with_path(nodes_array, NodePath::root().buf().to_str().unwrap()), "Node 'root' (path: \"\") not found");
         assert!(has_node_with_path(nodes_array, "user_root/fileA.txt"), "Node 'user_root/fileA.txt' not found");
         assert!(has_node_with_path(nodes_array, "user_root/dir1"), "Node 'user_root/dir1' not found");
-        assert!(has_node_with_path(nodes_array, "user_root"), "Node 'user_root' (focal) not found");
+        assert!(has_node_with_path(nodes_array, NodePath::user_root().buf().to_str().unwrap()), "Node 'user_root' (focal) not found");
 
         // Edge checks (optional, but good for completeness)
         let edges_array = body_json.as_array().unwrap()[1].as_array().expect("Edges element should be an array");
-        assert_eq!(edges_array.len(), 2, "Expected 2 edges from user_root to its children");
+        assert_eq!(edges_array.len(), 3, "Expected 3 edges: root->user_root, user_root->fileA.txt, user_root->dir1");
         
         let has_edge = |edges: &Vec<Value>, src: &str, tgt: &str| -> bool {
             edges.iter().any(|e| {
@@ -155,21 +165,95 @@ mod tests {
                 e.get("target").and_then(|t| t.as_str()) == Some(tgt)
             })
         };
+assert!(has_edge(edges_array, NodePath::root().buf().to_str().unwrap(), NodePath::user_root().buf().to_str().unwrap()), "Missing edge: root -> user_root");
         assert!(has_edge(edges_array, "user_root", "user_root/fileA.txt"), "Missing edge: user_root -> user_root/fileA.txt");
         assert!(has_edge(edges_array, "user_root", "user_root/dir1"), "Missing edge: user_root -> user_root/dir1");
+    }
 
-        // Context focal check
-        let user_root_node_json = nodes_array.iter()
-            .find(|&n| n.get("path").and_then(|p| p.as_str()) == Some("user_root"))
-            .expect("user_root node JSON not found for UUID extraction");
-        let expected_focal_uuid = user_root_node_json.get("uuid").and_then(|u| u.as_str())
-            .expect("Could not extract UUID from user_root node JSON");
+    #[tokio::test]
+    async fn test_open_virtual_root_api() {
+        let test_ctx = KartaServiceTestContext::new("api_open_virtual_root");
+        // No specific FS setup needed beyond what KartaServiceTestContext does,
+        // as NodePath::root() and NodePath::user_root() are archetypes.
+
+        let app_state_service = test_ctx.service_arc.clone();
+        let app_state = AppState {
+            service: app_state_service,
+            tx: tokio::sync::broadcast::channel(1).0,
+        };
+
+        let router = test_router_for_context_endpoints(app_state.clone());
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .uri("/ctx/root") // Requesting the virtual root
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK, "API call to /ctx/root should be OK");
+
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let body_json: Value = serde_json::from_slice(&body).expect("Failed to parse JSON response for /ctx/root");
+
+        // Expected structure: [DataNode[], Edge[], Context]
+        assert!(body_json.is_array() && body_json.as_array().unwrap().len() == 3,
+            "Response for /ctx/root should be a 3-element array");
+
+        let nodes_array = body_json.as_array().unwrap()[0].as_array().expect("Nodes element should be an array for /ctx/root");
         
+        // For the virtual root context, we expect two nodes:
+        // 1. The virtual root itself (NodePath::root(), serialized path usually "/")
+        // 2. Its child, the user_root (NodePath::user_root(), serialized path usually "/user_root")
+        assert_eq!(nodes_array.len(), 2, "Expected 2 nodes in virtual root context: root and user_root");
+
+        let has_node_with_serialized_path = |nodes: &Vec<Value>, target_path: &str| -> Option<String> {
+            nodes.iter().find_map(|n| {
+                if n.get("path").and_then(|p| p.as_str()) == Some(target_path) {
+                    n.get("uuid").and_then(|u| u.as_str()).map(String::from)
+                } else {
+                    None
+                }
+            })
+        };
+        
+        // NodePath::root().alias() is "/"
+        // NodePath::user_root().alias() is "/user_root"
+        // However, the DataNode's "path" field in JSON is the direct NodePath string, not its alias()
+        // NodePath::root() -> path_str: ""
+        // NodePath::user_root() -> path_str: "user_root"
+        // The KartaService::open_context_from_path returns DataNodes whose paths are NodePath instances.
+        // When these NodePath instances are serialized as part of DataNode, they seem to use their internal `path_str`.
+        // Let's re-check the previous test output for NodePath("user_root") serialization.
+        // Previous output for user_root node: "path": String("user_root")
+        // So, NodePath::root() should serialize to "path": String("") if it's consistent.
+
+        let virtual_root_uuid = has_node_with_serialized_path(nodes_array, NodePath::root().buf().to_str().unwrap())
+            .expect("Virtual root node (path: \"\") not found");
+        let user_root_uuid = has_node_with_serialized_path(nodes_array, NodePath::user_root().buf().to_str().unwrap())
+            .expect("User root node (path: \"user_root\") not found");
+
+        let edges_array = body_json.as_array().unwrap()[1].as_array().expect("Edges element should be an array for /ctx/root");
+        assert_eq!(edges_array.len(), 1, "Expected 1 edge in virtual root context (root -> user_root)");
+
+        let has_edge = |edges: &Vec<Value>, src_path: &str, tgt_path: &str| -> bool {
+            edges.iter().any(|e| {
+                e.get("source").and_then(|s| s.as_str()) == Some(src_path) &&
+                e.get("target").and_then(|t| t.as_str()) == Some(tgt_path)
+            })
+        };
+        // Edge source/target in JSON are also direct NodePath string representations
+        assert!(has_edge(edges_array, NodePath::root().buf().to_str().unwrap(), NodePath::user_root().buf().to_str().unwrap()),
+            "Missing edge: root -> user_root");
+
         let context_json = &body_json.as_array().unwrap()[2];
         let actual_focal_uuid = context_json.get("focal").and_then(|f| f.as_str())
-            .expect("Context JSON missing 'focal' field or it's not a string");
-
-        assert_eq!(actual_focal_uuid, expected_focal_uuid,
-            "Context's focal UUID should match the UUID of the 'user_root' DataNode");
+            .expect("Context JSON for /ctx/root missing 'focal' field or it's not a string");
+        
+        assert_eq!(actual_focal_uuid, virtual_root_uuid,
+            "Context's focal UUID for /ctx/root should match the UUID of the virtual root node");
     }
 }
