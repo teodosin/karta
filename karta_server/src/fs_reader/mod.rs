@@ -52,10 +52,6 @@ pub fn destructure_file_path(
             nodes.push(node);
         }
     }
-
-    Ok(nodes)
+Ok(nodes)
 }
-
-// Todo: some tests for this
-
 

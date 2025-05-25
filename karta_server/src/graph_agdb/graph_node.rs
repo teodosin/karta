@@ -22,30 +22,22 @@ impl GraphNodes for GraphAgdb {
             }
             NodeHandle::Uuid(id) => {
                 node = self.db.exec(&QueryBuilder::select().search().index("uuid").value(id.to_string()).query());
-                println!("Node is {:#?}", node);
+                // println!("Node is {:#?}", node); // Kept for potential debugging, but commented
             }
         }
         
         match node {
             Ok(node) => {
-                let node = node.elements.first().unwrap().clone();
-                let node = DataNode::try_from(node);
-
-                // Dirty
-                Ok(node.unwrap())
+                let db_element = node.elements.first().ok_or_else(|| "DB query returned Ok but no elements found.")?;
+                DataNode::try_from(db_element.clone()).map_err(|e| Box::new(e) as Box<dyn Error>)
             }
             Err(_err) => {
-                // Filesystem lookup removed. If node is not in DB, return error.
                 match handle {
                     NodeHandle::Path(path_handle) => {
-                        // Consider logging the path_handle for debugging if useful
-                        // println!("Node with path {:?} not found in DB.", path_handle);
-                        return Err(format!("Node with path {:?} not found in DB", path_handle).into());
+                        Err(format!("Node with path {:?} not found in DB", path_handle).into())
                     }
                     NodeHandle::Uuid(id_handle) => {
-                        // Consider logging the id_handle for debugging if useful
-                        // println!("Node with UUID {} not found in DB.", id_handle);
-                        return Err(format!("Node with UUID {} not found in DB", id_handle).into());
+                        Err(format!("Node with UUID {} not found in DB", id_handle).into())
                     }
                 }
             }
@@ -53,18 +45,18 @@ impl GraphNodes for GraphAgdb {
     }
 
     fn open_node_connections(&self, path: &NodePath) -> Vec<(DataNode, Edge)> {
-        // Resolve the full path to the node
-        let full_path = path.full(&self.root_path);
-        let is_physical = full_path.exists();
-        let is_dir = full_path.is_dir();
+        // Resolve the full path to the node - This seems unused now, consider removing if not needed elsewhere.
+        // let full_path = path.full(&self.root_path);
+        // let is_physical = full_path.exists();
+        // let is_dir = full_path.is_dir();
 
-        let as_str = path.alias();
+        // let as_str = path.alias(); // Unused
 
         let mut node_ids: Vec<DbId> = Vec::new();
         let mut edge_ids: Vec<DbId> = Vec::new();
 
         // Links from node
-        // println!("Searching for links from node {}", as_str);
+        // println!("Searching for links from node {}", path.alias());
         let links = self.db.exec(
             &QueryBuilder::search()
                 .from(path.alias())
@@ -81,7 +73,6 @@ impl GraphNodes for GraphAgdb {
                         edge_ids.push(elem.id);
                     } else if elem.id.0 > 0 {
                         // Is node
-                        // println!("Link: {:?}", elem);
                         node_ids.push(elem.id);
                     }
                 }
@@ -106,10 +97,9 @@ impl GraphNodes for GraphAgdb {
                         edge_ids.push(elem.id);
                     } else if elem.id.0 > 0 {
                         // Is node
-                        // println!("Backlink: {:?}", elem);
-                        let balias = self
-                            .db
-                            .exec(&QueryBuilder::select().aliases().ids(elem.id).query());
+                        // let balias = self // This balias was unused
+                        //     .db
+                        //     .exec(&QueryBuilder::select().aliases().ids(elem.id).query());
                         // println!("balias: {:?}", balias);
                         node_ids.push(elem.id);
                     }
@@ -132,7 +122,6 @@ impl GraphNodes for GraphAgdb {
             .filter_map(|node| {
                 let node = DataNode::try_from(node.clone()).unwrap();
 
-                // println!("Returning node {:?}", node.path());
                 // Ignore the original node
                 if node.path() == *path {
                     return None;
@@ -151,7 +140,6 @@ impl GraphNodes for GraphAgdb {
                     .unwrap();
                 let edge = Edge::try_from(edge.clone()).unwrap();
 
-                // println!("Nodes: {:?}", node.path());
                 Some((node, edge))
             })
             .collect();
@@ -172,11 +160,12 @@ impl GraphNodes for GraphAgdb {
 
             match existing {
                 Ok(_) => {
-                    // return Err("node already exists".into());
-                    println!("Node already exists");
+                    // Node already exists, consider if this should be an error or a silent skip/update.
+                    // For now, it prints and continues, effectively skipping re-insertion of the node itself if alias matches.
+                    // println!("Node with alias {} already exists in DB during insert_nodes", npath.alias());
                 }
                 Err(_e) => {
-                    // Node doesn't exist, proceed to insertion
+                    // Node doesn't exist by alias, proceed to insertion
                 }
             }
 
@@ -192,37 +181,38 @@ impl GraphNodes for GraphAgdb {
                 Ok(nodeqr) => {
                     let node_elem = &nodeqr.elements[0];
                     let nid = node_elem.id;
-                    // If parent is not root, check if the parent node already exists in the db.
-                    // If not, call this function recursively.
+                    // If parent is not root, ensure parent node exists in DB.
+                    // This recursively ensures the path to the node is created.
                     let parent_path = npath.parent();
                     match parent_path {
                         Some(parent_path) => {
                             if parent_path.parent().is_some() {
-                                // println!("About to insert parent node: {:?}", parent_path);
-
-                                let parent_node =
-                                    DataNode::new(&parent_path, NodeTypeId::dir_type());
-
-                                self.insert_nodes(vec![parent_node]);
-
+                                // println!("About to ensure parent node: {:?}", parent_path);
+                                // Check if parent exists before trying to insert, to avoid redundant work / errors if it's already there.
+                                // This basic check might not be sufficient if parent needs specific attributes or type.
+                                if self.db.exec(&QueryBuilder::select().ids(parent_path.alias()).query()).is_err() {
+                                    let parent_node = DataNode::new(&parent_path, NodeTypeId::dir_type());
+                                    self.insert_nodes(vec![parent_node]); // Recursive call
+                                }
+                                
                                 let edge = Edge::new(&parent_path, &npath);
-
                                 self.insert_edges(vec![edge]);
                             }
                         }
                         None => {
-                            // If the parent is root, parent them and move along.
+                            // Parent is root, create edge from root.
+                            // Ensure root node itself exists if this is the first node ever.
+                            // For simplicity, assuming root node (alias "/") is implicitly handled or pre-exists.
                             let root_edge = Edge::new(&NodePath::root(), &npath);
                             self.insert_edges(vec![root_edge]);
                         }
                     }
                 }
-                Err(e) => {
-                    // println!("Failed to insert node: {}", e);
+                Err(_e) => {
+                    // println!("Failed to insert node with alias {}: {}", npath.alias(), e);
                 }
             }
-
-            // print!("{:#?}", node);
+            // println!("Processed node for insertion: {:#?}", npath.alias());
         }
     }
 }

@@ -12,6 +12,7 @@ blake3 = "1.8.2"
 directories = "6.0.0"
 ron = "0.10.1"
 serde = { version = "1.0.219", features = ["serde_derive"] }
+serde_json = "1.0.140"
 tokio = { version = "1.45.0", features = ["rt-multi-thread", "macros"] }
 tracing = "0.1.41"
 tracing-subscriber = "0.3.19"
