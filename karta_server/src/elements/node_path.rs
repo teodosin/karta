@@ -18,23 +18,23 @@ pub struct NodePath(PathBuf);
 
 impl NodePath {
     /// Get NodePath of the root node. Note that this is not
-    /// the user_root, which must be accessed through the graph.
+    /// the vault, which must be accessed through the graph.
     pub fn root() -> Self {
         NodePath(PathBuf::from(""))
     }
 
-    /// Get the user_root of the graph
-    pub fn user_root() -> Self {
-        NodePath(PathBuf::from("user_root"))
+    /// Get the vault of the graph
+    pub fn vault() -> Self {
+        NodePath(PathBuf::from("vault"))
     }
 
-    /// Create a new NodePath from a pathbuf relative to the user_root.
+    /// Create a new NodePath from a pathbuf relative to the vault.
     /// Supplying an empty pathbuf will create a NodePath to the userroot.
     pub fn new(path: PathBuf) -> Self {
         if path.to_str().unwrap().is_empty() {
-            return NodePath::user_root();
+            return NodePath::vault();
         }
-        let root = NodePath::user_root().buf().clone();
+        let root = NodePath::vault().buf().clone();
         return NodePath(root.join(path));
     }
 
@@ -112,17 +112,17 @@ impl NodePath {
         false
     }
 
-    /// Get the absolute file path, including the user_root. Root path must be provided.
+    /// Get the absolute file path, including the vault. Root path must be provided.
     /// Note that this function doesn't take into account whether the path exists or not.
     pub fn full(&self, root_path: &PathBuf) -> PathBuf {
         let full_path = root_path.clone();
-        let path_to_join = self.0.strip_prefix("user_root").unwrap_or(&self.0).to_path_buf();
+        let path_to_join = self.0.strip_prefix("vault").unwrap_or(&self.0).to_path_buf();
         full_path.join(path_to_join)
     }
 
-    /// Get a NodePath from an absolute path and the vault user_root path.
+    /// Get a NodePath from an absolute path and the vault vault path.
     /// users/me/projects/my_vault/big/medium/small.txt -> NodePath("big/medium/small.txt")
-    /// NodePath("big/medium/small.txt").alias() -> "/user_root/big/medium/small.txt"
+    /// NodePath("big/medium/small.txt").alias() -> "/vault/big/medium/small.txt"
     pub fn from_dir_path(root_path: &PathBuf, file_path: &PathBuf) -> Self {
         let relative_path = file_path.strip_prefix(root_path).unwrap_or(file_path);
         NodePath::new(relative_path.to_path_buf())

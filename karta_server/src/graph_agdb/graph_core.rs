@@ -20,7 +20,7 @@ impl GraphCore for GraphAgdb {
         self.storage_path.clone()
     }
 
-    fn user_root_dirpath(&self) -> PathBuf {
+    fn vault_dirpath(&self) -> PathBuf {
         let path = self.root_path.clone();
         // println!("root_path: {:?}", path);
         path
@@ -43,7 +43,7 @@ impl GraphCore for GraphAgdb {
     /// Constructor. Panics if the db cannot be created.
     ///
     /// Takes the desired root directory of the graph as a parameter and the name for the db.
-    /// The name of the root directory will become the user_root of the graph,
+    /// The name of the root directory will become the vault of the graph,
     /// as first child of the root node.
     ///
     /// Creates the db at the storage_path, or initialises the db if it already exists there.

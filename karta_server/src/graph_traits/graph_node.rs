@@ -106,7 +106,7 @@ mod tests {
 
         ctx.with_graph_db_mut(|db_mut| db_mut.insert_nodes(vec![node.clone()]));
 
-        let root_path = NodePath::user_root();
+        let root_path = NodePath::vault();
         let root_connections = ctx.with_graph_db(|db| db.open_node_connections(&root_path));
 
         let mut mod_node = node.clone();

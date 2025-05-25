@@ -91,11 +91,11 @@ impl KartaService {
             let mut datanodes_for_context = vec![focal_node.clone()];
             let mut edges_for_context = Vec::new();
 
-            // Get children (primarily user_root) and their edges from the database
+            // Get children (primarily vault) and their edges from the database
             let db_child_connections = self.data().open_node_connections(&NodePath::root());
             for (child_node, edge) in db_child_connections {
-                // For the virtual root's context, we are primarily interested in user_root as its direct child.
-                if child_node.path() == NodePath::user_root() {
+                // For the virtual root's context, we are primarily interested in vault as its direct child.
+                if child_node.path() == NodePath::vault() {
                     if !datanodes_for_context.iter().any(|n| n.path() == child_node.path()) {
                         datanodes_for_context.push(child_node);
                     }
@@ -104,11 +104,11 @@ impl KartaService {
                 // Potentially include other direct virtual children of NodePath::root() if defined later.
             }
             
-            // Ensure user_root is included if not found via connections (e.g. if connections only returns non-archetype)
-            if !datanodes_for_context.iter().any(|n| n.path() == NodePath::user_root()) {
-                let user_root_node = self.data().open_node(&NodeHandle::Path(NodePath::user_root()))
-                    .map_err(|e| format!("Failed to open user_root node: {}", e))?;
-                datanodes_for_context.push(user_root_node);
+            // Ensure vault is included if not found via connections (e.g. if connections only returns non-archetype)
+            if !datanodes_for_context.iter().any(|n| n.path() == NodePath::vault()) {
+                let vault_node = self.data().open_node(&NodeHandle::Path(NodePath::vault()))
+                    .map_err(|e| format!("Failed to open vault node: {}", e))?;
+                datanodes_for_context.push(vault_node);
                 // If the edge was also missing, this implies it should be created or is an error.
                 // For now, assume open_node_connections is the source of truth for edges.
                 // A robust solution might involve self.data().get_edge_strict() if the edge is critical and might be missed.
@@ -118,7 +118,7 @@ impl KartaService {
             return Ok((datanodes_for_context, edges_for_context, context));
         }
 
-        // --- Existing logic for user_root and other FS-related paths ---
+        // --- Existing logic for vault and other FS-related paths ---
         let absolute_path = path.full(self.root_path());
         let fs_nodes_from_destructure = fs_reader::destructure_file_path(self.root_path(), &absolute_path, true)
             .map_err(|e| format!("Failed to destructure path {:?} with root {:?}: {}", absolute_path, self.root_path(), e))?;
@@ -224,8 +224,8 @@ mod tests {
         let file_path_fs = root_path.join("test_file.txt");
         let karta_dir_path_fs = root_path.join(".karta");
 
-        let node_path_dir = NodePath::user_root().join("test_dir".into());
-        let node_path_file = NodePath::user_root().join("test_file.txt".into());
+        let node_path_dir = NodePath::vault().join("test_dir".into());
+        let node_path_file = NodePath::vault().join("test_file.txt".into());
 
         std::fs::create_dir_all(&dir_path_fs).unwrap();
         std::fs::File::create(&file_path_fs).unwrap();
@@ -236,7 +236,7 @@ mod tests {
             assert!(graph_db.open_node(&NodeHandle::Path(node_path_file.clone())).is_err(), "test_file.txt should not be in DB before open_context");
         });
 
-        let (datanodes, edges, context) = ctx.with_service(|s| s.open_context_from_path(NodePath::user_root())).unwrap();
+        let (datanodes, edges, context) = ctx.with_service(|s| s.open_context_from_path(NodePath::vault())).unwrap();
 
         println!("[Test] Found Datanodes: {:?}", datanodes.iter().map(|dn| dn.path()).collect::<Vec<_>>());
         println!("[Test] Found Edges: {:?}", edges);
@@ -252,9 +252,9 @@ mod tests {
 
         println!("Datanodes amount: {}", datanodes.len());
         
-        let expected_dir_path = NodePath::user_root().join("test_dir".into());
-        let expected_file_path = NodePath::user_root().join("test_file.txt".into());
-        let expected_karta_dir_path = NodePath::user_root().join(".karta".into());
+        let expected_dir_path = NodePath::vault().join("test_dir".into());
+        let expected_file_path = NodePath::vault().join("test_file.txt".into());
+        let expected_karta_dir_path = NodePath::vault().join(".karta".into());
 
         let test_dir_node = datanodes.iter().find(|n| n.path() == expected_dir_path);
         let test_file_node = datanodes.iter().find(|n| n.path() == expected_file_path);
@@ -264,22 +264,22 @@ mod tests {
         assert!(test_file_node.is_some(), "test_file.txt DataNode not found");
         assert!(karta_dir_node.is_none(), ".karta directory should be ignored and not appear as a DataNode");
 
-assert!(datanodes.iter().any(|n| n.path() == NodePath::root()), "NodePath::root() not found in datanodes when opening user_root context");
+assert!(datanodes.iter().any(|n| n.path() == NodePath::root()), "NodePath::root() not found in datanodes when opening vault context");
         let test_dir_node = test_dir_node.unwrap();
         let test_file_node = test_file_node.unwrap();
 
         assert!(context.viewnodes().iter().any(|vn| vn.uuid() == test_dir_node.uuid()), "No ViewNode for test_dir");
         assert!(context.viewnodes().iter().any(|vn| vn.uuid() == test_file_node.uuid()), "No ViewNode for test_file.txt");
 
-        let user_root_node = datanodes.iter().find(|n| n.path() == NodePath::user_root()).expect("User root DataNode not found");
+        let vault_node = datanodes.iter().find(|n| n.path() == NodePath::vault()).expect("User root DataNode not found");
         
         assert!(
-            edges.iter().any(|e| e.source() == &user_root_node.path() && e.target() == &test_dir_node.path()),
-            "Missing edge from user_root to test_dir"
+            edges.iter().any(|e| e.source() == &vault_node.path() && e.target() == &test_dir_node.path()),
+            "Missing edge from vault to test_dir"
         );
         assert!(
-            edges.iter().any(|e| e.source() == &user_root_node.path() && e.target() == &test_file_node.path()),
-            "Missing edge from user_root to test_file.txt"
+            edges.iter().any(|e| e.source() == &vault_node.path() && e.target() == &test_file_node.path()),
+            "Missing edge from vault to test_file.txt"
         );
     }
 }
