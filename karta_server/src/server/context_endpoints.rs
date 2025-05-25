@@ -31,8 +31,6 @@ pub async fn open_context_from_fs_path(
     State(app_state): State<AppState>, 
     AxumPath(path_segments): AxumPath<String>,
 ) -> Result<Json<(Vec<DataNode>, Vec<Edge>, Context)>, Response> {
-    println!("[API DEBUG] Received path_segments: {:?}", path_segments);
-    
     // Acquire read lock to access KartaService.
     // .unwrap() is used here for simplicity; in production, consider graceful error handling for lock poisoning.
     let karta_service = match app_state.service.read() {
@@ -49,7 +47,6 @@ pub async fn open_context_from_fs_path(
         relative_path_str_mut = "";
     }
     let relative_path_str = relative_path_str_mut; // Re-assign to non-mut or use directly
-    println!("[API DEBUG] Processed relative_path_str: {:?}", relative_path_str);
     
     let joined_path = vault_path.join(relative_path_str);
 
@@ -67,8 +64,6 @@ pub async fn open_context_from_fs_path(
     } else {
         NodePath::from(relative_path_str.to_string())
     };
-    println!("[API DEBUG] Constructed node_path_to_open: {:?}", node_path_to_open);
-
     // Call the synchronous KartaService method directly.
     // Drop the read lock before calling a potentially blocking operation if KartaService methods were to become async
     // and required `&mut self`. For a read operation with `&self`, holding the read lock is fine.
@@ -133,46 +128,48 @@ mod tests {
 
         let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let body_json: Value = serde_json::from_slice(&body).expect("Failed to parse JSON response");
-        println!("[TEST DEBUG] Full response body_json: {:#?}", body_json);
         
-        assert!(body_json.is_array() && body_json.as_array().unwrap().len() == 3, "Response should be a 3-element array");
+        // Overall structure: Tuple of (Vec<DataNode>, Vec<Edge>, Context)
+        assert!(body_json.is_array() && body_json.as_array().unwrap().len() == 3,
+            "Response should be a 3-element array: [nodes, edges, context]");
 
-        let nodes_json = &body_json.as_array().unwrap()[0];
-        assert!(nodes_json.is_array(), "First element (nodes) should be an array");
+        // Nodes checks
+        let nodes_array = body_json.as_array().unwrap()[0].as_array().expect("Nodes element should be an array");
+        assert_eq!(nodes_array.len(), 3, "Expected 3 nodes in the root context (user_root, fileA.txt, dir1)");
+
+        let has_node_with_path = |nodes: &Vec<Value>, target_path: &str| -> bool {
+            nodes.iter().any(|n| n.get("path").and_then(|p| p.as_str()) == Some(target_path))
+        };
+
+        assert!(has_node_with_path(nodes_array, "user_root/fileA.txt"), "Node 'user_root/fileA.txt' not found");
+        assert!(has_node_with_path(nodes_array, "user_root/dir1"), "Node 'user_root/dir1' not found");
+        assert!(has_node_with_path(nodes_array, "user_root"), "Node 'user_root' (focal) not found");
+
+        // Edge checks (optional, but good for completeness)
+        let edges_array = body_json.as_array().unwrap()[1].as_array().expect("Edges element should be an array");
+        assert_eq!(edges_array.len(), 2, "Expected 2 edges from user_root to its children");
         
-        let nodes_array = nodes_json.as_array().unwrap();
-        
-        let mut found_file_a = false;
-        let mut found_dir_1 = false;
+        let has_edge = |edges: &Vec<Value>, src: &str, tgt: &str| -> bool {
+            edges.iter().any(|e| {
+                e.get("source").and_then(|s| s.as_str()) == Some(src) &&
+                e.get("target").and_then(|t| t.as_str()) == Some(tgt)
+            })
+        };
+        assert!(has_edge(edges_array, "user_root", "user_root/fileA.txt"), "Missing edge: user_root -> user_root/fileA.txt");
+        assert!(has_edge(edges_array, "user_root", "user_root/dir1"), "Missing edge: user_root -> user_root/dir1");
 
-        println!("[TEST DEBUG] Iterating nodes_array (count: {}):", nodes_array.len());
-        for (index, node_val) in nodes_array.iter().enumerate() {
-            println!("[TEST DEBUG] Node [{}]: {:#?}", index, node_val);
-            let path_str = node_val.get("path").and_then(|p| p.as_str()); // Corrected: path is a direct string
-            println!("[TEST DEBUG]   Extracted path_str: {:?}", path_str);
-            match path_str {
-                // Paths are now fully qualified from the service, e.g., "user_root/fileA.txt"
-                Some("user_root/fileA.txt") => found_file_a = true,
-                Some("user_root/dir1") => found_dir_1 = true,
-                _ => {}
-            }
-        }
-        assert!(found_file_a, "Node for 'fileA.txt' not found in root context response");
-        assert!(found_dir_1, "Node for 'dir1' not found in root context response");
-
-        // Find the user_root node in the nodes_array to get its UUID
-        let user_root_node_json = nodes_array.iter().find(|&n| n.get("path").and_then(|p| p.as_str()) == Some("user_root"));
-        assert!(user_root_node_json.is_some(), "user_root node not found in the returned nodes_array");
-        let expected_focal_uuid = user_root_node_json.unwrap().get("uuid").and_then(|u| u.as_str());
-        assert!(expected_focal_uuid.is_some(), "Could not extract UUID from user_root node JSON");
+        // Context focal check
+        let user_root_node_json = nodes_array.iter()
+            .find(|&n| n.get("path").and_then(|p| p.as_str()) == Some("user_root"))
+            .expect("user_root node JSON not found for UUID extraction");
+        let expected_focal_uuid = user_root_node_json.get("uuid").and_then(|u| u.as_str())
+            .expect("Could not extract UUID from user_root node JSON");
         
         let context_json = &body_json.as_array().unwrap()[2];
-        let actual_focal_uuid = context_json.get("focal").and_then(|f| f.as_str());
+        let actual_focal_uuid = context_json.get("focal").and_then(|f| f.as_str())
+            .expect("Context JSON missing 'focal' field or it's not a string");
 
-        assert_eq!(
-            actual_focal_uuid,
-            expected_focal_uuid,
-            "Context's focal UUID should match the UUID of the 'user_root' DataNode"
-        );
+        assert_eq!(actual_focal_uuid, expected_focal_uuid,
+            "Context's focal UUID should match the UUID of the 'user_root' DataNode");
     }
 }
