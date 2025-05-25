@@ -21,9 +21,10 @@ pub struct AppState {
     tx: broadcast::Sender<String>,
 }
 
-pub fn create_router(state: AppState) -> Router {
+pub fn create_router(state: AppState) -> Router<()> {
     let router = Router::new()
         .route("/", get(|| async { "Karta Server" }))
+        .route("/ctx/*id", get(context_endpoints::open_context_from_fs_path))
 
         // So what routes do we want?
         // /data/
@@ -34,11 +35,11 @@ pub fn create_router(state: AppState) -> Router {
         // .route("/nodes", get(get_all_aliases))
 
         // .route("/nodes/", get(get_root_node))
-        // .route("/nodes/*id", get(get_node))
 
         // .route("/ctx/*id", get(get_node_context))
         // .with_state(state)
-        .layer(Extension(state));
+        .with_state(state);
+
     router
 }
 
@@ -69,9 +70,9 @@ pub async fn run_server(root_path: PathBuf) {
 
     let app = create_router(state);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:7370").await.unwrap();
 
-    println!("Server listening on http://0.0.0.0:3000");
+    println!("Server listening on http://0.0.0.0:7370");
 
     axum::serve(listener, app).await.unwrap();
 }

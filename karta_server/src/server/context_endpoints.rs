@@ -1,9 +1,9 @@
 // Karta Server - Context API Endpoints
 
 use axum::{
-    extract::{Path as AxumPath, State}, // Added State
+    extract::{Path as AxumPath, State},
     response::{IntoResponse, Response},
-    Json, Router, routing::get, // Removed Extension
+    Json, Router, routing::get,
 };
 use std::path::PathBuf;
 use std::sync::Arc; // Keep Arc for KartaService within AppState
