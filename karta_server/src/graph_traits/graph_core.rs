@@ -4,7 +4,7 @@ use std::{error::Error, path::PathBuf};
 pub trait GraphCore {
     fn storage_path(&self) -> PathBuf;
 
-    fn user_root_dirpath(&self) -> PathBuf;
+    fn vault_dirpath(&self) -> PathBuf;
 
     fn root_nodepath(&self) -> NodePath;
     /// Gets the name of the root directory without the full path
@@ -78,7 +78,7 @@ mod tests {
         );
 
         assert_eq!(
-            ctx.with_graph_db(|db| db.user_root_dirpath().exists()),
+            ctx.with_graph_db(|db| db.vault_dirpath().exists()),
             true,
             "Graph was not created in storage directory"
         );

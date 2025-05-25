@@ -51,14 +51,14 @@ pub async fn open_context_from_fs_path(
         // For NodePath::root(), filesystem-based security checks are not applicable in the same way.
         // It's a virtual node. We proceed directly to opening it.
     } else {
-        // Handle user_root and other relative paths
+        // Handle vault and other relative paths
         let mut path_for_fs_check = processed_api_path;
         if path_for_fs_check == "." || path_for_fs_check.is_empty() {
-            path_for_fs_check = ""; // Canonical empty path for user_root for FS checks
-            node_path_to_open = NodePath::user_root();
+            path_for_fs_check = ""; // Canonical empty path for vault for FS checks
+            node_path_to_open = NodePath::vault();
         } else {
-            // For any other path, it's relative to user_root
-            // NodePath::from will prepend user_root if it's not an absolute-like path
+            // For any other path, it's relative to vault
+            // NodePath::from will prepend vault if it's not an absolute-like path
             node_path_to_open = NodePath::from(path_for_fs_check.to_string());
         }
 
@@ -144,20 +144,20 @@ mod tests {
 
         // Nodes checks
         let nodes_array = body_json.as_array().unwrap()[0].as_array().expect("Nodes element should be an array");
-        assert_eq!(nodes_array.len(), 4, "Expected 4 nodes in user_root context: root, user_root, fileA.txt, dir1");
+        assert_eq!(nodes_array.len(), 4, "Expected 4 nodes in vault context: root, vault, fileA.txt, dir1");
 
         let has_node_with_path = |nodes: &Vec<Value>, target_path: &str| -> bool {
             nodes.iter().any(|n| n.get("path").and_then(|p| p.as_str()) == Some(target_path))
         };
 
 assert!(has_node_with_path(nodes_array, NodePath::root().buf().to_str().unwrap()), "Node 'root' (path: \"\") not found");
-        assert!(has_node_with_path(nodes_array, "user_root/fileA.txt"), "Node 'user_root/fileA.txt' not found");
-        assert!(has_node_with_path(nodes_array, "user_root/dir1"), "Node 'user_root/dir1' not found");
-        assert!(has_node_with_path(nodes_array, NodePath::user_root().buf().to_str().unwrap()), "Node 'user_root' (focal) not found");
+        assert!(has_node_with_path(nodes_array, "vault/fileA.txt"), "Node 'vault/fileA.txt' not found");
+        assert!(has_node_with_path(nodes_array, "vault/dir1"), "Node 'vault/dir1' not found");
+        assert!(has_node_with_path(nodes_array, NodePath::vault().buf().to_str().unwrap()), "Node 'vault' (focal) not found");
 
         // Edge checks (optional, but good for completeness)
         let edges_array = body_json.as_array().unwrap()[1].as_array().expect("Edges element should be an array");
-        assert_eq!(edges_array.len(), 3, "Expected 3 edges: root->user_root, user_root->fileA.txt, user_root->dir1");
+        assert_eq!(edges_array.len(), 3, "Expected 3 edges: root->vault, vault->fileA.txt, vault->dir1");
         
         let has_edge = |edges: &Vec<Value>, src: &str, tgt: &str| -> bool {
             edges.iter().any(|e| {
@@ -165,16 +165,16 @@ assert!(has_node_with_path(nodes_array, NodePath::root().buf().to_str().unwrap()
                 e.get("target").and_then(|t| t.as_str()) == Some(tgt)
             })
         };
-assert!(has_edge(edges_array, NodePath::root().buf().to_str().unwrap(), NodePath::user_root().buf().to_str().unwrap()), "Missing edge: root -> user_root");
-        assert!(has_edge(edges_array, "user_root", "user_root/fileA.txt"), "Missing edge: user_root -> user_root/fileA.txt");
-        assert!(has_edge(edges_array, "user_root", "user_root/dir1"), "Missing edge: user_root -> user_root/dir1");
+assert!(has_edge(edges_array, NodePath::root().buf().to_str().unwrap(), NodePath::vault().buf().to_str().unwrap()), "Missing edge: root -> vault");
+        assert!(has_edge(edges_array, "vault", "vault/fileA.txt"), "Missing edge: vault -> vault/fileA.txt");
+        assert!(has_edge(edges_array, "vault", "vault/dir1"), "Missing edge: vault -> vault/dir1");
     }
 
     #[tokio::test]
     async fn test_open_virtual_root_api() {
         let test_ctx = KartaServiceTestContext::new("api_open_virtual_root");
         // No specific FS setup needed beyond what KartaServiceTestContext does,
-        // as NodePath::root() and NodePath::user_root() are archetypes.
+        // as NodePath::root() and NodePath::vault() are archetypes.
 
         let app_state_service = test_ctx.service_arc.clone();
         let app_state = AppState {
@@ -207,8 +207,8 @@ assert!(has_edge(edges_array, NodePath::root().buf().to_str().unwrap(), NodePath
         
         // For the virtual root context, we expect two nodes:
         // 1. The virtual root itself (NodePath::root(), serialized path usually "/")
-        // 2. Its child, the user_root (NodePath::user_root(), serialized path usually "/user_root")
-        assert_eq!(nodes_array.len(), 2, "Expected 2 nodes in virtual root context: root and user_root");
+        // 2. Its child, the vault (NodePath::vault(), serialized path usually "/vault")
+        assert_eq!(nodes_array.len(), 2, "Expected 2 nodes in virtual root context: root and vault");
 
         let has_node_with_serialized_path = |nodes: &Vec<Value>, target_path: &str| -> Option<String> {
             nodes.iter().find_map(|n| {
@@ -221,23 +221,23 @@ assert!(has_edge(edges_array, NodePath::root().buf().to_str().unwrap(), NodePath
         };
         
         // NodePath::root().alias() is "/"
-        // NodePath::user_root().alias() is "/user_root"
+        // NodePath::vault().alias() is "/vault"
         // However, the DataNode's "path" field in JSON is the direct NodePath string, not its alias()
         // NodePath::root() -> path_str: ""
-        // NodePath::user_root() -> path_str: "user_root"
+        // NodePath::vault() -> path_str: "vault"
         // The KartaService::open_context_from_path returns DataNodes whose paths are NodePath instances.
         // When these NodePath instances are serialized as part of DataNode, they seem to use their internal `path_str`.
-        // Let's re-check the previous test output for NodePath("user_root") serialization.
-        // Previous output for user_root node: "path": String("user_root")
+        // Let's re-check the previous test output for NodePath("vault") serialization.
+        // Previous output for vault node: "path": String("vault")
         // So, NodePath::root() should serialize to "path": String("") if it's consistent.
 
         let virtual_root_uuid = has_node_with_serialized_path(nodes_array, NodePath::root().buf().to_str().unwrap())
             .expect("Virtual root node (path: \"\") not found");
-        let user_root_uuid = has_node_with_serialized_path(nodes_array, NodePath::user_root().buf().to_str().unwrap())
-            .expect("User root node (path: \"user_root\") not found");
+        let vault_uuid = has_node_with_serialized_path(nodes_array, NodePath::vault().buf().to_str().unwrap())
+            .expect("User root node (path: \"vault\") not found");
 
         let edges_array = body_json.as_array().unwrap()[1].as_array().expect("Edges element should be an array for /ctx/root");
-        assert_eq!(edges_array.len(), 1, "Expected 1 edge in virtual root context (root -> user_root)");
+        assert_eq!(edges_array.len(), 1, "Expected 1 edge in virtual root context (root -> vault)");
 
         let has_edge = |edges: &Vec<Value>, src_path: &str, tgt_path: &str| -> bool {
             edges.iter().any(|e| {
@@ -246,8 +246,8 @@ assert!(has_edge(edges_array, NodePath::root().buf().to_str().unwrap(), NodePath
             })
         };
         // Edge source/target in JSON are also direct NodePath string representations
-        assert!(has_edge(edges_array, NodePath::root().buf().to_str().unwrap(), NodePath::user_root().buf().to_str().unwrap()),
-            "Missing edge: root -> user_root");
+        assert!(has_edge(edges_array, NodePath::root().buf().to_str().unwrap(), NodePath::vault().buf().to_str().unwrap()),
+            "Missing edge: root -> vault");
 
         let context_json = &body_json.as_array().unwrap()[2];
         let actual_focal_uuid = context_json.get("focal").and_then(|f| f.as_str())
