@@ -58,7 +58,7 @@ mod tests {
 
         let root_path = NodePath::root();
 
-        let connections = ctx.get_graph_db().open_node_connections(&root_path);
+        let connections = ctx.with_graph_db(|db| db.open_node_connections(&root_path));
 
         // Archetypes includes the root, but the source node is excluded from the function so
         // so the length should be one less than the number of archetypes
@@ -90,9 +90,9 @@ mod tests {
 
         let node = DataNode::new(&path, NodeTypeId::virtual_generic());
 
-        ctx.get_graph_db_mut().insert_nodes(vec![node]);
+        ctx.with_graph_db_mut(|db_mut| db_mut.insert_nodes(vec![node]));
 
-        ctx.get_graph_db().open_node(&NodeHandle::Path(path)).expect("Node should exist");
+        ctx.with_graph_db(|db| db.open_node(&NodeHandle::Path(path))).expect("Node should exist");
     }
 
     #[test]
@@ -104,21 +104,21 @@ mod tests {
 
         let node = DataNode::new(&path, NodeTypeId::virtual_generic());
 
-        ctx.get_graph_db_mut().insert_nodes(vec![node.clone()]);
+        ctx.with_graph_db_mut(|db_mut| db_mut.insert_nodes(vec![node.clone()]));
 
         let root_path = NodePath::user_root();
-        let root_connections = ctx.get_graph_db().open_node_connections(&root_path);
+        let root_connections = ctx.with_graph_db(|db| db.open_node_connections(&root_path));
 
         let mut mod_node = node.clone();
         mod_node.set_name("testerer");
         
-        ctx.get_graph_db_mut().insert_nodes(vec![mod_node]);
-        let second_connections = ctx.get_graph_db().open_node_connections(&root_path);
+        ctx.with_graph_db_mut(|db_mut| db_mut.insert_nodes(vec![mod_node]));
+        let second_connections = ctx.with_graph_db(|db| db.open_node_connections(&root_path));
 
         assert_eq!(root_connections.len(), second_connections.len());
 
         // Check the name too
-        let mod_node = ctx.get_graph_db().open_node(&NodeHandle::Path(path)).unwrap();
+        let mod_node = ctx.with_graph_db(|db| db.open_node(&NodeHandle::Path(path))).unwrap();
         assert_eq!(mod_node.name(), "testerer");
     }
 
@@ -133,15 +133,15 @@ mod tests {
 
         let third_node = DataNode::new(&third, NodeTypeId::virtual_generic());
 
-        ctx.get_graph_db_mut().insert_nodes(vec![third_node]);
+        ctx.with_graph_db_mut(|db_mut| db_mut.insert_nodes(vec![third_node]));
 
-        let second_node = ctx.get_graph_db().open_node(&NodeHandle::Path(second));
+        let second_node = ctx.with_graph_db(|db| db.open_node(&NodeHandle::Path(second)));
         assert!(second_node.is_ok());
 
-        let first_node = ctx.get_graph_db().open_node(&NodeHandle::Path(first));
+        let first_node = ctx.with_graph_db(|db| db.open_node(&NodeHandle::Path(first)));
         assert!(first_node.is_ok());
 
-        println!("{:#?}", ctx.get_graph_db().get_all_aliases());
+        println!("{:#?}", ctx.with_graph_db(|db| db.get_all_aliases()));
     }
 
     #[test]
@@ -153,12 +153,12 @@ mod tests {
 
         let node = DataNode::new(&path, NodeTypeId::virtual_generic());
         
-        ctx.get_graph_db_mut().insert_nodes(vec![node]);
+        ctx.with_graph_db_mut(|db_mut| db_mut.insert_nodes(vec![node]));
         
-        let found_by_path = ctx.get_graph_db().open_node(&NodeHandle::Path(path)).expect("Node should exist");
+        let found_by_path = ctx.with_graph_db(|db| db.open_node(&NodeHandle::Path(path))).expect("Node should exist");
         let uuid = found_by_path.uuid();
 
-        let found_by_uuid = ctx.get_graph_db().open_node(&NodeHandle::Uuid(uuid)).expect("Node should exist");
+        let found_by_uuid = ctx.with_graph_db(|db| db.open_node(&NodeHandle::Uuid(uuid))).expect("Node should exist");
         
         assert_eq!(found_by_path, found_by_uuid);
     }

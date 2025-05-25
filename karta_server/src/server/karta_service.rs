@@ -190,11 +190,12 @@ mod tests {
         std::fs::File::create(&file_path_fs).unwrap();
         std::fs::create_dir_all(&karta_dir_path_fs).unwrap();
 
-        let graph_db = ctx.get_graph_db();
-        assert!(graph_db.open_node(&NodeHandle::Path(node_path_dir.clone())).is_err(), "test_dir should not be in DB before open_context");
-        assert!(graph_db.open_node(&NodeHandle::Path(node_path_file.clone())).is_err(), "test_file.txt should not be in DB before open_context");
+        ctx.with_graph_db(|graph_db| {
+            assert!(graph_db.open_node(&NodeHandle::Path(node_path_dir.clone())).is_err(), "test_dir should not be in DB before open_context");
+            assert!(graph_db.open_node(&NodeHandle::Path(node_path_file.clone())).is_err(), "test_file.txt should not be in DB before open_context");
+        });
 
-        let (datanodes, edges, context) = ctx.get_service().open_context_from_path(NodePath::user_root()).unwrap();
+        let (datanodes, edges, context) = ctx.with_service(|s| s.open_context_from_path(NodePath::user_root())).unwrap();
 
         println!("[Test] Found Datanodes: {:?}", datanodes.iter().map(|dn| dn.path()).collect::<Vec<_>>());
         println!("[Test] Found Edges: {:?}", edges);
