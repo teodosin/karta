@@ -6,6 +6,8 @@ use crate::{context::{context::Context, context_db::ContextDb}, elements::node_p
 
 
 pub struct KartaService {
+    root_path: PathBuf,
+    storage_dir: PathBuf,
     data: GraphAgdb,
     view: ContextDb,
 }
@@ -37,7 +39,20 @@ impl KartaService {
                 storage_dir.clone(),
         );
 
-        Self { data, view }
+        Self { 
+            root_path,
+            storage_dir,
+            data,
+            view
+        }
+    }
+
+    pub fn root_path(&self) -> &PathBuf {
+        &self.root_path
+    }
+
+    pub fn storage_path(&self) -> &PathBuf {
+        &self.storage_dir
     }
 
     
@@ -68,7 +83,7 @@ impl KartaService {
 
         let mut finaldatanodes: Vec<DataNode> = Vec::new();
         let mut finaledges: Vec<Edge> = Vec::new();
-        
+           
         let focal_handle: NodeHandle = NodeHandle::Path(path.clone());
         let focal_node = self.data().open_node(&focal_handle)?;
         let focal_uuid = focal_node.uuid().unwrap();
@@ -87,5 +102,31 @@ impl KartaService {
         );
 
         return Ok((finaldatanodes, finaledges, context));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{prelude::NodePath, utils::utils::KartaServiceTestContext};
+
+    #[test]
+    fn opening_directory_spawns_viewnodes_without_indexing() {
+        let func_name = "opening_directory_spawns_viewnodes_without_indexing";
+        let ctx = KartaServiceTestContext::new(func_name);
+
+        // Create a bunch of files and directories in the test vault
+        let root_path = ctx.get_vault_root();
+
+        println!("Root path: {:?}", root_path);
+
+        let dir_path = root_path.join("test_dir");
+        let file_path = root_path.join("test_file.txt");
+
+        std::fs::create_dir_all(&dir_path).unwrap();
+        std::fs::File::create(&file_path).unwrap();
+
+        let fullcontext = ctx.get_service().open_context_from_path(NodePath::root());
+
+        println!("Full context: {:#?}", fullcontext);
     }
 }

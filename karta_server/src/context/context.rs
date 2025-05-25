@@ -5,7 +5,7 @@ use crate::{prelude::ViewNode, SERVER_VERSION};
 
 use super::context_settings::ContextSettings;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Context {
     karta_version: String,
     focal: Uuid,
