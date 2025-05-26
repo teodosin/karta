@@ -1,3 +1,15 @@
+// TODO: BUG - CLI Vault Path Handling for New Vaults:
+// There's a persistent issue where if a user types a path for a *new* vault
+// without a leading slash (e.g., "Users/play/MyNewVault"), intending it to be
+// absolute, it can sometimes be incorrectly appended to the server's current
+// working directory, resulting in an invalid vault root like
+// "/current/working/dir/Users/play/MyNewVault". This seems to occur specifically
+// when the path doesn't exist yet, and fs::canonicalize() fails, and the
+// fallback logic to construct an absolute path isn't robustly preventing
+// this relative join. Symlink resolution for existing paths is intended to work,
+// but this new path creation with an assumed absolute intent is problematic.
+// This needs further investigation to ensure all user-typed paths for new vaults
+// are correctly and unambiguously treated as absolute from the root.
 use crate::{prelude::*};
 use axum::{
     extract::{Path, State},
@@ -41,7 +53,7 @@ pub struct AppState {
 pub fn create_router(state: AppState) -> Router<()> {
     let router = Router::new()
         .route("/", get(|| async { "Karta Server" }))
-        .route("/ctx/*id", get(context_endpoints::open_context_from_fs_path))
+        .route("/ctx/{*id}", get(context_endpoints::open_context_from_fs_path)) // Corrected wildcard syntax
 
         // So what routes do we want?
         // /data/
@@ -157,19 +169,45 @@ impl Completer for PathCompleter {
         let dir_to_scan = PathBuf::from(&path_to_scan_str);
 
         if dir_to_scan.is_dir() {
-            if let Ok(entries) = fs::read_dir(dir_to_scan) {
+            if let Ok(entries) = fs::read_dir(dir_to_scan.clone()) { // Clone dir_to_scan for use in symlink resolution
                 for entry_result in entries {
                     if let Ok(entry) = entry_result {
-                        if let Ok(file_type) = entry.file_type() {
-                            if file_type.is_dir() {
-                                if let Some(name_osstr) = entry.file_name().to_str() {
-                                    let name = name_osstr.to_string();
-                                    if name.starts_with(&item_prefix_to_match) {
-                                        candidates.push(Pair {
-                                            display: name.clone() + "/",
-                                            replacement: name + "/",
-                                        });
+                        let file_name_os = entry.file_name();
+                        if let Some(name_str) = file_name_os.to_str() {
+                            // Rule: Hide dotfiles unless the prefix itself starts with a dot.
+                            if name_str.starts_with('.') && !item_prefix_to_match.starts_with('.') {
+                                continue;
+                            }
+
+                            if name_str.starts_with(&item_prefix_to_match) {
+                                let mut is_target_a_directory = false;
+                                if let Ok(file_type) = entry.file_type() {
+                                    if file_type.is_dir() {
+                                        is_target_a_directory = true;
+                                    } else if file_type.is_symlink() {
+                                        if let Ok(target_path_buf) = fs::read_link(entry.path()) {
+                                            // Resolve symlink: target_path_buf can be relative or absolute
+                                            let resolved_target = if target_path_buf.is_absolute() {
+                                                target_path_buf
+                                            } else {
+                                                // dir_to_scan is the directory containing the symlink
+                                                dir_to_scan.join(target_path_buf)
+                                            };
+                                            // Canonicalize to resolve ".." etc. and check existence
+                                            if let Ok(canonical_target) = resolved_target.canonicalize() {
+                                                if canonical_target.is_dir() {
+                                                    is_target_a_directory = true;
+                                                }
+                                            }
+                                        }
                                     }
+                                }
+
+                                if is_target_a_directory {
+                                    candidates.push(Pair {
+                                        display: name_str.to_string() + "/",
+                                        replacement: name_str.to_string() + "/",
+                                    });
                                 }
                             }
                         }
@@ -275,25 +313,91 @@ pub fn cli_load_or_create_vault() -> Result<PathBuf, Box<dyn Error>> {
                 let input = line.trim();
 
                 if input.is_empty() {
-            // println!("Exiting server.");
-            return Err("Exiting server.".into());
-        }
+                    return Err("Exiting server.".into());
+                }
 
-        // Check if the input is just an integer
-        if let Ok(index) = input.parse::<usize>() {
-            if index < vaults.vaults.len() {
-                break vaults.vaults[index].clone();
-            }
-        }
+                // Check if the input is just an integer (for selecting an existing vault)
+                if let Ok(index) = input.parse::<usize>() {
+                    if index < vaults.vaults.len() {
+                        let chosen_path_from_vault_list = vaults.vaults[index].clone();
+                        match fs::canonicalize(&chosen_path_from_vault_list) {
+                            Ok(canonical_path) => {
+                                if canonical_path.is_dir() {
+                                    break canonical_path; // Successfully selected and canonicalized existing vault
+                                } else {
+                                    println!("Vault path '{}' (entry {}) resolved to '{}', which is not a directory. Please check.", chosen_path_from_vault_list.display(), index, canonical_path.display());
+                                }
+                            }
+                            Err(e) => {
+                                println!("Error resolving vault path '{}' (entry {}): {}. Please check.", chosen_path_from_vault_list.display(), index, e);
+                            }
+                        }
+                        // If we reach here, the selected vault entry was problematic
+                        println!("Selected vault entry {} ('{}') is not a valid directory path.", index, chosen_path_from_vault_list.display());
+                        println!("");
+                        continue; // Ask for input again
+                    } else {
+                        println!("Invalid vault number: {}. Please choose from the list or type a path.", index);
+                        println!("");
+                        continue; // Ask for input again
+                    }
+                }
 
-        let path = PathBuf::from(input);
-        if path.is_dir() {
-            break path;
-        } else {
-            println!("Invalid path. Please enter a valid directory path. Leave empty to exit.");
-            println!("");
-        }
-            }
+                // Handle typed path (for existing or new vault)
+                let path_str_for_processing = if input.starts_with('/') {
+                    input.to_string()
+                } else {
+                    format!("/{}", input)
+                };
+                // path_str_for_processing now always represents an absolute path string.
+                
+                let path_to_check = PathBuf::from(path_str_for_processing);
+                // path_to_check is now constructed from a string guaranteed to start with "/"
+
+                // Try to canonicalize first. This resolves symlinks and checks existence.
+                match fs::canonicalize(&path_to_check) { // path_to_check is absolute
+                    Ok(canonical_path) => {
+                        if canonical_path.is_dir() {
+                            break canonical_path; // Existing, canonicalized directory
+                        } else {
+                            println!("Path '{}' resolved to '{}', which is not a directory.", path_to_check.display(), canonical_path.display());
+                        }
+                    }
+                    Err(_e) => {
+                        // Canonicalization failed. This could be because:
+                        // 1. Path does not exist (potential new vault).
+                        // 2. Path exists but is a broken symlink or other issue.
+                        // 3. Permissions error.
+
+                        // If it doesn't exist and looks like a directory path (no extension),
+                        // assume it's for a new vault.
+                        // path_to_check was derived from path_str_for_processing, which is absolute.
+                        if !path_to_check.exists() && path_to_check.extension().is_none() {
+                            // It's a new path. Try to make it absolute by canonicalizing its parent.
+                            if let Some(parent) = path_to_check.parent() {
+                                if let Ok(canonical_parent) = fs::canonicalize(parent) {
+                                    if let Some(file_name) = path_to_check.file_name() {
+                                        break canonical_parent.join(file_name);
+                                    }
+                                }
+                            }
+                            // Fallback if parent canonicalization fails or no parent/filename (should be rare for valid new paths)
+                            // This break uses path_to_check which *should* be absolute from its construction.
+                            println!("Warning: Could not fully canonicalize new path's parent for '{}'. Using constructed absolute path.", path_to_check.display());
+                            break path_to_check;
+                        }
+                        // Otherwise, it's an invalid path for an existing directory or a problematic one.
+                        println!("Debug: Canonicalization failed for '{}' (derived from input '{}'): {}. This path is not an existing directory and not suitable for a new vault name.", path_to_check.display(), input, _e);
+                    }
+                }
+                // If we reach here, the typed path was not a valid existing (or canonicalizable) directory,
+                // nor was it accepted as a new potential vault path.
+                // Use 'input' for the error message as it's what the user typed,
+                // or path_to_check.display() if you want to show the absolutized version.
+                println!("Invalid path: '{}'. Please enter a valid absolute directory path for an existing or new vault.", input);
+                println!("");
+                // continue; // This continue is implicit as it's the end of the Ok(line) block and will loop
+            } // End of Ok(line) block
             Err(ReadlineError::Interrupted) => {
                 println!("CTRL-C");
                 return Err("Exiting server due to CTRL-C.".into());
