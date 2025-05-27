@@ -3,7 +3,7 @@ import { Tween } from 'svelte/motion';
 import { cubicOut } from 'svelte/easing';
 import { localAdapter } from '../util/LocalAdapter';
 // Import KartaExportData as well
-import type { DataNode, KartaEdge, ViewNode, Context, NodeId, EdgeId, AbsoluteTransform, ViewportSettings, TweenableNodeState, StorableContext, StorableViewNode, StorableViewportSettings, Tool, KartaExportData } from '../types/types';
+import type { DataNode, KartaEdge, ViewNode, Context, NodeId, EdgeId, AbsoluteTransform, ViewportSettings, TweenableNodeState, StorableContext, StorableViewNode, StorableViewportSettings, Tool, KartaExportData, ContextBundle } from '../types/types';
 import { getDefaultViewNodeStateForType } from '$lib/node_types/registry';
 import { nodes, _ensureDataNodeExists } from './NodeStore'; // Assuming NodeStore exports these
 import { edges } from './EdgeStore'; // Assuming EdgeStore exports this
@@ -63,12 +63,17 @@ async function _getFocalNodeInitialState(targetNodeId: NodeId, oldContext: Conte
 async function _loadAndProcessContext(
     contextId: NodeId,
     focalInitialStateFromOldContext: TweenableNodeState, // Full initial state including dimensions
-    oldContext: Context | undefined // Previous context for potential tween reuse
+    oldContext: Context | undefined, // Previous context for potential tween reuse
+    storableContext: StorableContext | undefined // Pass storableContext directly
 ): Promise<{ finalContext: Context | undefined, wasCreated: boolean }> {
 
     if (!localAdapter) return { finalContext: undefined, wasCreated: false };
 
-    const storableContext = await localAdapter.getContext(contextId);
+    // const bundle = await localAdapter.loadContextBundle(contextId); // Call moved to switchContext
+    // const storableContext = bundle ? bundle.storableContext : undefined; // Now passed as argument
+    // TODO: Potentially use bundle.nodes and bundle.edges here to optimize or pre-populate,
+    // but for now, the main logic relies on NodeStore and EdgeStore being updated via _applyStoresUpdate
+    // after _loadContextData fetches all necessary data for the final processedContext.
     let contextWasCreated = false;
     const finalViewNodes = new Map<NodeId, ViewNode>();
     let finalViewportSettings: ViewportSettings | undefined = undefined;
@@ -409,11 +414,13 @@ export async function switchContext(newContextId: NodeId, isUndoRedo: boolean = 
         // Determine initial state (x,y,scale,width,height,rotation) for the new focal node based on old context
         const focalInitialState = await _getFocalNodeInitialState(newContextId, oldContext);
 
-        // Load StorableContext, convert/merge into in-memory Context with Tweens, add defaults
-        const { finalContext: processedContext } = await _loadAndProcessContext(
+        // Load StorableContext via bundle, then convert/merge into in-memory Context with Tweens, add defaults
+        const bundle = await localAdapter.loadContextBundle(newContextId);
+        const { finalContext: processedContext, wasCreated } = await _loadAndProcessContext(
             newContextId,
             focalInitialState, // Pass the full initial state object
-            oldContext // Pass old context to reuse tweens
+            oldContext, // Pass old context to reuse tweens
+            bundle ? bundle.storableContext : undefined // Pass storableContext from bundle
         );
 
         if (!processedContext) {
@@ -599,26 +606,27 @@ async function initializeStores() { // Remove export keyword here
             rotation: rootDefaultViewState.rotation
         };
 
-        const { finalContext } = await _loadAndProcessContext(
-            initialDataNode.id, // Use the validated ID
-            rootInitialState, // Pass the full default state
-            undefined // No old context on init
+        const bundle = await localAdapter.loadContextBundle(initialDataNode.id); // Fetch the bundle for the initial context
+
+        const { finalContext: processedContext } = await _loadAndProcessContext(
+            initialDataNode.id, // Use the validated ID (this is initialContextIdToLoad)
+            rootInitialState,   // This is the initialFocalState for initialDataNode.id (previously named rootInitialState)
+            undefined,          // No old context on init
+            bundle ? bundle.storableContext : undefined // Pass storableContext from bundle
         );
-        let initialProcessedContext = finalContext;
+        let initialProcessedContext = processedContext;
 
         if (!initialProcessedContext) {
             throw new Error(`Failed to load or process initial context for node: ${initialDataNode.id}`);
         }
 
-        // Load necessary DataNodes and Edges for the nodes now in the context
-        // Note: loadedDataNodesForContext here will only contain nodes *in the initial context*
+        // Always call _loadContextData based on the final initialProcessedContext
+        // to ensure all necessary DataNodes and KartaEdges for its viewNodes are loaded.
+        console.log(`[initializeStores] Loading data for processed initial context: ${initialProcessedContext.id}`);
         const loadedData = await _loadContextData(initialProcessedContext);
-        const loadedDataNodesForContext = loadedData.loadedDataNodes; // Renamed for clarity
-        const loadedEdges = loadedData.loadedEdges;
-
+        
         // 5. Apply Initial State
-        // _applyStoresUpdate will now merge loadedDataNodesForContext into the existing $nodes store
-        _applyStoresUpdate(initialDataNode.id, initialProcessedContext, loadedDataNodesForContext, loadedEdges);
+        _applyStoresUpdate(initialDataNode.id, initialProcessedContext, loadedData.loadedDataNodes, loadedData.loadedEdges);
 
         // 6. Set Initial Viewport
         // If loading the root context and no last context was saved, center the root node.

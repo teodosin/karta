@@ -1,6 +1,6 @@
 console.log('[LocalAdapter.ts] Module script executing - TOP OF FILE'); // New top-level log
 import * as idb from 'idb';
-import type { 
+import type {
 	DataNode,
 	KartaEdge,
 	Context,
@@ -9,7 +9,8 @@ import type {
 	StorableViewNode,
 	StorableViewportSettings,
 	AssetData,
-	KartaExportData
+	KartaExportData,
+	ContextBundle
 } from '../types/types';
 import type { PersistenceService } from './PersistenceService';
 
@@ -448,6 +449,31 @@ class LocalAdapter implements PersistenceService {
 			console.error("[LocalAdapter::getAllContextPaths] Error getting all context paths:", error);
 			return new Map(); // Return empty map on error
 		}
+	}
+
+	async loadContextBundle(identifier: NodeId): Promise<ContextBundle | undefined> {
+		const storableContext = await this.getContext(identifier);
+		if (!storableContext) {
+			return undefined;
+		}
+
+		const viewNodeIds = storableContext.viewNodes.map(([id, _]) => id);
+		
+		let dataNodesMap = new Map<NodeId, DataNode>();
+		if (viewNodeIds.length > 0) {
+			dataNodesMap = await this.getDataNodesByIds(viewNodeIds);
+		}
+
+		let edgesMap = new Map<string, KartaEdge>();
+		if (viewNodeIds.length > 0) {
+			edgesMap = await this.getEdgesByNodeIds(viewNodeIds);
+		}
+
+		return {
+			nodes: Array.from(dataNodesMap.values()),
+			edges: Array.from(edgesMap.values()),
+			storableContext: storableContext
+		};
 	}
 
 	// --- Export/Import Methods ---

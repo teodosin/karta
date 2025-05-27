@@ -1,4 +1,4 @@
-import type { AssetData, Context, DataNode, KartaEdge, NodeId, StorableContext } from "$lib/types/types";
+import type { AssetData, Context, ContextBundle, DataNode, KartaEdge, NodeId, StorableContext } from "$lib/types/types";
 
 export interface PersistenceService {
     // Node methods
@@ -27,6 +27,7 @@ export interface PersistenceService {
     getAllContextIds(): Promise<NodeId[]>;
     deleteContext(contextId: NodeId): Promise<void>;
     getAllContextPaths(): Promise<Map<NodeId, string>>;
+    loadContextBundle(identifier: string): Promise<ContextBundle | undefined>;
 
     // Asset methods
     saveAsset(assetId: string, assetData: AssetData): Promise<void>;

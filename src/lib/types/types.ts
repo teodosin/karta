@@ -107,6 +107,11 @@ export interface AssetData {
     mimeType: string;
     name: string; // Original filename or generated name
 }
+export interface ContextBundle {
+    nodes: DataNode[];
+    edges: KartaEdge[];
+    storableContext: StorableContext;
+}
 // --- Import/Export Types ---
 
 // Defines the structure for exported Karta data (JSON format)
