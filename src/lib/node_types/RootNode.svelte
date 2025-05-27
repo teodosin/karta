@@ -28,7 +28,7 @@
 	const rootNodePropertySchema: PropertyDefinition[] = []; // No type-specific properties for Root
 
 	export const nodeTypeDef: Omit<NodeTypeDefinition, 'component'> = {
-		ntype: 'root',
+		ntype: 'core/root',
 		getDefaultAttributes,
 		getDefaultViewNodeState,
 		displayName: 'Root',

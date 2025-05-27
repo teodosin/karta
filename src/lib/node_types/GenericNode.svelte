@@ -24,7 +24,7 @@
 	const genericNodePropertySchema: PropertyDefinition[] = []; // No type-specific properties
 
 	export const nodeTypeDef: Omit<NodeTypeDefinition, 'component'> = {
-		ntype: 'Node',
+		ntype: 'core/generic',
 		getDefaultAttributes,
 		getDefaultViewNodeState,
 		displayName: 'Node',

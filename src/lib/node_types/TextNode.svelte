@@ -31,7 +31,7 @@
 	];
 
 	export const nodeTypeDef: Omit<NodeTypeDefinition, 'component'> = {
-		ntype: 'text',
+		ntype: 'core/text',
 		getDefaultAttributes,
 		getDefaultViewNodeState,
 		displayName: 'Text',

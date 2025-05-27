@@ -4,7 +4,7 @@
   "nodes": [
     {
       "id": "00000000-0000-0000-0000-000000000000",
-      "ntype": "root",
+      "ntype": "core/root",
       "createdAt": 1746204542523,
       "modifiedAt": 1746217292052,
       "path": "/root",
@@ -17,7 +17,7 @@
     },
     {
       "id": "0404360b-ba53-48e3-9a5f-d5bedfa2c301",
-      "ntype": "text",
+      "ntype": "core/text",
       "createdAt": 1746204941858,
       "modifiedAt": 1746248793890,
       "path": "/Welcome To Karta",
@@ -34,7 +34,7 @@
     },
     {
       "id": "107ce265-4ce3-476d-b8ba-375aac51a8b5",
-      "ntype": "image",
+      "ntype": "core/image",
       "createdAt": 1746276707516,
       "modifiedAt": 1746276707529,
       "path": "/karta_logo.png",
@@ -48,7 +48,7 @@
     },
     {
       "id": "12b24079-338f-4c6e-9164-3b191012a708",
-      "ntype": "text",
+      "ntype": "core/text",
       "createdAt": 1746268941285,
       "modifiedAt": 1746272069137,
       "path": "/Guide - Data and View",
@@ -64,7 +64,7 @@
     },
     {
       "id": "12f68432-3b7c-471a-aff8-d71eb1d8d4d9",
-      "ntype": "text",
+      "ntype": "core/text",
       "createdAt": 1746277632092,
       "modifiedAt": 1746278565161,
       "path": "/Guide - Edges Explicitly Connect",
@@ -80,7 +80,7 @@
     },
     {
       "id": "39a2492d-5aa4-44b9-9108-f77ef29061c3",
-      "ntype": "text",
+      "ntype": "core/text",
       "createdAt": 1746250500823,
       "modifiedAt": 1746264010842,
       "path": "/Guide - Relativity Intro",
@@ -96,7 +96,7 @@
     },
     {
       "id": "3ee2048b-09f6-4e04-a44a-925731c0e8de",
-      "ntype": "text",
+      "ntype": "core/text",
       "createdAt": 1746284820298,
       "modifiedAt": 1746284922981,
       "path": "/Guide - End",
@@ -112,7 +112,7 @@
     },
     {
       "id": "41491580-b3bf-42dd-9f44-9fa89d758fc8",
-      "ntype": "text",
+      "ntype": "core/text",
       "createdAt": 1746283647702,
       "modifiedAt": 1746284129477,
       "path": "/Guide - Native Version",
@@ -128,7 +128,7 @@
     },
     {
       "id": "45f863f7-dd80-4df7-8250-f2c5ba3001cc",
-      "ntype": "text",
+      "ntype": "core/text",
       "createdAt": 1746284311553,
       "modifiedAt": 1746284470992,
       "path": "/Guide - Exporting Standalone Apps",
@@ -144,7 +144,7 @@
     },
     {
       "id": "46b1be18-2ed0-4e34-b154-a81b5356f3d2",
-      "ntype": "text",
+      "ntype": "core/text",
       "createdAt": 1746276796320,
       "modifiedAt": 1746276862663,
       "path": "/Guide - Creating Nodes Heading",
@@ -160,7 +160,7 @@
     },
     {
       "id": "496638d4-0d66-4edc-a703-46a3dda41ea4",
-      "ntype": "text",
+      "ntype": "core/text",
       "createdAt": 1746249181440,
       "modifiedAt": 1746265678966,
       "path": "/Guide - Context Fundamentals",
@@ -176,7 +176,7 @@
     },
     {
       "id": "5667157e-373b-4ade-8cba-c5c79710b65a",
-      "ntype": "Node",
+      "ntype": "core/generic",
       "createdAt": 1746250729953,
       "modifiedAt": 1746250737676,
       "path": "/Guide - Relativity",
@@ -187,7 +187,7 @@
     },
     {
       "id": "59a171af-58da-401b-9201-0d686a50d051",
-      "ntype": "text",
+      "ntype": "core/text",
       "createdAt": 1746281408363,
       "modifiedAt": 1746283008845,
       "path": "/Guide - Motivation for Karta",
@@ -203,7 +203,7 @@
     },
     {
       "id": "5ed3276c-f6c4-44f4-956e-40cb1989b88c",
-      "ntype": "text",
+      "ntype": "core/text",
       "createdAt": 1746280108875,
       "modifiedAt": 1746283391943,
       "path": "/Guide - Karta Feedback",
@@ -219,7 +219,7 @@
     },
     {
       "id": "68464f10-474b-49fd-a1af-f5188cd187ad",
-      "ntype": "text",
+      "ntype": "core/text",
       "createdAt": 1746217989880,
       "modifiedAt": 1746272608414,
       "path": "/Guide - Contexts",
@@ -235,7 +235,7 @@
     },
     {
       "id": "69b01297-e652-4e9d-ae04-dbc92247aab4",
-      "ntype": "text",
+      "ntype": "core/text",
       "createdAt": 1746248635774,
       "modifiedAt": 1746248719522,
       "path": "/Welcome To Karta - Heading",
@@ -251,7 +251,7 @@
     },
     {
       "id": "6eafc486-d47f-4f8f-b73d-90fe9212cb54",
-      "ntype": "text",
+      "ntype": "core/text",
       "createdAt": 1746284236851,
       "modifiedAt": 1746284289673,
       "path": "/Guide - Exporting Standalone Apps Heading",
@@ -267,7 +267,7 @@
     },
     {
       "id": "7256c99f-93bf-4675-8078-7393b49ac640",
-      "ntype": "text",
+      "ntype": "core/text",
       "createdAt": 1746215363735,
       "modifiedAt": 1746248455867,
       "path": "/Guide - View Navigation",
@@ -284,7 +284,7 @@
     },
     {
       "id": "76a07465-39de-4b16-ac82-f36d805d84c4",
-      "ntype": "text",
+      "ntype": "core/text",
       "createdAt": 1746283604737,
       "modifiedAt": 1746283640505,
       "path": "/Guide - Native Version Heading",
@@ -300,7 +300,7 @@
     },
     {
       "id": "786e75f1-addd-4090-8422-83e98468207f",
-      "ntype": "text",
+      "ntype": "core/text",
       "createdAt": 1746283366947,
       "modifiedAt": 1746284052247,
       "path": "/Guide - Roadmap Intro",
@@ -316,7 +316,7 @@
     },
     {
       "id": "7d8e17b5-6314-4eb4-8719-06b0a3b9368f",
-      "ntype": "text",
+      "ntype": "core/text",
       "createdAt": 1746279302319,
       "modifiedAt": 1746279603501,
       "path": "/Guide - Deleting Edges",
@@ -332,7 +332,7 @@
     },
     {
       "id": "80ebe1a9-96b5-423f-815e-def8cb609b15",
-      "ntype": "text",
+      "ntype": "core/text",
       "createdAt": 1746272099453,
       "modifiedAt": 1746275378047,
       "path": "/Guide - Moving and Scaling Nodes",
@@ -348,7 +348,7 @@
     },
     {
       "id": "814242b1-9a2f-46dd-8abd-07493c7a1734",
-      "ntype": "text",
+      "ntype": "core/text",
       "createdAt": 1746215777718,
       "modifiedAt": 1746217813960,
       "path": "/Guide - Navigating Between Contexts",
@@ -365,7 +365,7 @@
     },
     {
       "id": "8626d7c7-acca-4daa-8ba8-c0d847171284",
-      "ntype": "Node",
+      "ntype": "core/generic",
       "createdAt": 1746264223603,
       "modifiedAt": 1746264305857,
       "path": "/Guide - SmallRelativity3",
@@ -376,7 +376,7 @@
     },
     {
       "id": "894c2c17-0aa7-43a2-b687-e5580e64ad5d",
-      "ntype": "Node",
+      "ntype": "core/generic",
       "createdAt": 1746264225708,
       "modifiedAt": 1746264308336,
       "path": "/Guide - SmallRelativity4",
@@ -387,7 +387,7 @@
     },
     {
       "id": "8c83a0e7-6796-4526-a84b-f5a9dd298bb8",
-      "ntype": "text",
+      "ntype": "core/text",
       "createdAt": 1746218044790,
       "modifiedAt": 1746276125278,
       "path": "/Guide - Node Properties Heading",
@@ -403,7 +403,7 @@
     },
     {
       "id": "9066a675-ea6d-497e-817c-fd52d54733ad",
-      "ntype": "text",
+      "ntype": "core/text",
       "createdAt": 1746218025436,
       "modifiedAt": 1746277503284,
       "path": "/Guide - Edges Heading",
@@ -419,7 +419,7 @@
     },
     {
       "id": "91310d03-943f-4440-9357-183760e2c0aa",
-      "ntype": "text",
+      "ntype": "core/text",
       "createdAt": 1746271748608,
       "modifiedAt": 1746276132331,
       "path": "/Guide - Node Properties",
@@ -435,7 +435,7 @@
     },
     {
       "id": "9501580b-1562-4e94-aeeb-8240b8447304",
-      "ntype": "Node",
+      "ntype": "core/generic",
       "createdAt": 1746264221500,
       "modifiedAt": 1746264304016,
       "path": "/Guide - SmallRelativity2",
@@ -446,7 +446,7 @@
     },
     {
       "id": "971bb683-8e81-4ff5-8fb0-d7f783fefbf9",
-      "ntype": "text",
+      "ntype": "core/text",
       "createdAt": 1746276874193,
       "modifiedAt": 1746277356354,
       "path": "/Guide - Creating Nodes",
@@ -462,7 +462,7 @@
     },
     {
       "id": "9dbab416-5bee-45ca-bf11-2ecdd771c7ea",
-      "ntype": "text",
+      "ntype": "core/text",
       "createdAt": 1746278572202,
       "modifiedAt": 1746278991971,
       "path": "/Guide - What Edges Do",
@@ -478,7 +478,7 @@
     },
     {
       "id": "a45d37a5-4acc-4132-9cba-45fd4589bacc",
-      "ntype": "Node",
+      "ntype": "core/generic",
       "createdAt": 1746213760127,
       "modifiedAt": 1746249049097,
       "path": "/Guide - Hub",
@@ -490,7 +490,7 @@
     },
     {
       "id": "a5b242ea-22ce-40bd-ac62-6a62f6fc154b",
-      "ntype": "text",
+      "ntype": "core/text",
       "createdAt": 1746217309699,
       "modifiedAt": 1746248241418,
       "path": "/Guide - Move to Topics",
@@ -506,7 +506,7 @@
     },
     {
       "id": "a61279fa-79d2-4ede-90a3-c760fb72eaf6",
-      "ntype": "text",
+      "ntype": "core/text",
       "createdAt": 1746271882041,
       "modifiedAt": 1746275369720,
       "path": "/Guide - Moving and Scaling Nodes Heading",
@@ -522,7 +522,7 @@
     },
     {
       "id": "a6da7767-8a4a-4cd8-a328-54649cc703e4",
-      "ntype": "text",
+      "ntype": "core/text",
       "createdAt": 1746215866650,
       "modifiedAt": 1746249853559,
       "path": "/Guide - Karta in a Nutshell",
@@ -538,7 +538,7 @@
     },
     {
       "id": "b225b978-e381-4e7f-9d4a-355619c5acd0",
-      "ntype": "text",
+      "ntype": "core/text",
       "createdAt": 1746283954204,
       "modifiedAt": 1746284011830,
       "path": "/Guide - Open Source Heading",
@@ -554,7 +554,7 @@
     },
     {
       "id": "bf51f81a-f5fe-4a74-aaa7-470e0fd09428",
-      "ntype": "Node",
+      "ntype": "core/generic",
       "createdAt": 1746264219108,
       "modifiedAt": 1746264264027,
       "path": "/Guide - SmallRelativity",
@@ -565,7 +565,7 @@
     },
     {
       "id": "bfbad7f8-b921-4633-bfed-cf89f38fffc6",
-      "ntype": "text",
+      "ntype": "core/text",
       "createdAt": 1746279001792,
       "modifiedAt": 1746279216029,
       "path": "/Guide - Creating Edges",
@@ -581,7 +581,7 @@
     },
     {
       "id": "c181a23d-c031-42d6-bfbb-4a32c34bdda6",
-      "ntype": "text",
+      "ntype": "core/text",
       "createdAt": 1746272642305,
       "modifiedAt": 1746275980591,
       "path": "/Guide - Removing and Deleting Nodes Heading",
@@ -597,7 +597,7 @@
     },
     {
       "id": "c8659488-76e5-4597-9346-980978e48342",
-      "ntype": "text",
+      "ntype": "core/text",
       "createdAt": 1746265489996,
       "modifiedAt": 1746268890095,
       "path": "/Guide - More on Contexts",
@@ -613,7 +613,7 @@
     },
     {
       "id": "cdacb6ec-9c3c-4599-bad8-77b3b7705406",
-      "ntype": "text",
+      "ntype": "core/text",
       "createdAt": 1746284087164,
       "modifiedAt": 1746284778673,
       "path": "/Guide - Open Source",
@@ -629,7 +629,7 @@
     },
     {
       "id": "d89ac747-7d03-479d-b8cb-8f60beb6d95a",
-      "ntype": "text",
+      "ntype": "core/text",
       "createdAt": 1746218017684,
       "modifiedAt": 1746273318976,
       "path": "/Guide - Nodes Heading",
@@ -645,7 +645,7 @@
     },
     {
       "id": "e243aef2-92a4-42f6-809a-07c5118b4bb0",
-      "ntype": "text",
+      "ntype": "core/text",
       "createdAt": 1746272704456,
       "modifiedAt": 1746275997016,
       "path": "/Guide - Removing and Deleting Nodes",
@@ -661,7 +661,7 @@
     },
     {
       "id": "e9372ca1-2b06-4486-a376-6f9ca6c2c389",
-      "ntype": "text",
+      "ntype": "core/text",
       "createdAt": 1746248309545,
       "modifiedAt": 1746248569599,
       "path": "/Guide - Roadmap",
@@ -677,7 +677,7 @@
     },
     {
       "id": "f2fcbf13-215c-43d0-8f9f-08808570ddc0",
-      "ntype": "text",
+      "ntype": "core/text",
       "createdAt": 1746263753491,
       "modifiedAt": 1746265272817,
       "path": "/Guide - See How They Changed?",
@@ -693,7 +693,7 @@
     },
     {
       "id": "f58e0d9a-1af6-494f-a8bf-637341efa060",
-      "ntype": "text",
+      "ntype": "core/text",
       "createdAt": 1746277515126,
       "modifiedAt": 1746277608944,
       "path": "/Guide - Rough Around The Edges",
@@ -709,7 +709,7 @@
     },
     {
       "id": "fb3d5643-d54b-4024-8420-5d6832a44a4a",
-      "ntype": "text",
+      "ntype": "core/text",
       "createdAt": 1746217857521,
       "modifiedAt": 1746247019691,
       "path": "/Guide - What is Karta",

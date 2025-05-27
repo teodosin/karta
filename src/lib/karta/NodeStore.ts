@@ -28,7 +28,7 @@ async function _ensureDataNodeExists(nodeId: NodeId): Promise<DataNode | null> {
             const isRoot = nodeId === ROOT_NODE_ID;
             const defaultName = isRoot ? 'root' : `node-${nodeId.substring(0, 8)}`;
             const defaultPath = isRoot ? '/root' : `/${defaultName}`;
-            const defaultNtype = isRoot ? 'root' : 'node';
+            const defaultNtype = isRoot ? 'core/root' : 'core/generic';
             if (isRoot) {
             }
 
@@ -52,7 +52,7 @@ async function _ensureDataNodeExists(nodeId: NodeId): Promise<DataNode | null> {
 export async function createNodeAtPosition(
 	canvasX: number,
 	canvasY: number,
-	ntype: string = 'text',
+	ntype: string = 'core/text',
 	attributes: Record<string, any> = {},
 	initialWidth?: number, // Optional initial width
 	initialHeight?: number // Optional initial height
@@ -139,7 +139,7 @@ export async function createImageNodeFromDataUrl(position: { x: number, y: numbe
 	try {
 		// Create the basic node structure first
 		// Pass optional width and height to createNodeAtPosition
-		const newNodeId = await createNodeAtPosition(position.x, position.y, 'image', {}, width, height);
+		const newNodeId = await createNodeAtPosition(position.x, position.y, 'core/image', {}, width, height);
 		if (!newNodeId) {
 			console.error("[KartaStore] Failed to create base node for image paste.");
 			return;
@@ -157,7 +157,7 @@ export async function createImageNodeFromDataUrl(position: { x: number, y: numbe
 export async function createTextNodeFromPaste(position: { x: number, y: number }, text: string) {
 	try {
 		// Create the basic node structure first
-		const newNodeId = await createNodeAtPosition(position.x, position.y, 'text');
+		const newNodeId = await createNodeAtPosition(position.x, position.y, 'core/text');
 		if (!newNodeId) {
 			console.error("[KartaStore] Failed to create base node for text paste.");
 			return;
@@ -192,7 +192,7 @@ export async function createImageNodeWithAsset(
         newNodeId = await createNodeAtPosition(
             position.x,
             position.y,
-            'image',
+            'core/image',
             { alt: assetName, name: assetName }, // Set alt and name attributes initially
             initialWidth,
             initialHeight
@@ -436,7 +436,7 @@ export async function fetchAvailableContextDetails(): Promise<{ id: NodeId, name
     	// 5. Delete asset if it's an image node
     	// Use the node data we fetched earlier (either from store or DB)
     	const nodeType = dataNodeToDelete?.ntype ?? (await localAdapter.getNode(nodeId))?.ntype; // Check type
-    	if (nodeType === 'image') {
+    	if (nodeType === 'core/image') {
     		// Asset ID is the same as Node ID for images currently
     		await localAdapter.deleteAsset(nodeId);
     	}

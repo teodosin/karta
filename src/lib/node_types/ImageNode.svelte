@@ -32,7 +32,7 @@
 	];
 
 	export const nodeTypeDef: Omit<NodeTypeDefinition, 'component'> = {
-		ntype: 'image',
+		ntype: 'core/image',
 		getDefaultAttributes,
 		getDefaultViewNodeState,
 		displayName: 'Image',

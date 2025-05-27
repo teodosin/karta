@@ -57,7 +57,7 @@ export function getNodeTypeDef(ntype: string): Omit<NodeTypeDefinition, 'compone
 export function getNodeComponent(ntype: string): NodeTypeComponent | undefined {
 	const entry = nodeTypeRegistry[ntype];
 	// Fallback to generic component if type not found or component missing
-	return entry?.component || nodeTypeRegistry['generic']?.component;
+	return entry?.component || nodeTypeRegistry['core/generic']?.component;
 }
 
 // Function to get default attributes for a type
@@ -77,7 +77,7 @@ export function getDefaultAttributesForType(ntype: string): Record<string, any> 
 	const commonViewDefaults: Record<string, any> = {
 		view_width: defaultViewNodeState.width,
 		view_height: defaultViewNodeState.height,
-		view_isNameVisible: ntype !== 'root' // True for all except root
+		view_isNameVisible: ntype !== 'core/root' // True for all except root
 	};
 	
 	// Merge common defaults with type-specific attributes
@@ -99,7 +99,7 @@ export function getDefaultViewNodeStateForType(ntype: string): Omit<TweenableNod
 // Function to get a list of available types for UI (excluding root)
 export function getAvailableNodeTypesForMenu(): { ntype: string; displayName: string; icon?: IconComponent }[] {
     return Object.values(nodeTypeRegistry)
-        .filter(entry => entry.definition.ntype !== 'root') // Exclude root type
+        .filter(entry => entry.definition.ntype !== 'core/root') // Exclude root type
         .map(entry => ({
             ntype: entry.definition.ntype,
             displayName: entry.definition.displayName || entry.definition.ntype,
