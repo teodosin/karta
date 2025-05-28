@@ -36,7 +36,7 @@ impl NodeTypeId {
 
     pub fn dir_type() -> Self {
         Self {
-            type_path: "core/dir".to_string(),
+            type_path: "core/fs/dir".to_string(),
             version: "1.0".to_string(),
         }
     }
@@ -44,7 +44,7 @@ impl NodeTypeId {
     /// Generic file type. 
     pub fn file_type() -> Self {
         Self {
-            type_path: "core/file".to_string(),
+            type_path: "core/fs/file".to_string(),
             version: "1.0".to_string(),
         }
     }
