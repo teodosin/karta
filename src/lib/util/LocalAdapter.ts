@@ -18,7 +18,7 @@ import type { PersistenceService } from './PersistenceService';
 // Define default transform for root context, not needed anymore?
 // const ROOT_TRANSFORM: AbsoluteTransform = { x: 0, y: 0, scale: 1 };
 
-class LocalAdapter implements PersistenceService {
+export class LocalAdapter implements PersistenceService { // Added export here
 	private dbPromise: Promise<idb.IDBPDatabase<KartaDB>>;
 	private objectUrlMap = new Map<string, string>(); // Tracks generated Object URLs { nodeId: objectUrl }
 

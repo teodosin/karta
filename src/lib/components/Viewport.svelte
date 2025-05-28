@@ -214,7 +214,9 @@
         closeContextMenu();
         closeCreateNodeMenu();
     }
-    viewTransform.set({ scale: newScale, posX: newPosX, posY: newPosY }, {duration: 140});
+    const newTransformWheel = { scale: newScale, posX: newPosX, posY: newPosY };
+    viewTransform.set(newTransformWheel, {duration: 140});
+    console.log('[Viewport.handleWheel] Set viewTransform to:', newTransformWheel);
 
     // Call tool's wheel handler
     get(currentTool)?.onWheel?.(e);
@@ -459,7 +461,9 @@
                 closeContextMenu();
                 closeCreateNodeMenu();
             }
-            viewTransform.set({ scale: viewTransform.target.scale, posX: newPosX, posY: newPosY }, { duration: 0 });
+            const newTransformPan = { scale: viewTransform.target.scale, posX: newPosX, posY: newPosY };
+            viewTransform.set(newTransformPan, { duration: 0 });
+            console.log('[Viewport.handleElementPointerMove] Set viewTransform to:', newTransformPan);
         }
     }
 

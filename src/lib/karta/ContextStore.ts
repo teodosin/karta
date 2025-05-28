@@ -1,7 +1,9 @@
     import { writable, get, derived } from 'svelte/store';
 import { Tween } from 'svelte/motion';
 import { cubicOut } from 'svelte/easing';
-import { localAdapter } from '../util/LocalAdapter';
+import { LocalAdapter, localAdapter } from '../util/LocalAdapter'; // Import LocalAdapter class
+import { ServerAdapter } from '../util/ServerAdapter';
+import type { PersistenceService } from '../util/PersistenceService';
 // Import KartaExportData as well
 import type { DataNode, KartaEdge, ViewNode, Context, NodeId, EdgeId, AbsoluteTransform, ViewportSettings, TweenableNodeState, StorableContext, StorableViewNode, StorableViewportSettings, Tool, KartaExportData, ContextBundle } from '../types/types';
 import { getDefaultViewNodeStateForType } from '$lib/node_types/registry';
@@ -18,6 +20,27 @@ import { settings } from './SettingsStore'; // Import settings store
 // Define the Root Node ID
 export const ROOT_NODE_ID = '00000000-0000-0000-0000-000000000000';
 const LAST_CONTEXT_STORAGE_KEY = 'kartaLastContextId'; // Key for localStorage
+
+// --- Adapter Configuration ---
+const USE_SERVER_ADAPTER = true; // Set to true to use ServerAdapter, false for LocalAdapter
+let activeAdapter: PersistenceService;
+
+if (USE_SERVER_ADAPTER) {
+    activeAdapter = new ServerAdapter();
+    console.log('[ContextStore] Using ServerAdapter');
+} else {
+    if (localAdapter) {
+        activeAdapter = localAdapter;
+        console.log('[ContextStore] Using LocalAdapter');
+    } else {
+        // This case should ideally not happen if LocalAdapter is crucial for non-server mode.
+        // Or, we need a NoopAdapter. For now, activeAdapter might be undefined.
+        console.error("[ContextStore] LocalAdapter is null. Persistence will not work in local mode.");
+        // activeAdapter remains undefined, subsequent checks for activeAdapter will handle this.
+    }
+}
+// --- End Adapter Configuration ---
+
 
 // Constants
 const NODE_TWEEN_DURATION = 250; // Duration for node transitions
@@ -47,6 +70,7 @@ async function _getFocalNodeInitialState(targetNodeId: NodeId, oldContext: Conte
         return { ...targetViewNodeInOldCtx.state.current }; // Return a copy
     } else {
         // Node not visible in old context, calculate defaults
+        // _ensureDataNodeExists uses activeAdapter internally now
         const dataNode = await _ensureDataNodeExists(targetNodeId); // Ensure DataNode exists to get ntype
         const defaultState: { width: number; height: number; scale: number; rotation: number; } = dataNode ? getDefaultViewNodeStateForType(dataNode.ntype) : getDefaultViewNodeStateForType('core/generic'); // Fallback to generic
 
@@ -67,9 +91,9 @@ async function _loadAndProcessContext(
     storableContext: StorableContext | undefined // Pass storableContext directly
 ): Promise<{ finalContext: Context | undefined, wasCreated: boolean }> {
 
-    if (!localAdapter) return { finalContext: undefined, wasCreated: false };
+    if (!activeAdapter) return { finalContext: undefined, wasCreated: false }; // Use activeAdapter
 
-    // const bundle = await localAdapter.loadContextBundle(contextId); // Call moved to switchContext
+    // const bundle = await activeAdapter.loadContextBundle(contextId); // Call moved to switchContext
     // const storableContext = bundle ? bundle.storableContext : undefined; // Now passed as argument
     // TODO: Potentially use bundle.nodes and bundle.edges here to optimize or pre-populate,
     // but for now, the main logic relies on NodeStore and EdgeStore being updated via _applyStoresUpdate
@@ -102,7 +126,7 @@ async function _loadAndProcessContext(
     } else {
         // --- Context needs creation ---
         contextWasCreated = true;
-        const focalDataNode = await localAdapter.getNode(contextId);
+        const focalDataNode = await activeAdapter.getNode(contextId); // Use activeAdapter
         if (!focalDataNode) throw new Error(`Cannot create context for non-existent node: ${contextId}`);
         if (contextId === ROOT_NODE_ID) {
         }
@@ -141,7 +165,7 @@ async function _loadAndProcessContext(
 
     // --- Add Default Connected Nodes (if context didn't just load them) ---
     // This ensures nodes connected *after* the context was last saved are still added by default
-    const directlyConnectedEdges = await localAdapter.getEdgesByNodeIds([contextId]);
+    const directlyConnectedEdges = await activeAdapter.getEdgesByNodeIds([contextId]); // Use activeAdapter
     const connectedNodeIdsToAdd = new Set<NodeId>();
     for (const edge of directlyConnectedEdges.values()) {
         const neighborId = edge.source === contextId ? edge.target : edge.source;
@@ -190,9 +214,9 @@ async function _loadAndProcessContext(
     };
 
     // Save immediately if it was newly created or defaults were added
-    if (contextWasCreated && localAdapter) {
+    if (contextWasCreated && activeAdapter) { // Use activeAdapter
     	try {
-    		await localAdapter.saveContext(finalContext);
+    		await activeAdapter.saveContext(finalContext); // Use activeAdapter
     		// After successful save of a NEW context, update the map
     		const focalDataNode = get(nodes).get(contextId); // Get node from store
     		if (focalDataNode?.path) {
@@ -255,24 +279,6 @@ function _convertStorableViewportSettings(
     }
 }
 
-async function _loadContextData(context: Context | undefined): Promise<{ loadedDataNodes: Map<NodeId, DataNode>, loadedEdges: Map<EdgeId, KartaEdge> }> {
-    let loadedDataNodes = new Map<NodeId, DataNode>();
-    let loadedEdges = new Map<EdgeId, KartaEdge>();
-
-    if (!localAdapter || !context) {
-        return { loadedDataNodes, loadedEdges };
-    }
-
-    const viewNodeIds = Array.from(context.viewNodes.keys());
-    if (viewNodeIds.length > 0) {
-        loadedDataNodes = await localAdapter.getDataNodesByIds(viewNodeIds);
-
-        loadedEdges = await localAdapter.getEdgesByNodeIds(viewNodeIds);
-    } else {
-    }
-    return { loadedDataNodes, loadedEdges };
-}
-
 function _applyStoresUpdate(
     newContextId: NodeId,
     processedContext: Context, // The fully processed context with ViewNodes/Tweens
@@ -312,7 +318,11 @@ function _applyStoresUpdate(
 export function updateNodeLayout(nodeId: NodeId, newX: number, newY: number) {
     const contextId = get(currentContextId);
     const currentCtx = get(contexts).get(contextId);
+    console.log(`[ContextStore.updateNodeLayout] Called for nodeId: ${nodeId}, newX: ${newX}, newY: ${newY}, contextId: ${contextId}`);
     const viewNode = currentCtx?.viewNodes.get(nodeId); // This is ViewNode { id, state: Tween }
+    if (!viewNode) {
+        console.warn(`[ContextStore.updateNodeLayout] ViewNode ${nodeId} NOT FOUND in context ${contextId}. Current context view nodes:`, currentCtx?.viewNodes);
+    }
 
     if (viewNode) {
         // 1. Get the current state from the tween
@@ -335,10 +345,10 @@ export function updateNodeLayout(nodeId: NodeId, newX: number, newY: number) {
 
         // 5. Persist the change asynchronously
         // saveContext reads the .current state from the tween when converting
-        if (localAdapter && currentCtx) {
+        if (activeAdapter && currentCtx) { // Use activeAdapter
             // Debounce saving? For now, save on every update during drag.
             currentCtx.viewportSettings = { ...viewTransform.current }; // Capture viewport - Access .current directly
-            localAdapter.saveContext(currentCtx)
+            activeAdapter.saveContext(currentCtx) // Use activeAdapter
                 .catch(err => { /* console.error(`Error saving context ${contextId} during layout update:`, err); */ }); // Keep error logs for now
         }
     } else {
@@ -367,16 +377,16 @@ export async function removeViewNodeFromContext(contextId: NodeId, viewNodeId: N
 
 
     // Persist the updated context
-    if (localAdapter) {
+    if (activeAdapter) { // Use activeAdapter
         try {
             // Capture current viewport settings before saving
             currentCtx.viewportSettings = { ...viewTransform.current }; // Corrected access
-            await localAdapter.saveContext(currentCtx);
+            await activeAdapter.saveContext(currentCtx); // Use activeAdapter
         } catch (error) {
             console.error(`[removeViewNodeFromContext] Error saving context ${contextId} after removing ViewNode ${viewNodeId}:`, error);
         }
     } else {
-        console.warn("[removeViewNodeFromContext] LocalAdapter not initialized, persistence disabled.");
+        console.warn("[removeViewNodeFromContext] activeAdapter not initialized, persistence disabled.");
     }
 }
 
@@ -394,15 +404,15 @@ export async function switchContext(newContextId: NodeId, isUndoRedo: boolean = 
     // --- End History Management ---
 
 
-    if (!localAdapter) {
-        console.error("[switchContext] LocalAdapter not available."); return;
+    if (!activeAdapter) { // Use activeAdapter
+        console.error("[switchContext] activeAdapter not available."); return;
     }
 
     // --- Phase 1: Save Old Context State (Async) ---
     const oldContext = get(contexts).get(oldContextId);
     if (oldContext) {
         oldContext.viewportSettings = { ...viewTransform.current }; // Capture current viewport - Access .current directly
-        localAdapter.saveContext(oldContext) // Adapter converts ViewNode with Tween back to Storable
+        activeAdapter.saveContext(oldContext) // Use activeAdapter // Adapter converts ViewNode with Tween back to Storable
             .then(() => { /* console.log(`[switchContext] Old context ${oldContextId} saved.`); */ })
             .catch(error => console.error(`[switchContext] Error saving old context ${oldContextId}:`, error));
     } else {
@@ -415,7 +425,25 @@ export async function switchContext(newContextId: NodeId, isUndoRedo: boolean = 
         const focalInitialState = await _getFocalNodeInitialState(newContextId, oldContext);
 
         // Load StorableContext via bundle, then convert/merge into in-memory Context with Tweens, add defaults
-        const bundle = await localAdapter.loadContextBundle(newContextId);
+        let identifierForBundle: string;
+        if (activeAdapter instanceof ServerAdapter) {
+            const dataNodeForContext = get(nodes).get(newContextId);
+            if (!dataNodeForContext || typeof dataNodeForContext.path !== 'string') {
+                console.error(`[switchContext] Critical: DataNode or its path not found for newContextId: ${newContextId} when using ServerAdapter.`);
+                throw new Error(`DataNode path not found for ${newContextId}, required by ServerAdapter.`);
+            }
+            identifierForBundle = dataNodeForContext.path;
+            // The server endpoint /ctx/root handles the virtual root.
+            // An empty string path ("") corresponds to NodePath::root() on the server.
+            if (identifierForBundle === "") {
+                identifierForBundle = "root";
+            }
+        } else {
+            // LocalAdapter (and potentially other future adapters) might expect the NodeId (UUID)
+            identifierForBundle = newContextId;
+        }
+
+        const bundle = await activeAdapter.loadContextBundle(identifierForBundle);
         const { finalContext: processedContext, wasCreated } = await _loadAndProcessContext(
             newContextId,
             focalInitialState, // Pass the full initial state object
@@ -427,13 +455,22 @@ export async function switchContext(newContextId: NodeId, isUndoRedo: boolean = 
             throw new Error("Failed to load or create the new context object.");
         }
 
-        // Load necessary DataNodes and Edges for the nodes now in the context
-        const loadedData = await _loadContextData(processedContext);
-        const loadedDataNodes = loadedData.loadedDataNodes;
-        const loadedEdges = loadedData.loadedEdges;
-
         // --- Phase 3: Apply Svelte Stores ---
-        _applyStoresUpdate(newContextId, processedContext, loadedDataNodes, loadedEdges);
+        // Use nodes and edges directly from the bundle
+        const loadedDataNodesMap = new Map<NodeId, DataNode>();
+        if (bundle?.nodes) {
+            for (const node of bundle.nodes) {
+                loadedDataNodesMap.set(node.id, node);
+            }
+        }
+
+        const loadedEdgesMap = new Map<EdgeId, KartaEdge>();
+        if (bundle?.edges) {
+            for (const edge of bundle.edges) {
+                loadedEdgesMap.set(edge.id, edge);
+            }
+        }
+        _applyStoresUpdate(newContextId, processedContext, loadedDataNodesMap, loadedEdgesMap);
 
         // --- Phase 4: Update Viewport ---
         // --- Phase 4: Update Viewport ---
@@ -441,8 +478,10 @@ export async function switchContext(newContextId: NodeId, isUndoRedo: boolean = 
         // If processedContext.viewportSettings is undefined (newly created context),
         // the viewport should remain unchanged.
         if (processedContext.viewportSettings !== undefined) {
+            console.log('[switchContext] Setting viewTransform with processedContext.viewportSettings:', processedContext.viewportSettings);
             viewTransform.set(processedContext.viewportSettings, { duration: VIEWPORT_TWEEN_DURATION }); // Restore tween duration
         } else {
+            console.log('[switchContext] processedContext.viewportSettings is undefined. ViewTransform not explicitly set here.');
         }
 
 
@@ -473,8 +512,8 @@ async function initializeStores() { // Remove export keyword here
     }
 
 
-    if (!localAdapter) {
-        console.error("[initializeStores] LocalAdapter not initialized. Cannot proceed.");
+    if (!activeAdapter) { // Use activeAdapter
+        console.error("[initializeStores] activeAdapter not initialized. Cannot proceed.");
         // Set default empty state on critical error
         nodes.set(new Map());
         edges.set(new Map());
@@ -485,35 +524,43 @@ async function initializeStores() { // Remove export keyword here
         return;
        }
       
+    if (!USE_SERVER_ADAPTER) { // Conditionally run tutorial import
        // ---> START: First Run Tutorial Import <---
-    try {
-        const rootNodeExists = await localAdapter.getNode(ROOT_NODE_ID);
-        if (!rootNodeExists) {
-            console.log("[initializeStores] First run detected (Root node not found). Importing tutorial data...");
-            try {
-                const response = await fetch('/tutorial.json'); // Fetch from static path relative to public/static
-                if (!response.ok) {
-                    throw new Error(`Failed to fetch tutorial.json: ${response.statusText}`);
-                }
-                const tutorialData: KartaExportData = await response.json();
-                await localAdapter.importData(tutorialData); // importData clears DB first
-                console.log("[initializeStores] Tutorial data imported successfully.");
+        try {
+            const rootNodeExists = await activeAdapter.getNode(ROOT_NODE_ID); // Use activeAdapter
+            if (!rootNodeExists) {
+                console.log("[initializeStores] First run detected (Root node not found). Importing tutorial data...");
+                try {
+                    const response = await fetch('/tutorial.json'); // Fetch from static path relative to public/static
+                    if (!response.ok) {
+                        throw new Error(`Failed to fetch tutorial.json: ${response.statusText}`);
+                    }
+                    const tutorialData: KartaExportData = await response.json();
+                    // Assuming LocalAdapter has importData. ServerAdapter would not.
+                    if (activeAdapter instanceof LocalAdapter) { // Now LocalAdapter class can be used for instanceof
+                        await (activeAdapter as LocalAdapter).importData(tutorialData); // Cast to LocalAdapter
+                        console.log("[initializeStores] Tutorial data imported successfully.");
+                    } else {
+                        console.warn("[initializeStores] ServerAdapter is active, skipping tutorial.json import to DB.");
+                    }
 
-            } catch (importError) {
-                console.error("[initializeStores] CRITICAL: Failed to import tutorial data on first run:", importError);
-                // Continue initialization even if tutorial import fails
+                } catch (importError) {
+                    console.error("[initializeStores] CRITICAL: Failed to import tutorial data on first run:", importError);
+                    // Continue initialization even if tutorial import fails
+                }
             }
+        } catch (checkError) {
+            console.error("[initializeStores] Error checking for root node before tutorial import:", checkError);
+            // Continue initialization even if the check failed
         }
-    } catch (checkError) {
-        console.error("[initializeStores] Error checking for root node before tutorial import:", checkError);
-        // Continue initialization even if the check failed
+        // ---> END: First Run Tutorial Import <---
     }
-    // ---> END: First Run Tutorial Import <---
+
 
 // ---> START: Populate Available Contexts Map <---
        console.log("[initializeStores] Attempting to populate availableContextsMap..."); // ADDED LOG
        try {
-        const pathsMap = await localAdapter.getAllContextPaths();
+        const pathsMap = await activeAdapter.getAllContextPaths(); // Use activeAdapter
         availableContextsMap.set(pathsMap);
         console.log(`[initializeStores] Populated availableContextsMap with ${pathsMap.size} entries.`);
        } catch (error) {
@@ -531,61 +578,104 @@ async function initializeStores() { // Remove export keyword here
 
         // 1. Determine Target Initial Context ID based on settings
         let targetInitialContextId = ROOT_NODE_ID; // Default
-        try {
-            const currentSettings = get(settings); // Read settings (should be loaded by +layout.svelte)
-            if (currentSettings.saveLastViewedContext && typeof window !== 'undefined' && window.localStorage) {
-                const savedId = localStorage.getItem(LAST_CONTEXT_STORAGE_KEY);
-                if (savedId) {
-                    // Check if the saved ID corresponds to an existing node in the DB
-                    const nodeExists = await localAdapter.getNode(savedId);
-                    if (nodeExists) {
-                        targetInitialContextId = savedId;
+        if (USE_SERVER_ADAPTER) {
+            console.log("[initializeStores] ServerAdapter active. Defaulting initial context to ROOT_NODE_ID (server should provide root).");
+            targetInitialContextId = ROOT_NODE_ID; // Or a specific root path like '.' or '/'
+        } else {
+            try {
+                const currentSettings = get(settings); // Read settings (should be loaded by +layout.svelte)
+                if (currentSettings.saveLastViewedContext && typeof window !== 'undefined' && window.localStorage) {
+                    const savedId = localStorage.getItem(LAST_CONTEXT_STORAGE_KEY);
+                    if (savedId) {
+                        // Check if the saved ID corresponds to an existing node in the DB
+                        const nodeExists = await activeAdapter.getNode(savedId); // Use activeAdapter
+                        if (nodeExists) {
+                            targetInitialContextId = savedId;
+                        } else {
+                            console.warn(`[initializeStores] Saved last context ID ${savedId} not found in DB. Defaulting to ROOT.`);
+                            targetInitialContextId = ROOT_NODE_ID;
+                        }
                     } else {
-                        console.warn(`[initializeStores] Saved last context ID ${savedId} not found in DB. Defaulting to ROOT.`);
+                        console.log(`[initializeStores] No last context ID found, defaulting to ROOT: ${ROOT_NODE_ID}`);
                         targetInitialContextId = ROOT_NODE_ID;
                     }
                 } else {
-                    console.log(`[initializeStores] No last context ID found, defaulting to ROOT: ${ROOT_NODE_ID}`);
+                    console.log(`[initializeStores] Setting disabled or localStorage not available, defaulting to ROOT: ${ROOT_NODE_ID}`);
                     targetInitialContextId = ROOT_NODE_ID;
                 }
-            } else {
-                console.log(`[initializeStores] Setting disabled or localStorage not available, defaulting to ROOT: ${ROOT_NODE_ID}`);
-                targetInitialContextId = ROOT_NODE_ID;
+            } catch (error) {
+                console.error('[initializeStores] Error reading settings or localStorage for last context ID:', error);
+                targetInitialContextId = ROOT_NODE_ID; // Fallback to ROOT on error
             }
-        } catch (error) {
-            console.error('[initializeStores] Error reading settings or localStorage for last context ID:', error);
-            targetInitialContextId = ROOT_NODE_ID; // Fallback to ROOT on error
         }
 
-        // 2. Ensure and Load Initial DataNode (Target or Root)
-        let initialDataNode = await localAdapter.getNode(targetInitialContextId);
 
-        if (!initialDataNode) {
+        // 2. Ensure and Load Initial DataNode (Target or Root)
+        // For ServerAdapter, getNode might be a stub. loadContextBundle will be the primary way to get data.
+        // If ServerAdapter is active, we rely on loadContextBundle to bring in the initial node.
+        let initialDataNode: DataNode | undefined;
+        let initialContextBundle: ContextBundle | undefined;
+
+        if (USE_SERVER_ADAPTER) {
+            // For ServerAdapter, the "path" to load is the root.
+            // The server's /ctx/. or /ctx// should resolve to the vault root.
+            // Let's explicitly request "root" which is known to work in tests.
+            initialContextBundle = await activeAdapter.loadContextBundle("root");
+            if (initialContextBundle?.storableContext?.id) {
+                targetInitialContextId = initialContextBundle.storableContext.id;
+                // Try to find the focal node from the bundle's nodes
+                initialDataNode = initialContextBundle.nodes.find(n => n.id === targetInitialContextId);
+            }
+             if (!initialDataNode && initialContextBundle) { // If focal not in nodes list, but context exists
+                // This case implies the server returned a context whose focal node wasn't in the main node list.
+                // This might happen if the root itself isn't explicitly sent as a DataNode but is the focal point.
+                // We might need to create a placeholder or the server should always include the focal DataNode.
+                // For now, if ServerAdapter, we assume the bundle contains the necessary focal node if it exists.
+                console.warn(`[initializeStores] ServerAdapter: Focal node ${targetInitialContextId} for root context not found in bundled nodes. This might be okay if it's an implicit root.`);
+            }
+
+        } else { // LocalAdapter logic
+            initialDataNode = await activeAdapter.getNode(targetInitialContextId); // Use activeAdapter
+        }
+
+
+        if (!initialDataNode && !USE_SERVER_ADAPTER) { // Fallback for LocalAdapter if target not found
             console.warn(`[initializeStores] Target node ${targetInitialContextId} not found in DB. Falling back to ROOT.`);
             targetInitialContextId = ROOT_NODE_ID; // Reset target ID to root
-            initialDataNode = await localAdapter.getNode(ROOT_NODE_ID);
+            initialDataNode = await activeAdapter.getNode(ROOT_NODE_ID); // Use activeAdapter
             if (!initialDataNode) {
                 // If even the root is not in the DB, ensure it exists
                 const ensuredNode = await _ensureDataNodeExists(ROOT_NODE_ID); // This creates and saves if needed
                 initialDataNode = ensuredNode === null ? undefined : ensuredNode;
-                if (!initialDataNode) {
-                    throw new Error("CRITICAL: Root DataNode could not be found or created during initialization.");
-                }
             }
         }
-
-        // Add the successfully loaded/ensured initial node to the nodes store
-        nodes.update(n => n.set(initialDataNode!.id, initialDataNode!));
-        console.log(`[initializeStores] Initial node ${initialDataNode.id} loaded into store.`);
+        
+        if (!initialDataNode && !initialContextBundle) { // If still no node after all attempts (local or server failed to give a starting point)
+             throw new Error("CRITICAL: Initial DataNode could not be found or created during initialization.");
+        }
+        
+        // If using ServerAdapter and initialDataNode is still undefined but we have a bundle,
+        // it means the server is the source of truth. The focal ID from bundle is targetInitialContextId.
+        if (USE_SERVER_ADAPTER && !initialDataNode && initialContextBundle?.storableContext?.id) {
+            targetInitialContextId = initialContextBundle.storableContext.id;
+            // We will proceed with this ID, _loadAndProcessContext will use the bundle.
+            console.log(`[initializeStores] ServerAdapter: Proceeding with focal ID ${targetInitialContextId} from server bundle.`);
+        } else if (initialDataNode) {
+            // Add the successfully loaded/ensured initial node to the nodes store
+            nodes.update(n => n.set(initialDataNode!.id, initialDataNode!));
+            console.log(`[initializeStores] Initial node ${initialDataNode.id} loaded into store.`);
+            targetInitialContextId = initialDataNode.id; // Ensure targetInitialContextId is set from the found node
+        }
 
 
         // 3. Ensure Root Node has isSystemNode flag (if the initial node IS the root node)
-        if (initialDataNode.id === ROOT_NODE_ID && !initialDataNode.attributes?.isSystemNode) {
+        // This logic is primarily for LocalAdapter. Server should manage its own node properties.
+        if (!USE_SERVER_ADAPTER && initialDataNode && initialDataNode.id === ROOT_NODE_ID && !initialDataNode.attributes?.isSystemNode) {
             console.warn(`[initializeStores] Root node ${ROOT_NODE_ID} is missing the isSystemNode flag. Adding and saving...`);
             initialDataNode.attributes = { ...initialDataNode.attributes, isSystemNode: true };
             initialDataNode.modifiedAt = Date.now();
             try {
-                await localAdapter.saveNode(initialDataNode);
+                await activeAdapter.saveNode(initialDataNode); // Use activeAdapter
                 console.log(`[initializeStores] Successfully added isSystemNode flag to root node.`);
                 // Update the node in the store as well
                 nodes.update(n => n.set(initialDataNode!.id, initialDataNode!));
@@ -597,69 +687,87 @@ async function initializeStores() { // Remove export keyword here
 
 
         // 4. Load Initial Context & Data (Generalized)
-        // Construct the default initial state for the root node
-        const rootDefaultViewState = getDefaultViewNodeStateForType('root');
-        const rootInitialState: TweenableNodeState = {
+        // Construct the default initial state for the root node (or any initial node)
+        const defaultViewState = getDefaultViewNodeStateForType(initialDataNode?.ntype ?? 'core/root'); // Use ntype of loaded node or fallback
+        const initialFocalState: TweenableNodeState = {
             ...DEFAULT_FOCAL_TRANSFORM, // x, y, scale
-            width: rootDefaultViewState.width,
-            height: rootDefaultViewState.height,
-            rotation: rootDefaultViewState.rotation
+            width: defaultViewState.width,
+            height: defaultViewState.height,
+            rotation: defaultViewState.rotation
         };
 
-        const bundle = await localAdapter.loadContextBundle(initialDataNode.id); // Fetch the bundle for the initial context
+        // Fetch the bundle for the initial context if not already fetched (e.g. for LocalAdapter)
+        if (!initialContextBundle) { // initialContextBundle would be set if USE_SERVER_ADAPTER
+            initialContextBundle = await activeAdapter.loadContextBundle(targetInitialContextId); // Use activeAdapter
+        }
+        
 
         const { finalContext: processedContext } = await _loadAndProcessContext(
-            initialDataNode.id, // Use the validated ID (this is initialContextIdToLoad)
-            rootInitialState,   // This is the initialFocalState for initialDataNode.id (previously named rootInitialState)
+            targetInitialContextId,
+            initialFocalState,
             undefined,          // No old context on init
-            bundle ? bundle.storableContext : undefined // Pass storableContext from bundle
+            initialContextBundle ? initialContextBundle.storableContext : undefined // Pass storableContext from bundle
         );
         let initialProcessedContext = processedContext;
 
         if (!initialProcessedContext) {
-            throw new Error(`Failed to load or process initial context for node: ${initialDataNode.id}`);
+            throw new Error(`Failed to load or process initial context for node: ${targetInitialContextId}`);
         }
 
         // Always call _loadContextData based on the final initialProcessedContext
         // to ensure all necessary DataNodes and KartaEdges for its viewNodes are loaded.
-        console.log(`[initializeStores] Loading data for processed initial context: ${initialProcessedContext.id}`);
-        const loadedData = await _loadContextData(initialProcessedContext);
+        // If ServerAdapter, bundle might already have nodes/edges. _loadContextData uses activeAdapter.getDataNodesByIds etc.
+        // which are stubs for ServerAdapter. So, if ServerAdapter, we should use nodes/edges from the bundle directly.
+        
+        let contextDataNodes: Map<NodeId, DataNode>;
+        let contextEdges: Map<EdgeId, KartaEdge>;
+
+        if (USE_SERVER_ADAPTER && initialContextBundle) {
+            contextDataNodes = new Map(initialContextBundle.nodes.map(n => [n.id, n]));
+            contextEdges = new Map(initialContextBundle.edges.map(e => [e.id, e]));
+            console.log(`[initializeStores] ServerAdapter: Using nodes and edges from initial bundle for context: ${initialProcessedContext.id}`);
+        } else {
+            console.log(`[initializeStores] Using nodes and edges from initial bundle for context: ${initialProcessedContext.id} (LocalAdapter path)`);
+            // For LocalAdapter, initialContextBundle was fetched if not USE_SERVER_ADAPTER
+            // This path ensures that if bundle was fetched, its contents are used.
+            // If initialContextBundle is undefined here (e.g. error fetching), maps will be empty.
+            contextDataNodes = new Map(initialContextBundle?.nodes?.map(n => [n.id, n]) ?? []);
+            contextEdges = new Map(initialContextBundle?.edges?.map(e => [e.id, e]) ?? []);
+        }
+
         
         // 5. Apply Initial State
-        _applyStoresUpdate(initialDataNode.id, initialProcessedContext, loadedData.loadedDataNodes, loadedData.loadedEdges);
+        _applyStoresUpdate(targetInitialContextId, initialProcessedContext, contextDataNodes, contextEdges);
 
         // 6. Set Initial Viewport
         // If loading the root context and no last context was saved, center the root node.
         // Otherwise, use loaded viewport settings or defaults.
         let initialViewportSettings = initialProcessedContext.viewportSettings || DEFAULT_VIEWPORT_SETTINGS;
 
-        if (initialDataNode.id === ROOT_NODE_ID && targetInitialContextId === ROOT_NODE_ID && typeof window !== 'undefined') {
-            // Calculate translation to center the root node (at 0,0)
-            const centerX = window.innerWidth / 2;
-            const centerY = window.innerHeight / 2;
-            // The viewport position is the top-left corner in canvas coordinates.
-            // To center the node at (0,0), the top-left should be at (centerX / scale, centerY / scale)
-            // However, viewTransform stores the top-left in screen coordinates relative to the canvas origin.
-            // So, the required translation in screen space is simply (centerX, centerY).
-            // The viewTransform store's posX/posY represent the canvas origin's screen coordinates.
-            // To move the canvas origin so that the root node (at canvas 0,0) is at screen (centerX, centerY),
-            // the canvas origin needs to be at screen (centerX, centerY).
-            // The viewTransform posX/posY are the screen coordinates of the canvas origin.
-            // So, we want viewTransform.posX = centerX and viewTransform.posY = centerY.
-            // The scale should be the default scale.
-            initialViewportSettings = {
-                scale: DEFAULT_VIEWPORT_SETTINGS.scale, // Use default scale
-                posX: centerX,
-                posY: centerY
-            };
-            console.log(`[initializeStores] Centering root node at screen (${centerX}, ${centerY}).`);
+        // Centering logic for root node, applies if ServerAdapter is not used OR if it is used and we are indeed at the root.
+        if (targetInitialContextId === ROOT_NODE_ID && typeof window !== 'undefined') {
+            // Only center if no specific last context was loaded via LocalStorage (for LocalAdapter)
+            // Or always center if it's the server adapter and we are at root.
+            const shouldCenter = !USE_SERVER_ADAPTER ? (get(settings).saveLastViewedContext && localStorage.getItem(LAST_CONTEXT_STORAGE_KEY) === null) || !get(settings).saveLastViewedContext : true;
+
+            if (shouldCenter) {
+                const centerX = window.innerWidth / 2;
+                const centerY = window.innerHeight / 2;
+                initialViewportSettings = {
+                    scale: DEFAULT_VIEWPORT_SETTINGS.scale,
+                    posX: centerX,
+                    posY: centerY
+                };
+                console.log(`[initializeStores] Centering initial context ${targetInitialContextId} at screen (${centerX}, ${centerY}).`);
+            }
         } else {
-            console.log(`[initializeStores] Loading context ${initialDataNode.id}. Using saved or default viewport settings.`);
+            console.log(`[initializeStores] Loading context ${targetInitialContextId}. Using saved or default viewport settings.`);
         }
 
+        console.log('[initializeStores] Setting initial viewTransform with initialViewportSettings:', initialViewportSettings);
         viewTransform.set(initialViewportSettings, { duration: 0 }); // Set instantly
 
-        console.log(`[initializeStores] Stores initialized successfully, starting context: ${initialDataNode.id}`);
+        console.log(`[initializeStores] Stores initialized successfully, starting context: ${targetInitialContextId}`);
 
     } catch (error) {
         console.error("[initializeStores] Error during store initialization:", error);
@@ -682,4 +790,4 @@ async function initializeStores() { // Remove export keyword here
 }
 
 // Export internal helpers AND the initializeStores function
-export { _getFocalNodeInitialState, _loadAndProcessContext, _calculateTargetState, _convertStorableViewportSettings, _loadContextData, _applyStoresUpdate, initializeStores };
+export { _getFocalNodeInitialState, _loadAndProcessContext, _calculateTargetState, _convertStorableViewportSettings, _applyStoresUpdate, initializeStores };

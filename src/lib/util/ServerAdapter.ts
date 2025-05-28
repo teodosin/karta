@@ -5,10 +5,74 @@ import type {
     StorableContext,
     AssetData,
     Context, // For saveContext, though it will be stubbed
+    ContextBundle,
+    StorableViewNode,
+    StorableViewportSettings,
 } from '../types/types';
 import type { PersistenceService } from './PersistenceService';
 
 const SERVER_BASE_URL = 'http://localhost:7370'; // As determined
+
+// Helper interfaces for expected server data structures
+interface ServerAttribute {
+    name: string;
+    value: any; // Represents various AttrValue types (string, number, boolean, etc.)
+}
+
+interface ServerDataNode {
+    uuid: string;
+    ntype: string;
+    created_time: number; // seconds since epoch
+    modified_time: number; // seconds since epoch
+    path: string; // Path is guaranteed to be a string from the server
+    name: string; // Will be part of attributes.name
+    attributes: ServerAttribute[];
+    alive: boolean; // Added to match server output
+}
+
+interface ServerKartaEdge {
+    uuid: string; // Expected to be provided by the server
+    source: string; // NodeId (UUID string)
+    target: string; // NodeId (UUID string)
+    contains: boolean;
+    attributes: ServerAttribute[];
+}
+
+interface ServerViewNode {
+    uuid: string; // NodeId
+    x: number;
+    y: number;
+    width?: number;
+    height?: number;
+    rotation?: number;
+    zIndex?: number;
+    is_name_visible?: boolean;
+    attributes: ServerAttribute[];
+}
+
+interface ServerContextSettings {
+    zoom_scale: number;
+    offsetX: number;
+    offsetY: number;
+    // any other settings from Rust's ContextSettings
+}
+
+interface ServerContext {
+    focal: string; // NodeId (UUID string) of the focal node
+    nodes: ServerViewNode[]; // These are the ViewNodes for the context
+    settings: ServerContextSettings;
+}
+
+function transformServerAttributesToRecord(serverAttributes: ServerAttribute[]): Record<string, any> {
+    const record: Record<string, any> = {};
+    if (Array.isArray(serverAttributes)) {
+        for (const attr of serverAttributes) {
+            record[attr.name] = attr.value;
+        }
+    }
+    return record;
+}
+
 
 export class ServerAdapter implements PersistenceService {
     constructor() {
@@ -20,9 +84,9 @@ export class ServerAdapter implements PersistenceService {
      * Fetches the complete bundle of data required to render a context from the server.
      * This includes DataNodes, KartaEdges, and the StorableContext (layout).
      * @param contextPath The relative path of the context from the vault root.
-     * @returns A promise that resolves with an object containing nodes, edges, and storableContext, or undefined on error.
+     * @returns A promise that resolves with a ContextBundle, or undefined on error.
      */
-    async loadContextBundleByPath(contextPath: string): Promise<{ nodes: DataNode[], edges: KartaEdge[], storableContext: StorableContext } | undefined> {
+    async loadContextBundle(contextPath: string): Promise<ContextBundle | undefined> {
         const encodedPath = encodeURIComponent(contextPath);
         const url = `${SERVER_BASE_URL}/ctx/${encodedPath}`;
 
@@ -37,34 +101,107 @@ export class ServerAdapter implements PersistenceService {
                 return undefined;
             }
 
-            const data = await response.json();
+            const serverResponse = await response.json();
 
-            // Expected server response: [DataNode[], KartaEdge[], StorableContextData]
-            if (Array.isArray(data) && data.length === 3) {
-                const serverNodes = data[0] as DataNode[];
-                const serverEdges = data[1] as KartaEdge[];
-                const serverStorableContextData = data[2]; // This should match StorableContext structure
+            console.log('-----------------RAW RESPONSE------------------');
+            console.log('Server Response:', JSON.parse(JSON.stringify(serverResponse)));
+            console.log("------------------------------------------------");
 
-                // Basic validation for StorableContext structure (can be more robust)
-                if (typeof serverStorableContextData?.id !== 'string' || !Array.isArray(serverStorableContextData?.viewNodes)) {
-                     console.error('[ServerAdapter] Invalid StorableContextData structure received from server:', serverStorableContextData);
-                     return undefined;
-                }
-                
-                const storableContext: StorableContext = {
-                    id: serverStorableContextData.id,
-                    viewNodes: serverStorableContextData.viewNodes,
-                    viewportSettings: serverStorableContextData.viewportSettings,
+            // Expected server response: [ServerDataNode[], ServerKartaEdge[], ServerContext]
+            if (Array.isArray(serverResponse) && serverResponse.length === 3) {
+                const serverDataNodes = serverResponse[0] as ServerDataNode[];
+                const serverKartaEdges = serverResponse[1] as ServerKartaEdge[];
+                const serverContextData = serverResponse[2] as ServerContext;
+
+                // Transform ServerDataNode[] to DataNode[]
+                const clientDataNodes: DataNode[] = serverDataNodes.map(sNode => {
+                    const attributes = transformServerAttributesToRecord(sNode.attributes);
+                    attributes['name'] = sNode.name; // Ensure name is part of attributes
+                    return {
+                        id: sNode.uuid,
+                        ntype: sNode.ntype,
+                        createdAt: sNode.created_time * 1000, // Convert seconds to milliseconds
+                        modifiedAt: sNode.modified_time * 1000, // Convert seconds to milliseconds
+                        path: sNode.path, // Path is guaranteed to be a string
+                        attributes: attributes,
+                        alive: sNode.alive, // Map the top-level alive field
+                    };
+                });
+
+                // Transform ServerKartaEdge[] to KartaEdge[]
+                const clientKartaEdges: KartaEdge[] = serverKartaEdges.map(sEdge => {
+                    const attributes = transformServerAttributesToRecord(sEdge.attributes);
+                    attributes['contains'] = sEdge.contains; // Ensure contains is part of attributes
+                    return {
+                        id: sEdge.uuid, // Directly use the UUID from server
+                        source: sEdge.source,
+                        target: sEdge.target,
+                        attributes: attributes,
+                    };
+                });
+
+                // Transform ServerContext to StorableContext
+                const clientViewNodes: [NodeId, StorableViewNode][] = serverContextData.nodes.map(sViewNode => {
+                    const attributes = transformServerAttributesToRecord(sViewNode.attributes);
+                    if (sViewNode.is_name_visible !== undefined) {
+                        attributes['isNameVisible'] = sViewNode.is_name_visible;
+                    }
+                    // Provide default values for potentially undefined properties from server
+                    // These defaults should align with how StorableViewNode is defined or typically initialized.
+                    // For now, using common defaults. These might need adjustment based on actual StorableViewNode expectations.
+                    const defaultWidth = 100; // Example default
+                    const defaultHeight = 100; // Example default
+
+                    const storableViewNode: StorableViewNode = {
+                        id: sViewNode.uuid,
+                        relX: sViewNode.x, // Map to relX
+                        relY: sViewNode.y, // Map to relY
+                        width: sViewNode.width ?? defaultWidth,
+                        height: sViewNode.height ?? defaultHeight,
+                        rotation: sViewNode.rotation ?? 0,
+                        // relScale is part of StorableViewNode, but not directly in ServerViewNode.
+                        // It might be derived or set to a default. For now, let's assume a default or it's handled elsewhere.
+                        // If it's crucial, the server might need to provide it or we calculate it.
+                        // For now, let's assume a default scale if not present, or it's handled by client logic later.
+                        // This matches the StorableViewNode definition which includes relScale.
+                        // We'll need to confirm how relScale is typically set.
+                        // For now, if ServerViewNode doesn't have scale, we might default it.
+                        // However, StorableViewNode has `relScale`, not just `scale`.
+                        // Let's assume a default of 1 for relScale if not provided/derivable.
+                        relScale: 1, // Placeholder: This needs to align with how relScale is used/derived.
+                                     // ServerViewNode doesn't have scale, so we default it.
+                        attributes: attributes,
+                    };
+                    return [sViewNode.uuid, storableViewNode];
+                });
+
+                console.log('[ServerAdapter] serverContextData.settings received:', JSON.parse(JSON.stringify(serverContextData.settings || {})));
+                const clientViewportSettings: StorableViewportSettings = {
+                    scale: (serverContextData.settings?.zoom_scale ?? 1.0) > 0.001 ? (serverContextData.settings?.zoom_scale ?? 1.0) : 1.0,
+                    relPosX: Number(serverContextData.settings?.offsetX) || 0,
+                    relPosY: Number(serverContextData.settings?.offsetY) || 0,
                 };
+                console.log('[ServerAdapter] clientViewportSettings transformed:', JSON.parse(JSON.stringify(clientViewportSettings)));
 
-                console.log(`[ServerAdapter] Successfully fetched context bundle for path "${contextPath}"`);
+                const clientStorableContext: StorableContext = {
+                    id: serverContextData.focal, // focal node ID
+                    viewNodes: clientViewNodes,
+                    viewportSettings: clientViewportSettings,
+                };
+                
+                console.log(`[ServerAdapter] Successfully fetched and transformed context bundle for path "${contextPath}"`);
+                console.log("-----------------CONVERTED FETCH RESULT------------------");
+                console.log('Data Nodes:', JSON.parse(JSON.stringify(clientDataNodes)));
+                console.log('Karta Edges:', JSON.parse(JSON.stringify(clientKartaEdges)));
+                console.log('Storable Context:', JSON.parse(JSON.stringify(clientStorableContext)));
+                console.log("--------------------------------------------------------");
                 return {
-                    nodes: serverNodes,
-                    edges: serverEdges,
-                    storableContext: storableContext,
+                    nodes: clientDataNodes,
+                    edges: clientKartaEdges,
+                    storableContext: clientStorableContext,
                 };
             } else {
-                console.error('[ServerAdapter] Unexpected response structure from server:', data);
+                console.error('[ServerAdapter] Unexpected response structure from server:', serverResponse);
                 return undefined;
             }
         } catch (error) {
@@ -77,7 +214,8 @@ export class ServerAdapter implements PersistenceService {
 
     async getContext(contextPath: NodeId): Promise<StorableContext | undefined> {
         console.log(`[ServerAdapter] getContext called for path: ${contextPath}`);
-        const bundle = await this.loadContextBundleByPath(contextPath);
+        // contextPath is used as the identifier for loadContextBundle
+        const bundle = await this.loadContextBundle(contextPath);
         if (bundle) {
             console.log(`[ServerAdapter] getContext returning storableContext for path: ${contextPath}`);
             return bundle.storableContext;
