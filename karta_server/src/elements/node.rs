@@ -5,6 +5,8 @@ use uuid::Uuid;
 
 use super::{attribute::Attribute, node_path::NodePath, nodetype::NodeTypeId, SysTime};
 
+pub const ROOT_UUID: Uuid = Uuid::from_u128(0);
+
 /// The universal node type.
 /// Nodes loaded for users of this crate should be in this type.
 ///
@@ -105,7 +107,12 @@ impl DataNode {
 
         // Hash the combined string
         let hash = blake3::hash(combined.as_bytes());
-        let uuid = Uuid::new_v5(&Uuid::NAMESPACE_URL, hash.as_bytes());
+        let mut uuid = Uuid::new_v5(&Uuid::NAMESPACE_URL, hash.as_bytes());
+
+        // Root node has a special uuid
+        if *path == NodePath::root() {
+            uuid = ROOT_UUID;
+        }
 
         DataNode {
             db_id: None,
