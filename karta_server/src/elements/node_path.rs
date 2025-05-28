@@ -29,13 +29,19 @@ impl NodePath {
     }
 
     /// Create a new NodePath from a pathbuf relative to the vault.
-    /// Supplying an empty pathbuf will create a NodePath to the userroot.
+    /// Supplying an empty pathbuf will create a NodePath to the userroot (vault).
+    /// If the path is "vault", it also returns NodePath::vault().
+    /// Otherwise, it prepends "vault/" to the given path.
     pub fn new(path: PathBuf) -> Self {
-        if path.to_str().unwrap().is_empty() {
+        if path.to_str().unwrap_or("").is_empty() { // Handles empty path
             return NodePath::vault();
         }
-        let root = NodePath::vault().buf().clone();
-        return NodePath(root.join(path));
+        if path == PathBuf::from("vault") { // Handles "vault" path
+            return NodePath::vault();
+        }
+        // For other paths, prepend "vault/"
+        let vault_prefix = NodePath::vault().0; // This is PathBuf::from("vault")
+        return NodePath(vault_prefix.join(path));
     }
 
     pub fn join(&self, path: &str) -> Self {
@@ -135,17 +141,49 @@ impl NodePath {
             None => None,
         }
     }
+
+    /// Checks if the NodePath represents the virtual root node ("").
+    pub fn is_root(&self) -> bool {
+        self.0 == PathBuf::from("")
+    }
+
+    /// Checks if the NodePath represents the vault root node ("vault").
+    pub fn is_vault_root(&self) -> bool {
+        self.0 == PathBuf::from("vault")
+    }
+
+    /// If the path is under "vault/" (e.g., "vault/foo/bar"), returns "foo/bar".
+    /// If the path is "vault", returns an empty string.
+    /// Otherwise (e.g., for the virtual root ""), returns None.
+    pub fn strip_vault_prefix(&self) -> Option<String> {
+        let path_str = self.0.to_string_lossy();
+        if path_str == "vault" {
+            Some("".to_string())
+        } else if path_str.starts_with("vault/") {
+            Some(path_str["vault/".len()..].to_string())
+        } else {
+            None
+        }
+    }
 }
 
 impl From<String> for NodePath {
-    fn from(path: String) -> Self {
-        NodePath::new(PathBuf::from(path))
+    fn from(path_str: String) -> Self {
+        if path_str == "vault" {
+            return NodePath::vault();
+        }
+        // NodePath::new will handle empty string correctly (returns NodePath::vault())
+        // and prepend "vault/" to other non-empty, non-"vault" strings.
+        NodePath::new(PathBuf::from(path_str))
     }
 }
 
 impl From<&str> for NodePath {
-    fn from(path: &str) -> Self {
-        NodePath::new(PathBuf::from(path))
+    fn from(path_str: &str) -> Self {
+        if path_str == "vault" {
+            return NodePath::vault();
+        }
+        NodePath::new(PathBuf::from(path_str))
     }
 }
 

@@ -85,9 +85,12 @@ impl GraphCore for GraphAgdb {
                 let ntype = if atype_path == NodePath::root() {
                     // println!("Root node in question");
                     NodeTypeId::root_type()
+                } else if atype_path == NodePath::vault() { // Check for vault specifically
+                    // println!("Vault node in question");
+                    NodeTypeId::dir_type() // Assign core/dir to vault
                 } else {
-                    // println!("Archetype node in question");
-                    NodeTypeId::archetype_type()
+                    // println!("Other archetype node in question");
+                    NodeTypeId::archetype_type() // Other archetypes get core/archetype
                 };
 
                 let node: DataNode = DataNode::new(&atype_path, ntype);

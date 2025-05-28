@@ -14,8 +14,9 @@ use crate::{prelude::*};
 use axum::{
     extract::{Path, State},
     routing::{get, post},
-    Extension, Json, Router,
+    Extension, Json, Router, http::Method,
 };
+use tower_http::cors::{Any, CorsLayer}; // Added imports for CORS
 use karta_service::KartaService;
 use serde::Deserialize;
 use std::{borrow::Cow, io::{self, Write}, sync::RwLock};
@@ -51,10 +52,15 @@ pub struct AppState {
 }
 
 pub fn create_router(state: AppState) -> Router<()> {
+    let cors = CorsLayer::new()
+        .allow_origin("http://localhost:5173".parse::<axum::http::HeaderValue>().unwrap())
+        .allow_methods([Method::GET, Method::POST, Method::OPTIONS]) // Specify methods
+        .allow_headers(Any); // Allow any headers
+
     let router = Router::new()
         .route("/", get(|| async { "Karta Server" }))
         .route("/ctx/{*id}", get(context_endpoints::open_context_from_fs_path)) // Corrected wildcard syntax
-
+        .layer(cors) // Apply the CORS layer
         // So what routes do we want?
         // /data/
         // /ctx/
