@@ -110,9 +110,9 @@ impl DataNode {
         let mut uuid = Uuid::new_v5(&Uuid::NAMESPACE_URL, hash.as_bytes());
 
         // Root node has a special uuid
-        if *path == NodePath::root() {
-            uuid = ROOT_UUID;
-        }
+        // if *path == NodePath::root() {
+        //     uuid = ROOT_UUID;
+        // }
 
         DataNode {
             db_id: None,
