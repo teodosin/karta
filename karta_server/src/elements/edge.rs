@@ -1,6 +1,7 @@
-use std::time::SystemTime;
+use std::{str::FromStr, time::SystemTime};
 
 use agdb::{DbElement, DbError, DbId, DbKeyValue, DbUserValue, DbValue, QueryId};
+use uuid::Uuid;
 
 use crate::elements::attribute::RESERVED_EDGE_ATTRS;
 
@@ -8,6 +9,7 @@ use super::{attribute::Attribute, node_path::NodePath, SysTime};
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Edge {
+    uuid: Uuid,
     db_id: Option<DbId>,
     source: NodePath,
     target: NodePath,
@@ -20,7 +22,10 @@ pub struct Edge {
 impl Edge {
     pub fn new(source: &NodePath, target: &NodePath) -> Self {
         let now = SysTime(SystemTime::now());
+        let name_to_hash = format!("{}:{}:{}:{}", source.buf().to_string_lossy(), target.buf().to_string_lossy(), now.0.duration_since(SystemTime::UNIX_EPOCH).unwrap_or_default().as_millis(), "edge");
+        let new_uuid = Uuid::new_v5(&Uuid::NAMESPACE_URL, name_to_hash.as_bytes());
         Self {
+            uuid: new_uuid,
             db_id: None,
             source: source.clone(),
             target: target.clone(),
@@ -36,7 +41,11 @@ impl Edge {
             Attribute::new_contains()
         ];
         let now = SysTime(SystemTime::now());
+        // Placeholder for V5 UUID generation
+        let name_to_hash = format!("{}:{}:{}:{}", source.buf().to_string_lossy(), target.buf().to_string_lossy(), now.0.duration_since(SystemTime::UNIX_EPOCH).unwrap_or_default().as_millis(), "edge_cont");
+        let new_uuid = Uuid::new_v5(&Uuid::NAMESPACE_URL, name_to_hash.as_bytes());
         Self {
+            uuid: new_uuid,
             db_id: None,
             source: source.clone(),
             target: target.clone(),
@@ -88,11 +97,12 @@ impl DbUserValue for Edge {
 
     fn db_keys() -> Vec<DbValue> {
         let mut keys = Vec::new();
+        keys.push(DbValue::from("uuid")); // Added uuid
         keys.push(DbValue::from("source"));
         keys.push(DbValue::from("target"));
         keys.push(DbValue::from("created_time"));
         keys.push(DbValue::from("modified_time"));
-
+        // Note: 'contains' and other attributes are handled by iterating 'rest' in TryFrom
         keys
     }
 
@@ -104,10 +114,15 @@ impl DbUserValue for Edge {
 
     fn to_db_values(&self) -> Vec<DbKeyValue> {
         let mut values = Vec::new();
+        values.push(DbKeyValue::from(("uuid", self.uuid.to_string()))); // Added uuid
         values.push(DbKeyValue::from(("source", self.source.clone())));
         values.push(DbKeyValue::from(("target", self.target.clone())));
         values.push(DbKeyValue::from(("created_time", self.created_time.clone())));
         values.push(DbKeyValue::from(("modified_time", self.modified_time.clone())));
+        // Note: 'contains' is implicitly handled by attributes if it's stored as one.
+        // The TryFrom logic reconstructs 'contains' based on attribute presence.
+        // If 'contains' should be a direct DbValue, it needs to be added here and in db_keys.
+        // Based on current TryFrom, 'contains' is derived, so not adding it as a direct DbValue here.
 
         for attr in &self.attributes {
             values.push(attr.into());
@@ -126,6 +141,7 @@ impl TryFrom<DbElement> for Edge {
         let rest = value.values.iter().filter(|v|!fixed.contains(&v.key.string().unwrap().as_str())).collect::<Vec<_>>();
 
         let db_id = value.id;
+        let uuid = value.values.iter().find(|v| v.key == "uuid".into());
         let source = value.values.iter().find(|v| v.key == "source".into());
         let target = value.values.iter().find(|v| v.key == "target".into());
         let contains = value.values.iter().find(|v| v.key == "contains".into());
@@ -146,13 +162,23 @@ impl TryFrom<DbElement> for Edge {
             Attribute::try_from(*attr).unwrap()
         }).collect();
 
+        let uuid_val = uuid.ok_or_else(|| DbError::from("Edge DbElement missing 'uuid' value"))?.value.clone();
+        let source_val = source.ok_or_else(|| DbError::from("Edge DbElement missing 'source' value"))?.value.clone();
+        let target_val = target.ok_or_else(|| DbError::from("Edge DbElement missing 'target' value"))?.value.clone();
+        let created_time_val = created_time.ok_or_else(|| DbError::from("Edge DbElement missing 'created_time' value"))?.value.clone();
+        let modified_time_val = modified_time.ok_or_else(|| DbError::from("Edge DbElement missing 'modified_time' value"))?.value.clone();
+
+        let uuid = Uuid::from_str(&uuid_val.to_string())
+            .map_err(|e| DbError::from(format!("Failed to parse Edge UUID: {}", e)))?;
+
         let edge = Edge {
             db_id: Some(db_id),
-            source: NodePath::try_from(source.unwrap().value.clone())?,
-            target: NodePath::try_from(target.unwrap().value.clone())?,
-            contains: contains.is_some(),
-            created_time: SysTime::try_from(created_time.unwrap().value.clone())?,
-            modified_time: SysTime::try_from(modified_time.unwrap().value.clone())?,
+            uuid,
+            source: NodePath::try_from(source_val)?,
+            target: NodePath::try_from(target_val)?,
+            contains: contains.is_some(), // 'contains' is optional, derived from attribute presence
+            created_time: SysTime::try_from(created_time_val)?,
+            modified_time: SysTime::try_from(modified_time_val)?,
             attributes: attrs,
         };
 
