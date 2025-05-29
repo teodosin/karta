@@ -137,6 +137,22 @@ impl KartaService {
             }
         } else if absolute_path.is_file() {
             focal_fs_datanode = fs_nodes_from_destructure.into_iter().find(|n| n.path() == path);
+            if focal_fs_datanode.is_some() {
+                if let Some(parent_path) = path.parent() {
+                    // Ensure the parent is not the root itself or the vault path,
+                    // as these cases are handled by the is_dir branch for the vault,
+                    // or the specific root handling logic.
+                    // This addition is for files within subdirectories of the vault.
+                    if !parent_path.is_root() && parent_path != NodePath::vault() {
+                        let parent_node_from_fs = DataNode::new(&parent_path, NodeTypeId::dir_type());
+                        child_fs_datanodes.push(parent_node_from_fs.clone());
+                        
+                        if let Some(focal_file_node_unwrapped) = &focal_fs_datanode {
+                             fs_edges.push(Edge::new(&parent_node_from_fs.path(), &focal_file_node_unwrapped.path()));
+                        }
+                    }
+                }
+            }
         }
         
         let fs_derived_focal_node = focal_fs_datanode.ok_or_else(||

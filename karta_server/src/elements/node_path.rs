@@ -33,15 +33,33 @@ impl NodePath {
     /// If the path is "vault", it also returns NodePath::vault().
     /// Otherwise, it prepends "vault/" to the given path.
     pub fn new(path: PathBuf) -> Self {
-        if path.to_str().unwrap_or("").is_empty() { // Handles empty path
+        let path_str_opt = path.to_str();
+
+        if path_str_opt.map_or(true, |s| s.is_empty()) { // Handles empty path
             return NodePath::vault();
         }
-        if path == PathBuf::from("vault") { // Handles "vault" path
+
+        // We know path_str_opt is Some(path_str) at this point.
+        // Check if the path is exactly "vault"
+        if path == PathBuf::from("vault") {
             return NodePath::vault();
         }
-        // For other paths, prepend "vault/"
-        let vault_prefix = NodePath::vault().0; // This is PathBuf::from("vault")
-        return NodePath(vault_prefix.join(path));
+
+        // Check if path already starts with "vault/"
+        // PathBuf::components().next() can be used to check the first part robustly.
+        let mut components = path.components();
+        if let Some(std::path::Component::Normal(first_comp)) = components.next() {
+            if first_comp == std::ffi::OsStr::new("vault") {
+                // Path already correctly starts with "vault" (e.g., "vault/foo.txt")
+                // So, we can use the path as is, without prepending another "vault/".
+                return NodePath(path);
+            }
+        }
+        
+        // For other paths that do not start with "vault" (e.g., "foo.txt", "bar/baz.txt"),
+        // prepend "vault/" to make them relative to the vault concept.
+        let vault_prefix_pb = NodePath::vault().0; // PathBuf::from("vault")
+        NodePath(vault_prefix_pb.join(path))
     }
 
     pub fn join(&self, path: &str) -> Self {
