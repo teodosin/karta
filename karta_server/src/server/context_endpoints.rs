@@ -451,18 +451,16 @@ mod tests {
         let edges_array = body_json.as_array().unwrap()[1]
             .as_array()
             .expect("Edges element should be an array");
-        let context = body_json.as_array().unwrap()[2]
-            .as_str()
-            .expect("Context element should be a string");
+        let context_json = &body_json.as_array().unwrap()[2];
 
+        assert!(nodes_array.iter().any(|node| node.get("path").and_then(|v| v.as_str()) == Some("vault/dir1")), "Parent directory 'vault/dir1' not found");
+        assert!(nodes_array.iter().any(|node| node.get("path").and_then(|v| v.as_str()) == Some("vault/dir1/fileB.txt")), "File 'vault/dir1/fileB.txt' not found");
         assert_eq!(
             nodes_array.len(),
             2,
             "Expected 2 nodes in virtual root context: dir1 and fileB.txt"
         );
 
-        assert!(nodes_array.iter().any(|node| node == "dir1"));
-        assert!(nodes_array.iter().any(|node| node == "fileB.txt"));
 
         assert_eq!(
             edges_array.len(),
