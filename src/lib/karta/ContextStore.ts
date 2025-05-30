@@ -266,15 +266,40 @@ function _convertStorableViewportSettings(
     storableSettings: StorableViewportSettings | undefined,
     focalViewNode: ViewNode | undefined
 ): ViewportSettings | undefined {
-    if (!storableSettings) return undefined;
+    if (!storableSettings) {
+        console.log('[_convertStorableViewportSettings] storableSettings is undefined, returning undefined.');
+        return undefined;
+    }
 
     const focalState = focalViewNode?.state.current;
+    console.log('[_convertStorableViewportSettings] Inputs:',
+        {
+            storableSettings: JSON.parse(JSON.stringify(storableSettings)),
+            focalViewNodeId: focalViewNode?.id,
+            focalState: focalState ? JSON.parse(JSON.stringify(focalState)) : 'undefined'
+        }
+    );
+
     if (focalState) {
+        // Explicitly check for NaN before calculation
+        if (isNaN(focalState.x) || isNaN(focalState.y) || isNaN(storableSettings.scale) || isNaN(storableSettings.relPosX) || isNaN(storableSettings.relPosY)) {
+            console.error('[_convertStorableViewportSettings] NaN detected in input values!',
+                { x: focalState.x, y: focalState.y, scale: storableSettings.scale, relPosX: storableSettings.relPosX, relPosY: storableSettings.relPosY }
+            );
+        }
+
         const absPosX = storableSettings.relPosX - (focalState.x * storableSettings.scale);
         const absPosY = storableSettings.relPosY - (focalState.y * storableSettings.scale);
-        return { scale: storableSettings.scale, posX: absPosX, posY: absPosY };
+        
+        const result = { scale: storableSettings.scale, posX: absPosX, posY: absPosY };
+        console.log('[_convertStorableViewportSettings] Output:', JSON.parse(JSON.stringify(result)));
+        
+        if (isNaN(absPosX) || isNaN(absPosY)) {
+            console.error('[_convertStorableViewportSettings] CRITICAL: Outputting NaN!', JSON.parse(JSON.stringify(result)));
+        }
+        return result;
     } else {
-        console.warn("Focal node state not found when converting viewport settings.");
+        console.warn("[_convertStorableViewportSettings] Focal node state not found. Returning DEFAULT_VIEWPORT_SETTINGS.");
         return { ...DEFAULT_VIEWPORT_SETTINGS };
     }
 }
@@ -318,7 +343,10 @@ function _applyStoresUpdate(
 export function updateNodeLayout(nodeId: NodeId, newX: number, newY: number) {
     const contextId = get(currentContextId);
     const currentCtx = get(contexts).get(contextId);
-    console.log(`[ContextStore.updateNodeLayout] Called for nodeId: ${nodeId}, newX: ${newX}, newY: ${newY}, contextId: ${contextId}`);
+    // console.log(`[ContextStore.updateNodeLayout] Called for nodeId: ${nodeId}, newX: ${newX}, newY: ${newY}, contextId: ${contextId}`);
+    if (isNaN(newX) || isNaN(newY)) {
+        console.error(`[ContextStore.updateNodeLayout] Received NaN for position! nodeId: ${nodeId}, newX: ${newX}, newY: ${newY}`);
+    }
     const viewNode = currentCtx?.viewNodes.get(nodeId); // This is ViewNode { id, state: Tween }
     if (!viewNode) {
         console.warn(`[ContextStore.updateNodeLayout] ViewNode ${nodeId} NOT FOUND in context ${contextId}. Current context view nodes:`, currentCtx?.viewNodes);

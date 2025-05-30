@@ -19,11 +19,16 @@ interface ServerAttribute {
     value: any; // Represents various AttrValue types (string, number, boolean, etc.)
 }
 
+interface ServerNtypeObject {
+    type_path: string;
+    version: string;
+}
+
 interface ServerDataNode {
     uuid: string;
-    ntype: string;
-    created_time: number; // seconds since epoch
-    modified_time: number; // seconds since epoch
+    ntype: ServerNtypeObject; // Updated to reflect actual structure
+    created_time: any; // Can be number or object { secs_since_epoch, nanos_since_epoch }
+    modified_time: any; // Can be number or object { secs_since_epoch, nanos_since_epoch }
     path: string; // Path is guaranteed to be a string from the server
     name: string; // Will be part of attributes.name
     attributes: ServerAttribute[];
@@ -117,11 +122,20 @@ export class ServerAdapter implements PersistenceService {
                 const clientDataNodes: DataNode[] = serverDataNodes.map(sNode => {
                     const attributes = transformServerAttributesToRecord(sNode.attributes);
                     attributes['name'] = sNode.name; // Ensure name is part of attributes
+                    
+                    // Handle potential object structure for time fields
+                    const createdTime = typeof sNode.created_time === 'number'
+                                        ? sNode.created_time
+                                        : (sNode.created_time?.secs_since_epoch ?? 0);
+                    const modifiedTime = typeof sNode.modified_time === 'number'
+                                         ? sNode.modified_time
+                                         : (sNode.modified_time?.secs_since_epoch ?? 0);
+
                     return {
                         id: sNode.uuid,
-                        ntype: sNode.ntype,
-                        createdAt: sNode.created_time * 1000, // Convert seconds to milliseconds
-                        modifiedAt: sNode.modified_time * 1000, // Convert seconds to milliseconds
+                        ntype: sNode.ntype.type_path, // Extract type_path string
+                        createdAt: createdTime * 1000, // Convert seconds to milliseconds
+                        modifiedAt: modifiedTime * 1000, // Convert seconds to milliseconds
                         path: sNode.path, // Path is guaranteed to be a string
                         attributes: attributes,
                         alive: sNode.alive, // Map the top-level alive field
