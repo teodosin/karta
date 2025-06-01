@@ -31,7 +31,6 @@ export function centerViewOnCanvasPoint(canvasX: number, canvasY: number) {
     // Set duration to 0 for immediate jump, stopping any current tween
     const newTransform = { scale: targetScale, posX: targetPosX, posY: targetPosY };
     viewTransform.set(newTransform, { duration: 0 });
-    console.log('[ViewportStore.centerViewOnCanvasPoint] Set viewTransform to:', newTransform);
 }
 
 /** Centers the viewport on the current focal node. */
@@ -107,17 +106,14 @@ export function frameContext() {
 
     const newTransform = { scale: targetScale, posX: targetPosX, posY: targetPosY };
     viewTransform.set(newTransform, { duration: 0 });
-    console.log('[ViewportStore.frameContext] Set viewTransform to:', newTransform);
 
 }
 
 // Screen Coordinates Helper
 export function screenToCanvasCoordinates(screenX: number, screenY: number, containerRect: DOMRect): { x: number; y: number } {
     const currentTransform = viewTransform.target;
-    console.log('[screenToCanvasCoordinates] Inputs:', { screenX, screenY, containerLeft: containerRect?.left, containerTop: containerRect?.top, currentPosX: currentTransform?.posX, currentPosY: currentTransform?.posY, currentScale: currentTransform?.scale });
 	const canvasX = (screenX - containerRect.left - currentTransform.posX) / currentTransform.scale;
     const canvasY = (screenY - containerRect.top - currentTransform.posY) / currentTransform.scale;
-    console.log('[screenToCanvasCoordinates] Outputs:', { canvasX, canvasY });
 	return { x: canvasX, y: canvasY };
 }
 

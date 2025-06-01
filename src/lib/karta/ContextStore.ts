@@ -67,20 +67,21 @@ async function _getFocalNodeInitialState(targetNodeId: NodeId, oldContext: Conte
 
     if (targetViewNodeInOldCtx) {
         // Use existing state from the previous context
-        return { ...targetViewNodeInOldCtx.state.current }; // Return a copy
+        const state = { ...targetViewNodeInOldCtx.state.current };
+        return state; // Return a copy
     } else {
         // Node not visible in old context, calculate defaults
         // _ensureDataNodeExists uses activeAdapter internally now
         const dataNode = await _ensureDataNodeExists(targetNodeId); // Ensure DataNode exists to get ntype
         const defaultState: { width: number; height: number; scale: number; rotation: number; } = dataNode ? getDefaultViewNodeStateForType(dataNode.ntype) : getDefaultViewNodeStateForType('core/generic'); // Fallback to generic
-
         // Combine default placement with default dimensions/rotation
-        return {
+        const finalDefaultState = {
             ...DEFAULT_FOCAL_TRANSFORM, // Default x, y, scale
             width: defaultState.width,
             height: defaultState.height,
             rotation: defaultState.rotation
         };
+        return finalDefaultState;
     }
 }
 
@@ -224,9 +225,7 @@ async function _loadAndProcessContext(
     				map.set(contextId, focalDataNode.path);
     				return map;
     			});
-    			console.log(`[ContextStore] Added new context ${contextId} (${focalDataNode.path}) to availableContextsMap.`);
     		} else {
-    			console.warn(`[ContextStore] Could not find path for newly created context ${contextId} to update map.`);
     		}
     	} catch (error) {
     		console.error(`[ContextStore] Error saving newly created context ${contextId}:`, error);
@@ -267,18 +266,10 @@ function _convertStorableViewportSettings(
     focalViewNode: ViewNode | undefined
 ): ViewportSettings | undefined {
     if (!storableSettings) {
-        console.log('[_convertStorableViewportSettings] storableSettings is undefined, returning undefined.');
         return undefined;
     }
 
     const focalState = focalViewNode?.state.current;
-    console.log('[_convertStorableViewportSettings] Inputs:',
-        {
-            storableSettings: JSON.parse(JSON.stringify(storableSettings)),
-            focalViewNodeId: focalViewNode?.id,
-            focalState: focalState ? JSON.parse(JSON.stringify(focalState)) : 'undefined'
-        }
-    );
 
     if (focalState) {
         // Explicitly check for NaN before calculation
@@ -292,7 +283,6 @@ function _convertStorableViewportSettings(
         const absPosY = storableSettings.relPosY - (focalState.y * storableSettings.scale);
         
         const result = { scale: storableSettings.scale, posX: absPosX, posY: absPosY };
-        console.log('[_convertStorableViewportSettings] Output:', JSON.parse(JSON.stringify(result)));
         
         if (isNaN(absPosX) || isNaN(absPosY)) {
             console.error('[_convertStorableViewportSettings] CRITICAL: Outputting NaN!', JSON.parse(JSON.stringify(result)));
@@ -343,7 +333,6 @@ function _applyStoresUpdate(
 export function updateNodeLayout(nodeId: NodeId, newX: number, newY: number) {
     const contextId = get(currentContextId);
     const currentCtx = get(contexts).get(contextId);
-    // console.log(`[ContextStore.updateNodeLayout] Called for nodeId: ${nodeId}, newX: ${newX}, newY: ${newY}, contextId: ${contextId}`);
     if (isNaN(newX) || isNaN(newY)) {
         console.error(`[ContextStore.updateNodeLayout] Received NaN for position! nodeId: ${nodeId}, newX: ${newX}, newY: ${newY}`);
     }
@@ -441,8 +430,16 @@ export async function switchContext(newContextId: NodeId, isUndoRedo: boolean = 
     if (oldContext) {
         oldContext.viewportSettings = { ...viewTransform.current }; // Capture current viewport - Access .current directly
         activeAdapter.saveContext(oldContext) // Use activeAdapter // Adapter converts ViewNode with Tween back to Storable
-            .then(() => { /* console.log(`[switchContext] Old context ${oldContextId} saved.`); */ })
             .catch(error => console.error(`[switchContext] Error saving old context ${oldContextId}:`, error));
+
+        // Log the state of the target node (newContextId) as it exists in the oldContext
+        const targetNodeInOldContext = oldContext.viewNodes.get(newContextId);
+        if (targetNodeInOldContext) {
+            console.log(`[switchContext] State of target node ${newContextId} (soon to be focal) in oldContext ${oldContextId}:`, JSON.parse(JSON.stringify(targetNodeInOldContext.state.current)));
+        } else {
+            console.log(`[switchContext] Target node ${newContextId} (soon to be focal) NOT FOUND in oldContext ${oldContextId}.viewNodes.`);
+        }
+
     } else {
         console.warn(`[switchContext] Old context ${oldContextId} not found in memory for saving.`);
     }
@@ -479,6 +476,7 @@ export async function switchContext(newContextId: NodeId, isUndoRedo: boolean = 
             bundle ? bundle.storableContext : undefined // Pass storableContext from bundle
         );
 
+
         if (!processedContext) {
             throw new Error("Failed to load or create the new context object.");
         }
@@ -501,15 +499,11 @@ export async function switchContext(newContextId: NodeId, isUndoRedo: boolean = 
         _applyStoresUpdate(newContextId, processedContext, loadedDataNodesMap, loadedEdgesMap);
 
         // --- Phase 4: Update Viewport ---
-        // --- Phase 4: Update Viewport ---
         // Only update the viewport if saved settings exist for the context.
         // If processedContext.viewportSettings is undefined (newly created context),
         // the viewport should remain unchanged.
         if (processedContext.viewportSettings !== undefined) {
-            console.log('[switchContext] Setting viewTransform with processedContext.viewportSettings:', processedContext.viewportSettings);
             viewTransform.set(processedContext.viewportSettings, { duration: VIEWPORT_TWEEN_DURATION }); // Restore tween duration
-        } else {
-            console.log('[switchContext] processedContext.viewportSettings is undefined. ViewTransform not explicitly set here.');
         }
 
 
@@ -557,7 +551,6 @@ async function initializeStores() { // Remove export keyword here
         try {
             const rootNodeExists = await activeAdapter.getNode(ROOT_NODE_ID); // Use activeAdapter
             if (!rootNodeExists) {
-                console.log("[initializeStores] First run detected (Root node not found). Importing tutorial data...");
                 try {
                     const response = await fetch('/tutorial.json'); // Fetch from static path relative to public/static
                     if (!response.ok) {
@@ -567,7 +560,6 @@ async function initializeStores() { // Remove export keyword here
                     // Assuming LocalAdapter has importData. ServerAdapter would not.
                     if (activeAdapter instanceof LocalAdapter) { // Now LocalAdapter class can be used for instanceof
                         await (activeAdapter as LocalAdapter).importData(tutorialData); // Cast to LocalAdapter
-                        console.log("[initializeStores] Tutorial data imported successfully.");
                     } else {
                         console.warn("[initializeStores] ServerAdapter is active, skipping tutorial.json import to DB.");
                     }
@@ -585,12 +577,9 @@ async function initializeStores() { // Remove export keyword here
     }
 
 
-// ---> START: Populate Available Contexts Map <---
-       console.log("[initializeStores] Attempting to populate availableContextsMap..."); // ADDED LOG
        try {
         const pathsMap = await activeAdapter.getAllContextPaths(); // Use activeAdapter
         availableContextsMap.set(pathsMap);
-        console.log(`[initializeStores] Populated availableContextsMap with ${pathsMap.size} entries.`);
        } catch (error) {
         console.error("[initializeStores] Error populating availableContextsMap:", error);
         // Continue initialization even if this fails
@@ -605,10 +594,9 @@ async function initializeStores() { // Remove export keyword here
         currentContextId.set(ROOT_NODE_ID); // Temporarily set to root
 
         // 1. Determine Target Initial Context ID based on settings
-        let targetInitialContextId = ROOT_NODE_ID; // Default
+        let targetInitialContextId = ROOT_NODE_ID;
         if (USE_SERVER_ADAPTER) {
-            console.log("[initializeStores] ServerAdapter active. Defaulting initial context to ROOT_NODE_ID (server should provide root).");
-            targetInitialContextId = ROOT_NODE_ID; // Or a specific root path like '.' or '/'
+            targetInitialContextId = ROOT_NODE_ID;
         } else {
             try {
                 const currentSettings = get(settings); // Read settings (should be loaded by +layout.svelte)
@@ -624,11 +612,9 @@ async function initializeStores() { // Remove export keyword here
                             targetInitialContextId = ROOT_NODE_ID;
                         }
                     } else {
-                        console.log(`[initializeStores] No last context ID found, defaulting to ROOT: ${ROOT_NODE_ID}`);
                         targetInitialContextId = ROOT_NODE_ID;
                     }
                 } else {
-                    console.log(`[initializeStores] Setting disabled or localStorage not available, defaulting to ROOT: ${ROOT_NODE_ID}`);
                     targetInitialContextId = ROOT_NODE_ID;
                 }
             } catch (error) {
@@ -687,11 +673,9 @@ async function initializeStores() { // Remove export keyword here
         if (USE_SERVER_ADAPTER && !initialDataNode && initialContextBundle?.storableContext?.id) {
             targetInitialContextId = initialContextBundle.storableContext.id;
             // We will proceed with this ID, _loadAndProcessContext will use the bundle.
-            console.log(`[initializeStores] ServerAdapter: Proceeding with focal ID ${targetInitialContextId} from server bundle.`);
         } else if (initialDataNode) {
             // Add the successfully loaded/ensured initial node to the nodes store
             nodes.update(n => n.set(initialDataNode!.id, initialDataNode!));
-            console.log(`[initializeStores] Initial node ${initialDataNode.id} loaded into store.`);
             targetInitialContextId = initialDataNode.id; // Ensure targetInitialContextId is set from the found node
         }
 
@@ -704,7 +688,6 @@ async function initializeStores() { // Remove export keyword here
             initialDataNode.modifiedAt = Date.now();
             try {
                 await activeAdapter.saveNode(initialDataNode); // Use activeAdapter
-                console.log(`[initializeStores] Successfully added isSystemNode flag to root node.`);
                 // Update the node in the store as well
                 nodes.update(n => n.set(initialDataNode!.id, initialDataNode!));
             } catch (saveError) {
@@ -753,9 +736,7 @@ async function initializeStores() { // Remove export keyword here
         if (USE_SERVER_ADAPTER && initialContextBundle) {
             contextDataNodes = new Map(initialContextBundle.nodes.map(n => [n.id, n]));
             contextEdges = new Map(initialContextBundle.edges.map(e => [e.id, e]));
-            console.log(`[initializeStores] ServerAdapter: Using nodes and edges from initial bundle for context: ${initialProcessedContext.id}`);
         } else {
-            console.log(`[initializeStores] Using nodes and edges from initial bundle for context: ${initialProcessedContext.id} (LocalAdapter path)`);
             // For LocalAdapter, initialContextBundle was fetched if not USE_SERVER_ADAPTER
             // This path ensures that if bundle was fetched, its contents are used.
             // If initialContextBundle is undefined here (e.g. error fetching), maps will be empty.
@@ -786,16 +767,11 @@ async function initializeStores() { // Remove export keyword here
                     posX: centerX,
                     posY: centerY
                 };
-                console.log(`[initializeStores] Centering initial context ${targetInitialContextId} at screen (${centerX}, ${centerY}).`);
             }
         } else {
-            console.log(`[initializeStores] Loading context ${targetInitialContextId}. Using saved or default viewport settings.`);
         }
 
-        console.log('[initializeStores] Setting initial viewTransform with initialViewportSettings:', initialViewportSettings);
         viewTransform.set(initialViewportSettings, { duration: 0 }); // Set instantly
-
-        console.log(`[initializeStores] Stores initialized successfully, starting context: ${targetInitialContextId}`);
 
     } catch (error) {
         console.error("[initializeStores] Error during store initialization:", error);

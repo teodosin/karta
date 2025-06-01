@@ -451,7 +451,6 @@ export async function fetchAvailableContextDetails(): Promise<{ id: NodeId, name
     		availableContextsMap.update(map => {
     			if (map.has(nodeId)) {
     				map.delete(nodeId);
-    				console.log(`[NodeStore] Removed context ${nodeId} from availableContextsMap.`);
     			}
     			return map;
     		});
@@ -596,11 +595,6 @@ export async function fetchAvailableContextDetails(): Promise<{ id: NodeId, name
             }
        }
        
-       if (needsViewNodeUpdate || needsDataNodeUpdate) {
-           // console.log(`[updateViewNodeAttribute] Updated ${attributeKey} for ${viewNodeId}. ViewNode updated: ${needsViewNodeUpdate}, DataNode updated: ${needsDataNodeUpdate}`);
-       } else {
-           // console.log(`[updateViewNodeAttribute] No update needed for ${attributeKey} on ${viewNodeId}.`);
-       }
    }
 // --- Node Search Action ---
 

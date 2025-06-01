@@ -84,12 +84,10 @@
 		}
 
 		isLoading = true;
-		console.log(`[ImageNode ${dataNode.id}] Fetching Object URL for asset ${id}`);
 		try {
 			const url = await localAdapter.getAssetObjectUrl(id);
 			if (url) {
 				imageUrl = url;
-				// console.log(`[ImageNode ${dataNode.id}] Object URL loaded: ${url.substring(0, 50)}...`);
 			} else {
 				console.warn(`[ImageNode ${dataNode.id}] Failed to get Object URL for asset ${id}.`);
 				imageUrl = placeholderDataUri; // Use placeholder if fetch fails
@@ -107,15 +105,12 @@
 		// Only fetch if imageUrl isn't already set and assetId exists
 		if (!imageUrl && assetId) {
 			fetchImageUrl(assetId);
-		} else if (imageUrl) {
-			// console.log(`[ImageNode ${dataNode.id}] Using existing src/cached URL: ${imageUrl.substring(0, 50)}...`);
 		}
 	});
 
 	// Reactive statement to handle potential changes in assetId after mount
 	$: if (assetId && !isLoading && !imageUrl) {
 		// Re-trigger fetch if assetId changes and we don't have a URL yet
-		console.log(`[ImageNode ${dataNode.id}] AssetId changed or URL missing, re-fetching.`);
 		fetchImageUrl(assetId);
 	}
 

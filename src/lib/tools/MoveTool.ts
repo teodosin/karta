@@ -116,13 +116,11 @@ export class MoveTool implements Tool {
         // --- Drag Initialization (only if not Shift+Click) ---
 
         // Store initial positions for all nodes being dragged
-        console.log('[MoveTool.onPointerDown] Attempting to drag nodes:', Array.from(this.draggingNodeIds));
         // Log details of the nodes being dragged
         if (currentCtx) { // Ensure currentCtx is defined
             for (const id of this.draggingNodeIds) {
                 const viewNode = currentCtx.viewNodes.get(id);
                 const dataNode = get(nodes).get(id);
-                console.log(`  - Node ID: ${id}`, { viewNodeExists: !!viewNode, dataNodeExists: !!dataNode, dataNodePath: dataNode?.path, dataNodeType: dataNode?.ntype });
             }
         }
 
@@ -177,7 +175,6 @@ export class MoveTool implements Tool {
             if (initialPos) {
                 const newX = initialPos.x + deltaX;
                 const newY = initialPos.y + deltaY;
-                console.log(`[MoveTool.handlePointerMove] Updating node ${nodeId} to newX: ${newX}, newY: ${newY}`);
                 updateNodeLayout(nodeId, newX, newY); // This function handles store update and persistence
             }
         }

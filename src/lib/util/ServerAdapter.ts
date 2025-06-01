@@ -45,10 +45,11 @@ interface ServerKartaEdge {
 
 interface ServerViewNode {
     uuid: string; // NodeId
-    x: number;
-    y: number;
+    relX: number; // Changed from x
+    relY: number; // Changed from y
     width?: number;
     height?: number;
+    relScale?: number; // Added to match server output
     rotation?: number;
     zIndex?: number;
     is_name_visible?: boolean;
@@ -82,7 +83,6 @@ function transformServerAttributesToRecord(serverAttributes: ServerAttribute[]):
 export class ServerAdapter implements PersistenceService {
     constructor() {
         // Initialization if needed in the future
-        console.log('[ServerAdapter] Initialized');
     }
 
     /**
@@ -96,7 +96,6 @@ export class ServerAdapter implements PersistenceService {
         const url = `${SERVER_BASE_URL}/ctx/${encodedPath}`;
 
         try {
-            console.log(`[ServerAdapter] Fetching context bundle from: ${url}`);
             const response = await fetch(url);
 
             if (!response.ok) {
@@ -107,10 +106,6 @@ export class ServerAdapter implements PersistenceService {
             }
 
             const serverResponse = await response.json();
-
-            console.log('-----------------RAW RESPONSE------------------');
-            console.log('Server Response:', JSON.parse(JSON.stringify(serverResponse)));
-            console.log("------------------------------------------------");
 
             // Expected server response: [ServerDataNode[], ServerKartaEdge[], ServerContext]
             if (Array.isArray(serverResponse) && serverResponse.length === 3) {
@@ -168,34 +163,22 @@ export class ServerAdapter implements PersistenceService {
 
                     const storableViewNode: StorableViewNode = {
                         id: sViewNode.uuid,
-                        relX: sViewNode.x, // Map to relX
-                        relY: sViewNode.y, // Map to relY
+                        relX: sViewNode.relX, // Use sViewNode.relX
+                        relY: sViewNode.relY, // Use sViewNode.relY
                         width: sViewNode.width ?? defaultWidth,
                         height: sViewNode.height ?? defaultHeight,
                         rotation: sViewNode.rotation ?? 0,
-                        // relScale is part of StorableViewNode, but not directly in ServerViewNode.
-                        // It might be derived or set to a default. For now, let's assume a default or it's handled elsewhere.
-                        // If it's crucial, the server might need to provide it or we calculate it.
-                        // For now, let's assume a default scale if not present, or it's handled by client logic later.
-                        // This matches the StorableViewNode definition which includes relScale.
-                        // We'll need to confirm how relScale is typically set.
-                        // For now, if ServerViewNode doesn't have scale, we might default it.
-                        // However, StorableViewNode has `relScale`, not just `scale`.
-                        // Let's assume a default of 1 for relScale if not provided/derivable.
-                        relScale: 1, // Placeholder: This needs to align with how relScale is used/derived.
-                                     // ServerViewNode doesn't have scale, so we default it.
+                        relScale: sViewNode.relScale ?? 1, // Use sViewNode.relScale, default to 1 if not present
                         attributes: attributes,
                     };
                     return [sViewNode.uuid, storableViewNode];
                 });
 
-                console.log('[ServerAdapter] serverContextData.settings received:', JSON.parse(JSON.stringify(serverContextData.settings || {})));
                 const clientViewportSettings: StorableViewportSettings = {
                     scale: (serverContextData.settings?.zoom_scale ?? 1.0) > 0.001 ? (serverContextData.settings?.zoom_scale ?? 1.0) : 1.0,
                     relPosX: Number(serverContextData.settings?.offsetX) || 0,
                     relPosY: Number(serverContextData.settings?.offsetY) || 0,
                 };
-                console.log('[ServerAdapter] clientViewportSettings transformed:', JSON.parse(JSON.stringify(clientViewportSettings)));
 
                 const clientStorableContext: StorableContext = {
                     id: serverContextData.focal, // focal node ID
@@ -203,12 +186,6 @@ export class ServerAdapter implements PersistenceService {
                     viewportSettings: clientViewportSettings,
                 };
                 
-                console.log(`[ServerAdapter] Successfully fetched and transformed context bundle for path "${contextPath}"`);
-                console.log("-----------------CONVERTED FETCH RESULT------------------");
-                console.log('Data Nodes:', JSON.parse(JSON.stringify(clientDataNodes)));
-                console.log('Karta Edges:', JSON.parse(JSON.stringify(clientKartaEdges)));
-                console.log('Storable Context:', JSON.parse(JSON.stringify(clientStorableContext)));
-                console.log("--------------------------------------------------------");
                 return {
                     nodes: clientDataNodes,
                     edges: clientKartaEdges,
@@ -227,11 +204,9 @@ export class ServerAdapter implements PersistenceService {
     // --- PersistenceService Implementation ---
 
     async getContext(contextPath: NodeId): Promise<StorableContext | undefined> {
-        console.log(`[ServerAdapter] getContext called for path: ${contextPath}`);
         // contextPath is used as the identifier for loadContextBundle
         const bundle = await this.loadContextBundle(contextPath);
         if (bundle) {
-            console.log(`[ServerAdapter] getContext returning storableContext for path: ${contextPath}`);
             return bundle.storableContext;
         }
         console.warn(`[ServerAdapter] getContext failed to load bundle for path: ${contextPath}`);

@@ -166,60 +166,59 @@
 
 // --- Event Handlers ---
 	function handleWheel(e: WheelEvent) {
-    e.preventDefault();
-    if (!canvasContainer) return;
+	   e.preventDefault();
+	   if (!canvasContainer) return;
 
-    const rect = canvasContainer.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
+	   const rect = canvasContainer.getBoundingClientRect();
+	   const mouseX = e.clientX - rect.left;
+	   const mouseY = e.clientY - rect.top;
 
-    const currentTransform = viewTransform.target;
-    const beforeZoomX = (mouseX - currentTransform.posX) / currentTransform.scale;
-    const beforeZoomY = (mouseY - currentTransform.posY) / currentTransform.scale;
+	   const currentTransform = viewTransform.target;
+	   const beforeZoomX = (mouseX - currentTransform.posX) / currentTransform.scale;
+	   const beforeZoomY = (mouseY - currentTransform.posY) / currentTransform.scale;
 
-    let newScale = currentTransform.scale;
-    let newPosX = currentTransform.posX;
-    let newPosY = currentTransform.posY;
-    const zoomSensitivityFactor = 0.5; // Slightly slower zoom
-    const panSensitivityFactor = 1.6;  // Slightly faster pan
-    const wheelZoomFactor = 1.75; // Increased Standard wheel zoom factor
-    const pinchZoomSensitivity = 0.09; // Touchpad pinch zoom sensitivity
-    if (Math.abs(e.deltaX) > 0.1 && Math.abs(e.deltaY) > 0.1) { // Use a small threshold
-        lastInputWasTouchpad = true;
-    }
+	   let newScale = currentTransform.scale;
+	   let newPosX = currentTransform.posX;
+	   let newPosY = currentTransform.posY;
+	   const zoomSensitivityFactor = 0.5; // Slightly slower zoom
+	   const panSensitivityFactor = 1.6;  // Slightly faster pan
+	   const wheelZoomFactor = 1.75; // Increased Standard wheel zoom factor
+	   const pinchZoomSensitivity = 0.09; // Touchpad pinch zoom sensitivity
+	   if (Math.abs(e.deltaX) > 0.1 && Math.abs(e.deltaY) > 0.1) { // Use a small threshold
+	       lastInputWasTouchpad = true;
+	   }
 
-    if (e.ctrlKey) {
-        // Pinch-to-zoom (Ctrl key pressed) - Always zoom
-        const pinchFactor = 1 + pinchZoomSensitivity * zoomSensitivityFactor;
-        newScale = currentTransform.scale * (e.deltaY < 0 ? pinchFactor : 1 / pinchFactor);
-        newScale = Math.max(0.1, Math.min(newScale, 5));
-        newPosX = mouseX - beforeZoomX * newScale;
-        newPosY = mouseY - beforeZoomY * newScale;
-    } else if (lastInputWasTouchpad) {
-        // Touchpad panning (heuristic detected touchpad)
-        newPosX = currentTransform.posX - e.deltaX * panSensitivityFactor;
-        newPosY = currentTransform.posY - e.deltaY * panSensitivityFactor;
-        // Keep scale the same when panning
-        newScale = currentTransform.scale;
-    } else {
-        // Standard mouse wheel zoom (heuristic assumes mouse)
-        newScale = currentTransform.scale * (e.deltaY < 0 ? wheelZoomFactor : 1 / wheelZoomFactor);
-        newScale = Math.max(0.1, Math.min(newScale, 5));
-        newPosX = mouseX - beforeZoomX * newScale;
-        newPosY = mouseY - beforeZoomY * newScale;
-    }
+	   if (e.ctrlKey) {
+	       // Pinch-to-zoom (Ctrl key pressed) - Always zoom
+	       const pinchFactor = 1 + pinchZoomSensitivity * zoomSensitivityFactor;
+	       newScale = currentTransform.scale * (e.deltaY < 0 ? pinchFactor : 1 / pinchFactor);
+	       newScale = Math.max(0.1, Math.min(newScale, 5));
+	       newPosX = mouseX - beforeZoomX * newScale;
+	       newPosY = mouseY - beforeZoomY * newScale;
+	   } else if (lastInputWasTouchpad) {
+	       // Touchpad panning (heuristic detected touchpad)
+	       newPosX = currentTransform.posX - e.deltaX * panSensitivityFactor;
+	       newPosY = currentTransform.posY - e.deltaY * panSensitivityFactor;
+	       // Keep scale the same when panning
+	       newScale = currentTransform.scale;
+	   } else {
+	       // Standard mouse wheel zoom (heuristic assumes mouse)
+	       newScale = currentTransform.scale * (e.deltaY < 0 ? wheelZoomFactor : 1 / wheelZoomFactor);
+	       newScale = Math.max(0.1, Math.min(newScale, 5));
+	       newPosX = mouseX - beforeZoomX * newScale;
+	       newPosY = mouseY - beforeZoomY * newScale;
+	   }
 
-    // Close menus if transform changes
-    if (newScale !== currentTransform.scale || newPosX !== currentTransform.posX || newPosY !== currentTransform.posY) {
-        closeContextMenu();
-        closeCreateNodeMenu();
-    }
-    const newTransformWheel = { scale: newScale, posX: newPosX, posY: newPosY };
-    viewTransform.set(newTransformWheel, {duration: 140});
-    console.log('[Viewport.handleWheel] Set viewTransform to:', newTransformWheel);
+	   // Close menus if transform changes
+	   if (newScale !== currentTransform.scale || newPosX !== currentTransform.posX || newPosY !== currentTransform.posY) {
+	       closeContextMenu();
+	       closeCreateNodeMenu();
+	   }
+	   const newTransformWheel = { scale: newScale, posX: newPosX, posY: newPosY };
+	   viewTransform.set(newTransformWheel, {duration: 140});
 
-    // Call tool's wheel handler
-    get(currentTool)?.onWheel?.(e);
+	   // Call tool's wheel handler
+	   get(currentTool)?.onWheel?.(e);
 }
 
 	function handlePointerDown(e: PointerEvent) {
@@ -455,7 +454,7 @@
         // Add null check for canvasContainer
         if (isPanning && canvasContainer && canvasContainer.hasPointerCapture(e.pointerId)) {
             const newPosX = e.clientX - panStartX;
-			const newPosY = e.clientY - panStartY;
+   const newPosY = e.clientY - panStartY;
             // Close menus if transform changes
             if (newPosX !== viewTransform.target.posX || newPosY !== viewTransform.target.posY) {
                 closeContextMenu();
@@ -463,7 +462,6 @@
             }
             const newTransformPan = { scale: viewTransform.target.scale, posX: newPosX, posY: newPosY };
             viewTransform.set(newTransformPan, { duration: 0 });
-            console.log('[Viewport.handleElementPointerMove] Set viewTransform to:', newTransformPan);
         }
     }
 

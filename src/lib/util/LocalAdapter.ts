@@ -1,4 +1,3 @@
-console.log('[LocalAdapter.ts] Module script executing - TOP OF FILE'); // New top-level log
 import * as idb from 'idb';
 import type {
 	DataNode,
@@ -23,37 +22,29 @@ export class LocalAdapter implements PersistenceService { // Added export here
 	private objectUrlMap = new Map<string, string>(); // Tracks generated Object URLs { nodeId: objectUrl }
 
 	constructor() {
-		console.log('[LocalAdapter constructor] START'); // New constructor log
 		const startTime = performance.now();
 
 		// DB Version 2: Attribute prefix refactor
 		this.dbPromise = idb.openDB<KartaDB>('karta-db-debugtest', 2, { // CHANGED DB NAME FOR DEBUGGING
 			async upgrade(db, oldVersion, newVersion, tx, event) {
-				console.log('[LocalAdapter.upgrade] START (Restoring Schema Creation)', { oldVersion, newVersion, currentDbVersion: db.version });
 
 				// Schema creation for version 1 (if db is new or oldVersion is 0)
 				if (oldVersion < 1) {
-					console.log('[LocalAdapter.upgrade] Applying schema for v1...');
 					if (!db.objectStoreNames.contains('nodes')) {
 						const nodeStore = db.createObjectStore('nodes', { keyPath: 'id' });
 						nodeStore.createIndex('path_idx', 'path', { unique: true });
-						console.log('[LocalAdapter.upgrade] "nodes" store created.');
 					}
 					if (!db.objectStoreNames.contains('edges')) {
 						const edgeStore = db.createObjectStore('edges', { keyPath: 'id' });
 						edgeStore.createIndex('source_idx', 'source', { unique: false });
 						edgeStore.createIndex('target_idx', 'target', { unique: false });
-						console.log('[LocalAdapter.upgrade] "edges" store created.');
 					}
 					if (!db.objectStoreNames.contains('contexts')) {
 						db.createObjectStore('contexts', { keyPath: 'id' });
-						console.log('[LocalAdapter.upgrade] "contexts" store created.');
 					}
 					if (!db.objectStoreNames.contains('assets')) {
 						db.createObjectStore('assets');
-						console.log('[LocalAdapter.upgrade] "assets" store created.');
 					}
-					console.log('[LocalAdapter.upgrade] Schema for v1 applied.');
 				}
 
 				// Migration for version 2 (attribute prefix refactor) - STILL SKIPPED for now
@@ -61,27 +52,21 @@ export class LocalAdapter implements PersistenceService { // Added export here
 				// For a new DB (oldVersion = 0), this specific migration logic isn't strictly needed yet,
 				// but the schema from oldVersion < 1 is.
 				if (oldVersion < 2 && oldVersion >= 1) {
-					 console.log('[LocalAdapter.upgrade] Migrating data from v1 to v2 (SKIPPED FOR DEBUG)');
 					 // Actual migration logic would go here.
 				} else if (oldVersion === 0 && newVersion === 2) {
-					console.log('[LocalAdapter.upgrade] New database created at v2. No data migration needed from v1.');
 				}
-				console.log('[LocalAdapter.upgrade] END (Restored Schema Creation)');
 			},
 			blocked() { console.error('[LocalAdapter] IDB blocked. Close other tabs accessing the DB.'); },
 			blocking() { console.warn('[LocalAdapter] IDB blocking. Connection will close.'); },
 			terminated() { console.warn('[LocalAdapter] IDB connection terminated unexpectedly.'); }
 		});
-		console.log('[LocalAdapter constructor] idb.openDB called.'); // Log after openDB call
 
 		this.dbPromise.then(db => {
 			const endTime = performance.now();
-			console.log(`[LocalAdapter] DB PROMISE RESOLVED successfully after ${endTime - startTime}ms. DB version: ${db.version}`);
 		}).catch(error => {
 			const endTime = performance.now();
 			console.error(`[LocalAdapter] DB PROMISE REJECTED after ${endTime - startTime}ms:`, error);
 		});
-		console.log('[LocalAdapter constructor] END'); // End of constructor log
 	}
 
 	async saveNode(node: DataNode): Promise<void> {
@@ -277,12 +262,10 @@ export class LocalAdapter implements PersistenceService { // Added export here
 		// 1. Check cache
 		const cachedUrl = this.objectUrlMap.get(assetId);
 		if (cachedUrl) {
-			// console.log(`[LocalAdapter] Returning cached Object URL for asset ${assetId}`);
 			return cachedUrl;
 		}
 
 		// 2. Fetch asset data from DB
-		// console.log(`[LocalAdapter] Object URL for asset ${assetId} not cached. Fetching from DB...`);
 		const assetData = await this.getAsset(assetId);
 
 		if (assetData?.blob) {
@@ -290,7 +273,6 @@ export class LocalAdapter implements PersistenceService { // Added export here
 			try {
 				const newObjectUrl = URL.createObjectURL(assetData.blob);
 				this.objectUrlMap.set(assetId, newObjectUrl); // Cache the new URL
-				// console.log(`[LocalAdapter] Generated and cached new Object URL for asset ${assetId}`);
 				return newObjectUrl;
 			} catch (error) {
 				console.error(`[LocalAdapter] Error creating Object URL for asset ${assetId}:`, error);
@@ -307,7 +289,6 @@ export class LocalAdapter implements PersistenceService { // Added export here
 	private cleanupObjectUrls = (): void => {
 		this.objectUrlMap.forEach((url, nodeId) => {
 			URL.revokeObjectURL(url);
-			// console.log(`[LocalAdapter] Revoked Object URL for node ${nodeId}`);
 		});
 		this.objectUrlMap.clear();
 	};
@@ -423,16 +404,12 @@ export class LocalAdapter implements PersistenceService { // Added export here
 	}
 
 	async getAllContextPaths(): Promise<Map<NodeId, string>> {
-		console.log("[LocalAdapter::getAllContextPaths] Starting..."); // ADDED LOG
 		try {
 			const contextIds = await this.getAllContextIds();
-			console.log(`[LocalAdapter::getAllContextPaths] Found ${contextIds.length} context IDs.`); // ADDED LOG
 			if (contextIds.length === 0) {
-				console.log("[LocalAdapter::getAllContextPaths] No context IDs found, returning empty map."); // ADDED LOG
 				return new Map();
 			}
 			const nodesMap = await this.getDataNodesByIds(contextIds);
-			console.log(`[LocalAdapter::getAllContextPaths] Fetched ${nodesMap.size} nodes corresponding to context IDs.`); // ADDED LOG
 			const pathsMap = new Map<NodeId, string>();
 			for (const [nodeId, nodeData] of nodesMap.entries()) {
 				if (nodeData?.path) { // Ensure nodeData and path exist
@@ -442,7 +419,6 @@ export class LocalAdapter implements PersistenceService { // Added export here
 					console.warn(`[LocalAdapter::getAllContextPaths] Node data or path missing for context ID ${nodeId}. Node data found: ${!!nodeData}`);
 				}
 			}
-			console.log(`[LocalAdapter::getAllContextPaths] Successfully built paths map with ${pathsMap.size} entries.`); // ADDED LOG
 			return pathsMap;
 		} catch (error) {
 			// MODIFIED LOG to include full error object
@@ -585,7 +561,6 @@ export class LocalAdapter implements PersistenceService { // Added export here
 			throw new Error("Invalid import data format or version.");
 		}
 
-		console.log("[LocalAdapter] Starting data import...");
 		const db = await this.dbPromise;
 		const tx = db.transaction(['nodes', 'edges', 'contexts', 'assets'], 'readwrite');
 
@@ -596,17 +571,14 @@ export class LocalAdapter implements PersistenceService { // Added export here
 			const assetStore = tx.objectStore('assets');
 
 			// Clear existing data
-			console.log("[LocalAdapter] Clearing existing data...");
 			await Promise.all([
 				nodeStore.clear(),
 				edgeStore.clear(),
 				contextStore.clear(),
 				assetStore.clear()
 			]);
-			console.log("[LocalAdapter] Existing data cleared.");
 
 			// Import assets
-			console.log(`[LocalAdapter] Importing ${data.assets.length} assets...`);
 			const assetImportPromises = data.assets.map(asset => {
 				const blob = this.dataURLtoBlob(asset.dataUrl);
 				if (blob) {
@@ -622,28 +594,18 @@ export class LocalAdapter implements PersistenceService { // Added export here
 				}
 			});
 			await Promise.all(assetImportPromises);
-			console.log("[LocalAdapter] Assets imported.");
 
-			// Import nodes
-			console.log(`[LocalAdapter] Importing ${data.nodes.length} nodes...`);
 			const nodeImportPromises = data.nodes.map(node => nodeStore.put(node));
 			await Promise.all(nodeImportPromises);
-			console.log("[LocalAdapter] Nodes imported.");
 
-			// Import edges
-			console.log(`[LocalAdapter] Importing ${data.edges.length} edges...`);
 			const edgeImportPromises = data.edges.map(edge => edgeStore.put(edge));
 			await Promise.all(edgeImportPromises);
-			console.log("[LocalAdapter] Edges imported.");
 
 			// Import contexts
-			console.log(`[LocalAdapter] Importing ${data.contexts.length} contexts...`);
 			const contextImportPromises = data.contexts.map(context => contextStore.put(context));
 			await Promise.all(contextImportPromises);
-			console.log("[LocalAdapter] Contexts imported.");
 
 			await tx.done;
-			console.log("[LocalAdapter] Data import completed successfully.");
 
 			// Clear Object URL cache after import as old URLs are invalid
 			this.cleanupObjectUrls();

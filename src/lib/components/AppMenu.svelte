@@ -17,12 +17,10 @@
  	const file = target.files?.[0];
 
  	if (!file) {
- 		console.log("No file selected.");
  		isOpen = false;
  		return;
  	}
 
- 	console.log(`File selected: ${file.name}`);
  	isOpen = false; // Close menu immediately
 
  	if (!localAdapter) {
@@ -49,7 +47,6 @@
 
  			// Confirmation before overwriting
  			if (!confirm("Importing will replace ALL existing data. Are you sure?")) {
- 				console.log("Import cancelled by user.");
  				// Reset file input value so the same file can be selected again
  				if (target) target.value = '';
  				return;
@@ -88,7 +85,6 @@
  };
 
 	const handleExport = async () => {
-		console.log('Export Data clicked');
 		if (!localAdapter) {
 			console.error("LocalAdapter not initialized.");
 			alert("Error: Database connection not available.");
@@ -97,7 +93,6 @@
 		}
 		try {
 			const exportData = await localAdapter.getExportData();
-			// console.log("Export Data:", exportData); // Keep for debugging if needed
 
 			// Create JSON string
 			const jsonString = JSON.stringify(exportData, null, 2); // Pretty print JSON
