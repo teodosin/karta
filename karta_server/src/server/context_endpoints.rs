@@ -130,8 +130,10 @@ pub async fn open_context_from_fs_path(
     // For now, direct call:
     match karta_service.open_context_from_path(node_path_to_open) {
         Ok(context_data) => {
-            println!("Context data: {:?}", context_data);
-            Ok(Json(context_data))
+            // println!("Context data: {:#?}", context_data);
+            let cdata = Json(context_data);
+            println!("cdata: {:#?}", cdata);
+            Ok(cdata)
         }
         Err(e) => Err(box_error_to_response(e)),
     }
@@ -467,7 +469,67 @@ mod tests {
             1,
             "Expected 1 edge in virtual root context: dir1 -> fileB.txt"
         );
+    }
 
+        #[tokio::test]
+    async fn going_to_vault_child_context__includes_vault() {
+        let test_ctx = KartaServiceTestContext::new("api_open_file_ctx");
+        test_ctx
+            .create_file_in_vault("fileA.txt", b"content of file A")
+            .unwrap();
 
+        let app_state_service = test_ctx.service_arc.clone();
+
+        let app_state = AppState {
+            service: app_state_service,
+            tx: tokio::sync::broadcast::channel(1).0,
+        };
+
+        let router = test_router_for_context_endpoints(app_state.clone());
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .uri("/ctx/vault/fileA.txt") 
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let body_json: Value =
+            serde_json::from_slice(&body).expect("Failed to parse JSON response");
+        println!(
+            "Test: open_vault_context_from_api - Response JSON: {:#?}",
+            body_json
+        );
+
+        // Overall structure: Tuple of (Vec<DataNode>, Vec<Edge>, Context)
+        let nodes_array = body_json.as_array().unwrap()[0]
+            .as_array()
+            .expect("Nodes element should be an array");
+        let edges_array = body_json.as_array().unwrap()[1]
+            .as_array()
+            .expect("Edges element should be an array");
+        let context_json = &body_json.as_array().unwrap()[2];
+
+        assert!(nodes_array.iter().any(|node| node.get("path").and_then(|v| v.as_str()) == Some("vault")), "Parent directory 'vault' not found");
+        assert!(nodes_array.iter().any(|node| node.get("path").and_then(|v| v.as_str()) == Some("vault/fileA.txt")), "File 'vault/fileA.txt' not found");
+        assert_eq!(
+            nodes_array.len(),
+            2,
+            "Expected 2 nodes in virtual root context: vault and fileA.txt"
+        );
+
+        assert_eq!(
+            edges_array.len(),
+            1,
+            "Expected 1 edge in virtual root context: vault -> fileA.txt"
+        );
     }
 }
