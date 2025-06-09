@@ -185,6 +185,11 @@ export class ServerAdapter implements PersistenceService {
                     viewNodes: clientViewNodes,
                     viewportSettings: clientViewportSettings,
                 };
+
+                const dataNodeDebugPrint: string[] = clientDataNodes.map((node) => {
+                    return node.path
+                })
+                console.log(dataNodeDebugPrint);
                 
                 return {
                     nodes: clientDataNodes,
