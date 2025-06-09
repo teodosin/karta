@@ -132,7 +132,7 @@ pub async fn open_context_from_fs_path(
         Ok(context_data) => {
             // println!("Context data: {:#?}", context_data);
             let cdata = Json(context_data);
-            println!("cdata: {:#?}", cdata);
+            // println!("cdata: {:#?}", cdata);
             Ok(cdata)
         }
         Err(e) => Err(box_error_to_response(e)),
