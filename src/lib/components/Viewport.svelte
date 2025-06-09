@@ -20,7 +20,9 @@
 		screenToCanvasCoordinates,
 		centerViewOnCanvasPoint,
 		centerOnFocalNode,
-		frameContext
+		frameContext,
+		viewportWidth,
+		viewportHeight
 	} from '$lib/karta/ViewportStore';
 	import {
 		currentTool,
@@ -767,6 +769,8 @@ async function handlePaste(e: ClipboardEvent) {
 id="viewport"
 class="karta-viewport-container w-full h-screen overflow-hidden relative cursor-default bg-gray-950"
 	bind:this={canvasContainer}
+	bind:clientWidth={$viewportWidth}
+	bind:clientHeight={$viewportHeight}
 	on:pointerdown={handlePointerDown}
 	on:pointermove={handleViewportPointerMove}
 	on:pointerup={handleViewportPointerUp}
@@ -782,7 +786,7 @@ class="karta-viewport-container w-full h-screen overflow-hidden relative cursor-
 	<div
 		class="w-full h-full relative origin-top-left"
 		bind:this={canvas}
-		style:transform="translate({viewTransform.current.posX}px, {viewTransform.current.posY}px) scale({viewTransform.current.scale})"
+		style:transform="translate({viewTransform.current.posX + $viewportWidth / 2}px, {viewTransform.current.posY + $viewportHeight / 2}px) scale({viewTransform.current.scale})"
 	>
 		<!-- Edge Rendering Layer -->
         <EdgeLayer {inverseScale} />

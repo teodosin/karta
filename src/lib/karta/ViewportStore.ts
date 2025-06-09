@@ -15,10 +15,14 @@ export const viewTransform = new Tween<ViewportSettings>( // Use ViewportSetting
 	{ duration: VIEWPORT_TWEEN_DURATION, easing: cubicOut } // Default tween settings
 );
 
+// Stores for viewport dimensions
+export const viewportWidth = writable(0);
+export const viewportHeight = writable(0);
+
 // Viewport Actions
 /** Centers the viewport on a specific canvas coordinate, maintaining current scale. */
 export function centerViewOnCanvasPoint(canvasX: number, canvasY: number) {
-    const viewportEl = document.getElementById('viewport'); // Assuming viewport has this ID
+    const viewportEl = document.getElementById('viewport');
     if (!viewportEl) {
     	console.error("[centerViewOnCanvasPoint] Viewport element not found.");
     	return;
