@@ -102,7 +102,7 @@ impl DataNode {
     pub fn new(path: &NodePath, ntype: NodeTypeId) -> Self {
         // Uuid generation is based on the path and creation time.
         let now = SysTime(SystemTime::now());
-        let mut combined: String = path.name();
+        let mut combined: String = path.alias();
         combined.push_str(&now.0.elapsed().unwrap().as_millis().to_string());
 
         // Hash the combined string
