@@ -119,6 +119,8 @@ impl KartaService {
         }
 
         // --- Existing logic for vault and other FS-related paths ---
+        let mut additional_nodes_to_include: Vec<DataNode> = Vec::new();
+        let mut additional_edges_to_include: Vec<Edge> = Vec::new();
         let absolute_path = path.full(self.vault_fs_path());
         let fs_nodes_from_destructure = fs_reader::destructure_file_path(self.vault_fs_path(), &absolute_path, true)
             .map_err(|e| format!("Failed to destructure path {:?} with root {:?}: {}", absolute_path, self.vault_fs_path(), e))?;
@@ -177,6 +179,27 @@ impl KartaService {
             Some(db_node) => db_node,
             None => fs_derived_focal_node.clone(),
         };
+
+        // Check if the focal node's parent is the vault and include the vault node if so
+        if let Some(parent_path) = definitive_focal_node.path().parent() {
+            if parent_path == NodePath::vault() {
+                // Attempt to open the vault node from the database
+                match self.data().open_node(&NodeHandle::Path(NodePath::vault())) {
+                    Ok(vault_node) => {
+                        additional_nodes_to_include.push(vault_node);
+                        // Create and add the edge from vault to the focal node
+                        let vault_to_focal_edge = Edge::new(&NodePath::vault(), &definitive_focal_node.path());
+                        additional_edges_to_include.push(vault_to_focal_edge);
+                    }
+                    Err(e) => {
+                        // Log error, as vault node is expected to exist
+                        eprintln!("Critical error: Vault node not found in DB when processing child context {:?}: {}", definitive_focal_node.path(), e);
+                        // Potentially return an error Result here, but for now just log
+                    }
+                }
+            }
+        }
+
         final_datanodes_map.insert(definitive_focal_node.path().clone(), definitive_focal_node.clone());
 
         for fs_child_node in &child_fs_datanodes {
@@ -195,6 +218,11 @@ impl KartaService {
                 final_datanodes_map.insert(db_node_path.clone(), db_node_data.clone());
             }
         }
+
+        // Add any additional nodes (like the vault node)
+        for node_to_add in &additional_nodes_to_include {
+            final_datanodes_map.entry(node_to_add.path().clone()).or_insert_with(|| node_to_add.clone());
+        }
         
         for fs_edge in fs_edges {
             if final_datanodes_map.contains_key(fs_edge.source()) && final_datanodes_map.contains_key(fs_edge.target()) {
@@ -210,6 +238,17 @@ impl KartaService {
                 let edge_key = (db_edge.source().clone(), db_edge.target().clone());
                 if final_edges_set.insert(edge_key) {
                     reconciled_edges.push(db_edge);
+                }
+            }
+        }
+
+        // Add any additional edges (like the vault -> focal edge)
+        for edge_to_add in &additional_edges_to_include {
+            // Ensure both source and target nodes for the edge are in the final_datanodes_map
+            if final_datanodes_map.contains_key(edge_to_add.source()) && final_datanodes_map.contains_key(edge_to_add.target()) {
+                let edge_key = (edge_to_add.source().clone(), edge_to_add.target().clone());
+                if final_edges_set.insert(edge_key) {
+                    reconciled_edges.push(edge_to_add.clone()); // Assuming Edge is Clone
                 }
             }
         }

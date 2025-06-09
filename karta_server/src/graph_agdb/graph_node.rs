@@ -184,6 +184,7 @@ impl GraphNodes for GraphAgdb {
                     // If parent is not root, ensure parent node exists in DB.
                     // This recursively ensures the path to the node is created.
                     let parent_path = npath.parent();
+                    println!("Parent of node is: {:#?}", parent_path);
                     match parent_path {
                         Some(parent_path) => {
                             if parent_path.parent().is_some() {
