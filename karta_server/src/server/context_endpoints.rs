@@ -518,8 +518,10 @@ mod tests {
             .expect("Edges element should be an array");
         let context_json = &body_json.as_array().unwrap()[2];
 
-        assert!(nodes_array.iter().any(|node| node.get("path").and_then(|v| v.as_str()) == Some("vault")), "Parent directory 'vault' not found");
+        println!("Nodes array: {:#?}", nodes_array);
+
         assert!(nodes_array.iter().any(|node| node.get("path").and_then(|v| v.as_str()) == Some("vault/fileA.txt")), "File 'vault/fileA.txt' not found");
+        assert!(nodes_array.iter().any(|node| node.get("path").and_then(|v| v.as_str()) == Some("vault")), "Parent directory 'vault' not found");
         assert_eq!(
             nodes_array.len(),
             2,
