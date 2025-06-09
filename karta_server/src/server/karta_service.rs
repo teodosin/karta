@@ -141,18 +141,11 @@ impl KartaService {
         } else if absolute_path.is_file() {
             focal_fs_datanode = fs_nodes_from_destructure.into_iter().find(|n| n.path() == path);
             if focal_fs_datanode.is_some() {
+                // Parent handling is now done later, so this block is simplified.
                 if let Some(parent_path) = path.parent() {
-                    // Ensure the parent is not the root itself or the vault path,
-                    // as these cases are handled by the is_dir branch for the vault,
-                    // or the specific root handling logic.
-                    // This addition is for files within subdirectories of the vault.
-                    if !parent_path.is_root() && parent_path != NodePath::vault() {
-                        let parent_node_from_fs = DataNode::new(&parent_path, NodeTypeId::dir_type());
-                        child_fs_datanodes.push(parent_node_from_fs.clone());
-                        
-                        if let Some(focal_file_node_unwrapped) = &focal_fs_datanode {
-                             fs_edges.push(Edge::new(&parent_node_from_fs.path(), &focal_file_node_unwrapped.path()));
-                        }
+                    if let Some(focal_file_node_unwrapped) = &focal_fs_datanode {
+                        // We can still infer the edge from the filesystem path.
+                        fs_edges.push(Edge::new(&parent_path, &focal_file_node_unwrapped.path()));
                     }
                 }
             }
@@ -261,11 +254,16 @@ impl KartaService {
         // --- Parent Node Handling ---
         let mut parent_uuid: Option<Uuid> = None;
         if let Some(parent_path) = definitive_focal_node.path().parent() {
-            if let Ok(parent_node) = self.data().open_node(&NodeHandle::Path(parent_path.clone())) {
-                parent_uuid = Some(parent_node.uuid());
-                // Ensure parent is in the map for the context generator
-                final_datanodes_map.entry(parent_path).or_insert(parent_node);
-            }
+            // Try to get the parent from the DB first. If it fails, create a transient one.
+            let parent_node = self.data().open_node(&NodeHandle::Path(parent_path.clone()))
+                .unwrap_or_else(|_| {
+                    // If not in DB, it's an unindexed directory from the filesystem.
+                    DataNode::new(&parent_path, NodeTypeId::dir_type())
+                });
+            
+            parent_uuid = Some(parent_node.uuid());
+            // Ensure parent is in the map for the context generator.
+            final_datanodes_map.entry(parent_path).or_insert(parent_node);
         }
         // Re-collect datanodes in case parent was added
         let collected_final_datanodes: Vec<DataNode> = final_datanodes_map.values().cloned().collect();
