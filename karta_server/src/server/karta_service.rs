@@ -1,4 +1,5 @@
 use std::{collections::{HashMap, HashSet}, error::Error, path::PathBuf, sync::Arc};
+use uuid::Uuid;
 
 use tokio::sync::RwLock;
 
@@ -114,7 +115,7 @@ impl KartaService {
                 // A robust solution might involve self.data().get_edge_strict() if the edge is critical and might be missed.
             }
 
-            let context = self.view.generate_context(focal_node.uuid(), datanodes_for_context.clone());
+            let context = self.view.generate_context(focal_node.uuid(), None, datanodes_for_context.clone());
             return Ok((datanodes_for_context, edges_for_context, context));
         }
 
@@ -256,8 +257,23 @@ impl KartaService {
         let collected_final_datanodes: Vec<DataNode> = final_datanodes_map.values().cloned().collect();
 
         let context_focal_uuid = definitive_focal_node.uuid();
+
+        // --- Parent Node Handling ---
+        let mut parent_uuid: Option<Uuid> = None;
+        if let Some(parent_path) = definitive_focal_node.path().parent() {
+            if let Ok(parent_node) = self.data().open_node(&NodeHandle::Path(parent_path.clone())) {
+                parent_uuid = Some(parent_node.uuid());
+                // Ensure parent is in the map for the context generator
+                final_datanodes_map.entry(parent_path).or_insert(parent_node);
+            }
+        }
+        // Re-collect datanodes in case parent was added
+        let collected_final_datanodes: Vec<DataNode> = final_datanodes_map.values().cloned().collect();
+        // --- End Parent Node Handling ---
+
         let context = self.view.generate_context(
             context_focal_uuid,
+            parent_uuid, // Pass the parent's UUID
             collected_final_datanodes.clone(),
         );
 
