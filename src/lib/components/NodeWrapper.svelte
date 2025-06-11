@@ -163,12 +163,16 @@
 			<!-- External Label & Input - Render only if NOT ghost AND isNameVisible is true -->
 			{#if isNameVisible}
 				<div
-					class="node-label absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full mt-1 px-1.5 py-0.5 bg-gray-900 bg-opacity-80 text-white text-xs rounded pointer-events-auto"
+					class="node-label absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full mt-1 px-1.5 py-0.5 bg-gray-900 bg-opacity-80 text-white text-center text-xs rounded pointer-events-auto break-words"
 					class:cursor-text={isRenamable}
 					title={isRenamable
 						? "Double-click to rename"
 						: "System node (cannot be renamed)"}
 
+					style:width="{Math.min(
+						viewNode.state.current.width,
+						nodeName.length * 7 + 20
+					)}px"
 					style:max-width="{viewNode.state.current.width}px"
 				>
 					{#if isRenamable}
