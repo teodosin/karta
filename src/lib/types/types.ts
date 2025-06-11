@@ -133,7 +133,8 @@ export interface KartaExportData {
 export interface PropertyDefinition {
   key: string; // Corresponds to a key in DataNode.attributes
   label: string; // User-friendly display name
-  type: 'string' | 'number' | 'boolean' | 'textarea'; // Input control type
+  type: 'string' | 'number' | 'boolean' | 'textarea' | 'color' | 'font'; // Input control type
+  default?: any; // The default value for the property
   // Optional fields can be added later:
   // placeholder?: string;
   // min?: number;

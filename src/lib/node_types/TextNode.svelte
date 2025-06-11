@@ -26,8 +26,11 @@
 	}
 
 	const textNodePropertySchema: PropertyDefinition[] = [
-		// { key: 'text', label: 'Content', type: 'textarea' }, // Removed - edit directly on node
-		// { key: 'karta_fontSize', label: 'Font Size', type: 'number' } // Removed - Handled in View Styles
+		{ key: 'view_isNameVisible', label: 'Show Name Label', type: 'boolean', default: true },
+		{ key: 'viewtype_fillColor', label: 'Fill Color', type: 'color', default: '#FEF9C320' },
+		{ key: 'viewtype_textColor', label: 'Text Color', type: 'color', default: '#DDDDDD' },
+		{ key: 'viewtype_font', label: 'Font', type: 'font', default: 'Nunito' },
+		{ key: 'viewtype_fontSize', label: 'Font Size', type: 'number', default: 16 }
 	];
 
 	export const nodeTypeDef: Omit<NodeTypeDefinition, 'component'> = {

@@ -155,112 +155,39 @@
 			? currentCtx.viewNodes.get($propertiesPanelNodeId)
 			: null;
 
-	$: nodeTypeDef = selectedDataNode
-		? getNodeTypeDef(selectedDataNode.ntype)
-		: null;
+	$: nodeTypeDef = selectedDataNode ? getNodeTypeDef(selectedDataNode.ntype) : null;
 	$: propertySchema = nodeTypeDef?.propertySchema ?? [];
-	// Create a set of keys defined in the type-specific schema for quick lookup
-	$: typeSpecificKeys = new Set(propertySchema.map((p) => p.key));
 
-	// --- Text Node Style State ---
-	let currentFillColor: string = "#FEF9C3"; // Default fallback
-	let currentTextColor: string = "#000000"; // Default fallback
-	let currentFont: AvailableFont = "Nunito"; // Default fallback (calculated effective value)
-	let currentFontSize = 16; // Default fallback for font size (calculated effective value)
-	let selectedFontValue: AvailableFont = "Nunito"; // Local state for select binding
-	let selectedFontSizeValue: number = 16; // Local state for input binding
-	const FALLBACK_FONT_SIZE = 16; // Define fallback globally in script
+	/**
+	 * Creates a reactive `displayAttributes` object.
+	 * This is the single source of truth for the UI. It correctly merges attributes
+	 * using the cascade: ViewNode (override) -> DataNode (base) -> TypeDef (default).
+	 */
+	$: displayAttributes = (() => {
+		if (!selectedDataNode || !nodeTypeDef) return {};
 
-	$: {
-		if (
-			selectedViewNode &&
-			selectedDataNode &&
-			selectedDataNode.ntype === "text"
-		) {
-			const viewAttrs = selectedViewNode.attributes;
-			const dataAttrs = selectedDataNode.attributes;
-			const FALLBACK_FILL_COLOR = "#FEF9C3";
-			const FALLBACK_TEXT_COLOR = "#000000";
-			const FALLBACK_FONT: AvailableFont = "Nunito";
-			// Removed declaration from here
+		const defaults = nodeTypeDef.getDefaultAttributes() ?? {};
+		const dataAttrs = selectedDataNode.attributes ?? {};
+		const viewAttrs = selectedViewNode?.attributes ?? {};
 
-			// Get effective colors and font
-			const effectiveFillColor =
-				viewAttrs?.viewtype_fillColor ??
-				dataAttrs?.viewtype_fillColor ??
-				FALLBACK_FILL_COLOR;
-			const effectiveTextColor =
-				viewAttrs?.viewtype_textColor ??
-				dataAttrs?.viewtype_textColor ??
-				FALLBACK_TEXT_COLOR;
-			currentFont =
-				viewAttrs?.viewtype_font ?? dataAttrs?.viewtype_font ?? FALLBACK_FONT;
-			currentFontSize =
-				viewAttrs?.viewtype_fontSize ??
-				dataAttrs?.viewtype_fontSize ??
-				FALLBACK_FONT_SIZE; // Calculate effective font size
+		// The order is important: start with defaults, layer on data attributes, then finish with view-specific overrides.
+		return { ...defaults, ...dataAttrs, ...viewAttrs };
+	})();
 
-			// Update local state for bindings based on calculated effective values
-			selectedFontValue = currentFont;
-			selectedFontSizeValue = currentFontSize;
+	// --- Generic Attribute Update Handler ---
+	function handleAttributeUpdate(key: string, value: any) {
+		if (!selectedDataNode) return;
 
-			// Initialize color picker state (original) AND intermediate state from effective colors
-			fillColorRgb = hexOrRgbaToRgb(effectiveFillColor); // Store the original effective color
-			textColorRgb = hexOrRgbaToRgb(effectiveTextColor); // Store the original effective color
-			// Only update intermediate state if the picker is not currently open,
-			// otherwise keep the user's intermediate selection
-			if (!isFillPickerOpen) {
-				// No intermediate state needed
-			}
-			if (!isTextColorPickerOpen) {
-				// No intermediate state needed
+		// Attributes starting with 'view_' are context-specific and live on the ViewNode.
+		if (key.startsWith('view_') || key.startsWith('viewtype_')) {
+			if (selectedViewNode) {
+				updateViewNodeAttribute(selectedViewNode.id, key, value);
+			} else {
+				console.warn(`Cannot update view attribute "${key}" - no ViewNode selected.`);
 			}
 		} else {
-			// Reset when node changes or is not text
-			fillColorRgb = { r: 254, g: 249, b: 195, a: 1 }; // Reset original
-			textColorRgb = { r: 0, g: 0, b: 0, a: 1 }; // Reset original
-			currentFont = "Nunito";
-			currentFontSize = 16; // Reset font size state
-			selectedFontValue = "Nunito"; // Reset binding state
-			selectedFontSizeValue = 16; // Reset binding state
-		}
-	}
-
-	// --- Text Node Style Handlers ---
-	// Removed reactive blocks watching isOpen state
-
-	// Type for the data object provided by the 'onInput' prop
-	type ColorPickerInputData = {
-		hsv: { h: number; s: number; v: number; a: number } | null;
-		rgb: { r: number; g: number; b: number; a: number } | null;
-		hex: string | null;
-		// color: Colord | null; // Assuming Colord type might not be directly needed here
-	};
-
-	function handleColorInput(
-		attributeKey: "viewtype_fillColor" | "viewtype_textColor",
-		colorData: ColorPickerInputData, // Accept the data object directly
-	) {
-		if (selectedViewNode && colorData.rgb) { // Check if rgb is not null
-			const newColorString = rgbToRgbaString(colorData.rgb);
-			// Directly update the store on input event
-			updateViewNodeAttribute(selectedViewNode.id, attributeKey, newColorString);
-		}
-	}
-
-	function handleFontChange(event: Event) {
-		if (selectedViewNode) {
-			const target = event.target as HTMLSelectElement;
-			// Ensure the value is a valid AvailableFont before updating
-			const selectedValue = target.value as AvailableFont;
-			if (AVAILABLE_FONTS.includes(selectedValue)) {
-				updateViewNodeAttribute(
-					selectedViewNode.id,
-					"viewtype_font",
-					selectedValue,
-				);
-			} else {
-			}
+			// All other attributes live on the DataNode.
+			updateNodeAttributes(selectedDataNode.id, { [key]: value });
 		}
 	}
 
@@ -587,201 +514,91 @@
 				<div
 					class="panel-content flex-grow p-3 overflow-y-auto space-y-4 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full"
 				>
-					<!-- Attributes Section -->
+					<!-- Generic Properties Section (Schema-Driven) -->
 					<section>
 						<h3
 							class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 mb-2"
 						>
-							Attributes
+							Properties
 						</h3>
-						<div class="space-y-2">
-							{#each Object.entries(selectedDataNode.attributes) as [key, value]}
-								<!-- Only show attributes NOT defined in the type-specific schema, and not internal flags or view defaults, and not the old fontSize -->
-								{#if !key.startsWith("type_") && !key.startsWith("view_") && !key.startsWith("viewtype_") && !typeSpecificKeys.has(key) && key !== "isSystemNode"}
-									<div
-										class="flex items-center justify-between gap-2"
-									>
-										<label
-											for="attr-{key}"
-											class="text-sm capitalize truncate"
-											>{key}</label
-										>
-										{#if key === "name"}
-											{#if selectedDataNode.attributes.isSystemNode}
-												<!-- Read-only display for system node names -->
-												<span
-													class="text-sm text-gray-600 dark:text-gray-300 truncate px-2 py-1"
-												>
-													{value ?? ""}
-												</span>
-											{:else}
-												<!-- Editable input for non-system node names -->
-												<input
-													type="text"
-													id="attr-{key}"
-													{value}
-													on:change={(e) =>
-														handleAttributeChange(
-															key,
-															(
-																e.target as HTMLInputElement
-															).value,
-														)}
-													class="w-full px-2 py-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
-												/>
-											{/if}
-										{:else}
-											<!-- Basic read-only display for other generic attributes -->
-											<span
-												class="text-sm text-gray-600 dark:text-gray-300 truncate px-2 py-1"
-											>
-												{typeof value === "object"
-													? JSON.stringify(value)
-													: (value ?? "")}
-											</span>
-										{/if}
-									</div>
-								{/if}
-							{/each}
-						</div>
-					</section>
-
-					<!-- General View Properties Section -->
-					{#if selectedViewNode}
-					<section>
-						<h3
-							class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 mb-2"
-						>
-							View Properties (Context Specific)
-						</h3>
-						<div class="space-y-2">
+						<div class="space-y-3">
+							<!-- Name is always displayed first and is special -->
 							<div class="flex items-center justify-between gap-2">
-								<label for="prop-view-isNameVisible" class="text-sm">Show Name Label</label>
-								<input
-									type="checkbox"
-									id="prop-view-isNameVisible"
-									checked={selectedViewNode?.attributes?.view_isNameVisible ?? selectedDataNode?.attributes?.view_isNameVisible ?? true}
-									on:change={(e) => {
-										if (selectedViewNode) {
-											updateViewNodeAttribute(selectedViewNode.id, 'view_isNameVisible', (e.target as HTMLInputElement).checked);
-										}
-									}}
-									class="form-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-								/>
+								<label for="prop-name" class="text-sm capitalize truncate">Name</label>
+								{#if displayAttributes.isSystemNode}
+									<span class="text-sm text-gray-500 dark:text-gray-400 truncate px-2 py-1">
+										{displayAttributes.name ?? ''}
+									</span>
+								{:else}
+									<input
+										type="text"
+										id="prop-name"
+										value={displayAttributes.name ?? ''}
+										on:change={(e) => handleAttributeUpdate('name', (e.target as HTMLInputElement).value)}
+										class="w-full px-2 py-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+									/>
+								{/if}
 							</div>
-						</div>
-					</section>
-					{/if}
 
-					<!-- Type Properties Section Removed -->
+							<!-- Render other properties from the schema -->
+							{#each propertySchema as prop (prop.key)}
+								<div class="flex items-center justify-between gap-2">
+									<label for="prop-{prop.key}" class="text-sm truncate">{prop.label}</label>
 
-					<!-- Text Node View Properties Section -->
-					{#if selectedDataNode.ntype === "text" && selectedViewNode}
-						{#key selectedViewNode}
-							<!-- Force re-render when selectedViewNode reference changes -->
-							<section>
-								<h3
-									class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 mb-2"
-								>
-									Text View Styles (Context Specific) <!-- Renamed Header -->
-								</h3>
-								<div class="space-y-2">
-										<!-- Show Name Label toggle removed from here -->
-									<!-- Fill Color -->
-									<div
-										class="flex items-center justify-between gap-2 relative"
-									>
-										<label
-											for="view-fillColor"
-											class="text-sm">Fill Color</label
-										>
-										<ColorPicker
-											bind:rgb={fillColorRgb}
-											bind:isOpen={isFillPickerOpen}
-											onInput={(data) => handleColorInput("viewtype_fillColor", data)}
-											position="responsive"
-											components={{
-												wrapper:
-													ColorPickerPortalWrapper,
-											}}
-											disableCloseClickOutside={true}
+									<!-- Boolean Type -->
+									{#if prop.type === 'boolean'}
+										<input
+											type="checkbox"
+											id="prop-{prop.key}"
+											checked={displayAttributes[prop.key] ?? false}
+											on:change={(e) => handleAttributeUpdate(prop.key, (e.target as HTMLInputElement).checked)}
+											class="form-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
 										/>
-									</div>
-									<!-- Text Color -->
-									<div
-										class="flex items-center justify-between gap-2 relative"
-									>
-										<label
-											for="view-textColor"
-											class="text-sm">Text Color</label
-										>
-										<!-- Color Swatch to open picker -->
-										<ColorPicker
-											bind:rgb={textColorRgb}
-											bind:isOpen={isTextColorPickerOpen}
-											onInput={(data) => handleColorInput("viewtype_textColor", data)}
-											position="responsive"
-											components={{
-												wrapper:
-													ColorPickerPortalWrapper,
-											}}
-											disableCloseClickOutside={true}
+									{/if}
+
+									<!-- Number Type -->
+									{#if prop.type === 'number'}
+										<input
+											type="number"
+											id="prop-{prop.key}"
+											value={displayAttributes[prop.key] ?? 0}
+											on:change={(e) => handleAttributeUpdate(prop.key, parseFloat((e.target as HTMLInputElement).value) || 0)}
+											class="w-20 px-2 py-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
 										/>
-									</div>
-									<!-- Font -->
-									<div
-										class="flex items-center justify-between gap-2"
-									>
-										<label for="view-font" class="text-sm"
-											>Font</label
-										>
+									{/if}
+
+									<!-- Font Type -->
+									{#if prop.type === 'font'}
 										<select
-											id="view-font"
-											bind:value={selectedFontValue}
-											on:change={handleFontChange}
+											id="prop-{prop.key}"
+											value={displayAttributes[prop.key] ?? 'Nunito'}
+											on:change={(e) => handleAttributeUpdate(prop.key, (e.target as HTMLSelectElement).value)}
 											class="w-full px-2 py-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
 										>
 											{#each AVAILABLE_FONTS as font}
-												<option value={font}
-													>{font}</option
-												>
+												<option value={font}>{font}</option>
 											{/each}
 										</select>
-									</div>
-									<!-- Font Size -->
-									<div
-										class="flex items-center justify-between gap-2"
-									>
-										<label
-											for="view-fontSize"
-											class="text-sm">Font Size</label
-										>
-										<input
-											type="number"
-											id="view-fontSize"
-											bind:value={selectedFontSizeValue}
-											on:change={(e) => {
-												if (selectedViewNode) {
-													updateViewNodeAttribute(
-														selectedViewNode.id,
-														"viewtype_fontSize",
-														parseFloat(
-															(
-																e.target as HTMLInputElement
-															).value,
-														) || FALLBACK_FONT_SIZE,
-													);
+									{/if}
+
+									<!-- Color Type -->
+									{#if prop.type === 'color'}
+										<ColorPicker
+											rgb={hexOrRgbaToRgb(displayAttributes[prop.key])}
+											onInput={(data) => {
+												if (data.rgb) {
+													handleAttributeUpdate(prop.key, rgbToRgbaString(data.rgb));
 												}
 											}}
-											class="w-20 px-2 py-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+											position="responsive"
+											components={{ wrapper: ColorPickerPortalWrapper }}
+											disableCloseClickOutside={true}
 										/>
-									</div>
+									{/if}
 								</div>
-							</section>
-						{/key}
-						<!-- End of #key block -->
-					{/if}
-					<!-- End of Text Node View Properties Section #if -->
+							{/each}
+						</div>
+					</section>
 				</div>
 				<!-- End of panel-content div -->
 			{/if}
