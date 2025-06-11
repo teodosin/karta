@@ -116,8 +116,14 @@ export function frameContext() {
 // Screen Coordinates Helper
 export function screenToCanvasCoordinates(screenX: number, screenY: number, containerRect: DOMRect): { x: number; y: number } {
     const currentTransform = viewTransform.target;
-	const canvasX = (screenX - containerRect.left - currentTransform.posX) / currentTransform.scale;
-    const canvasY = (screenY - containerRect.top - currentTransform.posY) / currentTransform.scale;
+    const vw = get(viewportWidth);
+    const vh = get(viewportHeight);
+
+    // This is the inverse of the transformation applied in Viewport.svelte
+    // It accounts for the pan (posX, posY), zoom (scale), and the viewport center offset (vw/2, vh/2)
+    const canvasX = (screenX - containerRect.left - currentTransform.posX - vw / 2) / currentTransform.scale;
+    const canvasY = (screenY - containerRect.top - currentTransform.posY - vh / 2) / currentTransform.scale;
+
 	return { x: canvasX, y: canvasY };
 }
 
