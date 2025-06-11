@@ -6,15 +6,15 @@
 // Interaction logic should read configuration from node attributes.
 -->
 <script lang="ts">
-	import { get } from 'svelte/store';
-	import { onMount, onDestroy } from 'svelte';
+	import { get } from "svelte/store";
+	import { onMount, onDestroy } from "svelte";
 	import {
 		contexts,
 		currentContextId,
 		currentViewNodes,
 		switchContext,
 		removeViewNodeFromContext,
-	} from '$lib/karta/ContextStore';
+	} from "$lib/karta/ContextStore";
 	import {
 		viewTransform,
 		screenToCanvasCoordinates,
@@ -22,15 +22,15 @@
 		centerOnFocalNode,
 		frameContext,
 		viewportWidth,
-		viewportHeight
-	} from '$lib/karta/ViewportStore';
+		viewportHeight,
+	} from "$lib/karta/ViewportStore";
 	import {
 		currentTool,
 		cancelConnectionProcess,
 		isConnecting,
 		updateTempLinePosition,
-		finishConnectionProcess
-	} from '$lib/karta/ToolStore';
+		finishConnectionProcess,
+	} from "$lib/karta/ToolStore";
 	import {
 		isCreateNodeMenuOpen,
 		createNodeMenuPosition,
@@ -44,33 +44,33 @@
 		type ContextMenuContextType,
 		requestNodeRename,
 		openConfirmationDialog,
-		openNodeSearch
-	} from '$lib/karta/UIStateStore';
+		openNodeSearch,
+	} from "$lib/karta/UIStateStore";
 	import {
 		selectedNodeIds,
 		clearSelection,
 		setSelectedNodes,
-		toggleSelection
-	} from '$lib/karta/SelectionStore';
+		toggleSelection,
+	} from "$lib/karta/SelectionStore";
 	import {
 		selectedEdgeIds,
 		clearEdgeSelection,
 		setSelectedEdges,
-		toggleEdgeSelection
-	} from '$lib/karta/EdgeSelectionStore';
+		toggleEdgeSelection,
+	} from "$lib/karta/EdgeSelectionStore";
 	import {
 		nodes,
 		createTextNodeFromPaste,
 		createImageNodeWithAsset,
-		deleteDataNodePermanently
-	} from '$lib/karta/NodeStore';
-	import { deleteEdge } from '$lib/karta/EdgeStore';
-	import NodeWrapper from './NodeWrapper.svelte';
-	import EdgeLayer from './EdgeLayer.svelte';
-	import CreateNodeMenu from './CreateNodeMenu.svelte';
-	import ContextMenu from './ContextMenu.svelte';
-	import SelectionBox from './SelectionBox.svelte';
-	import ConfirmationDialog from './ConfirmationDialog.svelte';
+		deleteDataNodePermanently,
+	} from "$lib/karta/NodeStore";
+	import { deleteEdge } from "$lib/karta/EdgeStore";
+	import NodeWrapper from "./NodeWrapper.svelte";
+	import EdgeLayer from "./EdgeLayer.svelte";
+	import CreateNodeMenu from "./CreateNodeMenu.svelte";
+	import ContextMenu from "./ContextMenu.svelte";
+	import SelectionBox from "./SelectionBox.svelte";
+	import ConfirmationDialog from "./ConfirmationDialog.svelte";
 
 	let canvasContainer: HTMLElement;
 
@@ -79,41 +79,35 @@
 
 	let canvas: HTMLElement;
 
-    // Reactive definition for the current context object
-    $: currentCtx = $contexts.get($currentContextId);
-
-    // Debug log for selection size
+	$: currentCtx = $contexts.get($currentContextId);
 
 	// State for panning
 	let isPanning = false;
 	let panStartX = 0;
 	let panStartY = 0;
-    let lastInputWasTouchpad = false; // State for heuristic
+	let lastInputWasTouchpad = false; // State for heuristic
 
-    // State for last known cursor position
-    let lastScreenX = 0;
-    let lastScreenY = 0;
+	// State for last known cursor position
+	let lastScreenX = 0;
+	let lastScreenY = 0;
 
-    // State for marquee selection
-    let isMarqueeSelecting = false;
-    let marqueeStartCoords: { canvasX: number; canvasY: number } | null = null;
-    let marqueeEndCoords: { canvasX: number; canvasY: number } | null = null;
-    let initialSelection: Set<string> | null = null; // Store selection at drag start
-    let marqueeRectElement: HTMLDivElement | null = null; // For the visual element
+	// State for marquee selection
+	let isMarqueeSelecting = false;
+	let marqueeStartCoords: { canvasX: number; canvasY: number } | null = null;
+	let marqueeEndCoords: { canvasX: number; canvasY: number } | null = null;
+	let initialSelection: Set<string> | null = null;
+	let marqueeRectElement: HTMLDivElement | null = null;
 
-	let contextMenuElement: HTMLElement | null = null; // Reference to the context menu div
+	let contextMenuElement: HTMLElement | null = null;
 
 	// --- Constants for Scale Invariance ---
 	const desiredScreenOutlineWidth = 1; // Target outline width in screen pixels
 
-	// --- REMOVED Reactive Calculations for SelectionBox Props ---
-	// $: currentScale = $currentViewTransform?.scale ?? 1; // REMOVED
-	// $: invScale = currentScale > 0 ? 1 / currentScale : 1; // REMOVED
-	// $: outlineWidth = currentScale > 0 ? desiredScreenOutlineWidth / currentScale : desiredScreenOutlineWidth; // REMOVED
-
 	// --- Helper Functions ---
 	// Helper function to get image dimensions from an Object URL or Data URL
-	function getImageDimensionsFromUrl(url: string): Promise<{ width: number; height: number }> {
+	function getImageDimensionsFromUrl(
+		url: string,
+	): Promise<{ width: number; height: number }> {
 		return new Promise((resolve, reject) => {
 			const img = new Image();
 			img.onload = () => {
@@ -133,7 +127,11 @@
 	function handleConnectionPointerMove(event: PointerEvent) {
 		if (!get(isConnecting) || !canvasContainer) return; // Check if connecting and container exists
 		const rect = canvasContainer.getBoundingClientRect();
-		const { x: canvasX, y: canvasY } = screenToCanvasCoordinates(event.clientX, event.clientY, rect);
+		const { x: canvasX, y: canvasY } = screenToCanvasCoordinates(
+			event.clientX,
+			event.clientY,
+			rect,
+		);
 		updateTempLinePosition(canvasX, canvasY);
 	}
 
@@ -145,12 +143,18 @@
 
 		// Traverse up DOM to find a node element with data-id
 		while (currentElement) {
-			if (currentElement.dataset?.id && currentElement.classList.contains('node-wrapper')) {
+			if (
+				currentElement.dataset?.id &&
+				currentElement.classList.contains("node-wrapper")
+			) {
 				targetNodeId = currentElement.dataset.id;
 				break; // Found it
 			}
 			// Stop if we hit the canvas container or body
-			if (currentElement === document.body || currentElement === canvasContainer) {
+			if (
+				currentElement === document.body ||
+				currentElement === canvasContainer
+			) {
 				break;
 			}
 			currentElement = currentElement.parentElement;
@@ -165,63 +169,78 @@
 		// Listeners are removed by the $effect cleanup
 	}
 
-
-// --- Event Handlers ---
+	// --- Event Handlers ---
 	function handleWheel(e: WheelEvent) {
-	   e.preventDefault();
-	   if (!canvasContainer) return;
+		e.preventDefault();
+		if (!canvasContainer) return;
 
-	   const rect = canvasContainer.getBoundingClientRect();
-	   const mouseX = e.clientX - rect.left;
-	   const mouseY = e.clientY - rect.top;
+		const rect = canvasContainer.getBoundingClientRect();
+		const mouseX = e.clientX - rect.left;
+		const mouseY = e.clientY - rect.top;
 
-	   const currentTransform = viewTransform.target;
-	   const beforeZoomX = (mouseX - currentTransform.posX) / currentTransform.scale;
-	   const beforeZoomY = (mouseY - currentTransform.posY) / currentTransform.scale;
+		const currentTransform = viewTransform.target;
+		const beforeZoomX =
+			(mouseX - currentTransform.posX) / currentTransform.scale;
+		const beforeZoomY =
+			(mouseY - currentTransform.posY) / currentTransform.scale;
 
-	   let newScale = currentTransform.scale;
-	   let newPosX = currentTransform.posX;
-	   let newPosY = currentTransform.posY;
-	   const zoomSensitivityFactor = 0.5; // Slightly slower zoom
-	   const panSensitivityFactor = 1.6;  // Slightly faster pan
-	   const wheelZoomFactor = 1.75; // Increased Standard wheel zoom factor
-	   const pinchZoomSensitivity = 0.09; // Touchpad pinch zoom sensitivity
-	   if (Math.abs(e.deltaX) > 0.1 && Math.abs(e.deltaY) > 0.1) { // Use a small threshold
-	       lastInputWasTouchpad = true;
-	   }
+		let newScale = currentTransform.scale;
+		let newPosX = currentTransform.posX;
+		let newPosY = currentTransform.posY;
+		const zoomSensitivityFactor = 0.5;
+		const panSensitivityFactor = 1.6;
+		const wheelZoomFactor = 1.75;
+		const pinchZoomSensitivity = 0.09;
+		if (Math.abs(e.deltaX) > 0.1 && Math.abs(e.deltaY) > 0.1) {
+			// Use a small threshold
+			lastInputWasTouchpad = true;
+		}
 
-	   if (e.ctrlKey) {
-	       // Pinch-to-zoom (Ctrl key pressed) - Always zoom
-	       const pinchFactor = 1 + pinchZoomSensitivity * zoomSensitivityFactor;
-	       newScale = currentTransform.scale * (e.deltaY < 0 ? pinchFactor : 1 / pinchFactor);
-	       newScale = Math.max(0.1, Math.min(newScale, 5));
-	       newPosX = mouseX - beforeZoomX * newScale;
-	       newPosY = mouseY - beforeZoomY * newScale;
-	   } else if (lastInputWasTouchpad) {
-	       // Touchpad panning (heuristic detected touchpad)
-	       newPosX = currentTransform.posX - e.deltaX * panSensitivityFactor;
-	       newPosY = currentTransform.posY - e.deltaY * panSensitivityFactor;
-	       // Keep scale the same when panning
-	       newScale = currentTransform.scale;
-	   } else {
-	       // Standard mouse wheel zoom (heuristic assumes mouse)
-	       newScale = currentTransform.scale * (e.deltaY < 0 ? wheelZoomFactor : 1 / wheelZoomFactor);
-	       newScale = Math.max(0.1, Math.min(newScale, 5));
-	       newPosX = mouseX - beforeZoomX * newScale;
-	       newPosY = mouseY - beforeZoomY * newScale;
-	   }
+		if (e.ctrlKey) {
+			// Pinch-to-zoom (Ctrl key pressed) - Always zoom
+			const pinchFactor =
+				1 + pinchZoomSensitivity * zoomSensitivityFactor;
+			newScale =
+				currentTransform.scale *
+				(e.deltaY < 0 ? pinchFactor : 1 / pinchFactor);
+			newScale = Math.max(0.1, Math.min(newScale, 5));
+			newPosX = mouseX - beforeZoomX * newScale;
+			newPosY = mouseY - beforeZoomY * newScale;
+		} else if (lastInputWasTouchpad) {
+			// Touchpad panning (heuristic detected touchpad)
+			newPosX = currentTransform.posX - e.deltaX * panSensitivityFactor;
+			newPosY = currentTransform.posY - e.deltaY * panSensitivityFactor;
+			// Keep scale the same when panning
+			newScale = currentTransform.scale;
+		} else {
+			// Standard mouse wheel zoom (heuristic assumes mouse)
+			newScale =
+				currentTransform.scale *
+				(e.deltaY < 0 ? wheelZoomFactor : 1 / wheelZoomFactor);
+			newScale = Math.max(0.1, Math.min(newScale, 5));
+			newPosX = mouseX - beforeZoomX * newScale;
+			newPosY = mouseY - beforeZoomY * newScale;
+		}
 
-	   // Close menus if transform changes
-	   if (newScale !== currentTransform.scale || newPosX !== currentTransform.posX || newPosY !== currentTransform.posY) {
-	       closeContextMenu();
-	       closeCreateNodeMenu();
-	   }
-	   const newTransformWheel = { scale: newScale, posX: newPosX, posY: newPosY };
-	   viewTransform.set(newTransformWheel, {duration: 140});
+		// Close menus if transform changes
+		if (
+			newScale !== currentTransform.scale ||
+			newPosX !== currentTransform.posX ||
+			newPosY !== currentTransform.posY
+		) {
+			closeContextMenu();
+			closeCreateNodeMenu();
+		}
+		const newTransformWheel = {
+			scale: newScale,
+			posX: newPosX,
+			posY: newPosY,
+		};
+		viewTransform.set(newTransformWheel, { duration: 140 });
 
-	   // Call tool's wheel handler
-	   get(currentTool)?.onWheel?.(e);
-}
+		// Call tool's wheel handler
+		get(currentTool)?.onWheel?.(e);
+	}
 
 	function handlePointerDown(e: PointerEvent) {
 		// Middle mouse panning takes precedence
@@ -229,30 +248,38 @@
 			lastInputWasTouchpad = false; // Middle mouse click means it's definitely a mouse
 			e.preventDefault();
 			isPanning = true;
-			const currentTransform = viewTransform.target; // Use target for initial calculation
+			const currentTransform = viewTransform.target;
 			panStartX = e.clientX - currentTransform.posX;
 			panStartY = e.clientY - currentTransform.posY;
 			// Ensure canvasContainer is bound before manipulating style/listeners
 			if (canvasContainer) {
-				canvasContainer.style.cursor = 'grabbing';
+				canvasContainer.style.cursor = "grabbing";
 				// Capture the pointer for this drag sequence
 				canvasContainer.setPointerCapture(e.pointerId);
 				// Add listeners directly to the element that captured the pointer
-				canvasContainer.addEventListener('pointermove', handleElementPointerMove);
-				canvasContainer.addEventListener('pointerup', handleElementPointerUp);
+				canvasContainer.addEventListener(
+					"pointermove",
+					handleElementPointerMove,
+				);
+				canvasContainer.addEventListener(
+					"pointerup",
+					handleElementPointerUp,
+				);
 			} else {
 			}
 			return; // Don't delegate middle mouse
 		}
 
 		const targetElement = e.target as HTMLElement;
-		const clickedOnNode = targetElement.closest('.node-wrapper');
-		const clickedOnEdge = targetElement.closest('.edge-hit-area'); // Check if an edge hit area was clicked
-		const clickedOnBackground = targetElement === canvasContainer || targetElement === canvas;
+		const clickedOnNode = targetElement.closest(".node-wrapper");
+		const clickedOnEdge = targetElement.closest(".edge-hit-area");
+		const clickedOnBackground =
+			targetElement === canvasContainer || targetElement === canvas;
 
 		// --- Handle Edge Click ---
-		if (clickedOnEdge && e.button === 0) { // Left click on an edge hit area
-			e.preventDefault(); // Prevent default behavior
+		if (clickedOnEdge && e.button === 0) {
+			// Left click on an edge hit area
+			e.preventDefault();
 
 			const edgeId = (clickedOnEdge as HTMLElement).dataset.edgeId;
 			if (edgeId) {
@@ -280,13 +307,12 @@
 					}
 				}
 			}
-			return; // Stop processing after handling edge click
+			return;
 		}
 
 		// --- Handle Background Click (and Marquee Start) ---
-		if (clickedOnBackground && e.button === 0) { // Left click on background
-			e.preventDefault(); // Prevent default text selection/drag behavior
-			// Clear both node and edge selections on background click
+		if (clickedOnBackground && e.button === 0) {
+			e.preventDefault();
 			clearSelection();
 			clearEdgeSelection();
 
@@ -295,7 +321,11 @@
 
 			// Calculate start coords
 			const rect = canvasContainer.getBoundingClientRect();
-			const { x: canvasX, y: canvasY } = screenToCanvasCoordinates(e.clientX, e.clientY, rect);
+			const { x: canvasX, y: canvasY } = screenToCanvasCoordinates(
+				e.clientX,
+				e.clientY,
+				rect,
+			);
 			marqueeStartCoords = { canvasX, canvasY };
 			marqueeEndCoords = { canvasX, canvasY }; // Initialize end coords
 			initialSelection = new Set(get(selectedNodeIds)); // Store initial node selection (marquee only affects nodes)
@@ -303,8 +333,14 @@
 			// Capture pointer on the container
 			canvasContainer.setPointerCapture(e.pointerId);
 			// Add move/up listeners specifically for marquee drag
-			canvasContainer.addEventListener('pointermove', handleMarqueePointerMove);
-			canvasContainer.addEventListener('pointerup', handleMarqueePointerUp);
+			canvasContainer.addEventListener(
+				"pointermove",
+				handleMarqueePointerMove,
+			);
+			canvasContainer.addEventListener(
+				"pointerup",
+				handleMarqueePointerUp,
+			);
 
 			// Do NOT delegate to tool if starting marquee
 			return;
@@ -312,11 +348,16 @@
 
 		// Need new handlers for marquee move/up, separate from general viewport move/up
 		function handleMarqueePointerMove(e: PointerEvent) {
-			if (!isMarqueeSelecting || !marqueeStartCoords || !canvasContainer) return;
+			if (!isMarqueeSelecting || !marqueeStartCoords || !canvasContainer)
+				return;
 
 			const rect = canvasContainer.getBoundingClientRect();
-			const { x: currentCanvasX, y: currentCanvasY } = screenToCanvasCoordinates(e.clientX, e.clientY, rect);
-			marqueeEndCoords = { canvasX: currentCanvasX, canvasY: currentCanvasY };
+			const { x: currentCanvasX, y: currentCanvasY } =
+				screenToCanvasCoordinates(e.clientX, e.clientY, rect);
+			marqueeEndCoords = {
+				canvasX: currentCanvasX,
+				canvasY: currentCanvasY,
+			};
 
 			// --- Update Selection Logic ---
 			updateSelectionFromMarquee(e.shiftKey, e.ctrlKey || e.metaKey);
@@ -329,48 +370,81 @@
 			if (!isMarqueeSelecting || !canvasContainer) return;
 
 			// Check if it was a click (minimal movement) vs a drag
-			const dx = marqueeEndCoords ? Math.abs(marqueeEndCoords.canvasX - marqueeStartCoords!.canvasX) : 0;
-			const dy = marqueeEndCoords ? Math.abs(marqueeEndCoords.canvasY - marqueeStartCoords!.canvasY) : 0;
-			const dragThreshold = 5 / viewTransform.current.scale; // Adjust threshold based on zoom
+			const dx = marqueeEndCoords
+				? Math.abs(
+						marqueeEndCoords.canvasX - marqueeStartCoords!.canvasX,
+					)
+				: 0;
+			const dy = marqueeEndCoords
+				? Math.abs(
+						marqueeEndCoords.canvasY - marqueeStartCoords!.canvasY,
+					)
+				: 0;
+			const dragThreshold = 5 / viewTransform.current.scale;
 
 			if (dx < dragThreshold && dy < dragThreshold) {
-				// Treat as a click on the background
 				clearSelection();
-			} else {
-				// Final selection was already set during move, just cleanup
 			}
 
 			// Cleanup
 			canvasContainer.releasePointerCapture(e.pointerId);
-			canvasContainer.removeEventListener('pointermove', handleMarqueePointerMove);
-			canvasContainer.removeEventListener('pointerup', handleMarqueePointerUp);
+			canvasContainer.removeEventListener(
+				"pointermove",
+				handleMarqueePointerMove,
+			);
+			canvasContainer.removeEventListener(
+				"pointerup",
+				handleMarqueePointerUp,
+			);
 
 			isMarqueeSelecting = false;
 			marqueeStartCoords = null;
 			marqueeEndCoords = null;
 			initialSelection = null;
 			if (marqueeRectElement) {
-				marqueeRectElement.remove(); // Remove visual element
+				marqueeRectElement.remove();
 				marqueeRectElement = null;
 			}
 		}
 
 		// Helper function to calculate and update selection during marquee
-		function updateSelectionFromMarquee(shiftKey: boolean, ctrlOrMetaKey: boolean) {
-			if (!isMarqueeSelecting || !marqueeStartCoords || !marqueeEndCoords || !canvasContainer || !initialSelection) return;
+		function updateSelectionFromMarquee(
+			shiftKey: boolean,
+			ctrlOrMetaKey: boolean,
+		) {
+			if (
+				!isMarqueeSelecting ||
+				!marqueeStartCoords ||
+				!marqueeEndCoords ||
+				!canvasContainer ||
+				!initialSelection
+			)
+				return;
 
 			const currentTransform = viewTransform.current;
 
 			// Calculate marquee bounds in canvas coordinates
-			const marqueeLeft = Math.min(marqueeStartCoords.canvasX, marqueeEndCoords.canvasX);
-			const marqueeRight = Math.max(marqueeStartCoords.canvasX, marqueeEndCoords.canvasX);
-			const marqueeTop = Math.min(marqueeStartCoords.canvasY, marqueeEndCoords.canvasY);
-			const marqueeBottom = Math.max(marqueeStartCoords.canvasY, marqueeEndCoords.canvasY);
+			const marqueeLeft = Math.min(
+				marqueeStartCoords.canvasX,
+				marqueeEndCoords.canvasX,
+			);
+			const marqueeRight = Math.max(
+				marqueeStartCoords.canvasX,
+				marqueeEndCoords.canvasX,
+			);
+			const marqueeTop = Math.min(
+				marqueeStartCoords.canvasY,
+				marqueeEndCoords.canvasY,
+			);
+			const marqueeBottom = Math.max(
+				marqueeStartCoords.canvasY,
+				marqueeEndCoords.canvasY,
+			);
 
 			const currentIntersectingIds = new Set<string>();
-			const nodeElements = canvas?.querySelectorAll<HTMLElement>('.node-wrapper'); // Query within canvas
+			const nodeElements = canvas?.querySelectorAll<HTMLElement>(".node-wrapper");
 
-			nodeElements?.forEach(nodeEl => {
+			nodeElements?.forEach((nodeEl) => {
 				const nodeId = nodeEl.dataset.id;
 				if (!nodeId) return;
 
@@ -380,8 +454,16 @@
 				const viewportRect = canvasContainer.getBoundingClientRect();
 
 				// Convert node screen bounds to canvas bounds
-				const nodeCanvasTopLeft = screenToCanvasCoordinates(nodeRect.left, nodeRect.top, viewportRect);
-				const nodeCanvasBottomRight = screenToCanvasCoordinates(nodeRect.right, nodeRect.bottom, viewportRect);
+				const nodeCanvasTopLeft = screenToCanvasCoordinates(
+					nodeRect.left,
+					nodeRect.top,
+					viewportRect,
+				);
+				const nodeCanvasBottomRight = screenToCanvasCoordinates(
+					nodeRect.right,
+					nodeRect.bottom,
+					viewportRect,
+				);
 
 				// Simple AABB intersection check
 				if (
@@ -397,9 +479,16 @@
 			// Determine target selection based on modifiers and initial state
 			let targetSelection: Set<string>;
 			if (shiftKey) {
-				targetSelection = new Set([...initialSelection, ...currentIntersectingIds]);
+				targetSelection = new Set([
+					...initialSelection,
+					...currentIntersectingIds,
+				]);
 			} else if (ctrlOrMetaKey) {
-				targetSelection = new Set([...initialSelection].filter(id => !currentIntersectingIds.has(id)));
+				targetSelection = new Set(
+					[...initialSelection].filter(
+						(id) => !currentIntersectingIds.has(id),
+					),
+				);
 			} else {
 				targetSelection = currentIntersectingIds;
 			}
@@ -410,15 +499,25 @@
 
 		// Creates or updates the visual marquee rectangle element
 		function updateMarqueeVisual() {
-			if (!isMarqueeSelecting || !marqueeStartCoords || !marqueeEndCoords || !canvasContainer) return;
+			if (
+				!isMarqueeSelecting ||
+				!marqueeStartCoords ||
+				!marqueeEndCoords ||
+				!canvasContainer
+			)
+				return;
 
 			const transform = viewTransform.current;
 
 			// Convert canvas coords to screen coords
-			const screenStartX = marqueeStartCoords.canvasX * transform.scale + transform.posX;
-			const screenStartY = marqueeStartCoords.canvasY * transform.scale + transform.posY;
-			const screenEndX = marqueeEndCoords.canvasX * transform.scale + transform.posX;
-			const screenEndY = marqueeEndCoords.canvasY * transform.scale + transform.posY;
+			const screenStartX =
+				marqueeStartCoords.canvasX * transform.scale + transform.posX;
+			const screenStartY =
+				marqueeStartCoords.canvasY * transform.scale + transform.posY;
+			const screenEndX =
+				marqueeEndCoords.canvasX * transform.scale + transform.posX;
+			const screenEndY =
+				marqueeEndCoords.canvasY * transform.scale + transform.posY;
 
 			const left = Math.min(screenStartX, screenEndX);
 			const top = Math.min(screenStartY, screenEndY);
@@ -427,13 +526,14 @@
 
 			if (!marqueeRectElement) {
 				// Create the element if it doesn't exist
-				marqueeRectElement = document.createElement('div');
-				marqueeRectElement.style.position = 'absolute';
-				marqueeRectElement.style.border = '1px dashed #cbd5e1'; // Tailwind slate-300
-				marqueeRectElement.style.backgroundColor = 'rgba(59, 130, 246, 0.1)'; // Tailwind blue-500 with opacity
-				marqueeRectElement.style.pointerEvents = 'none'; // Ignore pointer events
-				marqueeRectElement.style.zIndex = '50'; // Ensure it's above nodes/edges
-				marqueeRectElement.setAttribute('aria-hidden', 'true');
+				marqueeRectElement = document.createElement("div");
+				marqueeRectElement.style.position = "absolute";
+				marqueeRectElement.style.border = "1px dashed #cbd5e1"; // Tailwind slate-300
+				marqueeRectElement.style.backgroundColor =
+					"rgba(59, 130, 246, 0.1)"; // Tailwind blue-500 with opacity
+				marqueeRectElement.style.pointerEvents = "none"; // Ignore pointer events
+				marqueeRectElement.style.zIndex = "50"; // Ensure it's above nodes/edges
+				marqueeRectElement.setAttribute("aria-hidden", "true");
 				canvasContainer.appendChild(marqueeRectElement);
 			}
 
@@ -449,131 +549,163 @@
 		get(currentTool)?.onPointerDown?.(e, e.target as EventTarget | null);
 	}
 
-    // New handler for pointer move on the element during middle-mouse pan
-    function handleElementPointerMove(e: PointerEvent) {
-        // Check if we are still panning (redundant check if listeners are removed correctly, but safe)
-        // Also check if the moving pointer is the one we captured
-        // Add null check for canvasContainer
-        if (isPanning && canvasContainer && canvasContainer.hasPointerCapture(e.pointerId)) {
-            const newPosX = e.clientX - panStartX;
-   const newPosY = e.clientY - panStartY;
-            // Close menus if transform changes
-            if (newPosX !== viewTransform.target.posX || newPosY !== viewTransform.target.posY) {
-                closeContextMenu();
-                closeCreateNodeMenu();
-            }
-            const newTransformPan = { scale: viewTransform.target.scale, posX: newPosX, posY: newPosY };
-            viewTransform.set(newTransformPan, { duration: 0 });
-        }
-    }
+	// New handler for pointer move on the element during middle-mouse pan
+	function handleElementPointerMove(e: PointerEvent) {
+		// Check if we are still panning (redundant check if listeners are removed correctly, but safe)
+		// Also check if the moving pointer is the one we captured
+		// Add null check for canvasContainer
+		if (
+			isPanning &&
+			canvasContainer &&
+			canvasContainer.hasPointerCapture(e.pointerId)
+		) {
+			const newPosX = e.clientX - panStartX;
+			const newPosY = e.clientY - panStartY;
+			// Close menus if transform changes
+			if (
+				newPosX !== viewTransform.target.posX ||
+				newPosY !== viewTransform.target.posY
+			) {
+				closeContextMenu();
+				closeCreateNodeMenu();
+			}
+			const newTransformPan = {
+				scale: viewTransform.target.scale,
+				posX: newPosX,
+				posY: newPosY,
+			};
+			viewTransform.set(newTransformPan, { duration: 0 });
+		}
+	}
 
-    // New handler for pointer up on the element during middle-mouse pan
-    function handleElementPointerUp(e: PointerEvent) {
-        // Check if this is the up event for the pointer we captured and the middle button
-        // Add null check for canvasContainer
-        if (isPanning && e.button === 1 && canvasContainer && canvasContainer.hasPointerCapture(e.pointerId)) {
-            isPanning = false;
-            // No need for inner null check now, already checked above
-            canvasContainer.style.cursor = 'default'; // Reset cursor
-            // Remove listeners from the element
-            canvasContainer.removeEventListener('pointermove', handleElementPointerMove);
-            canvasContainer.removeEventListener('pointerup', handleElementPointerUp);
-            // Release the pointer capture
-            canvasContainer.releasePointerCapture(e.pointerId);
-        }
-    }
+	// New handler for pointer up on the element during middle-mouse pan
+	function handleElementPointerUp(e: PointerEvent) {
+		// Check if this is the up event for the pointer we captured and the middle button
+		// Add null check for canvasContainer
+		if (
+			isPanning &&
+			e.button === 1 &&
+			canvasContainer &&
+			canvasContainer.hasPointerCapture(e.pointerId)
+		) {
+			isPanning = false;
+			// No need for inner null check now, already checked above
+			canvasContainer.style.cursor = "default"; // Reset cursor
+			// Remove listeners from the element
+			canvasContainer.removeEventListener(
+				"pointermove",
+				handleElementPointerMove,
+			);
+			canvasContainer.removeEventListener(
+				"pointerup",
+				handleElementPointerUp,
+			);
+			// Release the pointer capture
+			canvasContainer.releasePointerCapture(e.pointerId);
+		}
+	}
 
 	// General pointer move on viewport (for non-panning moves, delegate to tool)
-	function handleViewportPointerMove(e: PointerEvent) { // Changed to PointerEvent
-        // Update last known cursor position
-        lastScreenX = e.clientX;
-        lastScreenY = e.clientY;
+	function handleViewportPointerMove(e: PointerEvent) {
+		// Changed to PointerEvent
+		// Update last known cursor position
+		lastScreenX = e.clientX;
+		lastScreenY = e.clientY;
 
 		// Delegate to the active tool
-        get(currentTool)?.onPointerMove?.(e);
+		get(currentTool)?.onPointerMove?.(e);
 	}
 
 	// General pointer up on viewport
-	function handleViewportPointerUp(e: PointerEvent) { // Changed to PointerEvent
+	function handleViewportPointerUp(e: PointerEvent) {
+		// Changed to PointerEvent
 		// Delegate to the active tool
-        get(currentTool)?.onPointerUp?.(e);
+		get(currentTool)?.onPointerUp?.(e);
 	}
 
-    // Removed handleCanvasClick - click logic should be within tool's onPointerUp
-function handleKeyDown(e: KeyboardEvent) {
-	// Check if focus is currently within an input, textarea, or contenteditable element
-	const activeEl = document.activeElement;
-	const isInputFocused = activeEl && (
-		activeEl.tagName === 'INPUT' ||
-		activeEl.tagName === 'TEXTAREA' ||
-		(activeEl instanceof HTMLElement && activeEl.isContentEditable)
-	);
+	// Removed handleCanvasClick - click logic should be within tool's onPointerUp
+	function handleKeyDown(e: KeyboardEvent) {
+		// Check if focus is currently within an input, textarea, or contenteditable element
+		const activeEl = document.activeElement;
+		const isInputFocused =
+			activeEl &&
+			(activeEl.tagName === "INPUT" ||
+				activeEl.tagName === "TEXTAREA" ||
+				(activeEl instanceof HTMLElement &&
+					activeEl.isContentEditable));
 
-	if (e.key === 'Tab') {
-		// Open Create Node Menu, but only if an input isn't focused.
-		// Default focus cycling is prevented globally in +layout.svelte.
-		if (!isInputFocused) {
-			if (!canvasContainer) return;
+		if (e.key === "Tab") {
+			// Open Create Node Menu, but only if an input isn't focused.
+			// Default focus cycling is prevented globally in +layout.svelte.
+			if (!isInputFocused) {
+				if (!canvasContainer) return;
 
-			const rect = canvasContainer.getBoundingClientRect();
-			let screenX = lastScreenX;
-			let screenY = lastScreenY;
+				const rect = canvasContainer.getBoundingClientRect();
+				let screenX = lastScreenX;
+				let screenY = lastScreenY;
 
-			// Fallback to center if cursor hasn't moved over viewport yet
-			if (screenX === 0 && screenY === 0) {
-				screenX = rect.left + rect.width / 2;
-				screenY = rect.top + rect.height / 2;
+				// Fallback to center if cursor hasn't moved over viewport yet
+				if (screenX === 0 && screenY === 0) {
+					screenX = rect.left + rect.width / 2;
+					screenY = rect.top + rect.height / 2;
+				} else {
+				}
+
+				// Calculate canvas coordinates
+				const { x: canvasX, y: canvasY } = screenToCanvasCoordinates(
+					screenX,
+					screenY,
+					rect,
+				);
+
+				// Open the menu
+				openCreateNodeMenu(screenX, screenY, canvasX, canvasY);
+				// DO NOT call e.preventDefault() here - it's handled globally
+				return; // Prevent further handling if menu is opened
 			} else {
 			}
-
-			// Calculate canvas coordinates
-			const { x: canvasX, y: canvasY } = screenToCanvasCoordinates(screenX, screenY, rect);
-
-			// Open the menu
-			openCreateNodeMenu(screenX, screenY, canvasX, canvasY);
-			// DO NOT call e.preventDefault() here - it's handled globally
-			return; // Prevent further handling if menu is opened
-		} else {
-		}
-
-	} else if (e.key === 'f' || e.key === 'F') {
-		// --- ADD THIS CHECK ---
-		if (!isInputFocused) {
-			// --- Existing logic moves inside ---
-			// Handle both 'F' and 'Shift+F'
-			if (e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
-				// Shift+F: Frame Context
-				e.preventDefault();
-				frameContext();
-			} else if (!e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
-				// F (no modifiers): Center Focal Node
-				e.preventDefault();
-				centerOnFocalNode();
+		} else if (e.key === "f" || e.key === "F") {
+			// --- ADD THIS CHECK ---
+			if (!isInputFocused) {
+				// --- Existing logic moves inside ---
+				// Handle both 'F' and 'Shift+F'
+				if (e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+					// Shift+F: Frame Context
+					e.preventDefault();
+					frameContext();
+				} else if (
+					!e.shiftKey &&
+					!e.ctrlKey &&
+					!e.metaKey &&
+					!e.altKey
+				) {
+					// F (no modifiers): Center Focal Node
+					e.preventDefault();
+					centerOnFocalNode();
+				}
+				// Ignore if other modifiers are pressed (e.g., Ctrl+F for browser search)
+				// --- End of moved logic ---
 			}
-			// Ignore if other modifiers are pressed (e.g., Ctrl+F for browser search)
-			// --- End of moved logic ---
+			// --- END OF ADDED CHECK ---
 		}
-		// --- END OF ADDED CHECK ---
+
+		// Delegate keydown events to the active tool (unless handled above)
+		if (!e.defaultPrevented) {
+			get(currentTool)?.onKeyDown?.(e);
+		}
+
+		// Keep Escape key handling here for global cancel? Or move to tool?
+		// Let's keep it global for now.
+		if (e.key === "Escape") {
+			cancelConnectionProcess();
+			closeCreateNodeMenu(); // Also close create menu on Escape
+			closeContextMenu(); // Also close context menu on Escape
+		}
 	}
 
-	// Delegate keydown events to the active tool (unless handled above)
-	if (!e.defaultPrevented) {
-		get(currentTool)?.onKeyDown?.(e);
-	}
-
-
-		      // Keep Escape key handling here for global cancel? Or move to tool?
-		      // Let's keep it global for now.
-		      if (e.key === 'Escape') {
-            cancelConnectionProcess();
-            closeCreateNodeMenu(); // Also close create menu on Escape
-            closeContextMenu(); // Also close context menu on Escape
-           }
-          }
-
-    function handleKeyUp(e: KeyboardEvent) {
-        // Delegate keyup events to the active tool
-        get(currentTool)?.onKeyUp?.(e);
+	function handleKeyUp(e: KeyboardEvent) {
+		// Delegate keyup events to the active tool
+		get(currentTool)?.onKeyUp?.(e);
 	}
 
 	function handleContextMenu(e: MouseEvent) {
@@ -587,14 +719,14 @@ function handleKeyDown(e: KeyboardEvent) {
 		e.preventDefault(); // Prevent default browser context menu
 
 		const targetElement = e.target as HTMLElement;
-		const clickedOnNode = targetElement.closest('.node-wrapper');
-		const clickedOnEdge = targetElement.closest('.edge-hit-area'); // Check for edge hit area click
+		const clickedOnNode = targetElement.closest(".node-wrapper");
+		const clickedOnEdge = targetElement.closest(".edge-hit-area"); // Check for edge hit area click
 
 		let context: ContextMenuContextType;
 
 		if (clickedOnNode) {
 			const nodeId = (clickedOnNode as HTMLElement).dataset.id;
-			context = { type: 'node', id: nodeId };
+			context = { type: "node", id: nodeId };
 
 			// --- New Logic: Update selection on right-click if node is not already selected ---
 			const currentSelection = get(selectedNodeIds);
@@ -602,11 +734,12 @@ function handleKeyDown(e: KeyboardEvent) {
 				setSelectedNodes([nodeId]); // Clear existing and select only this node
 			}
 			// If the node is already selected, do nothing to the selection.
-		} else if (clickedOnEdge) { // Corrected typo here
+		} else if (clickedOnEdge) {
+			// Corrected typo here
 			const edgeId = (clickedOnEdge as HTMLElement).dataset.edgeId; // Corrected typo here
-			context = { type: 'edge', id: edgeId || 'unknown' }; // Use unknown if ID not found yet
+			context = { type: "edge", id: edgeId || "unknown" }; // Use unknown if ID not found yet
 		} else {
-			context = { type: 'background' };
+			context = { type: "background" };
 		}
 
 		openContextMenu({ x: e.clientX, y: e.clientY }, context);
@@ -614,7 +747,11 @@ function handleKeyDown(e: KeyboardEvent) {
 
 	/** Closes the context menu if a click occurs outside of it. */
 	function handleClickOutsideContextMenu(event: PointerEvent) {
-		if ($isContextMenuOpen && contextMenuElement && !contextMenuElement.contains(event.target as Node)) {
+		if (
+			$isContextMenuOpen &&
+			contextMenuElement &&
+			!contextMenuElement.contains(event.target as Node)
+		) {
 			// Check if the click target is the menu itself or one of its descendants
 			// Also check if the click target is the element that *opened* the menu (prevent immediate close)
 			// For now, a simple check is sufficient. Refine if needed.
@@ -624,150 +761,197 @@ function handleKeyDown(e: KeyboardEvent) {
 
 	// Removed handleDoubleClick
 
-    onMount(() => {
-        // Focus the viewport container when the component mounts
-        // This helps ensure keyboard events are captured correctly.
-        canvasContainer?.focus();
+	onMount(() => {
+		// Focus the viewport container when the component mounts
+		// This helps ensure keyboard events are captured correctly.
+		canvasContainer?.focus();
 
-  // Global listener for closing context menu on outside click
-  window.addEventListener('pointerdown', handleClickOutsideContextMenu);
+		// Global listener for closing context menu on outside click
+		window.addEventListener("pointerdown", handleClickOutsideContextMenu);
 
-  // Cleanup listener on component destroy
-  return () => {
-   window.removeEventListener('pointerdown', handleClickOutsideContextMenu);
-  };
-    });
+		// Cleanup listener on component destroy
+		return () => {
+			window.removeEventListener(
+				"pointerdown",
+				handleClickOutsideContextMenu,
+			);
+		};
+	});
 
-    // --- Lifecycle & Effects ---
+	// --- Lifecycle & Effects ---
 
-    // Effect to manage global listeners for connection drag
-    // Svelte 5: Use $effect rune
-    // Svelte 4: Use $: reactive statement with a function call or onMount/onDestroy
-    $: { // Reactive block for Svelte 4 effect simulation
-    	if (typeof window !== 'undefined') { // Ensure runs only in browser
-    		if ($isConnecting) {
-    			window.addEventListener('pointermove', handleConnectionPointerMove);
-    			window.addEventListener('pointerup', handleConnectionPointerUp);
-    		} else {
-    			window.removeEventListener('pointermove', handleConnectionPointerMove);
-    			window.removeEventListener('pointerup', handleConnectionPointerUp);
-    		}
-    	}
-    }
+	// Effect to manage global listeners for connection drag
+	// Svelte 5: Use $effect rune
+	// Svelte 4: Use $: reactive statement with a function call or onMount/onDestroy
+	$: {
+		// Reactive block for Svelte 4 effect simulation
+		if (typeof window !== "undefined") {
+			// Ensure runs only in browser
+			if ($isConnecting) {
+				window.addEventListener(
+					"pointermove",
+					handleConnectionPointerMove,
+				);
+				window.addEventListener("pointerup", handleConnectionPointerUp);
+			} else {
+				window.removeEventListener(
+					"pointermove",
+					handleConnectionPointerMove,
+				);
+				window.removeEventListener(
+					"pointerup",
+					handleConnectionPointerUp,
+				);
+			}
+		}
+	}
 
-    // Ensure listeners are removed on component destroy
-    onDestroy(() => {
-    	if (typeof window !== 'undefined') {
-    		window.removeEventListener('pointermove', handleConnectionPointerMove);
-    		window.removeEventListener('pointerup', handleConnectionPointerUp);
-    		// Remove any other global listeners added here
-    	}
-    });
+	// Ensure listeners are removed on component destroy
+	onDestroy(() => {
+		if (typeof window !== "undefined") {
+			window.removeEventListener(
+				"pointermove",
+				handleConnectionPointerMove,
+			);
+			window.removeEventListener("pointerup", handleConnectionPointerUp);
+			// Remove any other global listeners added here
+		}
+	});
 
-    // --- Paste/Drop Handlers ---
+	// --- Paste/Drop Handlers ---
 
-function handleDragOver(e: DragEvent) {
- e.preventDefault(); // Necessary to allow dropping
- // Optional: Add visual feedback (e.g., change border style)
- if (canvasContainer) {
-  // Example: Add a class, remove it on dragleave/drop
- }
-}
+	function handleDragOver(e: DragEvent) {
+		e.preventDefault(); // Necessary to allow dropping
+		// Optional: Add visual feedback (e.g., change border style)
+		if (canvasContainer) {
+			// Example: Add a class, remove it on dragleave/drop
+		}
+	}
 
-async function handleDrop(e: DragEvent) {
- e.preventDefault();
- if (!e.dataTransfer || !canvasContainer) return;
+	async function handleDrop(e: DragEvent) {
+		e.preventDefault();
+		if (!e.dataTransfer || !canvasContainer) return;
 
- const rect = canvasContainer.getBoundingClientRect();
+		const rect = canvasContainer.getBoundingClientRect();
 
- for (const item of e.dataTransfer.items) {
-  if (item.kind === 'file' && item.type.startsWith('image/')) {
-   const file = item.getAsFile();
-   if (file) {
-    try {
-    		      // Create Object URL (must be revoked later if creation fails)
-    		      const objectUrl = URL.createObjectURL(file);
-    		      const assetName = file.name || 'Dropped Image';
-    		      const { x: canvasX, y: canvasY } = screenToCanvasCoordinates(e.clientX, e.clientY, rect);
-    		      // Get dimensions from the object URL
-    		      const dimensions = await getImageDimensionsFromUrl(objectUrl);
-    		      // Call the new store action, passing the Blob, Object URL, and dimensions
-    		      createImageNodeWithAsset({ x: canvasX, y: canvasY }, file, objectUrl, assetName, dimensions.width, dimensions.height);
-    } catch (error) {
-    	// console.error('[Viewport] Error reading dropped file:', error); // Keep error logs for now
-    }
-   }
-  }
- }
- // Optional: Remove visual feedback added in handleDragOver
-}
+		for (const item of e.dataTransfer.items) {
+			if (item.kind === "file" && item.type.startsWith("image/")) {
+				const file = item.getAsFile();
+				if (file) {
+					try {
+						// Create Object URL (must be revoked later if creation fails)
+						const objectUrl = URL.createObjectURL(file);
+						const assetName = file.name || "Dropped Image";
+						const { x: canvasX, y: canvasY } =
+							screenToCanvasCoordinates(
+								e.clientX,
+								e.clientY,
+								rect,
+							);
+						// Get dimensions from the object URL
+						const dimensions =
+							await getImageDimensionsFromUrl(objectUrl);
+						// Call the new store action, passing the Blob, Object URL, and dimensions
+						createImageNodeWithAsset(
+							{ x: canvasX, y: canvasY },
+							file,
+							objectUrl,
+							assetName,
+							dimensions.width,
+							dimensions.height,
+						);
+					} catch (error) {
+						// console.error('[Viewport] Error reading dropped file:', error); // Keep error logs for now
+					}
+				}
+			}
+		}
+		// Optional: Remove visual feedback added in handleDragOver
+	}
 
-async function handlePaste(e: ClipboardEvent) {
- // Ignore paste events originating from inputs/textareas/contenteditables
- const target = e.target as HTMLElement;
- if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
-  return;
- }
+	async function handlePaste(e: ClipboardEvent) {
+		// Ignore paste events originating from inputs/textareas/contenteditables
+		const target = e.target as HTMLElement;
+		if (
+			target.tagName === "INPUT" ||
+			target.tagName === "TEXTAREA" ||
+			target.isContentEditable
+		) {
+			return;
+		}
 
- if (!e.clipboardData || !canvasContainer) return;
+		if (!e.clipboardData || !canvasContainer) return;
 
- e.preventDefault(); // Handle paste ourselves
+		e.preventDefault(); // Handle paste ourselves
 
- const rect = canvasContainer.getBoundingClientRect();
- let pasteCanvasX: number;
- let pasteCanvasY: number;
+		const rect = canvasContainer.getBoundingClientRect();
+		let pasteCanvasX: number;
+		let pasteCanvasY: number;
 
- // Determine paste position (last cursor or center)
- if (lastScreenX !== 0 || lastScreenY !== 0) {
-  const coords = screenToCanvasCoordinates(lastScreenX, lastScreenY, rect);
-  pasteCanvasX = coords.x;
-  pasteCanvasY = coords.y;
- } else {
-  const centerX = rect.left + rect.width / 2;
-  const centerY = rect.top + rect.height / 2;
-  const coords = screenToCanvasCoordinates(centerX, centerY, rect);
-  pasteCanvasX = coords.x;
-  pasteCanvasY = coords.y;
- }
+		// Determine paste position (last cursor or center)
+		if (lastScreenX !== 0 || lastScreenY !== 0) {
+			const coords = screenToCanvasCoordinates(
+				lastScreenX,
+				lastScreenY,
+				rect,
+			);
+			pasteCanvasX = coords.x;
+			pasteCanvasY = coords.y;
+		} else {
+			const centerX = rect.left + rect.width / 2;
+			const centerY = rect.top + rect.height / 2;
+			const coords = screenToCanvasCoordinates(centerX, centerY, rect);
+			pasteCanvasX = coords.x;
+			pasteCanvasY = coords.y;
+		}
 
+		for (const item of e.clipboardData.items) {
+			if (item.kind === "file" && item.type.startsWith("image/")) {
+				const file = item.getAsFile();
+				if (file) {
+					try {
+						// Create Object URL (must be revoked later if creation fails)
+						const objectUrl = URL.createObjectURL(file);
+						const assetName = file.name || "Pasted Image";
+						// Get dimensions from the object URL
+						const dimensions =
+							await getImageDimensionsFromUrl(objectUrl);
+						// Call the new store action, passing the Blob, Object URL, and dimensions
+						createImageNodeWithAsset(
+							{ x: pasteCanvasX, y: pasteCanvasY },
+							file,
+							objectUrl,
+							assetName,
+							dimensions.width,
+							dimensions.height,
+						);
+						return; // Handle first image found
+					} catch (error) {
+						// console.error('[Viewport] Error reading pasted file:', error); // Keep error logs for now
+					}
+				}
+			} else if (item.kind === "string" && item.type === "text/plain") {
+				item.getAsString((text) => {
+					if (text && text.trim().length > 0) {
+						createTextNodeFromPaste(
+							{ x: pasteCanvasX, y: pasteCanvasY },
+							text,
+						);
+						return; // Handle first text found
+					}
+				});
+			} // End of for loop
+		} // End of handlePaste function
+	} // End of handlePaste function
 
- for (const item of e.clipboardData.items) {
-  if (item.kind === 'file' && item.type.startsWith('image/')) {
-   const file = item.getAsFile();
-   if (file) {
-   try {
-            // Create Object URL (must be revoked later if creation fails)
-            const objectUrl = URL.createObjectURL(file);
-            const assetName = file.name || 'Pasted Image';
-            // Get dimensions from the object URL
-            const dimensions = await getImageDimensionsFromUrl(objectUrl);
-            // Call the new store action, passing the Blob, Object URL, and dimensions
-            createImageNodeWithAsset({ x: pasteCanvasX, y: pasteCanvasY }, file, objectUrl, assetName, dimensions.width, dimensions.height);
-            return; // Handle first image found
-    } catch (error) {
-    	// console.error('[Viewport] Error reading pasted file:', error); // Keep error logs for now
-    }
-   }
-  } else if (item.kind === 'string' && item.type === 'text/plain') {
-   item.getAsString(text => {
-    if (text && text.trim().length > 0) {
-    	createTextNodeFromPaste({ x: pasteCanvasX, y: pasteCanvasY }, text);
-    	return; // Handle first text found
-    }
-  });
- } // End of for loop
- } // End of handlePaste function
-} // End of handlePaste function
-
-// Removed duplicate helper function readFileAsDataURL
-
+	// Removed duplicate helper function readFileAsDataURL
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <div
-id="viewport"
-class="karta-viewport-container w-full h-screen overflow-hidden relative cursor-default bg-gray-950"
+	id="viewport"
+	class="karta-viewport-container w-full h-screen overflow-hidden relative cursor-default bg-gray-950"
 	bind:this={canvasContainer}
 	bind:clientWidth={$viewportWidth}
 	bind:clientHeight={$viewportHeight}
@@ -786,34 +970,47 @@ class="karta-viewport-container w-full h-screen overflow-hidden relative cursor-
 	<div
 		class="w-full h-full relative origin-top-left"
 		bind:this={canvas}
-		style:transform="translate({viewTransform.current.posX + $viewportWidth / 2}px, {viewTransform.current.posY + $viewportHeight / 2}px) scale({viewTransform.current.scale})"
+		style:transform="translate({viewTransform.current.posX +
+			$viewportWidth / 2}px, {viewTransform.current.posY +
+			$viewportHeight / 2}px) scale({viewTransform.current.scale})"
 	>
 		<!-- Edge Rendering Layer -->
-        <EdgeLayer {inverseScale} />
+		<EdgeLayer {inverseScale} />
 
 		<!-- Node Rendering Layer - Iterate over ViewNodes in the current context -->
-        {#if currentCtx}
-            {#each [...currentCtx.viewNodes.values()] as viewNode (viewNode.id)}
-                {@const dataNode = $nodes.get(viewNode.id)}
-                <!-- Always render NodeWrapper; let it handle the ghost state if dataNode is missing -->
-                <NodeWrapper {viewNode} {dataNode} />
-            {/each}
-        {/if}
+		{#if currentCtx}
+			{#each [...currentCtx.viewNodes.values()] as viewNode (viewNode.id)}
+				{@const dataNode = $nodes.get(viewNode.id)}
+				<!-- Always render NodeWrapper; let it handle the ghost state if dataNode is missing -->
+				<NodeWrapper {viewNode} {dataNode} />
+			{/each}
+		{/if}
 		<!-- Selection Box (now always mounted, internal logic handles visibility) - Moved INSIDE transformed canvas -->
-		{#if true} <!-- Wrap in valid block to fix {@const} placement -->
+		{#if true}
+			<!-- Wrap in valid block to fix {@const} placement -->
 			{@const currentScaleValue = viewTransform.current.scale}
-			{@const invScaleValue = currentScaleValue > 0 ? 1 / currentScaleValue : 1}
-			{@const outlineWidthValue = currentScaleValue > 0 ? desiredScreenOutlineWidth / currentScaleValue : desiredScreenOutlineWidth}
-			<SelectionBox inverseScale={invScaleValue} canvasOutlineWidth={outlineWidthValue} />
+			{@const invScaleValue =
+				currentScaleValue > 0 ? 1 / currentScaleValue : 1}
+			{@const outlineWidthValue =
+				currentScaleValue > 0
+					? desiredScreenOutlineWidth / currentScaleValue
+					: desiredScreenOutlineWidth}
+			<SelectionBox
+				inverseScale={invScaleValue}
+				canvasOutlineWidth={outlineWidthValue}
+			/>
 		{/if}
 	</div>
 
 	<!-- Create Node Menu (conditionally rendered) -->
 	{#if $isCreateNodeMenuOpen && $createNodeMenuPosition}
 		<!-- Create Node Menu related elements -->
-		{@const transform = viewTransform.current} <!-- Access tween value directly -->
-		{@const markerScreenX = $createNodeMenuPosition.canvasX * transform.scale + transform.posX}
-		{@const markerScreenY = $createNodeMenuPosition.canvasY * transform.scale + transform.posY}
+		{@const transform = viewTransform.current}
+		<!-- Access tween value directly -->
+		{@const markerScreenX =
+			$createNodeMenuPosition.canvasX * transform.scale + transform.posX}
+		{@const markerScreenY =
+			$createNodeMenuPosition.canvasY * transform.scale + transform.posY}
 
 		<!-- Position Marker (positioned using transformed canvas coords) -->
 		<div
@@ -824,150 +1021,186 @@ class="karta-viewport-container w-full h-screen overflow-hidden relative cursor-
 		></div>
 
 		<!-- The Menu Component (positioned using screen coords) -->
-		<CreateNodeMenu x={$createNodeMenuPosition.screenX + 10} y={$createNodeMenuPosition.screenY + 10} />
+		<CreateNodeMenu
+			x={$createNodeMenuPosition.screenX + 10}
+			y={$createNodeMenuPosition.screenY + 10}
+		/>
 	{/if}
 
 	<!-- Create Node Menu elements remain outside the transformed canvas, positioned relative to viewport -->
 </div>
 
-	<!-- Context Menu (conditionally rendered) -->
-	{#if $isContextMenuOpen && $contextMenuPosition}
-		{@const contextType = $contextMenuContext?.type}
-		{@const targetNodeId = $contextMenuContext?.id}
-		{@const currentNodesMap = $nodes}
-		{@const currentViewNodesMap = $currentViewNodes}
+<!-- Context Menu (conditionally rendered) -->
+{#if $isContextMenuOpen && $contextMenuPosition}
+	{@const contextType = $contextMenuContext?.type}
+	{@const targetNodeId = $contextMenuContext?.id}
+	{@const currentNodesMap = $nodes}
+	{@const currentViewNodesMap = $currentViewNodes}
 
-		<!-- Dynamically generate menu items based on context -->
-		{@const menuItems = (() => {
-			let items: { label: string; action: () => void; disabled?: boolean }[] = [];
-			const targetDataNode = targetNodeId ? currentNodesMap.get(targetNodeId) : null;
-			const targetViewNode = targetNodeId ? currentViewNodesMap.get(targetNodeId) : null;
-			const screenPos = $contextMenuPosition; // Has screenX/Y
+	<!-- Dynamically generate menu items based on context -->
+	{@const menuItems = (() => {
+		let items: { label: string; action: () => void; disabled?: boolean }[] =
+			[];
+		const targetDataNode = targetNodeId
+			? currentNodesMap.get(targetNodeId)
+			: null;
+		const targetViewNode = targetNodeId
+			? currentViewNodesMap.get(targetNodeId)
+			: null;
+		const screenPos = $contextMenuPosition; // Has screenX/Y
 
-			// Helper to get canvas coords from stored screen coords
-			const getCanvasCoords = () => {
-				if (!screenPos || !canvasContainer) return { x: 0, y: 0 };
-				const rect = canvasContainer.getBoundingClientRect();
-				// Use screenPos.x and screenPos.y which are the correct screen coordinates
-				return screenToCanvasCoordinates(screenPos.x, screenPos.y, rect);
-			};
+		// Helper to get canvas coords from stored screen coords
+		const getCanvasCoords = () => {
+			if (!screenPos || !canvasContainer) return { x: 0, y: 0 };
+			const rect = canvasContainer.getBoundingClientRect();
+			// Use screenPos.x and screenPos.y which are the correct screen coordinates
+			return screenToCanvasCoordinates(screenPos.x, screenPos.y, rect);
+		};
 
-			if (contextType === 'node' && targetNodeId) {
-				const nodeState = targetViewNode?.state.current;
-				items = [
-					{
-						label: 'Enter Context',
-						action: () => { if (targetNodeId) switchContext(targetNodeId); },
-						disabled: !targetNodeId || targetNodeId === $currentContextId
+		if (contextType === "node" && targetNodeId) {
+			const nodeState = targetViewNode?.state.current;
+			items = [
+				{
+					label: "Enter Context",
+					action: () => {
+						if (targetNodeId) switchContext(targetNodeId);
 					},
-					{
-						label: 'Remove from Context',
-						action: () => {
-							const selected = get(selectedNodeIds);
-							const currentCtxId = get(currentContextId);
-							if (currentCtx) {
-								// Iterate through selected nodes and remove from context, skipping the focal node
-								selected.forEach(nodeId => {
-									if (nodeId !== currentCtxId) {
-										removeViewNodeFromContext(currentCtxId, nodeId);
-									}
-								});
-								clearSelection(); // Clear selection after removing
-							}
-						},
-						// Disable if it's the focal node
-						disabled: !targetNodeId || targetNodeId === $currentContextId
-					},
-					{
-						label: 'Center View',
-						action: () => {
-							if (nodeState) {
-								centerViewOnCanvasPoint(nodeState.x + nodeState.width / 2, nodeState.y + nodeState.height / 2);
-							}
-						},
-						disabled: !nodeState
-					},
-					{
-						label: 'Rename',
-						action: () => { if (targetNodeId) requestNodeRename(targetNodeId); },
-						disabled: !targetDataNode || targetDataNode.attributes?.isSystemNode
-					},
-					{
-						label: 'Delete Permanently',
-						action: () => {
-							// Ensure targetNodeId is not null or undefined before proceeding
-							if (targetNodeId) {
-								openConfirmationDialog(
-									'Are you sure you want to permanently delete this node? This action cannot be undone.',
-									// The callback now receives the ID
-									async (idToDelete) => {
-										// Call the actual permanent deletion function with the received ID
-										await deleteDataNodePermanently(idToDelete);
-									},
-									targetNodeId // Pass the targetNodeId here
-								);
-							} else {
-							}
-						},
-						disabled: !targetNodeId || targetNodeId === $currentContextId // Disable if it's the focal node
-					}
-				];
-			} else if (contextType === 'edge' && targetNodeId) {
-				items = [
-					{
-						label: 'Delete Edge(s)', // Changed label to indicate multi-deletion
-						action: () => {
-							const edgesToDelete = get(selectedEdgeIds);
-							if (edgesToDelete.size > 0) {
-								edgesToDelete.forEach(edgeId => deleteEdge(edgeId));
-								clearEdgeSelection(); // Clear selection after deleting
-							} else if (targetNodeId) {
-								// If no edges are multi-selected, delete the single right-clicked edge
-								deleteEdge(targetNodeId);
-							}
-							closeContextMenu();
+					disabled:
+						!targetNodeId || targetNodeId === $currentContextId,
+				},
+				{
+					label: "Remove from Context",
+					action: () => {
+						const selected = get(selectedNodeIds);
+						const currentCtxId = get(currentContextId);
+						if (currentCtx) {
+							// Iterate through selected nodes and remove from context, skipping the focal node
+							selected.forEach((nodeId) => {
+								if (nodeId !== currentCtxId) {
+									removeViewNodeFromContext(
+										currentCtxId,
+										nodeId,
+									);
+								}
+							});
+							clearSelection(); // Clear selection after removing
 						}
-					}
-				];
-			} else if (contextType === 'background') {
-				items = [
-					{
-						label: 'Center Focal Node',
-						action: () => centerOnFocalNode(),
-						disabled: !$currentContextId // Disable if no context (shouldn't happen?)
 					},
-					{
-						label: 'Frame Context',
-						action: () => frameContext(), // Action to be implemented in KartaStore
-						disabled: !$currentContextId
+					// Disable if it's the focal node
+					disabled:
+						!targetNodeId || targetNodeId === $currentContextId,
+				},
+				{
+					label: "Center View",
+					action: () => {
+						if (nodeState) {
+							centerViewOnCanvasPoint(
+								nodeState.x + nodeState.width / 2,
+								nodeState.y + nodeState.height / 2,
+							);
+						}
 					},
-					{
-						label: 'Create Node Here',
-						action: () => {
-							const { x: canvasX, y: canvasY } = getCanvasCoords();
-							// Use screenPos.x and screenPos.y for the menu positioning part
-							openCreateNodeMenu(screenPos!.x, screenPos!.y, canvasX, canvasY);
-						},
-						disabled: !screenPos
+					disabled: !nodeState,
+				},
+				{
+					label: "Rename",
+					action: () => {
+						if (targetNodeId) requestNodeRename(targetNodeId);
 					},
-						              { // Add Search Node item
-						                  label: 'Search Node...',
-						                  action: () => {
-						                      const { x: canvasX, y: canvasY } = getCanvasCoords();
-						                      // Use screenPos.x and screenPos.y for the initial modal position hint
-						                      openNodeSearch(screenPos!.x, screenPos!.y, canvasX, canvasY);
-						                  },
-						                  disabled: !screenPos // Disable if position is somehow missing
-						              },
-					// { label: 'Paste', action: () => console.warn('Paste action NYI from context menu.'), disabled: true }
-				];
-			}
-			return items;
-		})()}
+					disabled:
+						!targetDataNode ||
+						targetDataNode.attributes?.isSystemNode,
+				},
+				{
+					label: "Delete Permanently",
+					action: () => {
+						// Ensure targetNodeId is not null or undefined before proceeding
+						if (targetNodeId) {
+							openConfirmationDialog(
+								"Are you sure you want to permanently delete this node? This action cannot be undone.",
+								// The callback now receives the ID
+								async (idToDelete) => {
+									// Call the actual permanent deletion function with the received ID
+									await deleteDataNodePermanently(idToDelete);
+								},
+								targetNodeId, // Pass the targetNodeId here
+							);
+						} else {
+						}
+					},
+					disabled:
+						!targetNodeId || targetNodeId === $currentContextId, // Disable if it's the focal node
+				},
+			];
+		} else if (contextType === "edge" && targetNodeId) {
+			items = [
+				{
+					label: "Delete Edge(s)", // Changed label to indicate multi-deletion
+					action: () => {
+						const edgesToDelete = get(selectedEdgeIds);
+						if (edgesToDelete.size > 0) {
+							edgesToDelete.forEach((edgeId) =>
+								deleteEdge(edgeId),
+							);
+							clearEdgeSelection(); // Clear selection after deleting
+						} else if (targetNodeId) {
+							// If no edges are multi-selected, delete the single right-clicked edge
+							deleteEdge(targetNodeId);
+						}
+						closeContextMenu();
+					},
+				},
+			];
+		} else if (contextType === "background") {
+			items = [
+				{
+					label: "Center Focal Node",
+					action: () => centerOnFocalNode(),
+					disabled: !$currentContextId, // Disable if no context (shouldn't happen?)
+				},
+				{
+					label: "Frame Context",
+					action: () => frameContext(), // Action to be implemented in KartaStore
+					disabled: !$currentContextId,
+				},
+				{
+					label: "Create Node Here",
+					action: () => {
+						const { x: canvasX, y: canvasY } = getCanvasCoords();
+						// Use screenPos.x and screenPos.y for the menu positioning part
+						openCreateNodeMenu(
+							screenPos!.x,
+							screenPos!.y,
+							canvasX,
+							canvasY,
+						);
+					},
+					disabled: !screenPos,
+				},
+				{
+					// Add Search Node item
+					label: "Search Node...",
+					action: () => {
+						const { x: canvasX, y: canvasY } = getCanvasCoords();
+						// Use screenPos.x and screenPos.y for the initial modal position hint
+						openNodeSearch(
+							screenPos!.x,
+							screenPos!.y,
+							canvasX,
+							canvasY,
+						);
+					},
+					disabled: !screenPos, // Disable if position is somehow missing
+				},
+				// { label: 'Paste', action: () => console.warn('Paste action NYI from context menu.'), disabled: true }
+			];
+		}
+		return items;
+	})()}
 
-		<div bind:this={contextMenuElement}>
-			<!-- Pass only screen coordinates for positioning -->
-			<ContextMenu position={$contextMenuPosition} items={menuItems} />
-		</div>
-	{/if}
+	<div bind:this={contextMenuElement}>
+		<!-- Pass only screen coordinates for positioning -->
+		<ContextMenu position={$contextMenuPosition} items={menuItems} />
+	</div>
+{/if}
 <ConfirmationDialog />

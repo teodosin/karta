@@ -6,30 +6,30 @@
 // Avoid adding editor-specific UI logic here.
 -->
 <script lang="ts">
-	import type { DataNode, ViewNode } from '$lib/types/types';
-	import { currentContextId, currentViewNodes } from '$lib/karta/ContextStore'; // Remove contexts import
-	import { nodes, updateNodeAttributes } from '$lib/karta/NodeStore'; // Import nodes store
-	import { selectedNodeIds } from '$lib/karta/SelectionStore';
-	import { nodeRenameRequestId } from '$lib/karta/UIStateStore';
-	import { getNodeComponent } from '$lib/node_types/registry';
-	import { tick } from 'svelte';
-	import { fade } from 'svelte/transition'; // Import fade transition
-	// Removed startResize import as handles are now in SelectionBox
+	import type { DataNode, ViewNode } from "$lib/types/types";
+	import { nodes, updateNodeAttributes } from "$lib/karta/NodeStore";
+	import { selectedNodeIds } from "$lib/karta/SelectionStore";
+	import { nodeRenameRequestId } from "$lib/karta/UIStateStore";
+	import { getNodeComponent } from "$lib/node_types/registry";
+	import { tick } from "svelte";
+	import { fade } from "svelte/transition";
 
-	// Make dataNode potentially undefined
 	export let dataNode: DataNode | undefined;
-	export let viewNode: ViewNode; // viewNode is always required
+	export let viewNode: ViewNode;
 
-	let nodeWrapperRef: HTMLElement | null = null; // Reference to the main wrapper div
-	let inputElementRef: HTMLInputElement | null = null; // Reference to the input field
+	let nodeWrapperRef: HTMLElement | null = null;
+	let inputElementRef: HTMLInputElement | null = null;
 
 	let isEditingName = false;
-	let editedName = '';
+	let editedName = "";
 
 	// Dynamically get the component based on ntype - only if dataNode exists
 	$: NodeComponent = dataNode ? getNodeComponent(dataNode.ntype) : null;
 	// Use viewNode.id for fallback if dataNode is missing (ghost node)
-	$: nodeName = dataNode?.attributes?.name ?? dataNode?.ntype ?? `Deleted Node (${viewNode.id.substring(0, 8)})`;
+	$: nodeName =
+		dataNode?.attributes?.name ??
+		dataNode?.ntype ??
+		`Deleted Node (${viewNode.id.substring(0, 8)})`;
 	// Selection and Renamable depend on dataNode existing
 	$: isSelected = dataNode ? $selectedNodeIds.has(dataNode.id) : false;
 	$: isRenamable = dataNode ? !dataNode.attributes?.isSystemNode : false; // Ghost nodes are not renamable
@@ -37,35 +37,52 @@
 	$: isGhost = !$nodes.has(viewNode.id);
 	// Determine if the name label should be visible
 	// Check ViewNode override, then DataNode default, then fallback to true
-	$: isNameVisible = viewNode.attributes?.view_isNameVisible ?? dataNode?.attributes?.view_isNameVisible ?? true;
+	$: isNameVisible =
+		viewNode.attributes?.view_isNameVisible ??
+		dataNode?.attributes?.view_isNameVisible ??
+		true;
 	// Remove hasContext calculation
 
 	async function startEditing() {
 		// Can only edit if not a ghost and renamable
 		if (isGhost || !isRenamable || !dataNode) return;
-		editedName = dataNode.attributes?.name ?? dataNode.ntype ?? ''; // Use current name from dataNode
+		editedName = dataNode.attributes?.name ?? dataNode.ntype ?? "";
 		isEditingName = true;
 		await tick(); // Wait for input to render
 		inputElementRef?.focus();
 		inputElementRef?.select();
 		// Add listener to handle clicks outside
-		window.addEventListener('pointerdown', handleClickOutside, { capture: true });
+		window.addEventListener("pointerdown", handleClickOutside, {
+			capture: true,
+		});
 	}
 
 	function handleNameSubmit() {
 		// Can only submit if not a ghost, renamable, editing, and dataNode exists
-		if (!isGhost && isRenamable && isEditingName && dataNode && editedName.trim() && editedName !== (dataNode.attributes?.name ?? dataNode.ntype)) {
-			updateNodeAttributes(dataNode.id, { ...dataNode.attributes, name: editedName.trim() });
+		if (
+			!isGhost &&
+			isRenamable &&
+			isEditingName &&
+			dataNode &&
+			editedName.trim() &&
+			editedName !== (dataNode.attributes?.name ?? dataNode.ntype)
+		) {
+			updateNodeAttributes(dataNode.id, {
+				...dataNode.attributes,
+				name: editedName.trim(),
+			});
 		}
 		isEditingName = false;
 		// Clean up listener after successful submit
-		window.removeEventListener('pointerdown', handleClickOutside, { capture: true });
+		window.removeEventListener("pointerdown", handleClickOutside, {
+			capture: true,
+		});
 	}
 
 	function handleKeyDown(event: KeyboardEvent) {
-		if (event.key === 'Enter') {
+		if (event.key === "Enter") {
 			handleNameSubmit();
-		} else if (event.key === 'Escape') {
+		} else if (event.key === "Escape") {
 			cancelEditing(); // Use cancel function for Escape
 		}
 	}
@@ -79,13 +96,16 @@
 	function cancelEditing() {
 		if (!isEditingName) return; // Avoid removing listener multiple times
 		isEditingName = false;
-		window.removeEventListener('pointerdown', handleClickOutside, { capture: true });
+		window.removeEventListener("pointerdown", handleClickOutside, {
+			capture: true,
+		});
 	}
 
 	// --- Resize Handle Logic Removed - Handled by SelectionBox ---
 
 	// Reactive statement to listen for rename requests
-	$: if ($nodeRenameRequestId === viewNode.id) { // Check against viewNode.id
+	$: if ($nodeRenameRequestId === viewNode.id) {
+		// Check against viewNode.id
 		// Ensure dataNode exists before attempting to rename
 		if (dataNode) {
 			startEditing(); // Use existing function to start editing
@@ -110,28 +130,46 @@
 		class:ghost-node={isGhost}
 		style:width="{viewNode.state.current.width}px"
 		style:height="{viewNode.state.current.height}px"
-		style:transform="translate({viewNode.state.current.x}px, {viewNode.state.current.y}px) scale({viewNode.state.current.scale}) rotate({viewNode.state.current.rotation}deg) translateX(-50%) translateY(-50%)"
-		on:mouseenter={(e: MouseEvent) => { if (!isGhost) nodeWrapperRef?.classList.add('node-hover'); }}
-		on:mouseleave={(e: MouseEvent) => nodeWrapperRef?.classList.remove('node-hover')}
+		style:transform="translate({viewNode.state.current.x}px, {viewNode.state
+			.current.y}px) scale({viewNode.state.current.scale}) rotate({viewNode
+			.state.current.rotation}deg) translateX(-50%) translateY(-50%)"
+		on:mouseenter={(e: MouseEvent) => {
+			if (!isGhost) nodeWrapperRef?.classList.add("node-hover");
+		}}
+		on:mouseleave={(e: MouseEvent) =>
+			nodeWrapperRef?.classList.remove("node-hover")}
 	>
 		{#if !isGhost && dataNode}
 			<!-- Inner container for the specific node type component - Render only if NOT ghost -->
-			<div class="node-content relative w-full h-full pointer-events-auto">
+			<div
+				class="node-content relative w-full h-full pointer-events-auto"
+			>
 				{#if NodeComponent}
-					<!-- Remove hasContext prop -->
-					<svelte:component this={NodeComponent} {dataNode} {viewNode} />
+					<svelte:component
+						this={NodeComponent}
+						{dataNode}
+						{viewNode}
+					/>
 				{:else}
 					<!-- Fallback rendering if component not found -->
-					<div class="w-full h-full bg-red-500 flex items-center justify-center text-white font-bold">?</div>
+					<div
+						class="w-full h-full bg-red-500 flex items-center justify-center text-white font-bold"
+					>
+						?
+					</div>
 				{/if}
 			</div>
 
 			<!-- External Label & Input - Render only if NOT ghost AND isNameVisible is true -->
 			{#if isNameVisible}
 				<div
-					class="node-label absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full mt-1 px-1.5 py-0.5 bg-gray-700 bg-opacity-80 text-white text-xs rounded whitespace-nowrap pointer-events-auto"
+					class="node-label absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full mt-1 px-1.5 py-0.5 bg-gray-900 bg-opacity-80 text-white text-xs rounded pointer-events-auto"
 					class:cursor-text={isRenamable}
-					title={isRenamable ? 'Double-click to rename' : 'System node (cannot be renamed)'}
+					title={isRenamable
+						? "Double-click to rename"
+						: "System node (cannot be renamed)"}
+
+					style:max-width="{viewNode.state.current.width}px"
 				>
 					{#if isRenamable}
 						{#if isEditingName}
@@ -141,7 +179,10 @@
 								bind:value={editedName}
 								on:keydown={handleKeyDown}
 								class="bg-gray-900 text-white text-xs p-0 border border-blue-500 rounded outline-none focus:ring-1 focus:ring-blue-400"
-								style:width="{Math.max(60, nodeName.length * 7 + 10)}px"
+								style:width="{Math.min(
+									viewNode.state.current.width - 12,
+									Math.max(60, editedName.length * 7 + 10)
+								)}px"
 								spellcheck="false"
 							/>
 						{:else}
@@ -155,7 +196,9 @@
 			{/if}
 		{:else if isGhost}
 			<!-- Render a simple placeholder for ghost nodes -->
-			<div class="ghost-placeholder w-full h-full flex items-center justify-center text-gray-500 italic text-sm">
+			<div
+				class="ghost-placeholder w-full h-full flex items-center justify-center text-gray-500 italic text-sm"
+			>
 				(Deleted)
 			</div>
 		{/if}
@@ -164,10 +207,13 @@
 
 <style>
 	.node-wrapper {
-        /* Add touch-action for better mobile/touchpad behavior */
-        touch-action: none;
+		/* Add touch-action for better mobile/touchpad behavior */
+		touch-action: none;
 		/* Add transition for potential hover effects */
-		transition: filter 0.15s ease-in-out, opacity 0.15s ease-in-out, border 0.15s ease-in-out;
+		transition:
+			filter 0.15s ease-in-out,
+			opacity 0.15s ease-in-out,
+			border 0.15s ease-in-out;
 	}
 
 	.node-wrapper.selected {
@@ -180,7 +226,7 @@
 	/* Apply hover only to non-ghost nodes */
 	.node-wrapper:not(.ghost-node).node-hover .node-content {
 		/* Example hover effect: slightly brighter */
- 		filter: brightness(1.1);
+		filter: brightness(1.1);
 	}
 	.node-wrapper:not(.ghost-node).node-hover .node-label {
 		/* Make label more prominent on hover */
@@ -190,7 +236,6 @@
 	.node-label input {
 		/* Ensure input fits nicely */
 		box-sizing: border-box;
-		height: 1.25rem; /* Match typical text line height */
 		vertical-align: middle;
 	}
 
@@ -199,13 +244,17 @@
 		opacity: 0.4;
 		border: 1px dashed #6b7280; /* Tailwind gray-500 */
 		/* pointer-events: none; REMOVED - Allow wrapper interaction */
-		background-color: rgba(55, 65, 81, 0.2); /* Tailwind gray-700 with low opacity */
+		background-color: rgba(
+			55,
+			65,
+			81,
+			0.2
+		); /* Tailwind gray-700 with low opacity */
 	}
 	/* Style for the placeholder text inside ghost node */
 	.ghost-placeholder {
 		pointer-events: none; /* Ensure placeholder itself is non-interactive */
 	}
-
 
 	/* Resize Handle Styles Removed - Handled by SelectionBox */
 </style>
