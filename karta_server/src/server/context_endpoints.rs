@@ -153,16 +153,41 @@ mod tests {
     use std::sync::{Arc, RwLock};
     use tower::ServiceExt;
 
-    // Helper to build a router for testing this specific endpoint
-    fn test_router_for_context_endpoints(app_state: AppState) -> Router {
-        Router::new()
+    // Refactored Test Setup Helper
+    fn setup_test_environment(test_name: &str) -> (Router, KartaServiceTestContext) {
+        let test_ctx = KartaServiceTestContext::new(test_name);
+        let app_state = AppState {
+            service: test_ctx.service_arc.clone(),
+            tx: tokio::sync::broadcast::channel(1).0,
+        };
+        let router = Router::new()
             .route("/ctx/{*path_segments}", get(open_context_from_fs_path))
-            .with_state(app_state)
+            .with_state(app_state);
+        (router, test_ctx)
+    }
+
+    // Refactored Request Execution Helper
+    async fn execute_request_and_get_json(
+        router: Router,
+        uri: &str,
+        expected_status: StatusCode,
+    ) -> Value {
+        let response = router
+            .oneshot(Request::builder().uri(uri).body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), expected_status);
+
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        serde_json::from_slice(&body).expect("Failed to parse JSON response")
     }
 
     #[tokio::test]
     async fn open_vault_context_from_api() {
-        let test_ctx = KartaServiceTestContext::new("api_open_vault_ctx");
+        let (router, test_ctx) = setup_test_environment("api_open_vault_ctx");
         test_ctx
             .create_file_in_vault("fileA.txt", b"content of file A")
             .unwrap();
@@ -171,34 +196,7 @@ mod tests {
             .create_file_in_vault("dir1/fileB.txt", b"content of file B")
             .unwrap();
 
-        // KartaService from KartaServiceTestContext is not Arc<RwLock<KartaService>>
-        // We need to wrap it.
-        let app_state_service = test_ctx.service_arc.clone();
-
-        let app_state = AppState {
-            service: app_state_service,
-            tx: tokio::sync::broadcast::channel(1).0,
-        };
-
-        let router = test_router_for_context_endpoints(app_state.clone());
-
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .uri("/ctx/vault/")
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
-            .await
-            .unwrap();
-        let body_json: Value =
-            serde_json::from_slice(&body).expect("Failed to parse JSON response");
+        let body_json = execute_request_and_get_json(router, "/ctx/vault/", StatusCode::OK).await;
         println!(
             "Test: open_vault_context_from_api - Response JSON: {:#?}",
             body_json
@@ -279,39 +277,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_open_virtual_root_api() {
-        let test_ctx = KartaServiceTestContext::new("api_open_virtual_root");
-        // No specific FS setup needed beyond what KartaServiceTestContext does,
-        // as NodePath::root() and NodePath::vault() are archetypes.
+        let (router, _test_ctx) = setup_test_environment("api_open_virtual_root");
 
-        let app_state_service = test_ctx.service_arc.clone();
-        let app_state = AppState {
-            service: app_state_service,
-            tx: tokio::sync::broadcast::channel(1).0,
-        };
-
-        let router = test_router_for_context_endpoints(app_state.clone());
-
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .uri("/ctx/root") // Requesting the virtual root
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(
-            response.status(),
-            StatusCode::OK,
-            "API call to /ctx/root should be OK"
-        );
-
-        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
-            .await
-            .unwrap();
-        let body_json: Value =
-            serde_json::from_slice(&body).expect("Failed to parse JSON response for /ctx/root");
+        let body_json = execute_request_and_get_json(router, "/ctx/root", StatusCode::OK).await;
         println!(
             "Test: test_open_virtual_root_api - Response JSON: {:#?}",
             body_json
@@ -327,9 +295,6 @@ mod tests {
             .as_array()
             .expect("Nodes element should be an array for /ctx/root");
 
-        // For the virtual root context, we expect two nodes:
-        // 1. The virtual root itself (NodePath::root(), serialized path usually "/")
-        // 2. Its child, the vault (NodePath::vault(), serialized path usually "/vault")
         assert_eq!(
             nodes_array.len(),
             2,
@@ -347,21 +312,10 @@ mod tests {
                 })
             };
 
-        // NodePath::root().alias() is "/"
-        // NodePath::vault().alias() is "/vault"
-        // However, the DataNode's "path" field in JSON is the direct NodePath string, not its alias()
-        // NodePath::root() -> path_str: ""
-        // NodePath::vault() -> path_str: "vault"
-        // The KartaService::open_context_from_path returns DataNodes whose paths are NodePath instances.
-        // When these NodePath instances are serialized as part of DataNode, they seem to use their internal `path_str`.
-        // Let's re-check the previous test output for NodePath("vault") serialization.
-        // Previous output for vault node: "path": String("vault")
-        // So, NodePath::root() should serialize to "path": String("") if it's consistent.
-
         let virtual_root_uuid =
             has_node_with_serialized_path(nodes_array, NodePath::root().buf().to_str().unwrap())
                 .expect("Virtual root node (path: \"\") not found");
-        let vault_uuid =
+        let _vault_uuid =
             has_node_with_serialized_path(nodes_array, NodePath::vault().buf().to_str().unwrap())
                 .expect("User root node (path: \"vault\") not found");
 
@@ -380,7 +334,6 @@ mod tests {
                     && e.get("target").and_then(|t| t.as_str()) == Some(tgt_path)
             })
         };
-        // Edge source/target in JSON are also direct NodePath string representations
         assert!(
             has_edge(
                 edges_array,
@@ -404,7 +357,7 @@ mod tests {
 
     #[tokio::test]
     async fn go_to_file_context() {
-        let test_ctx = KartaServiceTestContext::new("api_open_file_ctx");
+        let (router, test_ctx) = setup_test_environment("api_open_file_ctx");
         test_ctx
             .create_file_in_vault("fileA.txt", b"content of file A")
             .unwrap();
@@ -413,125 +366,69 @@ mod tests {
             .create_file_in_vault("dir1/fileB.txt", b"content of file B")
             .unwrap();
 
-        // KartaService from KartaServiceTestContext is not Arc<RwLock<KartaService>>
-        // We need to wrap it.
-        let app_state_service = test_ctx.service_arc.clone();
-
-        let app_state = AppState {
-            service: app_state_service,
-            tx: tokio::sync::broadcast::channel(1).0,
-        };
-
-        let router = test_router_for_context_endpoints(app_state.clone());
-
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .uri("/ctx/vault/dir1/fileB.txt") // Requesting a specific file context
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
-            .await
-            .unwrap();
-        let body_json: Value =
-            serde_json::from_slice(&body).expect("Failed to parse JSON response");
+        let body_json =
+            execute_request_and_get_json(router, "/ctx/vault/dir1/fileB.txt", StatusCode::OK).await;
         println!(
-            "Test: open_vault_context_from_api - Response JSON: {:#?}",
+            "Test: go_to_file_context - Response JSON: {:#?}",
             body_json
         );
 
-        // Overall structure: Tuple of (Vec<DataNode>, Vec<Edge>, Context)
         let nodes_array = body_json.as_array().unwrap()[0]
             .as_array()
             .expect("Nodes element should be an array");
         let edges_array = body_json.as_array().unwrap()[1]
             .as_array()
             .expect("Edges element should be an array");
-        let context_json = &body_json.as_array().unwrap()[2];
 
         assert!(nodes_array.iter().any(|node| node.get("path").and_then(|v| v.as_str()) == Some("vault/dir1")), "Parent directory 'vault/dir1' not found");
         assert!(nodes_array.iter().any(|node| node.get("path").and_then(|v| v.as_str()) == Some("vault/dir1/fileB.txt")), "File 'vault/dir1/fileB.txt' not found");
         assert_eq!(
             nodes_array.len(),
             2,
-            "Expected 2 nodes in virtual root context: dir1 and fileB.txt"
+            "Expected 2 nodes: dir1 and fileB.txt"
         );
-
 
         assert_eq!(
             edges_array.len(),
             1,
-            "Expected 1 edge in virtual root context: dir1 -> fileB.txt"
+            "Expected 1 edge: dir1 -> fileB.txt"
         );
     }
 
-        #[tokio::test]
+    #[tokio::test]
     async fn going_to_vault_child_context__includes_vault() {
-        let test_ctx = KartaServiceTestContext::new("api_open_file_ctx");
+        let (router, test_ctx) = setup_test_environment("api_open_file_ctx_incl_vault");
         test_ctx
             .create_file_in_vault("fileA.txt", b"content of file A")
             .unwrap();
 
-        let app_state_service = test_ctx.service_arc.clone();
+        let body_json =
+            execute_request_and_get_json(router, "/ctx/vault/fileA.txt", StatusCode::OK).await;
 
-        let app_state = AppState {
-            service: app_state_service,
-            tx: tokio::sync::broadcast::channel(1).0,
-        };
-
-        let router = test_router_for_context_endpoints(app_state.clone());
-
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .uri("/ctx/vault/fileA.txt") 
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
-            .await
-            .unwrap();
-        let body_json: Value =
-            serde_json::from_slice(&body).expect("Failed to parse JSON response");
         println!(
-            "Test: open_vault_context_from_api - Response JSON: {:#?}",
+            "Test: going_to_vault_child_context__includes_vault - Response JSON: {:#?}",
             body_json
         );
 
-        // Overall structure: Tuple of (Vec<DataNode>, Vec<Edge>, Context)
         let nodes_array = body_json.as_array().unwrap()[0]
             .as_array()
             .expect("Nodes element should be an array");
         let edges_array = body_json.as_array().unwrap()[1]
             .as_array()
             .expect("Edges element should be an array");
-        let context_json = &body_json.as_array().unwrap()[2];
-
-        println!("Nodes array: {:#?}", nodes_array);
 
         assert!(nodes_array.iter().any(|node| node.get("path").and_then(|v| v.as_str()) == Some("vault/fileA.txt")), "File 'vault/fileA.txt' not found");
         assert!(nodes_array.iter().any(|node| node.get("path").and_then(|v| v.as_str()) == Some("vault")), "Parent directory 'vault' not found");
         assert_eq!(
             nodes_array.len(),
             2,
-            "Expected 2 nodes in virtual root context: vault and fileA.txt"
+            "Expected 2 nodes: vault and fileA.txt"
         );
 
         assert_eq!(
             edges_array.len(),
             1,
-            "Expected 1 edge in virtual root context: vault -> fileA.txt"
+            "Expected 1 edge: vault -> fileA.txt"
         );
     }
 }

@@ -196,6 +196,22 @@ impl KartaService {
 
         final_datanodes_map.insert(definitive_focal_node.path().clone(), definitive_focal_node.clone());
 
+        // --- Parent Node Handling (Moved Up) ---
+        let mut parent_uuid: Option<Uuid> = None;
+        if let Some(parent_path) = definitive_focal_node.path().parent() {
+            // Try to get the parent from the DB first. If it fails, create a transient one.
+            let parent_node = self.data().open_node(&NodeHandle::Path(parent_path.clone()))
+                .unwrap_or_else(|_| {
+                    // If not in DB, it's an unindexed directory from the filesystem.
+                    DataNode::new(&parent_path, NodeTypeId::dir_type())
+                });
+            
+            parent_uuid = Some(parent_node.uuid());
+            // Ensure parent is in the map so its edges can be reconciled.
+            final_datanodes_map.entry(parent_path).or_insert(parent_node);
+        }
+        // --- End Parent Node Handling ---
+
         for fs_child_node in &child_fs_datanodes {
             match db_child_datanodes_map.get(&fs_child_node.path()) {
                 Some(db_child_node) => {
@@ -206,7 +222,7 @@ impl KartaService {
                 }
             }
         }
-// Include other DB-connected nodes not present in FS (e.g., parents, other virtual links)
+        // Include other DB-connected nodes not present in FS (e.g., parents, other virtual links)
         for (db_node_path, db_node_data) in db_child_datanodes_map.iter() {
             if !final_datanodes_map.contains_key(db_node_path) {
                 final_datanodes_map.insert(db_node_path.clone(), db_node_data.clone());
@@ -248,26 +264,7 @@ impl KartaService {
         }
 
         let collected_final_datanodes: Vec<DataNode> = final_datanodes_map.values().cloned().collect();
-
         let context_focal_uuid = definitive_focal_node.uuid();
-
-        // --- Parent Node Handling ---
-        let mut parent_uuid: Option<Uuid> = None;
-        if let Some(parent_path) = definitive_focal_node.path().parent() {
-            // Try to get the parent from the DB first. If it fails, create a transient one.
-            let parent_node = self.data().open_node(&NodeHandle::Path(parent_path.clone()))
-                .unwrap_or_else(|_| {
-                    // If not in DB, it's an unindexed directory from the filesystem.
-                    DataNode::new(&parent_path, NodeTypeId::dir_type())
-                });
-            
-            parent_uuid = Some(parent_node.uuid());
-            // Ensure parent is in the map for the context generator.
-            final_datanodes_map.entry(parent_path).or_insert(parent_node);
-        }
-        // Re-collect datanodes in case parent was added
-        let collected_final_datanodes: Vec<DataNode> = final_datanodes_map.values().cloned().collect();
-        // --- End Parent Node Handling ---
 
         let context = self.view.generate_context(
             context_focal_uuid,
