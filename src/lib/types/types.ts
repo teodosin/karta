@@ -33,6 +33,7 @@ export interface ViewNode {
   // Holds context-specific attribute overrides (e.g., view_isNameVisible, viewtype_fontSize)
   // and custom user-defined attributes (unprefixed).
   attributes?: Record<string, any>;
+  isModified?: boolean;
 }
 
 // Represents an absolute transform in the canvas coordinate space

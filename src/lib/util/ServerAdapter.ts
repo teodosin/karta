@@ -4,19 +4,19 @@ import type {
     NodeId,
     StorableContext,
     AssetData,
-    Context, // For saveContext, though it will be stubbed
+    Context,
     ContextBundle,
     StorableViewNode,
     StorableViewportSettings,
 } from '../types/types';
 import type { PersistenceService } from './PersistenceService';
 
-const SERVER_BASE_URL = 'http://localhost:7370'; // As determined
+const SERVER_BASE_URL = 'http://localhost:7370';
 
 // Helper interfaces for expected server data structures
 interface ServerAttribute {
     name: string;
-    value: any; // Represents various AttrValue types (string, number, boolean, etc.)
+    value: any;
 }
 
 interface ServerNtypeObject {
@@ -26,30 +26,30 @@ interface ServerNtypeObject {
 
 interface ServerDataNode {
     uuid: string;
-    ntype: ServerNtypeObject; // Updated to reflect actual structure
-    created_time: any; // Can be number or object { secs_since_epoch, nanos_since_epoch }
-    modified_time: any; // Can be number or object { secs_since_epoch, nanos_since_epoch }
-    path: string; // Path is guaranteed to be a string from the server
-    name: string; // Will be part of attributes.name
+    ntype: ServerNtypeObject;
+    created_time: any;
+    modified_time: any;
+    path: string;
+    name: string;
     attributes: ServerAttribute[];
-    alive: boolean; // Added to match server output
+    alive: boolean;
 }
 
 interface ServerKartaEdge {
-    uuid: string; // Expected to be provided by the server
-    source: string; // NodeId (UUID string)
-    target: string; // NodeId (UUID string)
+    uuid: string;
+    source: string;
+    target: string;
     contains: boolean;
     attributes: ServerAttribute[];
 }
 
 interface ServerViewNode {
-    uuid: string; // NodeId
-    relX: number; // Changed from x
-    relY: number; // Changed from y
+    uuid: string;
+    relX: number;
+    relY: number;
     width?: number;
     height?: number;
-    relScale?: number; // Added to match server output
+    relScale?: number;
     rotation?: number;
     zIndex?: number;
     is_name_visible?: boolean;
@@ -60,12 +60,11 @@ interface ServerContextSettings {
     zoom_scale: number;
     offsetX: number;
     offsetY: number;
-    // any other settings from Rust's ContextSettings
 }
 
 interface ServerContext {
-    focal: string; // NodeId (UUID string) of the focal node
-    nodes: ServerViewNode[]; // These are the ViewNodes for the context
+    focal: string;
+    nodes: ServerViewNode[];
     settings: ServerContextSettings;
 }
 
@@ -73,7 +72,16 @@ function transformServerAttributesToRecord(serverAttributes: ServerAttribute[]):
     const record: Record<string, any> = {};
     if (Array.isArray(serverAttributes)) {
         for (const attr of serverAttributes) {
-            record[attr.name] = attr.value;
+            if (typeof attr.value === 'object' && attr.value !== null) {
+                 const keys = Object.keys(attr.value);
+                 if (keys.length === 1) {
+                     record[attr.name] = attr.value[keys[0]];
+                 } else {
+                    record[attr.name] = attr.value;
+                 }
+            } else {
+                record[attr.name] = attr.value;
+            }
         }
     }
     return record;
@@ -81,16 +89,8 @@ function transformServerAttributesToRecord(serverAttributes: ServerAttribute[]):
 
 
 export class ServerAdapter implements PersistenceService {
-    constructor() {
-        // Initialization if needed in the future
-    }
+    constructor() {}
 
-    /**
-     * Fetches the complete bundle of data required to render a context from the server.
-     * This includes DataNodes, KartaEdges, and the StorableContext (layout).
-     * @param contextPath The relative path of the context from the vault root.
-     * @returns A promise that resolves with a ContextBundle, or undefined on error.
-     */
     async loadContextBundle(contextPath: string): Promise<ContextBundle | undefined> {
         const encodedPath = encodeURIComponent(contextPath);
         const url = `${SERVER_BASE_URL}/ctx/${encodedPath}`;
@@ -107,18 +107,15 @@ export class ServerAdapter implements PersistenceService {
 
             const serverResponse = await response.json();
 
-            // Expected server response: [ServerDataNode[], ServerKartaEdge[], ServerContext]
             if (Array.isArray(serverResponse) && serverResponse.length === 3) {
                 const serverDataNodes = serverResponse[0] as ServerDataNode[];
                 const serverKartaEdges = serverResponse[1] as ServerKartaEdge[];
                 const serverContextData = serverResponse[2] as ServerContext;
 
-                // Transform ServerDataNode[] to DataNode[]
                 const clientDataNodes: DataNode[] = serverDataNodes.map(sNode => {
                     const attributes = transformServerAttributesToRecord(sNode.attributes);
-                    attributes['name'] = sNode.name; // Ensure name is part of attributes
+                    attributes['name'] = sNode.name;
                     
-                    // Handle potential object structure for time fields
                     const createdTime = typeof sNode.created_time === 'number'
                                         ? sNode.created_time
                                         : (sNode.created_time?.secs_since_epoch ?? 0);
@@ -128,47 +125,36 @@ export class ServerAdapter implements PersistenceService {
 
                     return {
                         id: sNode.uuid,
-                        ntype: sNode.ntype.type_path, // Extract type_path string
-                        createdAt: createdTime * 1000, // Convert seconds to milliseconds
-                        modifiedAt: modifiedTime * 1000, // Convert seconds to milliseconds
-                        path: sNode.path, // Path is guaranteed to be a string
+                        ntype: sNode.ntype.type_path,
+                        createdAt: createdTime * 1000,
+                        modifiedAt: modifiedTime * 1000,
+                        path: sNode.path,
                         attributes: attributes,
-                        alive: sNode.alive, // Map the top-level alive field
+                        isSearchable: attributes['isSearchable'] ?? true,
                     };
                 });
 
-                // Transform ServerKartaEdge[] to KartaEdge[]
-                const clientKartaEdges: KartaEdge[] = serverKartaEdges.map(sEdge => {
-                    const attributes = transformServerAttributesToRecord(sEdge.attributes);
-                    attributes['contains'] = sEdge.contains; // Ensure contains is part of attributes
-                    return {
-                        id: sEdge.uuid, // Directly use the UUID from server
-                        source: sEdge.source,
-                        target: sEdge.target,
-                        attributes: attributes,
-                    };
-                });
+                const clientKartaEdges: KartaEdge[] = serverKartaEdges.map(sEdge => ({
+                    id: sEdge.uuid,
+                    source: sEdge.source,
+                    target: sEdge.target,
+                    attributes: transformServerAttributesToRecord(sEdge.attributes),
+                }));
 
-                // Transform ServerContext to StorableContext
                 const clientViewNodes: [NodeId, StorableViewNode][] = serverContextData.nodes.map(sViewNode => {
                     const attributes = transformServerAttributesToRecord(sViewNode.attributes);
                     if (sViewNode.is_name_visible !== undefined) {
                         attributes['isNameVisible'] = sViewNode.is_name_visible;
                     }
-                    // Provide default values for potentially undefined properties from server
-                    // These defaults should align with how StorableViewNode is defined or typically initialized.
-                    // For now, using common defaults. These might need adjustment based on actual StorableViewNode expectations.
-                    const defaultWidth = 100; // Example default
-                    const defaultHeight = 100; // Example default
-
+                    
                     const storableViewNode: StorableViewNode = {
                         id: sViewNode.uuid,
-                        relX: sViewNode.relX, // Use sViewNode.relX
-                        relY: sViewNode.relY, // Use sViewNode.relY
-                        width: sViewNode.width ?? defaultWidth,
-                        height: sViewNode.height ?? defaultHeight,
+                        relX: sViewNode.relX,
+                        relY: sViewNode.relY,
+                        width: sViewNode.width ?? 100,
+                        height: sViewNode.height ?? 100,
                         rotation: sViewNode.rotation ?? 0,
-                        relScale: sViewNode.relScale ?? 1, // Use sViewNode.relScale, default to 1 if not present
+                        relScale: sViewNode.relScale ?? 1,
                         attributes: attributes,
                     };
                     return [sViewNode.uuid, storableViewNode];
@@ -181,15 +167,10 @@ export class ServerAdapter implements PersistenceService {
                 };
 
                 const clientStorableContext: StorableContext = {
-                    id: serverContextData.focal, // focal node ID
+                    id: serverContextData.focal,
                     viewNodes: clientViewNodes,
                     viewportSettings: clientViewportSettings,
                 };
-
-                const dataNodeDebugPrint: string[] = clientDataNodes.map((node) => {
-                    return node.path
-                })
-                console.log(dataNodeDebugPrint);
                 
                 return {
                     nodes: clientDataNodes,
@@ -206,127 +187,130 @@ export class ServerAdapter implements PersistenceService {
         }
     }
 
-    // --- PersistenceService Implementation ---
-
     async getContext(contextPath: NodeId): Promise<StorableContext | undefined> {
-        // contextPath is used as the identifier for loadContextBundle
         const bundle = await this.loadContextBundle(contextPath);
-        if (bundle) {
-            return bundle.storableContext;
-        }
-        console.warn(`[ServerAdapter] getContext failed to load bundle for path: ${contextPath}`);
-        return undefined;
-    }
-
-    // --- Stubbed Methods ---
-
-    async saveNode(node: DataNode): Promise<void> {
-        console.warn('[ServerAdapter.saveNode] Not implemented');
-        return Promise.resolve();
-    }
-
-    async getNode(nodeId: string): Promise<DataNode | undefined> {
-        console.warn(`[ServerAdapter.getNode] Not implemented for ID: ${nodeId}`);
-        return Promise.resolve(undefined);
-    }
-
-    async deleteNode(nodeId: string): Promise<void> {
-        console.warn(`[ServerAdapter.deleteNode] Not implemented for ID: ${nodeId}`);
-        return Promise.resolve();
-    }
-
-    async getNodes(): Promise<DataNode[]> {
-        console.warn('[ServerAdapter.getNodes] Not implemented');
-        return Promise.resolve([]);
-    }
-
-    async checkNameExists(name: string): Promise<boolean> {
-        console.warn(`[ServerAdapter.checkNameExists] Not implemented for name: ${name}`);
-        return Promise.resolve(false);
-    }
-
-    async getDataNodesByIds(nodeIds: NodeId[]): Promise<Map<NodeId, DataNode>> {
-        console.warn(`[ServerAdapter.getDataNodesByIds] Not implemented for IDs: ${nodeIds.join(', ')}`);
-        return Promise.resolve(new Map());
-    }
-
-    async getAllNodePaths(): Promise<string[]> {
-        console.warn('[ServerAdapter.getAllNodePaths] Not implemented');
-        return Promise.resolve([]);
-    }
-
-    async getDataNodeByPath(path: string): Promise<DataNode | undefined> {
-        console.warn(`[ServerAdapter.getDataNodeByPath] Not implemented for path: ${path}`);
-        return Promise.resolve(undefined);
-    }
-
-    async saveEdge(edge: KartaEdge): Promise<void> {
-        console.warn('[ServerAdapter.saveEdge] Not implemented');
-        return Promise.resolve();
-    }
-
-    async getEdge(edgeId: string): Promise<KartaEdge | undefined> {
-        console.warn(`[ServerAdapter.getEdge] Not implemented for ID: ${edgeId}`);
-        return Promise.resolve(undefined);
-    }
-
-    async getEdges(): Promise<KartaEdge[]> {
-        console.warn('[ServerAdapter.getEdges] Not implemented');
-        return Promise.resolve([]);
-    }
-
-    async deleteEdge(edgeId: string): Promise<void> {
-        console.warn(`[ServerAdapter.deleteEdge] Not implemented for ID: ${edgeId}`);
-        return Promise.resolve();
-    }
-
-    async loadEdges(): Promise<KartaEdge[]> {
-        console.warn('[ServerAdapter.loadEdges] Not implemented');
-        return Promise.resolve([]);
-    }
-
-    async getEdgesByNodeIds(nodeIds: NodeId[]): Promise<Map<string, KartaEdge>> {
-        console.warn(`[ServerAdapter.getEdgesByNodeIds] Not implemented for IDs: ${nodeIds.join(', ')}`);
-        return Promise.resolve(new Map());
+        return bundle?.storableContext;
     }
 
     async saveContext(context: Context): Promise<void> {
-        console.warn(`[ServerAdapter.saveContext] Not implemented for context ID: ${context.id}`);
-        return Promise.resolve();
+        const modifiedViewNodes = Array.from(context.viewNodes.values()).filter(vn => vn.isModified);
+
+        if (modifiedViewNodes.length === 0) {
+            return Promise.resolve();
+        }
+
+        const focalNode = context.viewNodes.get(context.id);
+        if (!focalNode) {
+            console.error(`[ServerAdapter.saveContext] Focal node ${context.id} not found in context.`);
+            return Promise.reject(new Error('Focal node not found'));
+        }
+        const focalState = focalNode.state.current;
+
+        const serverViewNodes = modifiedViewNodes.map(viewNode => {
+            const { id, state, attributes } = viewNode;
+            const { x, y, scale, rotation, width, height } = state.current;
+
+            const relX = id === context.id ? 0 : (x - focalState.x) / focalState.scale;
+            const relY = id === context.id ? 0 : (y - focalState.y) / focalState.scale;
+            const relScale = id === context.id ? 1 : scale / focalState.scale;
+
+            const isNameVisible = attributes?.['isNameVisible'] ?? true;
+
+            const serverAttributes: ServerAttribute[] = attributes
+                ? Object.entries(attributes)
+                      .filter(([key, value]) => value !== undefined && value !== null && key !== 'isNameVisible')
+                      .map(([name, value]) => {
+                          let taggedValue: any;
+                          switch (typeof value) {
+                              case 'string':
+                                  taggedValue = { String: value };
+                                  break;
+                              case 'number':
+                                  taggedValue = { Float: value };
+                                  break;
+                              case 'boolean':
+                                  taggedValue = { UInt: value ? 1 : 0 };
+                                  break;
+                              default:
+                                  taggedValue = { String: JSON.stringify(value) };
+                                  break;
+                          }
+                          return { name, value: taggedValue };
+                      })
+                : [];
+
+            return {
+                uuid: id,
+                is_name_visible: isNameVisible,
+                relX,
+                relY,
+                width,
+                height,
+                relScale,
+                rotation,
+                attributes: serverAttributes,
+            };
+        });
+
+        const { scale: currentScale, posX: absPosX, posY: absPosY } = context.viewportSettings ?? { scale: 1.0, posX: 0, posY: 0 };
+        const relPosX = absPosX + (focalState.x * currentScale);
+        const relPosY = absPosY + (focalState.y * currentScale);
+
+        const payload = {
+            karta_version: "0.1.0",
+            focal: context.id,
+            nodes: serverViewNodes,
+            settings: {
+                zoom_scale: currentScale,
+                view_rel_pos_x: relPosX,
+                view_rel_pos_y: relPosY,
+            }
+        };
+
+        const url = `${SERVER_BASE_URL}/api/ctx/${context.id}`;
+        try {
+            console.log(`[ServerAdapter.saveContext] Sending payload for context ${context.id}:`, JSON.stringify(payload, null, 2));
+            const response = await fetch(url, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+            });
+
+            if (!response.ok) {
+                const errorBody = await response.text();
+                console.error(`[ServerAdapter.saveContext] Error saving context ${context.id}. Status: ${response.status}`, errorBody);
+                throw new Error(`Server responded with status ${response.status}`);
+            }
+
+            console.log(`[ServerAdapter.saveContext] Successfully saved layout for ${modifiedViewNodes.length} nodes in context ${context.id}`);
+        } catch (error) {
+            console.error(`[ServerAdapter.saveContext] Network error saving context ${context.id}:`, error);
+            throw error;
+        }
     }
 
-    async getAllContextIds(): Promise<NodeId[]> {
-        console.warn('[ServerAdapter.getAllContextIds] Not implemented');
-        return Promise.resolve([]);
-    }
-
-    async deleteContext(contextId: NodeId): Promise<void> {
-        console.warn(`[ServerAdapter.deleteContext] Not implemented for ID: ${contextId}`);
-        return Promise.resolve();
-    }
-
-    async getAllContextPaths(): Promise<Map<NodeId, string>> {
-        console.warn('[ServerAdapter.getAllContextPaths] Not implemented');
-        return Promise.resolve(new Map());
-    }
-
-    async saveAsset(assetId: string, assetData: AssetData): Promise<void> {
-        console.warn(`[ServerAdapter.saveAsset] Not implemented for asset ID: ${assetId}`);
-        return Promise.resolve();
-    }
-
-    async getAsset(assetId: string): Promise<AssetData | undefined> {
-        console.warn(`[ServerAdapter.getAsset] Not implemented for asset ID: ${assetId}`);
-        return Promise.resolve(undefined);
-    }
-
-    async deleteAsset(assetId: string): Promise<void> {
-        console.warn(`[ServerAdapter.deleteAsset] Not implemented for asset ID: ${assetId}`);
-        return Promise.resolve();
-    }
-
-    async getAssetObjectUrl(assetId: string): Promise<string | null> {
-        console.warn(`[ServerAdapter.getAssetObjectUrl] Not implemented for asset ID: ${assetId}`);
-        return Promise.resolve(null);
-    }
+    // --- Stubbed Methods ---
+    async saveNode(node: DataNode): Promise<void> { console.warn('[ServerAdapter.saveNode] Not implemented'); }
+    async getNode(nodeId: string): Promise<DataNode | undefined> { console.warn(`[ServerAdapter.getNode] Not implemented for ID: ${nodeId}`); return undefined; }
+    async deleteNode(nodeId: string): Promise<void> { console.warn(`[ServerAdapter.deleteNode] Not implemented for ID: ${nodeId}`); }
+    async getNodes(): Promise<DataNode[]> { console.warn('[ServerAdapter.getNodes] Not implemented'); return []; }
+    async checkNameExists(name: string): Promise<boolean> { console.warn(`[ServerAdapter.checkNameExists] Not implemented for name: ${name}`); return false; }
+    async getDataNodesByIds(nodeIds: NodeId[]): Promise<Map<NodeId, DataNode>> { console.warn(`[ServerAdapter.getDataNodesByIds] Not implemented`); return new Map(); }
+    async getAllNodePaths(): Promise<string[]> { console.warn('[ServerAdapter.getAllNodePaths] Not implemented'); return []; }
+    async getDataNodeByPath(path: string): Promise<DataNode | undefined> { console.warn(`[ServerAdapter.getDataNodeByPath] Not implemented for path: ${path}`); return undefined; }
+    async saveEdge(edge: KartaEdge): Promise<void> { console.warn('[ServerAdapter.saveEdge] Not implemented'); }
+    async getEdge(edgeId: string): Promise<KartaEdge | undefined> { console.warn(`[ServerAdapter.getEdge] Not implemented for ID: ${edgeId}`); return undefined; }
+    async getEdges(): Promise<KartaEdge[]> { console.warn('[ServerAdapter.getEdges] Not implemented'); return []; }
+    async deleteEdge(edgeId: string): Promise<void> { console.warn(`[ServerAdapter.deleteEdge] Not implemented for ID: ${edgeId}`); }
+    async loadEdges(): Promise<KartaEdge[]> { console.warn('[ServerAdapter.loadEdges] Not implemented'); return []; }
+    async getEdgesByNodeIds(nodeIds: NodeId[]): Promise<Map<string, KartaEdge>> { console.warn(`[ServerAdapter.getEdgesByNodeIds] Not implemented`); return new Map(); }
+    async getAllContextIds(): Promise<NodeId[]> { console.warn('[ServerAdapter.getAllContextIds] Not implemented'); return []; }
+    async deleteContext(contextId: NodeId): Promise<void> { console.warn(`[ServerAdapter.deleteContext] Not implemented for ID: ${contextId}`); }
+    async getAllContextPaths(): Promise<Map<NodeId, string>> { console.warn('[ServerAdapter.getAllContextPaths] Not implemented'); return new Map(); }
+    async saveAsset(assetId: string, assetData: AssetData): Promise<void> { console.warn(`[ServerAdapter.saveAsset] Not implemented for asset ID: ${assetId}`); }
+    async getAsset(assetId: string): Promise<AssetData | undefined> { console.warn(`[ServerAdapter.getAsset] Not implemented for asset ID: ${assetId}`); return undefined; }
+    async deleteAsset(assetId: string): Promise<void> { console.warn(`[ServerAdapter.deleteAsset] Not implemented for asset ID: ${assetId}`); }
+    async getAssetObjectUrl(assetId: string): Promise<string | null> { console.warn(`[ServerAdapter.getAssetObjectUrl] Not implemented for asset ID: ${assetId}`); return null; }
 }

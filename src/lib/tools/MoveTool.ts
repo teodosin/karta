@@ -1,7 +1,7 @@
 import type { Tool, NodeId } from '$lib/types/types';
 import { get } from 'svelte/store';
 import { viewTransform, screenToCanvasCoordinates } from '$lib/karta/ViewportStore';
-import { updateNodeLayout, contexts, currentContextId } from '$lib/karta/ContextStore';
+import { updateNodeLayout, contexts, currentContextId, markNodeAsModified } from '$lib/karta/ContextStore';
 import { selectedNodeIds, setSelectedNodes, toggleSelection } from '$lib/karta/SelectionStore';
 import { nodes } from '$lib/karta/NodeStore'; // Import the nodes store
 
@@ -183,6 +183,13 @@ export class MoveTool implements Tool {
     // Replaces handleWindowMouseUp - Use PointerEvent
     private handlePointerUp(event: PointerEvent): void {
         if (!this.isDragging || event.button !== 0) return;
+
+        // Mark moved nodes as modified
+        if (this.draggingNodeIds) {
+            for (const nodeId of this.draggingNodeIds) {
+                markNodeAsModified(nodeId);
+            }
+        }
 
         // Final positions are already set by handlePointerMove calling updateNodeLayout
         // Just need to clean up state

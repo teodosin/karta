@@ -360,14 +360,8 @@ export function updateNodeLayout(nodeId: NodeId, newX: number, newY: number) {
         // signalling that the contexts map has changed ensures Svelte updates.
         contexts.update((map: Map<NodeId, Context>) => map); // Explicitly type map
 
-        // 5. Persist the change asynchronously
-        // saveContext reads the .current state from the tween when converting
-        if (activeAdapter && currentCtx) { // Use activeAdapter
-            // Debounce saving? For now, save on every update during drag.
-            currentCtx.viewportSettings = { ...viewTransform.current }; // Capture viewport - Access .current directly
-            activeAdapter.saveContext(currentCtx) // Use activeAdapter
-                .catch(err => { /* console.error(`Error saving context ${contextId} during layout update:`, err); */ }); // Keep error logs for now
-        }
+        // 5. Persistence is now handled by the explicit "Save Layout" button.
+        // The old logic for saving on every layout update is removed.
     } else {
         console.warn(`ViewNode ${nodeId} not found in context ${contextId} for layout update`);
     }
@@ -405,6 +399,82 @@ export async function removeViewNodeFromContext(contextId: NodeId, viewNodeId: N
     } else {
         console.warn("[removeViewNodeFromContext] activeAdapter not initialized, persistence disabled.");
     }
+}
+
+/**
+ * Marks a specific ViewNode as modified.
+ * This is used to track which nodes need to be saved to the server.
+ * @param nodeId The ID of the node to mark as modified.
+ */
+export function markNodeAsModified(nodeId: NodeId) {
+ const contextId = get(currentContextId);
+ const allContexts = get(contexts);
+ const currentCtx = allContexts.get(contextId);
+
+ if (currentCtx) {
+  const viewNode = currentCtx.viewNodes.get(nodeId);
+  if (viewNode) {
+   if (!viewNode.isModified) {
+    viewNode.isModified = true;
+    // Manually trigger reactivity for the contexts store if you want other UI
+    // elements to react to the dirty state, e.g., enabling a save button.
+    contexts.set(allContexts);
+   }
+  } else {
+   console.warn(`[markNodeAsModified] ViewNode ${nodeId} not found in context ${contextId}.`);
+  }
+ } else {
+  console.warn(`[markNodeAsModified] Current context ${contextId} not found.`);
+ }
+}
+
+/**
+ * Saves the current context's modified nodes to the active persistence layer.
+ * After a successful save, it resets the isModified flag on the saved nodes.
+ */
+export async function saveCurrentContext() {
+	const contextId = get(currentContextId);
+	const allContexts = get(contexts);
+	const currentCtx = allContexts.get(contextId);
+
+	if (!currentCtx) {
+		console.error('[saveCurrentContext] No current context found to save.');
+		return;
+	}
+
+	if (!activeAdapter) {
+		console.error('[saveCurrentContext] No active persistence adapter found.');
+		return;
+	}
+
+	try {
+		// The adapter's saveContext method is now responsible for filtering modified nodes.
+		await activeAdapter.saveContext(currentCtx);
+
+		// After a successful save, reset the isModified flag on the nodes that were saved.
+		// This prevents them from being saved again unnecessarily.
+		const contextToUpdate = allContexts.get(contextId); // Re-get to be safe, though it's the same object
+		if (contextToUpdate) {
+			let wasModified = false;
+			for (const viewNode of contextToUpdate.viewNodes.values()) {
+				if (viewNode.isModified) {
+					viewNode.isModified = false;
+					wasModified = true;
+				}
+			}
+			// Trigger reactivity if we actually cleared any flags, which will update the UI
+			// (e.g., disable the save button if it's no longer dirty).
+			if (wasModified) {
+				contexts.set(allContexts);
+			}
+		}
+
+		console.log(`[saveCurrentContext] Context ${contextId} save operation completed.`);
+		// TODO: Add user feedback here (e.g., a toast notification for success)
+	} catch (error) {
+		console.error(`[saveCurrentContext] Failed to save context ${contextId}:`, error);
+		// TODO: Add user feedback for the error
+	}
 }
 
 export async function switchContext(newContextId: NodeId, isUndoRedo: boolean = false) { // Added isUndoRedo flag
