@@ -61,7 +61,7 @@ pub fn create_router(state: AppState) -> Router<()> {
     let router = Router::new()
         .route("/", get(|| async { "Karta Server" }))
         .route("/ctx/{*id}", get(context_endpoints::open_context_from_fs_path)) // Corrected wildcard syntax
-        .route("/api/ctx/:id", put(write_endpoints::save_context))
+        .route("/api/ctx/{id}", put(write_endpoints::save_context))
         .layer(cors) // Apply the CORS layer
         // So what routes do we want?
         // /data/
