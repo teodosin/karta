@@ -132,7 +132,7 @@ impl ContextDb {
         }
     }
 
-    fn get_context_file(&self, uuid: Uuid) -> Result<Context, Box<dyn Error>> {
+    pub fn get_context_file(&self, uuid: Uuid) -> Result<Context, Box<dyn Error>> {
         let mut file_name: String = uuid.to_string();
         file_name.push_str(".ctx");
         let full_path = self.get_contexts_dir().join(file_name);
@@ -143,14 +143,29 @@ impl ContextDb {
         Ok(context)
     }
 
-    fn save_context(&self, context: &Context) -> Result<(), Box<dyn Error>> {
+    pub fn save_context(&self, context: &Context) -> Result<(), Box<dyn Error>> {
+        let contexts_dir = self.get_contexts_dir();
+        std::fs::create_dir_all(&contexts_dir)?; // Ensure the contexts directory exists
+
         let mut file_name: String = context.focal().to_string();
         file_name.push_str(".ctx");
-        let full_path = self.get_contexts_dir().join(file_name);
+        let full_path = contexts_dir.join(file_name);
 
+        // If the context we are asked to save has no nodes, it means all nodes
+        // are in their default positions. In this case, we should remove the
+        // context file if it exists to fall back to the default generated layout.
+        if context.viewnodes().is_empty() {
+            if full_path.exists() {
+                std::fs::remove_file(full_path)?;
+            }
+            return Ok(());
+        }
+
+        // Otherwise, serialize the provided context (with its modified nodes)
+        // and overwrite the file.
         let mut context_file = std::fs::File::create(full_path)?;
-        let pretty_config = ron::ser::to_string_pretty(&context, Default::default()).unwrap();
-        context_file.write_all(pretty_config.as_bytes()).unwrap();
+        let pretty_config = ron::ser::to_string_pretty(&context, Default::default())?;
+        context_file.write_all(pretty_config.as_bytes())?;
         Ok(())
     }
 }
