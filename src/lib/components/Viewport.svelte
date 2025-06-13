@@ -177,12 +177,16 @@
 		const rect = canvasContainer.getBoundingClientRect();
 		const mouseX = e.clientX - rect.left;
 		const mouseY = e.clientY - rect.top;
+		const w = $viewportWidth;
+		const h = $viewportHeight;
 
 		const currentTransform = viewTransform.target;
-		const beforeZoomX =
-			(mouseX - currentTransform.posX) / currentTransform.scale;
-		const beforeZoomY =
-			(mouseY - currentTransform.posY) / currentTransform.scale;
+
+		// Get the canvas point under the mouse cursor, this is our zoom center
+		const canvasPointX =
+			(mouseX - currentTransform.posX - w / 2) / currentTransform.scale;
+		const canvasPointY =
+			(mouseY - currentTransform.posY - h / 2) / currentTransform.scale;
 
 		let newScale = currentTransform.scale;
 		let newPosX = currentTransform.posX;
@@ -203,9 +207,6 @@
 			newScale =
 				currentTransform.scale *
 				(e.deltaY < 0 ? pinchFactor : 1 / pinchFactor);
-			newScale = Math.max(0.1, Math.min(newScale, 5));
-			newPosX = mouseX - beforeZoomX * newScale;
-			newPosY = mouseY - beforeZoomY * newScale;
 		} else if (lastInputWasTouchpad) {
 			// Touchpad panning (heuristic detected touchpad)
 			newPosX = currentTransform.posX - e.deltaX * panSensitivityFactor;
@@ -217,9 +218,14 @@
 			newScale =
 				currentTransform.scale *
 				(e.deltaY < 0 ? wheelZoomFactor : 1 / wheelZoomFactor);
+		}
+
+		// If we zoomed, recalculate position to keep the canvas point under the mouse
+		if (newScale !== currentTransform.scale) {
 			newScale = Math.max(0.1, Math.min(newScale, 5));
-			newPosX = mouseX - beforeZoomX * newScale;
-			newPosY = mouseY - beforeZoomY * newScale;
+			// The new pan position is calculated to keep the canvas point at the same screen position (the mouse cursor)
+			newPosX = mouseX - canvasPointX * newScale - w / 2;
+			newPosY = mouseY - canvasPointY * newScale - h / 2;
 		}
 
 		// Close menus if transform changes

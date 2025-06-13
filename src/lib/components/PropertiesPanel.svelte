@@ -17,12 +17,6 @@
 	} from "$lib/karta/NodeStore";
 	import { contexts, currentContextId } from "$lib/karta/ContextStore"; // Import context stores
 	import { getNodeTypeDef } from "$lib/node_types/registry"; // To get property schema
-	import type {
-		DataNode,
-		PropertyDefinition,
-		ViewNode,
-		AvailableFont,
-	} from "$lib/types/types"; // Import ViewNode, AvailableFont
 	import { AVAILABLE_FONTS } from "$lib/types/types"; // Import AVAILABLE_FONTS
 	import { onDestroy, onMount } from "svelte";
 	import ColorPicker from "svelte-awesome-color-picker"; // Import ColorPicker
