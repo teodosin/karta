@@ -190,11 +190,11 @@
 								spellcheck="false"
 							/>
 						{:else}
-							<span on:dblclick={startEditing}>{nodeName}</span>
+							<span class="text-xs" on:dblclick={startEditing}>{nodeName}</span>
 						{/if}
 					{:else}
 						<!-- Display name for non-renamable nodes, no interaction -->
-						<span>{nodeName}</span>
+						<span class="text-xs">{nodeName}</span>
 					{/if}
 				</div>
 			{/if}

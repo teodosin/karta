@@ -55,7 +55,7 @@
 <!-- File Node Appearance: Simple Rounded Rectangle - Apply focus ring here -->
 <div
 	class={`
-		w-full h-full rounded-md bg-wine /* Changed from rounded-full */
+		w-full h-full rounded-[1rem] bg-wine mb-4
 		shadow-inner flex items-center justify-center pointer-events-auto
 		${ringClasses}
 	`}
