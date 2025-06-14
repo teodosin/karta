@@ -5,8 +5,16 @@ use crate::prelude::Attribute;
 use super::node::DataNode;
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub enum ViewNodeStatus {
+    Generated,
+    Modified,
+}
+
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct ViewNode {
     pub uuid: Uuid,
+
+    pub status: ViewNodeStatus,
 
     pub is_name_visible: bool,
 
@@ -30,6 +38,7 @@ impl ViewNode {
 
         Self {
             uuid: data_node.uuid(),
+            status: ViewNodeStatus::Generated,
             is_name_visible: true,
             relX: 0.0,
             relY: 0.0,
@@ -39,6 +48,15 @@ impl ViewNode {
             rotation: 0.0,
             attributes: viewnode_attributes,
         }
+    
+    }
+
+    pub fn status(&self) -> &ViewNodeStatus {
+        &self.status
+    }
+
+    pub fn set_status(&mut self, status: ViewNodeStatus) {
+        self.status = status;
     }
 
     pub fn sized(mut self, width: f32, height: f32) -> Self {

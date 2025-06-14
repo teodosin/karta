@@ -22,6 +22,10 @@ impl Context {
         &self.nodes
     }
 
+    pub fn viewnodes_mut(&mut self) -> &mut Vec<ViewNode> {
+        &mut self.nodes
+    }
+
     pub fn new(focal: Uuid) -> Self {
         Self {
             karta_version: SERVER_VERSION.to_string(),
