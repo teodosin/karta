@@ -94,7 +94,8 @@ export async function createNodeAtPosition(
     // 3. Create the new ViewNode containing the Tween
     const newViewNode: ViewNode = {
         id: newNodeId,
-        state: new Tween(initialState, { duration: 0 }) // Initialize instantly, no animation
+        state: new Tween(initialState, { duration: 0 }), // Initialize instantly, no animation
+        status: 'modified'
     };
 
     // 4. Update stores
@@ -254,7 +255,6 @@ export async function updateNodeAttributes(nodeId: NodeId, newAttributes: Record
     const oldName = dataNode.attributes?.name;
     const newName = newAttributes?.name;
     let attributesToSave = { ...dataNode.attributes, ...newAttributes }; // Merge old and new
-
     // Check for name change and uniqueness
     if (newName && newName.trim() && newName !== oldName) {
         const finalNewName = newName.trim();
@@ -287,13 +287,11 @@ export async function updateNodeAttributes(nodeId: NodeId, newAttributes: Record
     }
 
     // Create updated node data
-    // Create updated node data
     const updatedNodeData: DataNode = {
         ...dataNode,
         attributes: attributesToSave, // Use the final attributes map (name might have been incremented)
         modifiedAt: Date.now(),
-        // Update path if name changed
-        path: `/${attributesToSave.name}`
+        path: dataNode.path // Do not change the path here. Path changes should be handled by a dedicated rename/move operation.
     };
 
     // Update the store
@@ -699,7 +697,8 @@ export async function addExistingNodeToCurrentContext(path: string, position: { 
         const newViewNode: ViewNode = {
             id: dataNode.id,
             state: new Tween(initialState, { duration: 0 }), // Initialize instantly
-            attributes: viewAttributes
+            attributes: viewAttributes,
+            status: 'modified'
         };
 
         // 8c. Update contexts store immutably

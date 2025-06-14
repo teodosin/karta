@@ -53,6 +53,7 @@ interface ServerViewNode {
     rotation?: number;
     zIndex?: number;
     is_name_visible?: boolean;
+    status?: 'generated' | 'modified';
     attributes: ServerAttribute[];
 }
 
@@ -155,6 +156,7 @@ export class ServerAdapter implements PersistenceService {
                         height: sViewNode.height ?? 100,
                         rotation: sViewNode.rotation ?? 0,
                         relScale: sViewNode.relScale ?? 1,
+                        status: sViewNode.status?.toLowerCase() as 'generated' | 'modified' ?? 'modified',
                         attributes: attributes,
                     };
                     return [sViewNode.uuid, storableViewNode];
@@ -193,7 +195,7 @@ export class ServerAdapter implements PersistenceService {
     }
 
     async saveContext(context: Context): Promise<void> {
-        const modifiedViewNodes = Array.from(context.viewNodes.values()).filter(vn => vn.isModified);
+        const modifiedViewNodes = Array.from(context.viewNodes.values()).filter(vn => vn.status === 'modified');
 
         if (modifiedViewNodes.length === 0) {
             return Promise.resolve();
@@ -207,7 +209,7 @@ export class ServerAdapter implements PersistenceService {
         const focalState = focalNode.state.current;
 
         const serverViewNodes = modifiedViewNodes.map(viewNode => {
-            const { id, state, attributes } = viewNode;
+            const { id, state, attributes, status } = viewNode;
             const { x, y, scale, rotation, width, height } = state.current;
 
             const relX = id === context.id ? 0 : (x - focalState.x) / focalState.scale;
@@ -241,6 +243,7 @@ export class ServerAdapter implements PersistenceService {
 
             return {
                 uuid: id,
+                status: status.charAt(0).toUpperCase() + status.slice(1),
                 is_name_visible: isNameVisible,
                 relX,
                 relY,

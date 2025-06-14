@@ -33,7 +33,7 @@ export interface ViewNode {
   // Holds context-specific attribute overrides (e.g., view_isNameVisible, viewtype_fontSize)
   // and custom user-defined attributes (unprefixed).
   attributes?: Record<string, any>;
-  isModified?: boolean;
+  status: 'generated' | 'modified';
 }
 
 // Represents an absolute transform in the canvas coordinate space
@@ -82,6 +82,7 @@ export interface StorableViewNode {
     height: number;
     relScale: number;
     rotation: number;
+    status: 'generated' | 'modified';
     // Holds context-specific attribute overrides for storage (e.g., view_isNameVisible, viewtype_fontSize)
     // and custom user-defined attributes (unprefixed).
     attributes?: Record<string, any>;

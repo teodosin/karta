@@ -115,10 +115,11 @@ async function _loadAndProcessContext(
             if (existingViewNode) {
                 existingViewNode.state.set(targetState, NODE_TWEEN_OPTIONS); // Update existing tween
                 existingViewNode.attributes = storableNode.attributes; // Copy attributes
+                existingViewNode.status = storableNode.status; // Update status
                 finalViewNodes.set(nodeId, existingViewNode); // Reuse ViewNode object
             } else {
                 // Create new ViewNode with a new Tween, starting from target state? Or current if exists? Start from target.
-                finalViewNodes.set(nodeId, { id: nodeId, state: new Tween(targetState, NODE_TWEEN_OPTIONS), attributes: storableNode.attributes });
+                finalViewNodes.set(nodeId, { id: nodeId, state: new Tween(targetState, NODE_TWEEN_OPTIONS), attributes: storableNode.attributes, status: storableNode.status });
             }
         }
         // Convert stored viewport settings
@@ -145,7 +146,7 @@ async function _loadAndProcessContext(
              width: focalInitialStateFromOldContext.width, // Use width from old context/defaults
              height: focalInitialStateFromOldContext.height // Use height from old context/defaults
         };
-        finalViewNodes.set(contextId, { id: contextId, state: new Tween(correctedFocalInitialState, { duration: 0 }) });
+        finalViewNodes.set(contextId, { id: contextId, state: new Tween(correctedFocalInitialState, { duration: 0 }), status: 'modified' });
         // For newly created contexts, don't set viewport settings yet.
         // Let the viewport remain where it is. Settings will be saved on first interaction/switch away.
         // For newly created contexts, don't set viewport settings here.
@@ -201,7 +202,7 @@ async function _loadAndProcessContext(
                 finalViewNodes.set(connectedId, existingViewNodeInOldContext);
             } else {
                 // Create new ViewNode/Tween
-                finalViewNodes.set(connectedId, { id: connectedId, state: new Tween(defaultState, NODE_TWEEN_OPTIONS) });
+                finalViewNodes.set(connectedId, { id: connectedId, state: new Tween(defaultState, NODE_TWEEN_OPTIONS), status: 'modified' });
             }
             currentAngle += angleIncrement;
         }
@@ -407,25 +408,25 @@ export async function removeViewNodeFromContext(contextId: NodeId, viewNodeId: N
  * @param nodeId The ID of the node to mark as modified.
  */
 export function markNodeAsModified(nodeId: NodeId) {
- const contextId = get(currentContextId);
- const allContexts = get(contexts);
- const currentCtx = allContexts.get(contextId);
+	const contextId = get(currentContextId);
+	const allContexts = get(contexts);
+	const currentCtx = allContexts.get(contextId);
 
- if (currentCtx) {
-  const viewNode = currentCtx.viewNodes.get(nodeId);
-  if (viewNode) {
-   if (!viewNode.isModified) {
-    viewNode.isModified = true;
-    // Manually trigger reactivity for the contexts store if you want other UI
-    // elements to react to the dirty state, e.g., enabling a save button.
-    contexts.set(allContexts);
-   }
-  } else {
-   console.warn(`[markNodeAsModified] ViewNode ${nodeId} not found in context ${contextId}.`);
-  }
- } else {
-  console.warn(`[markNodeAsModified] Current context ${contextId} not found.`);
- }
+	if (currentCtx) {
+		const viewNode = currentCtx.viewNodes.get(nodeId);
+		if (viewNode) {
+			if (viewNode.status !== 'modified') {
+				viewNode.status = 'modified';
+				// Manually trigger reactivity for the contexts store if you want other UI
+				// elements to react to the dirty state, e.g., enabling a save button.
+				contexts.set(allContexts);
+			}
+		} else {
+			console.warn(`[markNodeAsModified] ViewNode ${nodeId} not found in context ${contextId}.`);
+		}
+	} else {
+		console.warn(`[markNodeAsModified] Current context ${contextId} not found.`);
+	}
 }
 
 /**
@@ -434,8 +435,7 @@ export function markNodeAsModified(nodeId: NodeId) {
  */
 export async function saveCurrentContext() {
 	const contextId = get(currentContextId);
-	const allContexts = get(contexts);
-	const currentCtx = allContexts.get(contextId);
+	const currentCtx = get(contexts).get(contextId);
 
 	if (!currentCtx) {
 		console.error('[saveCurrentContext] No current context found to save.');
@@ -448,26 +448,12 @@ export async function saveCurrentContext() {
 	}
 
 	try {
-		// The adapter's saveContext method is now responsible for filtering modified nodes.
+		// The adapter's saveContext method is responsible for filtering nodes with status: 'modified'.
 		await activeAdapter.saveContext(currentCtx);
 
-		// After a successful save, reset the isModified flag on the nodes that were saved.
-		// This prevents them from being saved again unnecessarily.
-		const contextToUpdate = allContexts.get(contextId); // Re-get to be safe, though it's the same object
-		if (contextToUpdate) {
-			let wasModified = false;
-			for (const viewNode of contextToUpdate.viewNodes.values()) {
-				if (viewNode.isModified) {
-					viewNode.isModified = false;
-					wasModified = true;
-				}
-			}
-			// Trigger reactivity if we actually cleared any flags, which will update the UI
-			// (e.g., disable the save button if it's no longer dirty).
-			if (wasModified) {
-				contexts.set(allContexts);
-			}
-		}
+		// After a successful save, we don't need to reset the status anymore.
+		// The status will be correctly set to 'modified' when the context is loaded next time.
+		// This ensures that all nodes from a saved context are considered modifiable.
 
 		console.log(`[saveCurrentContext] Context ${contextId} save operation completed.`);
 		// TODO: Add user feedback here (e.g., a toast notification for success)
@@ -566,6 +552,20 @@ export async function switchContext(newContextId: NodeId, isUndoRedo: boolean = 
                 loadedEdgesMap.set(edge.id, edge);
             }
         }
+        // --- DataNode Cleanup ---
+        // Before applying the new context, we purge any DataNode from memory that is not
+        // part of the incoming context's data bundle. The server is the source of truth.
+        // This prevents stale data and ensures virtual nodes are correctly ghosted.
+        const incomingDataNodeIds = new Set(loadedDataNodesMap.keys());
+        nodes.update(currentNodes => {
+            for (const nodeId of currentNodes.keys()) {
+                if (!incomingDataNodeIds.has(nodeId)) {
+                    currentNodes.delete(nodeId);
+                }
+            }
+            return currentNodes;
+        });
+
         _applyStoresUpdate(newContextId, processedContext, loadedDataNodesMap, loadedEdgesMap);
 
         // --- Phase 4: Update Viewport ---
