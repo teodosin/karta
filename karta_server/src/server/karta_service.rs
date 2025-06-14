@@ -135,38 +135,34 @@ impl KartaService {
             child_fs_datanodes = fs_nodes_from_destructure;
             if let Some(focal_node_unwrapped) = &focal_fs_datanode {
                 for child_node in &child_fs_datanodes {
-                    fs_edges.push(Edge::new(&focal_node_unwrapped.path(), &child_node.path()));
+                    fs_edges.push(Edge::new(focal_node_unwrapped.uuid(), child_node.uuid()));
                 }
             }
         } else if absolute_path.is_file() {
             focal_fs_datanode = fs_nodes_from_destructure.into_iter().find(|n| n.path() == path);
-            if focal_fs_datanode.is_some() {
-                // Parent handling is now done later, so this block is simplified.
+            if let Some(focal_file_node_unwrapped) = &focal_fs_datanode {
                 if let Some(parent_path) = path.parent() {
-                    if let Some(focal_file_node_unwrapped) = &focal_fs_datanode {
-                        // We can still infer the edge from the filesystem path.
-                        fs_edges.push(Edge::new(&parent_path, &focal_file_node_unwrapped.path()));
-                    }
+                    // We need the parent's UUID. We can create a transient parent node to get it.
+                    let parent_node = DataNode::new(&parent_path, NodeTypeId::dir_type());
+                    fs_edges.push(Edge::new(parent_node.uuid(), focal_file_node_unwrapped.uuid()));
                 }
             }
         }
-        
-        let fs_derived_focal_node = focal_fs_datanode.ok_or_else(||
+
+        let fs_derived_focal_node = focal_fs_datanode.ok_or_else(|| {
             format!("Focal node for path {:?} could not be determined from filesystem.", path)
-        )?;
+        })?;
 
         let db_focal_datanode_optional = self.data().open_node(&NodeHandle::Path(path.clone())).ok();
         let db_child_connections = self.data().open_node_connections(&path);
-        
-        let mut db_child_datanodes_map: HashMap<NodePath, DataNode> = HashMap::new();
-        let mut db_edges_vec: Vec<Edge> = Vec::new();
-        for (node, edge) in db_child_connections {
-            db_child_datanodes_map.insert(node.path().clone(), node);
-            db_edges_vec.push(edge);
+
+        let mut db_child_datanodes_map: HashMap<Uuid, DataNode> = HashMap::new();
+        for (node, _) in db_child_connections {
+            db_child_datanodes_map.insert(node.uuid(), node);
         }
 
-        let mut final_datanodes_map: HashMap<NodePath, DataNode> = HashMap::new();
-        let mut final_edges_set: HashSet<(NodePath, NodePath)> = HashSet::new();
+        let mut final_datanodes_map: HashMap<Uuid, DataNode> = HashMap::new();
+        let mut final_edges_set: HashSet<(Uuid, Uuid)> = HashSet::new();
         let mut reconciled_edges: Vec<Edge> = Vec::new();
 
         let definitive_focal_node = match db_focal_datanode_optional {
@@ -174,91 +170,55 @@ impl KartaService {
             None => fs_derived_focal_node.clone(),
         };
 
-        // Check if the focal node's parent is the vault and include the vault node if so
         if let Some(parent_path) = definitive_focal_node.path().parent() {
             if parent_path == NodePath::vault() {
-                // Attempt to open the vault node from the database
-                match self.data().open_node(&NodeHandle::Path(NodePath::vault())) {
-                    Ok(vault_node) => {
-                        additional_nodes_to_include.push(vault_node);
-                        // Create and add the edge from vault to the focal node
-                        let vault_to_focal_edge = Edge::new(&NodePath::vault(), &definitive_focal_node.path());
-                        additional_edges_to_include.push(vault_to_focal_edge);
-                    }
-                    Err(e) => {
-                        // Log error, as vault node is expected to exist
-                        eprintln!("Critical error: Vault node not found in DB when processing child context {:?}: {}", definitive_focal_node.path(), e);
-                        // Potentially return an error Result here, but for now just log
-                    }
+                if let Ok(vault_node) = self.data().open_node(&NodeHandle::Path(NodePath::vault())) {
+                    let vault_to_focal_edge = Edge::new(vault_node.uuid(), definitive_focal_node.uuid());
+                    additional_nodes_to_include.push(vault_node);
+                    additional_edges_to_include.push(vault_to_focal_edge);
+                } else {
+                    eprintln!("Critical error: Vault node not found in DB.");
                 }
             }
         }
 
-        final_datanodes_map.insert(definitive_focal_node.path().clone(), definitive_focal_node.clone());
+        final_datanodes_map.insert(definitive_focal_node.uuid(), definitive_focal_node.clone());
 
-        // --- Parent Node Handling (Moved Up) ---
         let mut parent_uuid: Option<Uuid> = None;
         if let Some(parent_path) = definitive_focal_node.path().parent() {
-            // Try to get the parent from the DB first. If it fails, create a transient one.
             let parent_node = self.data().open_node(&NodeHandle::Path(parent_path.clone()))
-                .unwrap_or_else(|_| {
-                    // If not in DB, it's an unindexed directory from the filesystem.
-                    DataNode::new(&parent_path, NodeTypeId::dir_type())
-                });
-            
+                .unwrap_or_else(|_| DataNode::new(&parent_path, NodeTypeId::dir_type()));
             parent_uuid = Some(parent_node.uuid());
-            // Ensure parent is in the map so its edges can be reconciled.
-            final_datanodes_map.entry(parent_path).or_insert(parent_node);
+            final_datanodes_map.entry(parent_node.uuid()).or_insert(parent_node);
         }
-        // --- End Parent Node Handling ---
 
         for fs_child_node in &child_fs_datanodes {
-            match db_child_datanodes_map.get(&fs_child_node.path()) {
-                Some(db_child_node) => {
-                    final_datanodes_map.insert(db_child_node.path().clone(), db_child_node.clone());
-                }
-                None => {
-                    final_datanodes_map.insert(fs_child_node.path().clone(), fs_child_node.clone());
-                }
-            }
-        }
-        // Include other DB-connected nodes not present in FS (e.g., parents, other virtual links)
-        for (db_node_path, db_node_data) in db_child_datanodes_map.iter() {
-            if !final_datanodes_map.contains_key(db_node_path) {
-                final_datanodes_map.insert(db_node_path.clone(), db_node_data.clone());
-            }
+            let child_uuid = fs_child_node.uuid();
+            let definitive_child = db_child_datanodes_map.get(&child_uuid)
+                .cloned()
+                .unwrap_or_else(|| fs_child_node.clone());
+            final_datanodes_map.insert(child_uuid, definitive_child);
         }
 
-        // Add any additional nodes (like the vault node)
+        for (db_node_uuid, db_node_data) in db_child_datanodes_map.iter() {
+            final_datanodes_map.entry(*db_node_uuid).or_insert_with(|| db_node_data.clone());
+        }
+
         for node_to_add in &additional_nodes_to_include {
-            final_datanodes_map.entry(node_to_add.path().clone()).or_insert_with(|| node_to_add.clone());
-        }
-        
-        for fs_edge in fs_edges {
-            if final_datanodes_map.contains_key(fs_edge.source()) && final_datanodes_map.contains_key(fs_edge.target()) {
-                let edge_key = (fs_edge.source().clone(), fs_edge.target().clone());
-                if final_edges_set.insert(edge_key) {
-                    reconciled_edges.push(fs_edge);
-                }
-            }
+            final_datanodes_map.entry(node_to_add.uuid()).or_insert_with(|| node_to_add.clone());
         }
 
-        for db_edge in db_edges_vec {
-            if final_datanodes_map.contains_key(db_edge.source()) && final_datanodes_map.contains_key(db_edge.target()) {
-                let edge_key = (db_edge.source().clone(), db_edge.target().clone());
-                if final_edges_set.insert(edge_key) {
-                    reconciled_edges.push(db_edge);
-                }
-            }
-        }
+        let mut all_edges_to_process = fs_edges;
+        all_edges_to_process.extend(db_child_datanodes_map.values().flat_map(|node| {
+            self.data().open_node_connections(&node.path()).into_iter().map(|(_, edge)| edge)
+        }));
+        all_edges_to_process.extend(additional_edges_to_include);
 
-        // Add any additional edges (like the vault -> focal edge)
-        for edge_to_add in &additional_edges_to_include {
-            // Ensure both source and target nodes for the edge are in the final_datanodes_map
-            if final_datanodes_map.contains_key(edge_to_add.source()) && final_datanodes_map.contains_key(edge_to_add.target()) {
-                let edge_key = (edge_to_add.source().clone(), edge_to_add.target().clone());
+        for edge in all_edges_to_process {
+            if final_datanodes_map.contains_key(edge.source()) && final_datanodes_map.contains_key(edge.target()) {
+                let edge_key = (*edge.source(), *edge.target());
                 if final_edges_set.insert(edge_key) {
-                    reconciled_edges.push(edge_to_add.clone()); // Assuming Edge is Clone
+                    reconciled_edges.push(edge);
                 }
             }
         }
@@ -340,11 +300,11 @@ assert!(datanodes.iter().any(|n| n.path() == NodePath::root()), "NodePath::root(
         let vault_node = datanodes.iter().find(|n| n.path() == NodePath::vault()).expect("User root DataNode not found");
         
         assert!(
-            edges.iter().any(|e| e.source() == &vault_node.path() && e.target() == &test_dir_node.path()),
+            edges.iter().any(|e| *e.source() == vault_node.uuid() && *e.target() == test_dir_node.uuid()),
             "Missing edge from vault to test_dir"
         );
         assert!(
-            edges.iter().any(|e| e.source() == &vault_node.path() && e.target() == &test_file_node.path()),
+            edges.iter().any(|e| *e.source() == vault_node.uuid() && *e.target() == test_file_node.uuid()),
             "Missing edge from vault to test_file.txt"
         );
     }

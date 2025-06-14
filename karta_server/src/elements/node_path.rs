@@ -5,6 +5,7 @@ use uuid::Uuid;
 
 use super::nodetype::ARCHETYPES;
 
+#[derive(Debug)]
 pub enum NodeHandle {
     Path(NodePath),
     Uuid(Uuid)

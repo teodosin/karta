@@ -251,26 +251,38 @@ mod tests {
             "Expected 3 edges: root->vault, vault->fileA.txt, vault->dir1"
         );
 
-        let has_edge = |edges: &Vec<Value>, src: &str, tgt: &str| -> bool {
-            edges.iter().any(|e| {
-                e.get("source").and_then(|s| s.as_str()) == Some(src)
-                    && e.get("target").and_then(|t| t.as_str()) == Some(tgt)
+        let get_uuid_by_path = |nodes: &Vec<Value>, path: &str| -> Option<String> {
+            nodes.iter().find_map(|n| {
+                if n.get("path").and_then(|p| p.as_str()) == Some(path) {
+                    n.get("uuid").and_then(|u| u.as_str()).map(String::from)
+                } else {
+                    None
+                }
             })
         };
+
+        let root_uuid = get_uuid_by_path(nodes_array, "").expect("Root node UUID not found");
+        let vault_uuid = get_uuid_by_path(nodes_array, "vault").expect("Vault node UUID not found");
+        let file_a_uuid = get_uuid_by_path(nodes_array, "vault/fileA.txt").expect("fileA.txt node UUID not found");
+        let dir1_uuid = get_uuid_by_path(nodes_array, "vault/dir1").expect("dir1 node UUID not found");
+
+        let has_edge_by_uuid = |edges: &Vec<Value>, src_uuid: &str, tgt_uuid: &str| -> bool {
+            edges.iter().any(|e| {
+                e.get("source").and_then(|s| s.as_str()) == Some(src_uuid)
+                    && e.get("target").and_then(|t| t.as_str()) == Some(tgt_uuid)
+            })
+        };
+
         assert!(
-            has_edge(
-                edges_array,
-                NodePath::root().buf().to_str().unwrap(),
-                NodePath::vault().buf().to_str().unwrap()
-            ),
+            has_edge_by_uuid(edges_array, &root_uuid, &vault_uuid),
             "Missing edge: root -> vault"
         );
         assert!(
-            has_edge(edges_array, "vault", "vault/fileA.txt"),
+            has_edge_by_uuid(edges_array, &vault_uuid, &file_a_uuid),
             "Missing edge: vault -> vault/fileA.txt"
         );
         assert!(
-            has_edge(edges_array, "vault", "vault/dir1"),
+            has_edge_by_uuid(edges_array, &vault_uuid, &dir1_uuid),
             "Missing edge: vault -> vault/dir1"
         );
     }
@@ -315,7 +327,7 @@ mod tests {
         let virtual_root_uuid =
             has_node_with_serialized_path(nodes_array, NodePath::root().buf().to_str().unwrap())
                 .expect("Virtual root node (path: \"\") not found");
-        let _vault_uuid =
+        let vault_uuid =
             has_node_with_serialized_path(nodes_array, NodePath::vault().buf().to_str().unwrap())
                 .expect("User root node (path: \"vault\") not found");
 
@@ -328,17 +340,17 @@ mod tests {
             "Expected 1 edge in virtual root context (root -> vault)"
         );
 
-        let has_edge = |edges: &Vec<Value>, src_path: &str, tgt_path: &str| -> bool {
+        let has_edge_by_uuid = |edges: &Vec<Value>, src_uuid: &str, tgt_uuid: &str| -> bool {
             edges.iter().any(|e| {
-                e.get("source").and_then(|s| s.as_str()) == Some(src_path)
-                    && e.get("target").and_then(|t| t.as_str()) == Some(tgt_path)
+                e.get("source").and_then(|s| s.as_str()) == Some(src_uuid)
+                    && e.get("target").and_then(|t| t.as_str()) == Some(tgt_uuid)
             })
         };
         assert!(
-            has_edge(
+            has_edge_by_uuid(
                 edges_array,
-                NodePath::root().buf().to_str().unwrap(),
-                NodePath::vault().buf().to_str().unwrap()
+                &virtual_root_uuid,
+                &vault_uuid
             ),
             "Missing edge: root -> vault"
         );

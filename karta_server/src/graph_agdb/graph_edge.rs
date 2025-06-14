@@ -1,23 +1,20 @@
-use std::{error::Error, path::PathBuf};
+use std::error::Error;
 
 use agdb::{DbElement, QueryBuilder};
+use uuid::Uuid;
 
-use crate::{
-    elements,
-    graph_traits::graph_edge::GraphEdge,
-    prelude::{Edge, NodePath},
-};
+use crate::{graph_traits::graph_edge::GraphEdge, prelude::Edge};
 
 use super::GraphAgdb;
 
 impl GraphEdge for GraphAgdb {
-    fn get_edge_strict(&self, from: &NodePath, to: &NodePath) -> Result<Edge, Box<dyn Error>> {
-        let from_al = from.alias();
-        let to_al = to.alias();
-
-        let edge_query = self
-            .db
-            .exec(&QueryBuilder::search().from(from_al).to(to_al).query());
+    fn get_edge_strict(&self, from: &Uuid, to: &Uuid) -> Result<Edge, Box<dyn Error>> {
+        let edge_query = self.db.exec(
+            &QueryBuilder::search()
+                .from(from.to_string())
+                .to(to.to_string())
+                .query(),
+        );
 
         if edge_query.is_err() {
             return Err("Failed to get edge".into());
@@ -30,66 +27,42 @@ impl GraphEdge for GraphAgdb {
             .filter(|e| e.id.0 < 0)
             .collect::<Vec<_>>();
 
-        assert_eq!(
-            edge_elems.len(),
-            1,
-            "Expected only 1 edge, got {}",
-            edge_elems.len()
-        );
+        if edge_elems.len() != 1 {
+            return Err(format!("Expected 1 edge, got {}", edge_elems.len()).into());
+        }
         let edge_id = edge_elems.first().unwrap().id;
 
         // The search doesn't return the values, so we have to do a separate select
         // on the edge id.
-        let keys: Vec<String> = Vec::new();
         let data_query = self
             .db
-            .exec(&QueryBuilder::select().values(keys).ids(edge_id).query());
+            .exec(&QueryBuilder::select().ids(edge_id).query());
 
         if data_query.is_err() {
             return Err("Failed to get edge data".into());
         }
         let data_query = data_query.unwrap();
-        let data_elem = data_query.elements.first().unwrap();
-        // println!("Edge element: {:#?}", data_elem);
+        let data_elem = data_query
+            .elements
+            .first()
+            .ok_or("No element found for edge id")?;
 
-        let edge = Edge::try_from(data_elem.clone());
-
-        // println!("Edge: {:#?}", edge);
-
-        match edge {
-            Ok(edge) => {
-                return Ok(edge);
-            }
-            Err(e) => {
-                return Err(e.into());
-            }
-        }
+        Edge::try_from(data_elem.clone()).map_err(|e| e.into())
     }
 
     fn insert_edges(&mut self, edges: Vec<Edge>) {
-
         for edge in edges {
-            
-            let parent = edge.source();
-            let child = edge.target();
+            let source_uuid = edge.source();
+            let target_uuid = edge.target();
 
-            let edge = self.db.exec_mut(
+            let _edge_query_result = self.db.exec_mut(
                 &QueryBuilder::insert()
                     .edges()
-                    .from(parent.alias())
-                    .to(child.alias())
+                    .from(source_uuid.to_string())
+                    .to(target_uuid.to_string())
                     .values_uniform(edge)
                     .query(),
-            ); // For whatever reason this does not insert the attribute into the edge.
-
-            let eid = edge.unwrap().ids();
-            let eid = eid.first().unwrap();
-            // println!("Id of the edge: {:#?}", eid);
-
-            let edge = self
-                .db
-                .exec(&QueryBuilder::select().keys().ids(*eid).query());
-
+            );
         }
     }
 

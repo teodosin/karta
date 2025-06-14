@@ -1,13 +1,15 @@
 use std::error::Error;
 
-use super::{attribute::Attribute, edge::Edge, node_path::NodePath};
+use uuid::Uuid;
+
+use super::{edge::Edge};
 
 
 pub trait GraphEdge {
     fn get_edge_strict(
-        &self, 
-        from: &NodePath, 
-        to: &NodePath
+        &self,
+        from: &Uuid,
+        to: &Uuid
     ) -> Result<Edge, Box<dyn Error>>;
 
     fn insert_edges(&mut self, edges: Vec<Edge>);

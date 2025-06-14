@@ -11,8 +11,8 @@ use super::{attribute::Attribute, node_path::NodePath, SysTime};
 pub struct Edge {
     uuid: Uuid,
     db_id: Option<DbId>,
-    source: NodePath,
-    target: NodePath,
+    source: Uuid,
+    target: Uuid,
     contains: bool,
     created_time: SysTime,
     modified_time: SysTime,
@@ -20,15 +20,23 @@ pub struct Edge {
 }
 
 impl Edge {
-    pub fn new(source: &NodePath, target: &NodePath) -> Self {
+    pub fn new(source_uuid: Uuid, target_uuid: Uuid) -> Self {
         let now = SysTime(SystemTime::now());
-        let name_to_hash = format!("{}:{}:{}:{}", source.buf().to_string_lossy(), target.buf().to_string_lossy(), now.0.duration_since(SystemTime::UNIX_EPOCH).unwrap_or_default().as_millis(), "edge");
+        let name_to_hash = format!(
+            "{}:{}:{}:{}",
+            source_uuid,
+            target_uuid,
+            now.0.duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis(),
+            "edge"
+        );
         let new_uuid = Uuid::new_v5(&Uuid::NAMESPACE_URL, name_to_hash.as_bytes());
         Self {
             uuid: new_uuid,
             db_id: None,
-            source: source.clone(),
-            target: target.clone(),
+            source: source_uuid,
+            target: target_uuid,
             contains: false,
             attributes: Vec::new(),
             created_time: now.clone(),
@@ -36,19 +44,24 @@ impl Edge {
         }
     }
 
-    pub fn new_cont(source: &NodePath, target: &NodePath) -> Self {
-        let attrs: Vec<Attribute> = vec![
-            Attribute::new_contains()
-        ];
+    pub fn new_cont(source_uuid: Uuid, target_uuid: Uuid) -> Self {
+        let attrs: Vec<Attribute> = vec![Attribute::new_contains()];
         let now = SysTime(SystemTime::now());
-        // Placeholder for V5 UUID generation
-        let name_to_hash = format!("{}:{}:{}:{}", source.buf().to_string_lossy(), target.buf().to_string_lossy(), now.0.duration_since(SystemTime::UNIX_EPOCH).unwrap_or_default().as_millis(), "edge_cont");
+        let name_to_hash = format!(
+            "{}:{}:{}:{}",
+            source_uuid,
+            target_uuid,
+            now.0.duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis(),
+            "edge_cont"
+        );
         let new_uuid = Uuid::new_v5(&Uuid::NAMESPACE_URL, name_to_hash.as_bytes());
         Self {
             uuid: new_uuid,
             db_id: None,
-            source: source.clone(),
-            target: target.clone(),
+            source: source_uuid,
+            target: target_uuid,
             contains: true,
             attributes: attrs,
             created_time: now.clone(),
@@ -60,11 +73,11 @@ impl Edge {
         self.db_id
     }
 
-    pub fn source(&self) -> &NodePath {
+    pub fn source(&self) -> &Uuid {
         &self.source
     }
 
-    pub fn target(&self) -> &NodePath {
+    pub fn target(&self) -> &Uuid {
         &self.target
     }
 
@@ -114,9 +127,9 @@ impl DbUserValue for Edge {
 
     fn to_db_values(&self) -> Vec<DbKeyValue> {
         let mut values = Vec::new();
-        values.push(DbKeyValue::from(("uuid", self.uuid.to_string()))); // Added uuid
-        values.push(DbKeyValue::from(("source", self.source.clone())));
-        values.push(DbKeyValue::from(("target", self.target.clone())));
+        values.push(DbKeyValue::from(("uuid", self.uuid.to_string())));
+        values.push(DbKeyValue::from(("source", self.source.to_string())));
+        values.push(DbKeyValue::from(("target", self.target.to_string())));
         values.push(DbKeyValue::from(("created_time", self.created_time.clone())));
         values.push(DbKeyValue::from(("modified_time", self.modified_time.clone())));
         // Note: 'contains' is implicitly handled by attributes if it's stored as one.
@@ -174,8 +187,10 @@ impl TryFrom<DbElement> for Edge {
         let edge = Edge {
             db_id: Some(db_id),
             uuid,
-            source: NodePath::try_from(source_val)?,
-            target: NodePath::try_from(target_val)?,
+            source: Uuid::from_str(&source_val.to_string())
+                .map_err(|e| DbError::from(format!("Failed to parse source UUID: {}", e)))?,
+            target: Uuid::from_str(&target_val.to_string())
+                .map_err(|e| DbError::from(format!("Failed to parse target UUID: {}", e)))?,
             contains: contains.is_some(), // 'contains' is optional, derived from attribute presence
             created_time: SysTime::try_from(created_time_val)?,
             modified_time: SysTime::try_from(modified_time_val)?,
