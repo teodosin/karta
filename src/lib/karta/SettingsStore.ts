@@ -6,7 +6,8 @@ const SETTINGS_STORAGE_KEY = 'kartaSettings';
 // Default settings
 const defaultSettings: KartaSettings = {
 	version: 1,
-	saveLastViewedContext: true
+	saveLastViewedContext: true,
+	vaultPath: null
 };
 
 // Create the writable store, initialized with defaults

@@ -100,18 +100,26 @@
 		}
 	}
 
-	// Fetch Object URL on mount if needed
-	onMount(() => {
-		// Only fetch if imageUrl isn't already set and assetId exists
-		if (!imageUrl && assetId) {
+	// This reactive block ensures the imageUrl is correctly determined whenever
+	// the component's props change. It handles both filesystem-based nodes (with a path)
+	// and asset-based nodes (pasted/dropped).
+	$: {
+		if (dataNode.path) {
+			// Filesystem node: construct the URL directly to the asset endpoint.
+			// The path from the dataNode might include the "vault/" prefix, which needs to be stripped
+			// as the backend will join it with its own vault root path.
+			let relativePath = dataNode.path;
+			if (relativePath.startsWith('vault/')) {
+				relativePath = relativePath.substring('vault/'.length);
+			}
+			const newUrl = `/api/asset/${encodeURI(relativePath)}`;
+			if (imageUrl !== newUrl) {
+				imageUrl = newUrl;
+			}
+		} else if (assetId && !isLoading && !imageUrl) {
+			// Pasted/dropped asset: use the existing fetch logic.
 			fetchImageUrl(assetId);
 		}
-	});
-
-	// Reactive statement to handle potential changes in assetId after mount
-	$: if (assetId && !isLoading && !imageUrl) {
-		// Re-trigger fetch if assetId changes and we don't have a URL yet
-		fetchImageUrl(assetId);
 	}
 
 	// Determine ring classes based on focal state and context existence

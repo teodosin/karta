@@ -150,6 +150,7 @@ export interface PropertyDefinition {
 export interface KartaSettings {
   version: number; // For potential future migrations
   saveLastViewedContext: boolean; // Whether to reopen the last context on startup
+  vaultPath: string | null; // The absolute path to the root of the Karta vault
   // Add other global settings here as needed
 }
 

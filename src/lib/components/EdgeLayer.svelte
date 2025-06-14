@@ -5,6 +5,7 @@
 // Keep this focused on display logic; avoid editor-specific features.
 -->
 <script lang="ts">
+	import { fade } from 'svelte/transition';
 	import { edges } from '$lib/karta/EdgeStore';
 	import { contexts, currentContextId } from '$lib/karta/ContextStore';
 	import { isConnecting, connectionSourceNodeIds, tempLineTargetPosition } from '$lib/karta/ToolStore';
@@ -36,26 +37,28 @@
 	           {#if sourceViewNode && targetViewNode}
 	               {@const sourceState = sourceViewNode.state.current}
 	               {@const targetState = targetViewNode.state.current}
-	               {@const sourceX = sourceState.x} // Use center X directly
-	               {@const sourceY = sourceState.y} // Use center Y directly
-	               {@const targetX = targetState.x} // Use center X directly
-	               {@const targetY = targetState.y} // Use center Y directly
+	               {@const sourceX = sourceState.x}
+	               {@const sourceY = sourceState.y}
+	               {@const targetX = targetState.x}
+	               {@const targetY = targetState.y}
+	               <!-- The 'each' block key is on the edge.id, so when an edge is removed from the store, this whole block is removed. -->
+	               <!-- Applying the transition to the wrapping 'g' element ensures both the visible path and its hit-area fade together. -->
 	               <!-- Hit area for interaction -->
-	               <!-- Uses stroke-width scaled by inverseScale to maintain constant screen size, mimicking SelectionBox handle scaling -->
 	               <path
 	                   id={`hit-area-${edge.id}`}
 	                   class="edge-hit-area"
 	                   d={`M ${sourceX} ${sourceY} L ${targetX} ${targetY}`}
 	                   data-edge-id={edge.id}
-	       stroke-width={30 * inverseScale}
+	                   stroke-width={30 * inverseScale}
 	               />
 	               <!-- Visible edge -->
-	               <!-- Uses stroke-width scaled by inverseScale to maintain constant screen size -->
 	               <path
+	                   in:fade={{ duration: 1000 }}
+	                   out:fade={{ duration: 1000 }}
 	                   id={edge.id}
 	                   class={`edge ${$selectedEdgeIds.has(edge.id) ? 'selected' : ''}`}
 	                   d={`M ${sourceX} ${sourceY} L ${targetX} ${targetY}`}
-	       stroke-width={$selectedEdgeIds.has(edge.id) ? 3 * inverseScale : 2 * inverseScale}
+	                   stroke-width={$selectedEdgeIds.has(edge.id) ? 3 * inverseScale : 2 * inverseScale}
 	               />
 	           {/if}
 	   {/each}
@@ -87,8 +90,9 @@
 		stroke: #9ca3af; /* gray-400 */
 		/* stroke-width is now set inline based on inverseScale */
 		fill: none;
-		/* Add transition for hover effect */
-		transition: stroke 0.1s ease-in-out;
+		/* The transition for the hover effect (stroke color) is now handled by the browser's default transition behavior,
+		which is sufficient for this simple color change. Removing the explicit 'transition' property resolves the
+		conflict with Svelte's 'fade' transition, which needs to animate the 'opacity' property. */
 	}
 	/* Apply hover style to the visible edge when the hit area is hovered */
 	:global(.edge-hit-area:hover + .edge) {
