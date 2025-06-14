@@ -6,7 +6,7 @@ use std::{
 use agdb::QueryBuilder;
 
 use crate::{
-    elements::nodetype::ARCHETYPES,
+    elements::{node::ROOT_UUID, nodetype::ARCHETYPES},
     graph_traits::{self, graph_core::GraphCore, graph_node::GraphNodes},
     prelude::{DataNode, GraphEdge, NodePath, NodeTypeId, StoragePath},
 };
@@ -70,58 +70,36 @@ impl GraphCore for GraphAgdb {
         if !open_existing {
             let archetypes = ARCHETYPES;
 
-            // println!("Length of archetypes {}", archetypes.len());
-
-            archetypes.iter().for_each(|at| {
-                // println!("{}", at);
-            });
-
             archetypes.iter().for_each(|atype| {
                 let atype_path = NodePath::atype(*atype);
-                // println!("Atypepath {:?}", atype_path);
-
-                // println!("Creating archetype node: {}", atype_path.alias());
-
                 let ntype = if atype_path == NodePath::root() {
-                    // println!("Root node in question");
                     NodeTypeId::root_type()
-                } else if atype_path == NodePath::vault() { // Check for vault specifically
-                    // println!("Vault node in question");
-                    NodeTypeId::dir_type() // Assign core/dir to vault
+                } else if atype_path == NodePath::vault() {
+                    NodeTypeId::dir_type()
                 } else {
-                    // println!("Other archetype node in question");
-                    NodeTypeId::archetype_type() // Other archetypes get core/archetype
+                    NodeTypeId::archetype_type()
                 };
 
-                let node: DataNode = DataNode::new(&atype_path, ntype);
+                let node = DataNode::new(&atype_path, ntype);
+                let node_uuid = node.uuid();
 
-                // println!("alias is {}", atype_path.alias());
-
-                let query = giraphe.db.exec_mut(
+                let query_result = giraphe.db.exec_mut(
                     &QueryBuilder::insert()
                         .nodes()
-                        .aliases(atype_path.alias())
+                        .aliases(node_uuid.to_string())
                         .values(node)
                         .query(),
                 );
 
-                match query {
-                    Ok(_) => {
-                        // println!("Created archetype node: {}", atype_path.alias());
-                    }
-                    Err(ref err) => {
-                        panic!("Failed to create archetype node: {}", err);
-                        // println!("Failed to create archetype node: {}", err);
-                    }
+                if let Err(err) = query_result {
+                    panic!("Failed to create archetype node: {}", err);
                 }
 
                 if atype_path != NodePath::root() {
                     let root_to_atype_edge =
-                        crate::prelude::Edge::new_cont(&NodePath::root(), &atype_path);
+                        crate::prelude::Edge::new_cont(ROOT_UUID, node_uuid);
 
                     giraphe.insert_edges(vec![root_to_atype_edge]);
-                } else {
-                    // println!("Root node, no autoparenting");
                 }
             });
         }
@@ -129,6 +107,7 @@ impl GraphCore for GraphAgdb {
         // Indexes for faster lookup based on attributes
         giraphe.db.exec_mut(QueryBuilder::insert().index("uuid").query());
         giraphe.db.exec_mut(QueryBuilder::insert().index("ntype").query());
+        giraphe.db.exec_mut(QueryBuilder::insert().index("path").query());
 
         return giraphe;
     }

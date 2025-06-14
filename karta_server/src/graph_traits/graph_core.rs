@@ -122,7 +122,9 @@ mod tests {
                 let parent_node = ctx.with_graph_db(|db| db.open_node(&NodeHandle::Path(parent_path.clone())));
                 assert_eq!(parent_node.is_ok(), true, "Parent of node {} not found", path.alias());
 
-                let edge = ctx.with_graph_db(|db| db.get_edge_strict(&parent_path, &path));
+                let parent_node_unwrapped = parent_node.unwrap();
+                let node_unwrapped = node.unwrap();
+                let edge = ctx.with_graph_db(|db| db.get_edge_strict(&parent_node_unwrapped.uuid(), &node_unwrapped.uuid()));
                 assert_eq!(edge.is_ok(), true, "Edge not found");
             }
         });

@@ -74,8 +74,8 @@ mod tests {
         // Check that the tuples contain matching edges
         for (i, connection) in connections.iter().enumerate() {
             assert!(
-                *connection.1.source() == connection.0.path()
-                    || *connection.1.target() == connection.0.path(),
+                *connection.1.source() == connection.0.uuid()
+                    || *connection.1.target() == connection.0.uuid(),
                 "Edge should be connected to Node"
             )
         }
