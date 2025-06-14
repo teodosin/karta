@@ -49,6 +49,13 @@ impl NodeTypeId {
         }
     }
 
+    pub fn image_type() -> Self {
+    	Self {
+    		type_path: "core/image".to_string(),
+    		version: "1.0".to_string(),
+    	}
+    }
+   
     pub fn virtual_generic() -> Self {
         Self {
             type_path: "core/virtual_generic".to_string(),

@@ -1,6 +1,22 @@
-use std::{error::Error, ops::Index, path::PathBuf};
+use std::{error::Error, ops::Index, path::{Path, PathBuf}};
 
 use crate::prelude::{DataNode, NodePath, NodeTypeId};
+
+fn get_node_type_from_path(path: &Path) -> NodeTypeId {
+    if path.is_dir() {
+        return NodeTypeId::dir_type();
+    }
+
+    if path.is_file() {
+        return match path.extension().and_then(|s| s.to_str()) {
+            Some("png") | Some("jpg") | Some("jpeg") | Some("gif") => NodeTypeId::image_type(),
+            _ => NodeTypeId::file_type(),
+        };
+    }
+
+    // Default fallback, though in practice the calling logic should prevent this.
+    NodeTypeId::file_type()
+}
 
 pub fn destructure_file_path(
     vault_root_path: &PathBuf, // New parameter: the root of the Karta vault
@@ -15,7 +31,7 @@ pub fn destructure_file_path(
     if path_to_destructure.is_file() && include_self {
         // Create NodePath relative to vault_root_path
         let node_path = NodePath::from_dir_path(vault_root_path, path_to_destructure);
-        let ntype = NodeTypeId::file_type();
+        let ntype = get_node_type_from_path(path_to_destructure);
         let node = DataNode::new(&node_path, ntype);
         nodes.push(node);
     }
@@ -45,7 +61,7 @@ pub fn destructure_file_path(
             if absolute_entry_path.is_dir() {
                 ntype = NodeTypeId::dir_type();
             } else if absolute_entry_path.is_file() {
-                ntype = NodeTypeId::file_type();
+                ntype = get_node_type_from_path(&absolute_entry_path);
             } else { continue; }
 
             let node = DataNode::new(&node_path, ntype);
