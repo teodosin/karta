@@ -29,8 +29,8 @@ export function centerViewOnCanvasPoint(canvasX: number, canvasY: number) {
     }
     const rect = viewportEl.getBoundingClientRect();
     const targetScale = 1; // Reset scale to 1 for centering actions
-    const targetPosX = rect.width / 2 - canvasX * targetScale;
-    const targetPosY = rect.height / 2 - canvasY * targetScale;
+    const targetPosX = -canvasX * targetScale;
+    const targetPosY = -canvasY * targetScale;
 
     // Set duration to 0 for immediate jump, stopping any current tween
     const newTransform = { scale: targetScale, posX: targetPosX, posY: targetPosY };
@@ -44,8 +44,8 @@ export function centerOnFocalNode() {
 
     if (focalViewNode) {
     	const nodeState = focalViewNode.state.current;
-    	const centerX = nodeState.x + nodeState.width / 2;
-    	const centerY = nodeState.y + nodeState.height / 2;
+    	const centerX = nodeState.x;
+    	const centerY = nodeState.y;
     	centerViewOnCanvasPoint(centerX, centerY);
     } else {
     	console.warn(`[KartaStore] Cannot center on focal node: ViewNode ${focalNodeId} not found in current context.`);
@@ -105,8 +105,8 @@ export function frameContext() {
     const scaleY = rect.height / (boundsHeight * (1 + padding));
     const targetScale = Math.min(scaleX, scaleY, 2); // Limit max zoom to 2x
 
-    const targetPosX = rect.width / 2 - boundsCenterX * targetScale;
-    const targetPosY = rect.height / 2 - boundsCenterY * targetScale;
+    const targetPosX = -boundsCenterX * targetScale;
+    const targetPosY = -boundsCenterY * targetScale;
 
     const newTransform = { scale: targetScale, posX: targetPosX, posY: targetPosY };
     viewTransform.set(newTransform, { duration: 0 });
