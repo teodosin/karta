@@ -85,7 +85,6 @@
 	let isPanning = false;
 	let panStartX = 0;
 	let panStartY = 0;
-	let lastInputWasTouchpad = false; // State for heuristic
 
 	// State for last known cursor position
 	let lastScreenX = 0;
@@ -182,50 +181,42 @@
 
 		const currentTransform = viewTransform.target;
 
-		// Get the canvas point under the mouse cursor, this is our zoom center
-		const canvasPointX =
-			(mouseX - currentTransform.posX - w / 2) / currentTransform.scale;
-		const canvasPointY =
-			(mouseY - currentTransform.posY - h / 2) / currentTransform.scale;
-
 		let newScale = currentTransform.scale;
 		let newPosX = currentTransform.posX;
 		let newPosY = currentTransform.posY;
-		const zoomSensitivityFactor = 0.5;
-		const panSensitivityFactor = 1.6;
-		const wheelZoomFactor = 1.75;
-		const pinchZoomSensitivity = 0.09;
-		if (Math.abs(e.deltaX) > 0.1 && Math.abs(e.deltaY) > 0.1) {
-			// Use a small threshold
-			lastInputWasTouchpad = true;
-		}
+		const panSensitivityFactor = 1.0;
 
 		if (e.ctrlKey) {
-			// Pinch-to-zoom (Ctrl key pressed) - Always zoom
+			// Pinch-to-zoom (Ctrl key pressed) - Preserves the original smooth zoom for touchpads
+			const zoomSensitivityFactor = 1.8;
+			const pinchZoomSensitivity = 0.09;
 			const pinchFactor =
 				1 + pinchZoomSensitivity * zoomSensitivityFactor;
+
 			newScale =
 				currentTransform.scale *
 				(e.deltaY < 0 ? pinchFactor : 1 / pinchFactor);
-		} else if (lastInputWasTouchpad) {
-			// Touchpad panning (heuristic detected touchpad)
+
+			// If we zoomed, recalculate position to keep the canvas point under the mouse
+			if (newScale !== currentTransform.scale) {
+				const canvasPointX =
+					(mouseX - currentTransform.posX - w / 2) /
+					currentTransform.scale;
+				const canvasPointY =
+					(mouseY - currentTransform.posY - h / 2) /
+					currentTransform.scale;
+
+				newScale = Math.max(0.1, Math.min(newScale, 5));
+
+				newPosX = mouseX - canvasPointX * newScale - w / 2;
+				newPosY = mouseY - canvasPointY * newScale - h / 2;
+			}
+		} else {
+			// Default to panning for both mouse wheel and touchpad
 			newPosX = currentTransform.posX - e.deltaX * panSensitivityFactor;
 			newPosY = currentTransform.posY - e.deltaY * panSensitivityFactor;
 			// Keep scale the same when panning
 			newScale = currentTransform.scale;
-		} else {
-			// Standard mouse wheel zoom (heuristic assumes mouse)
-			newScale =
-				currentTransform.scale *
-				(e.deltaY < 0 ? wheelZoomFactor : 1 / wheelZoomFactor);
-		}
-
-		// If we zoomed, recalculate position to keep the canvas point under the mouse
-		if (newScale !== currentTransform.scale) {
-			newScale = Math.max(0.1, Math.min(newScale, 5));
-			// The new pan position is calculated to keep the canvas point at the same screen position (the mouse cursor)
-			newPosX = mouseX - canvasPointX * newScale - w / 2;
-			newPosY = mouseY - canvasPointY * newScale - h / 2;
 		}
 
 		// Close menus if transform changes
@@ -251,7 +242,6 @@
 	function handlePointerDown(e: PointerEvent) {
 		// Middle mouse panning takes precedence
 		if (e.button === 1) {
-			lastInputWasTouchpad = false; // Middle mouse click means it's definitely a mouse
 			e.preventDefault();
 			isPanning = true;
 			const currentTransform = viewTransform.target;
@@ -323,7 +313,6 @@
 			clearEdgeSelection();
 
 			isMarqueeSelecting = true;
-			lastInputWasTouchpad = false; // Assume mouse interaction for marquee
 
 			// Calculate start coords
 			const rect = canvasContainer.getBoundingClientRect();
