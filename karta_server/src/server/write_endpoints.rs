@@ -3,9 +3,88 @@ use axum::{
     http::StatusCode,
     Json,
 };
+use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::{context::context::Context, server::AppState};
+use crate::{
+    context::context::Context,
+    elements::{
+        attribute::{Attribute, AttrValue},
+        node::DataNode,
+        node_path::{NodeHandle, NodePath},
+        nodetype::NodeTypeId,
+    },
+    graph_traits::graph_node::GraphNodes,
+    server::AppState,
+};
+
+#[derive(Deserialize)]
+pub struct CreateNodePayload {
+    name: String,
+    ntype: NodeTypeId,
+    parent_path: String,
+    attributes: Vec<Attribute>,
+}
+
+#[derive(Deserialize)]
+pub struct UpdateNodePayload {
+    attributes: Vec<Attribute>,
+}
+
+pub async fn create_node(
+    State(app_state): State<AppState>,
+    Json(payload): Json<CreateNodePayload>,
+) -> Result<Json<DataNode>, StatusCode> {
+    let mut service = app_state.service.write().unwrap();
+    let parent_path = NodePath::from(payload.parent_path);
+    let mut name = payload.name.clone();
+    let mut final_path = parent_path.join(&name);
+    let mut counter = 2;
+
+    // Loop until we find a unique path
+    while service.data().open_node(&NodeHandle::Path(final_path.clone())).is_ok() {
+        name = format!("{}_{}", payload.name.clone(), counter);
+        final_path = parent_path.join(&name);
+        counter += 1;
+    }
+
+    let mut new_node = DataNode::new(&final_path, payload.ntype);
+    
+    // Update the name attribute if it was changed
+    let mut attributes = payload.attributes;
+    if let Some(attr) = attributes.iter_mut().find(|a| a.name == "name") {
+        attr.value = AttrValue::String(name.clone());
+    } else {
+        attributes.push(Attribute::new_string("name".to_string(), name));
+    }
+
+    new_node.set_attributes(attributes);
+    new_node.set_name(&new_node.path().name());
+
+    service.data_mut().insert_nodes(vec![new_node.clone()]);
+
+    Ok(Json(new_node))
+}
+
+pub async fn update_node(
+    State(app_state): State<AppState>,
+    AxumPath(id): AxumPath<Uuid>,
+    Json(payload): Json<UpdateNodePayload>,
+) -> Result<Json<DataNode>, StatusCode> {
+    let mut service = app_state.service.write().unwrap();
+
+    let mut node = match service.data().open_node(&NodeHandle::Uuid(id)) {
+        Ok(node) => node,
+        Err(_) => return Err(StatusCode::NOT_FOUND),
+    };
+
+    node.set_attributes(payload.attributes);
+    node.update_modified_time();
+
+    service.data_mut().insert_nodes(vec![node.clone()]);
+
+    Ok(Json(node))
+}
 
 pub async fn save_context(
     State(app_state): State<AppState>,
