@@ -170,6 +170,10 @@ impl DataNode {
     pub fn attributes(&self) -> Vec<Attribute> {
         self.attributes.clone()
     }
+
+    pub fn set_attributes(&mut self, attributes: Vec<Attribute>) {
+        self.attributes = attributes;
+    }
 }
 
 impl TryFrom<DbElement> for DataNode {
