@@ -498,45 +498,55 @@
 				!isMarqueeSelecting ||
 				!marqueeStartCoords ||
 				!marqueeEndCoords ||
-				!canvasContainer
+				!canvas // Check for canvas element now
 			)
 				return;
 
-			const transform = viewTransform.current;
-
-			// Convert canvas coords to screen coords
-			const screenStartX =
-				marqueeStartCoords.canvasX * transform.scale + transform.posX;
-			const screenStartY =
-				marqueeStartCoords.canvasY * transform.scale + transform.posY;
-			const screenEndX =
-				marqueeEndCoords.canvasX * transform.scale + transform.posX;
-			const screenEndY =
-				marqueeEndCoords.canvasY * transform.scale + transform.posY;
-
-			const left = Math.min(screenStartX, screenEndX);
-			const top = Math.min(screenStartY, screenEndY);
-			const width = Math.abs(screenStartX - screenEndX);
-			const height = Math.abs(screenStartY - screenEndY);
+			// The marquee coordinates are already in canvas space.
+			// We just need to calculate the top-left corner and dimensions.
+			const left = Math.min(
+				marqueeStartCoords.canvasX,
+				marqueeEndCoords.canvasX,
+			);
+			const top = Math.min(
+				marqueeStartCoords.canvasY,
+				marqueeEndCoords.canvasY,
+			);
+			const width = Math.abs(
+				marqueeStartCoords.canvasX - marqueeEndCoords.canvasX,
+			);
+			const height = Math.abs(
+				marqueeStartCoords.canvasY - marqueeEndCoords.canvasY,
+			);
 
 			if (!marqueeRectElement) {
 				// Create the element if it doesn't exist
 				marqueeRectElement = document.createElement("div");
 				marqueeRectElement.style.position = "absolute";
-				marqueeRectElement.style.border = "1px dashed #cbd5e1"; // Tailwind slate-300
+				// The border width needs to be scaled inversely to the viewport scale
+				// to maintain a constant visual width.
+				const currentScale = viewTransform.current.scale;
+				const borderWidth = 1 / currentScale;
+				marqueeRectElement.style.border = `${borderWidth}px dashed #cbd5e1`; // Tailwind slate-300
 				marqueeRectElement.style.backgroundColor =
 					"rgba(59, 130, 246, 0.1)"; // Tailwind blue-500 with opacity
 				marqueeRectElement.style.pointerEvents = "none"; // Ignore pointer events
 				marqueeRectElement.style.zIndex = "50"; // Ensure it's above nodes/edges
 				marqueeRectElement.setAttribute("aria-hidden", "true");
-				canvasContainer.appendChild(marqueeRectElement);
+				// Append to the transformed canvas, not the container
+				canvas.appendChild(marqueeRectElement);
 			}
 
-			// Update position and size
+			// Update position and size in canvas coordinates
 			marqueeRectElement.style.left = `${left}px`;
 			marqueeRectElement.style.top = `${top}px`;
 			marqueeRectElement.style.width = `${width}px`;
 			marqueeRectElement.style.height = `${height}px`;
+
+			// Also update the border width on each frame, as the scale can change
+			const currentScale = viewTransform.current.scale;
+			const borderWidth = 1 / currentScale;
+			marqueeRectElement.style.borderWidth = `${borderWidth}px`;
 		}
 
 		// If not middle mouse or marquee start, delegate to the active tool
