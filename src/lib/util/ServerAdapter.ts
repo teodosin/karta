@@ -88,9 +88,121 @@ function transformServerAttributesToRecord(serverAttributes: ServerAttribute[]):
     return record;
 }
 
+/**
+ * Transforms a client-side DataNode's attributes into the format expected by the server.
+ * @param attributes The client-side attributes record.
+ * @returns An array of ServerAttribute objects.
+ */
+function transformAttributesToServerFormat(attributes: Record<string, any>): ServerAttribute[] {
+    return Object.entries(attributes)
+        .filter(([key, value]) => value !== undefined && value !== null)
+        .map(([name, value]) => {
+            // The backend expects a tagged union format.
+            let taggedValue: any;
+            switch (typeof value) {
+                case 'string':
+                    taggedValue = { String: value };
+                    break;
+                case 'number':
+                    // Using Float as a general case for numbers.
+                    taggedValue = { Float: value };
+                    break;
+                case 'boolean':
+                    taggedValue = { UInt: value ? 1 : 0 };
+                    break;
+                default:
+                    // For complex objects, serialize them as a JSON string.
+                    taggedValue = { String: JSON.stringify(value) };
+                    break;
+            }
+            return { name, value: taggedValue };
+        });
+}
+
 
 export class ServerAdapter implements PersistenceService {
     constructor() {}
+
+    async createNode(node: DataNode, parentPath: string): Promise<DataNode | undefined> {
+        const url = `${SERVER_BASE_URL}/api/nodes`;
+        const payload = {
+            name: node.attributes['name'] || 'Unnamed Node',
+            ntype: { type_path: node.ntype, version: "0.1.0" },
+            parent_path: parentPath,
+            attributes: transformAttributesToServerFormat(node.attributes),
+        };
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+
+            if (!response.ok) {
+                const errorBody = await response.text();
+                console.error(`[ServerAdapter.createNode] Error creating node. Status: ${response.status}`, errorBody);
+                throw new Error(`Server responded with status ${response.status}`);
+            }
+
+            const serverNode: ServerDataNode = await response.json();
+            const attributes = transformServerAttributesToRecord(serverNode.attributes);
+            attributes['name'] = serverNode.name;
+
+            return {
+                id: serverNode.uuid,
+                ntype: serverNode.ntype.type_path,
+                createdAt: (serverNode.created_time?.secs_since_epoch ?? 0) * 1000,
+                modifiedAt: (serverNode.modified_time?.secs_since_epoch ?? 0) * 1000,
+                path: serverNode.path,
+                attributes: attributes,
+                isSearchable: attributes['isSearchable'] ?? true,
+            };
+
+        } catch (error) {
+            console.error(`[ServerAdapter.createNode] Network error creating node:`, error);
+            throw error;
+        }
+    }
+
+    async updateNode(node: DataNode): Promise<DataNode | undefined> {
+        const url = `${SERVER_BASE_URL}/api/nodes/${node.id}`;
+        const payload = {
+             attributes: transformAttributesToServerFormat(node.attributes),
+        };
+
+        try {
+            const response = await fetch(url, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+
+            if (!response.ok) {
+                const errorBody = await response.text();
+                console.error(`[ServerAdapter.updateNode] Error updating node ${node.id}. Status: ${response.status}`, errorBody);
+                throw new Error(`Server responded with status ${response.status}`);
+            }
+            
+            const serverNode: ServerDataNode = await response.json();
+            const attributes = transformServerAttributesToRecord(serverNode.attributes);
+            attributes['name'] = serverNode.name;
+
+            return {
+                id: serverNode.uuid,
+                ntype: serverNode.ntype.type_path,
+                createdAt: (serverNode.created_time?.secs_since_epoch ?? 0) * 1000,
+                modifiedAt: (serverNode.modified_time?.secs_since_epoch ?? 0) * 1000,
+                path: serverNode.path,
+                attributes: attributes,
+                isSearchable: attributes['isSearchable'] ?? true,
+            };
+
+        } catch (error) {
+            console.error(`[ServerAdapter.updateNode] Network error updating node ${node.id}:`, error);
+            throw error;
+        }
+    }
 
     async loadContextBundle(contextPath: string): Promise<ContextBundle | undefined> {
         const encodedPath = encodeURIComponent(contextPath);
@@ -219,26 +331,7 @@ export class ServerAdapter implements PersistenceService {
             const isNameVisible = attributes?.['isNameVisible'] ?? true;
 
             const serverAttributes: ServerAttribute[] = attributes
-                ? Object.entries(attributes)
-                      .filter(([key, value]) => value !== undefined && value !== null && key !== 'isNameVisible')
-                      .map(([name, value]) => {
-                          let taggedValue: any;
-                          switch (typeof value) {
-                              case 'string':
-                                  taggedValue = { String: value };
-                                  break;
-                              case 'number':
-                                  taggedValue = { Float: value };
-                                  break;
-                              case 'boolean':
-                                  taggedValue = { UInt: value ? 1 : 0 };
-                                  break;
-                              default:
-                                  taggedValue = { String: JSON.stringify(value) };
-                                  break;
-                          }
-                          return { name, value: taggedValue };
-                      })
+                ? transformAttributesToServerFormat(attributes)
                 : [];
 
             return {
@@ -295,7 +388,10 @@ export class ServerAdapter implements PersistenceService {
     }
 
     // --- Stubbed Methods ---
-    async saveNode(node: DataNode): Promise<void> { console.warn('[ServerAdapter.saveNode] Not implemented'); }
+    async saveNode(node: DataNode): Promise<void> {
+        // This can be a wrapper, but for now we expect the caller to use create/update directly.
+        console.warn('[ServerAdapter.saveNode] Deprecated. Use createNode or updateNode directly.');
+    }
     async getNode(nodeId: string): Promise<DataNode | undefined> { console.warn(`[ServerAdapter.getNode] Not implemented for ID: ${nodeId}`); return undefined; }
     async deleteNode(nodeId: string): Promise<void> { console.warn(`[ServerAdapter.deleteNode] Not implemented for ID: ${nodeId}`); }
     async getNodes(): Promise<DataNode[]> { console.warn('[ServerAdapter.getNodes] Not implemented'); return []; }
