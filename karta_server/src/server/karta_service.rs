@@ -238,7 +238,7 @@ impl KartaService {
 
 #[cfg(test)]
 mod tests {
-    use crate::{prelude::NodePath, utils::utils::KartaServiceTestContext, elements::node_path::NodeHandle, graph_traits::graph_node::GraphNodes};
+    use crate::{prelude::*, utils::utils::KartaServiceTestContext, elements::{node_path::NodeHandle, attribute::{Attribute, AttrValue}, view_node::ViewNode}, graph_traits::{graph_node::GraphNodes, graph_edge::GraphEdge}, context::context::Context};
 
     #[test]
     fn opening_directory_spawns_viewnodes_without_indexing() {
@@ -247,65 +247,163 @@ mod tests {
         let root_path = ctx.get_vault_root();
 
         let dir_path_fs = root_path.join("test_dir");
+        let nested_dir_path_fs = dir_path_fs.join("nested_dir");
         let file_path_fs = root_path.join("test_file.txt");
-        let karta_dir_path_fs = root_path.join(".karta");
-
-        let node_path_dir = NodePath::vault().join("test_dir".into());
-        let node_path_file = NodePath::vault().join("test_file.txt".into());
-
-        std::fs::create_dir_all(&dir_path_fs).unwrap();
+        
+        std::fs::create_dir_all(&nested_dir_path_fs).unwrap();
         std::fs::File::create(&file_path_fs).unwrap();
-        std::fs::create_dir_all(&karta_dir_path_fs).unwrap();
 
-        ctx.with_graph_db(|graph_db| {
-            assert!(graph_db.open_node(&NodeHandle::Path(node_path_dir.clone())).is_err(), "test_dir should not be in DB before open_context");
-            assert!(graph_db.open_node(&NodeHandle::Path(node_path_file.clone())).is_err(), "test_file.txt should not be in DB before open_context");
+        // --- Part 1: Test opening the vault context ---
+        let (datanodes, edges, _) = ctx.with_service(|s| s.open_context_from_path(NodePath::vault())).unwrap();
+
+        let vault_node = datanodes.iter().find(|n| n.path() == NodePath::vault()).expect("Vault node not found");
+        let root_node = datanodes.iter().find(|n| n.path() == NodePath::root()).expect("Root node not found");
+        let test_dir_node = datanodes.iter().find(|n| n.path() == NodePath::vault().join("test_dir")).expect("test_dir not found");
+
+        assert_eq!(datanodes.len(), 4, "Should contain root, vault, test_dir, and test_file.txt");
+        assert!(edges.iter().any(|e| *e.source() == root_node.uuid() && *e.target() == vault_node.uuid()), "Missing edge from root to vault");
+        assert!(edges.iter().any(|e| *e.source() == vault_node.uuid() && *e.target() == test_dir_node.uuid()), "Missing edge from vault to test_dir");
+
+        // --- Part 2: Test opening a deeper context to check for grandparent bug ---
+        let (datanodes_deeper, _, _) = ctx.with_service(|s| s.open_context_from_path(NodePath::vault().join("test_dir"))).unwrap();
+
+        assert!(datanodes_deeper.iter().any(|n| n.path() == NodePath::vault().join("test_dir")), "Focal node test_dir missing");
+        assert!(datanodes_deeper.iter().any(|n| n.path() == NodePath::vault()), "Parent node vault missing");
+        assert!(datanodes_deeper.iter().any(|n| n.path() == NodePath::vault().join("test_dir").join("nested_dir")), "Child node nested_dir missing");
+        assert!(!datanodes_deeper.iter().any(|n| n.path() == NodePath::root()), "Grandparent root node should NOT be present");
+        assert_eq!(datanodes_deeper.len(), 3, "Should only contain focal, parent, and child");
+    }
+
+    #[test]
+    fn test_load_filesystem_context_with_db_entries() {
+        let func_name = "test_load_filesystem_context_with_db_entries";
+        let ctx = KartaServiceTestContext::new(func_name);
+        let root_path = ctx.get_vault_root();
+        let dir_path = root_path.join("another_dir");
+        let file_path = dir_path.join("another_file.txt");
+        std::fs::create_dir_all(&dir_path).unwrap();
+        std::fs::File::create(&file_path).unwrap();
+
+        let file_node_path = NodePath::vault().join("another_dir").join("another_file.txt");
+        ctx.with_service_mut(|s| {
+            let mut file_node = DataNode::new(&file_node_path, NodeTypeId::file_type());
+            file_node.set_attributes(vec![Attribute::new_string("custom_attr".to_string(), "db_value".to_string())]);
+            s.data_mut().insert_nodes(vec![file_node]);
         });
 
-        let (datanodes, edges, context) = ctx.with_service(|s| s.open_context_from_path(NodePath::vault())).unwrap();
-
-        println!("[Test] Found Datanodes: {:?}", datanodes.iter().map(|dn| dn.path()).collect::<Vec<_>>());
-        println!("[Test] Found Edges: {:?}", edges);
-
-
-        let datanode_uuids: Vec<_> = datanodes.iter().map(|n| n.uuid()).collect();
-        let viewnode_uuids: Vec<_> = context.viewnodes().iter().map(|vn| vn.uuid()).collect();
-        assert_eq!(
-            viewnode_uuids.iter().collect::<std::collections::HashSet<_>>(),
-            datanode_uuids.iter().collect::<std::collections::HashSet<_>>(),
-            "ViewNode UUIDs should match DataNode UUIDs"
-        );
-
-        println!("Datanodes amount: {}", datanodes.len());
+        let (datanodes, _, _) = ctx.with_service(|s| s.open_context_from_path(NodePath::vault().join("another_dir"))).unwrap();
         
-        let expected_dir_path = NodePath::vault().join("test_dir".into());
-        let expected_file_path = NodePath::vault().join("test_file.txt".into());
-        let expected_karta_dir_path = NodePath::vault().join(".karta".into());
+        let fetched_file_node = datanodes.iter().find(|n| n.path() == file_node_path).expect("File node not found in context");
+        let binding = fetched_file_node.attributes();
+        let attr = binding.iter().find(|a| a.name == "custom_attr").expect("Custom attribute not found");
+        assert_eq!(attr.value, AttrValue::String("db_value".to_string()));
+        assert_eq!(datanodes.len(), 3, "Should contain focal, parent, and child");
+    }
 
-        let test_dir_node = datanodes.iter().find(|n| n.path() == expected_dir_path);
-        let test_file_node = datanodes.iter().find(|n| n.path() == expected_file_path);
-        let karta_dir_node = datanodes.iter().find(|n| n.path() == expected_karta_dir_path);
+    #[test]
+    fn test_load_virtual_node_context() {
+        let func_name = "test_load_virtual_node_context";
+        let ctx = KartaServiceTestContext::new(func_name);
+        let root_path = ctx.get_vault_root();
+        let parent_dir_path_fs = root_path.join("parent_dir");
+        std::fs::create_dir_all(&parent_dir_path_fs).unwrap();
 
-        assert!(test_dir_node.is_some(), "test_dir DataNode not found");
-        assert!(test_file_node.is_some(), "test_file.txt DataNode not found");
-        assert!(karta_dir_node.is_none(), ".karta directory should be ignored and not appear as a DataNode");
+        let parent_node_path = NodePath::vault().join("parent_dir");
+        let virtual_node_path = parent_node_path.join("virtual_text_node");
 
-assert!(datanodes.iter().any(|n| n.path() == NodePath::root()), "NodePath::root() not found in datanodes when opening vault context");
-        let test_dir_node = test_dir_node.unwrap();
-        let test_file_node = test_file_node.unwrap();
+        ctx.with_service_mut(|s| {
+            let parent_node = DataNode::new(&parent_node_path, NodeTypeId::dir_type());
+            let virtual_node = DataNode::new(&virtual_node_path, NodeTypeId::new("core/text"));
+            s.data_mut().insert_nodes(vec![parent_node.clone(), virtual_node.clone()]);
+        });
 
-        assert!(context.viewnodes().iter().any(|vn| vn.uuid() == test_dir_node.uuid()), "No ViewNode for test_dir");
-        assert!(context.viewnodes().iter().any(|vn| vn.uuid() == test_file_node.uuid()), "No ViewNode for test_file.txt");
+        let (datanodes, _, _) = ctx.with_service(|s| s.open_context_from_path(virtual_node_path.clone())).unwrap();
 
-        let vault_node = datanodes.iter().find(|n| n.path() == NodePath::vault()).expect("User root DataNode not found");
+        assert!(datanodes.iter().any(|n| n.path() == virtual_node_path), "Focal virtual node not found");
+        assert!(datanodes.iter().any(|n| n.path() == parent_node_path), "Parent node not found");
+        assert_eq!(datanodes.len(), 2, "Should only contain focal and parent");
+    }
+
+    #[test]
+    fn test_load_context_with_unconnected_node_in_ctx_file() {
+        let func_name = "test_load_context_with_unconnected_node_in_ctx_file";
+        let ctx = KartaServiceTestContext::new(func_name);
+        let root_path = ctx.get_vault_root();
+        let focal_dir_path_fs = root_path.join("focal_dir");
+        std::fs::create_dir_all(&focal_dir_path_fs).unwrap();
+
+        let focal_path = NodePath::vault().join("focal_dir");
+        let unrelated_path = NodePath::vault().join("unrelated_node");
+
+        let (focal_node, unrelated_node) = ctx.with_service_mut(|s| {
+            let focal = DataNode::new(&focal_path, NodeTypeId::dir_type());
+            let unrelated = DataNode::new(&unrelated_path, NodeTypeId::new("core/text"));
+            s.data_mut().insert_nodes(vec![focal.clone(), unrelated.clone()]);
+            (focal, unrelated)
+        });
+
+        let mut context_file = Context::new(focal_node.uuid());
+        context_file.add_node(ViewNode::from_data_node(unrelated_node.clone()));
+        ctx.with_service_mut(|s| {
+            s.view_mut().save_context(&context_file).unwrap();
+        });
+
+        let (datanodes, _, _) = ctx.with_service(|s| s.open_context_from_path(focal_path.clone())).unwrap();
+
+        assert!(datanodes.iter().any(|n| n.path() == focal_path));
+        assert!(datanodes.iter().any(|n| n.path() == NodePath::vault()));
+        assert!(datanodes.iter().any(|n| n.path() == unrelated_path));
+        assert_eq!(datanodes.len(), 3);
+    }
+
+    #[test]
+    fn test_load_context_with_non_child_connected_node() {
+        let func_name = "test_load_context_with_non_child_connected_node";
+        let ctx = KartaServiceTestContext::new(func_name);
+        let root_path = ctx.get_vault_root();
+        std::fs::create_dir_all(root_path.join("dir_A")).unwrap();
+        std::fs::create_dir_all(root_path.join("dir_B")).unwrap();
+
+        let path_a = NodePath::vault().join("dir_A");
+        let path_b = NodePath::vault().join("dir_B");
+
+        let (node_a, node_b) = ctx.with_service_mut(|s| {
+            let a = DataNode::new(&path_a, NodeTypeId::dir_type());
+            let b = DataNode::new(&path_b, NodeTypeId::dir_type());
+            s.data_mut().insert_nodes(vec![a.clone(), b.clone()]);
+            let a_to_b = Edge::new(a.uuid(), b.uuid());
+            s.data_mut().insert_edges(vec![a_to_b]);
+            (a, b)
+        });
+
+        let (datanodes, edges, _) = ctx.with_service(|s| s.open_context_from_path(path_a.clone())).unwrap();
+
+        assert!(datanodes.iter().any(|n| n.path() == path_a));
+        assert!(datanodes.iter().any(|n| n.path() == path_b));
+        assert!(datanodes.iter().any(|n| n.path() == NodePath::vault()));
+        assert!(edges.iter().any(|e| *e.source() == node_a.uuid() && *e.target() == node_b.uuid()));
+        assert_eq!(datanodes.len(), 3);
+    }
+
+    #[test]
+    fn test_load_root_context_shows_only_direct_children() {
+        let func_name = "test_load_root_context_shows_only_direct_children";
+        let ctx = KartaServiceTestContext::new(func_name);
         
-        assert!(
-            edges.iter().any(|e| *e.source() == vault_node.uuid() && *e.target() == test_dir_node.uuid()),
-            "Missing edge from vault to test_dir"
-        );
-        assert!(
-            edges.iter().any(|e| *e.source() == vault_node.uuid() && *e.target() == test_file_node.uuid()),
-            "Missing edge from vault to test_file.txt"
-        );
+        let virtual_node_path = NodePath::new("/root_virtual_node".into());
+
+        ctx.with_service_mut(|s| {
+            let root_node = s.data().open_node(&NodeHandle::Path(NodePath::root())).unwrap();
+            let virtual_node = DataNode::new(&virtual_node_path, NodeTypeId::new("core/text"));
+            s.data_mut().insert_nodes(vec![virtual_node.clone()]);
+        });
+
+        let (datanodes, _, _) = ctx.with_service(|s| s.open_context_from_path(NodePath::root())).unwrap();
+
+        assert!(datanodes.iter().any(|n| n.path() == NodePath::root()));
+        assert!(datanodes.iter().any(|n| n.path() == NodePath::vault()));
+        assert!(datanodes.iter().any(|n| n.path() == virtual_node_path));
+        assert!(!datanodes.iter().any(|n| n.path().buf().to_string_lossy().starts_with("/vault/")));
+        assert_eq!(datanodes.len(), 3);
     }
 }

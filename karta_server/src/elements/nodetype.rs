@@ -6,6 +6,8 @@ use crate::elements::node;
 // Determining a sound architecture for node types is difficult and
 // not urgent quite yet.
 
+pub const KARTA_VERSION: &str = "0.1.0";
+
 
 pub const ARCHETYPES: [&str; 5] = ["", "vault", "attributes", "nodetypes", "settings"];
 
@@ -20,24 +22,31 @@ impl NodeTypeId {
         format!("{}@{}", self.type_path, self.version)
     }
 
+    pub fn new(type_path: &str) -> Self {
+        Self {
+            type_path: type_path.to_string(),
+            version: KARTA_VERSION.to_string(),
+        }
+    }
+
     pub fn root_type() -> Self {
         Self {
             type_path: "core/root".to_string(),
-            version: "1.0".to_string(),
+            version: KARTA_VERSION.to_string(),
         }
     }
 
     pub fn archetype_type() -> Self {
         Self {
             type_path: "core/archetype".to_string(),
-            version: "1.0".to_string(),
+            version: KARTA_VERSION.to_string(),
         }
     }
 
     pub fn dir_type() -> Self {
         Self {
             type_path: "core/fs/dir".to_string(),
-            version: "1.0".to_string(),
+            version: KARTA_VERSION.to_string(),
         }
     }
 
@@ -45,21 +54,21 @@ impl NodeTypeId {
     pub fn file_type() -> Self {
         Self {
             type_path: "core/fs/file".to_string(),
-            version: "1.0".to_string(),
+            version: KARTA_VERSION.to_string(),
         }
     }
 
     pub fn image_type() -> Self {
     	Self {
     		type_path: "core/image".to_string(),
-    		version: "1.0".to_string(),
+    		version: KARTA_VERSION.to_string(),
     	}
     }
    
     pub fn virtual_generic() -> Self {
         Self {
             type_path: "core/virtual_generic".to_string(),
-            version: "1.0".to_string(),
+            version: KARTA_VERSION.to_string(),
         }
     }
 }
