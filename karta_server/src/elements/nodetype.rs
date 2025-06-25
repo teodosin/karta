@@ -9,7 +9,8 @@ use crate::elements::node;
 pub const KARTA_VERSION: &str = "0.1.0";
 
 
-pub const ARCHETYPES: [&str; 5] = ["", "vault", "attributes", "nodetypes", "settings"];
+// pub const ARCHETYPES: [&str; 5] = ["", "vault", "attributes", "nodetypes", "settings"];
+pub const ARCHETYPES: [&str; 2] = ["", "vault"];
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct NodeTypeId {
