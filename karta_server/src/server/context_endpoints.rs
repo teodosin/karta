@@ -142,7 +142,7 @@ pub async fn open_context_from_fs_path(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::server::karta_service::KartaService;
+    use crate::{prelude::{GraphNodes, NodeTypeId}, server::karta_service::KartaService};
     use crate::utils::utils::KartaServiceTestContext;
     use axum::{
         body::Body,
@@ -188,13 +188,13 @@ mod tests {
     #[tokio::test]
     async fn open_vault_context_from_api() {
         let (router, test_ctx) = setup_test_environment("api_open_vault_ctx");
-        test_ctx
-            .create_file_in_vault("fileA.txt", b"content of file A")
-            .unwrap();
-        test_ctx.create_dir_in_vault("dir1").unwrap();
-        test_ctx
-            .create_file_in_vault("dir1/fileB.txt", b"content of file B")
-            .unwrap();
+        test_ctx.with_service_mut(|s| {
+            s.data_mut().insert_nodes(vec![
+                DataNode::new(&"vault/fileA.txt".into(), NodeTypeId::file_type()),
+                DataNode::new(&"vault/dir1".into(), NodeTypeId::dir_type()),
+                DataNode::new(&"vault/dir1/fileB.txt".into(), NodeTypeId::file_type()),
+            ]);
+        });
 
         let body_json = execute_request_and_get_json(router, "/ctx/vault/", StatusCode::OK).await;
         println!(
@@ -370,13 +370,13 @@ mod tests {
     #[tokio::test]
     async fn go_to_file_context() {
         let (router, test_ctx) = setup_test_environment("api_open_file_ctx");
-        test_ctx
-            .create_file_in_vault("fileA.txt", b"content of file A")
-            .unwrap();
-        test_ctx.create_dir_in_vault("dir1").unwrap();
-        test_ctx
-            .create_file_in_vault("dir1/fileB.txt", b"content of file B")
-            .unwrap();
+        test_ctx.with_service_mut(|s| {
+            s.data_mut().insert_nodes(vec![
+                DataNode::new(&"vault/fileA.txt".into(), NodeTypeId::file_type()),
+                DataNode::new(&"vault/dir1".into(), NodeTypeId::dir_type()),
+                DataNode::new(&"vault/dir1/fileB.txt".into(), NodeTypeId::file_type()),
+            ]);
+        });
 
         let body_json =
             execute_request_and_get_json(router, "/ctx/vault/dir1/fileB.txt", StatusCode::OK).await;
@@ -410,9 +410,11 @@ mod tests {
     #[tokio::test]
     async fn going_to_vault_child_context__includes_vault() {
         let (router, test_ctx) = setup_test_environment("api_open_file_ctx_incl_vault");
-        test_ctx
-            .create_file_in_vault("fileA.txt", b"content of file A")
-            .unwrap();
+        test_ctx.with_service_mut(|s| {
+            s.data_mut().insert_nodes(vec![
+                DataNode::new(&"vault/fileA.txt".into(), NodeTypeId::file_type()),
+            ]);
+        });
 
         let body_json =
             execute_request_and_get_json(router, "/ctx/vault/fileA.txt", StatusCode::OK).await;

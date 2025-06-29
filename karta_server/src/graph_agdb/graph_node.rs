@@ -36,6 +36,28 @@ impl GraphNodes for GraphAgdb {
         DataNode::try_from(db_element.clone()).map_err(|e| e.into())
     }
 
+    fn open_nodes_by_uuid(&self, uuids: Vec<Uuid>) -> Result<Vec<DataNode>, Box<dyn Error>> {
+        if uuids.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let ids_as_strings: Vec<String> = uuids.into_iter().map(|id| id.to_string()).collect();
+        
+        let query_result = self.db.exec(
+            &QueryBuilder::select()
+                .ids(ids_as_strings)
+                .query(),
+        )?;
+
+        let datanodes = query_result
+            .elements
+            .into_iter()
+            .map(DataNode::try_from)
+            .collect::<Result<Vec<DataNode>, _>>()?;
+
+        Ok(datanodes)
+    }
+
     fn open_node_connections(&self, path: &NodePath) -> Vec<(DataNode, Edge)> {
         let focal_node = match self.open_node(&NodeHandle::Path(path.clone())) {
             Ok(node) => node,

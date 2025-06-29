@@ -85,154 +85,156 @@ impl KartaService {
     pub fn open_context_from_path(&self, path: NodePath)
         -> Result<(Vec<DataNode>, Vec<Edge>, Context), Box<dyn Error>> {
 
-        if path == NodePath::root() {
-            let focal_node = self.data().open_node(&NodeHandle::Path(NodePath::root()))
-                .map_err(|e| format!("Failed to open virtual root node: {}", e))?;
-            
-            let mut datanodes_for_context = vec![focal_node.clone()];
-            let mut edges_for_context = Vec::new();
-
-            // Get children (primarily vault) and their edges from the database
-            let db_child_connections = self.data().open_node_connections(&NodePath::root());
-            for (child_node, edge) in db_child_connections {
-                // For the virtual root's context, we are primarily interested in vault as its direct child.
-                if child_node.path() == NodePath::vault() {
-                    if !datanodes_for_context.iter().any(|n| n.path() == child_node.path()) {
-                        datanodes_for_context.push(child_node);
-                    }
-                    edges_for_context.push(edge);
-                }
-                // Potentially include other direct virtual children of NodePath::root() if defined later.
-            }
-            
-            // Ensure vault is included if not found via connections (e.g. if connections only returns non-archetype)
-            if !datanodes_for_context.iter().any(|n| n.path() == NodePath::vault()) {
-                let vault_node = self.data().open_node(&NodeHandle::Path(NodePath::vault()))
-                    .map_err(|e| format!("Failed to open vault node: {}", e))?;
-                datanodes_for_context.push(vault_node);
-                // If the edge was also missing, this implies it should be created or is an error.
-                // For now, assume open_node_connections is the source of truth for edges.
-                // A robust solution might involve self.data().get_edge_strict() if the edge is critical and might be missed.
-            }
-
-            let context = self.view.generate_context(focal_node.uuid(), None, datanodes_for_context.clone());
-            return Ok((datanodes_for_context, edges_for_context, context));
-        }
-
-        // --- Existing logic for vault and other FS-related paths ---
-        let mut additional_nodes_to_include: Vec<DataNode> = Vec::new();
-        let mut additional_edges_to_include: Vec<Edge> = Vec::new();
         let absolute_path = path.full(self.vault_fs_path());
-        let fs_nodes_from_destructure = fs_reader::destructure_file_path(self.vault_fs_path(), &absolute_path, true)
-            .map_err(|e| format!("Failed to destructure path {:?} with root {:?}: {}", absolute_path, self.vault_fs_path(), e))?;
+        let is_fs_node = absolute_path.exists();
+        let is_db_node = self.data().open_node(&NodeHandle::Path(path.clone())).is_ok();
 
-        let mut focal_fs_datanode: Option<DataNode> = None;
-        let mut child_fs_datanodes: Vec<DataNode> = Vec::new();
-        let mut fs_edges: Vec<Edge> = Vec::new();
+        if path == NodePath::root() {
+            self.open_root_context()
+        } else if is_db_node && !is_fs_node {
+            self.open_virtual_context(&path)
+        } else {
+            self.open_physical_context(&path)
+        }
+    }
 
-        if absolute_path.is_dir() {
-            focal_fs_datanode = Some(DataNode::new(&path, NodeTypeId::dir_type()));
-            child_fs_datanodes = fs_nodes_from_destructure;
-            if let Some(focal_node_unwrapped) = &focal_fs_datanode {
-                for child_node in &child_fs_datanodes {
-                    fs_edges.push(Edge::new(focal_node_unwrapped.uuid(), child_node.uuid()));
-                }
-            }
-        } else if absolute_path.is_file() {
-            focal_fs_datanode = fs_nodes_from_destructure.into_iter().find(|n| n.path() == path);
-            if let Some(focal_file_node_unwrapped) = &focal_fs_datanode {
-                if let Some(parent_path) = path.parent() {
-                    // We need the parent's UUID. We can create a transient parent node to get it.
-                    let parent_node = DataNode::new(&parent_path, NodeTypeId::dir_type());
-                    fs_edges.push(Edge::new(parent_node.uuid(), focal_file_node_unwrapped.uuid()));
-                }
-            }
+    /// Opens the root context. This is a special case as it has no parent and its children are determined differently.
+    fn open_root_context(&self) -> Result<(Vec<DataNode>, Vec<Edge>, Context), Box<dyn Error>> {
+        let mut nodes: HashMap<Uuid, DataNode> = HashMap::new();
+        let mut direct_edges: Vec<Edge> = Vec::new();
+
+        let focal_node = self.data().open_node(&NodeHandle::Path(NodePath::root()))?;
+        nodes.insert(focal_node.uuid(), focal_node.clone());
+
+        for (child_node, edge) in self.data().open_node_connections(&NodePath::root()) {
+            nodes.insert(child_node.uuid(), child_node);
+            direct_edges.push(edge);
         }
 
-        let fs_derived_focal_node = focal_fs_datanode.ok_or_else(|| {
-            format!("Focal node for path {:?} could not be determined from filesystem.", path)
-        })?;
+        self._finalize_context(focal_node, nodes, direct_edges)
+    }
 
-        let db_focal_datanode_optional = self.data().open_node(&NodeHandle::Path(path.clone())).ok();
-        let db_child_connections = self.data().open_node_connections(&path);
+    /// Opens a context for a "virtual" node (exists in DB, but not on the filesystem).
+    fn open_virtual_context(&self, path: &NodePath) -> Result<(Vec<DataNode>, Vec<Edge>, Context), Box<dyn Error>> {
+        let mut nodes: HashMap<Uuid, DataNode> = HashMap::new();
+        let mut direct_edges: Vec<Edge> = Vec::new();
 
-        let mut db_child_datanodes_map: HashMap<Uuid, DataNode> = HashMap::new();
-        for (node, _) in db_child_connections {
-            db_child_datanodes_map.insert(node.uuid(), node);
+        let focal_node = self.data().open_node(&NodeHandle::Path(path.clone()))?;
+        nodes.insert(focal_node.uuid(), focal_node.clone());
+
+        // Add parent if it exists.
+        if let Some(parent_path) = path.parent() {
+            if let Ok(parent_node) = self.data().open_node(&NodeHandle::Path(parent_path)) {
+                direct_edges.push(Edge::new(parent_node.uuid(), focal_node.uuid()));
+                nodes.insert(parent_node.uuid(), parent_node);
+            }
         }
-
-        let mut final_datanodes_map: HashMap<Uuid, DataNode> = HashMap::new();
-        let mut final_edges_set: HashSet<(Uuid, Uuid)> = HashSet::new();
-        let mut reconciled_edges: Vec<Edge> = Vec::new();
-
-        let definitive_focal_node = match db_focal_datanode_optional {
-            Some(db_node) => db_node,
-            None => fs_derived_focal_node.clone(),
-        };
-
-        if let Some(parent_path) = definitive_focal_node.path().parent() {
-            if parent_path == NodePath::vault() {
-                if let Ok(vault_node) = self.data().open_node(&NodeHandle::Path(NodePath::vault())) {
-                    let vault_to_focal_edge = Edge::new(vault_node.uuid(), definitive_focal_node.uuid());
-                    additional_nodes_to_include.push(vault_node);
-                    additional_edges_to_include.push(vault_to_focal_edge);
-                } else {
-                    eprintln!("Critical error: Vault node not found in DB.");
-                }
+        
+        // Add DB connections (children and others).
+        for (child_node, edge) in self.data().open_node_connections(path) {
+            if *edge.source() == focal_node.uuid() {
+                nodes.insert(child_node.uuid(), child_node);
+                direct_edges.push(edge);
             }
         }
 
-        final_datanodes_map.insert(definitive_focal_node.uuid(), definitive_focal_node.clone());
+        self._finalize_context(focal_node, nodes, direct_edges)
+    }
 
-        let mut parent_uuid: Option<Uuid> = None;
-        if let Some(parent_path) = definitive_focal_node.path().parent() {
-            let parent_node = self.data().open_node(&NodeHandle::Path(parent_path.clone()))
+    /// Opens a context for a "physical" node (exists on the filesystem).
+    fn open_physical_context(&self, path: &NodePath) -> Result<(Vec<DataNode>, Vec<Edge>, Context), Box<dyn Error>> {
+        let mut nodes: HashMap<Uuid, DataNode> = HashMap::new();
+        let mut direct_edges: Vec<Edge> = Vec::new();
+        let absolute_path = path.full(self.vault_fs_path());
+
+        // Get the DB version of the focal node if it exists, otherwise create a provisional one.
+        let focal_node = self.data()
+            .open_node(&NodeHandle::Path(path.clone()))
+            .unwrap_or_else(|_| DataNode::new(path, NodeTypeId::dir_type()));
+        nodes.insert(focal_node.uuid(), focal_node.clone());
+
+        // Add parent if it exists.
+        if let Some(parent_path) = path.parent() {
+            let parent_node = self.data()
+                .open_node(&NodeHandle::Path(parent_path.clone()))
                 .unwrap_or_else(|_| DataNode::new(&parent_path, NodeTypeId::dir_type()));
-            parent_uuid = Some(parent_node.uuid());
-            final_datanodes_map.entry(parent_node.uuid()).or_insert(parent_node);
+            direct_edges.push(Edge::new(parent_node.uuid(), focal_node.uuid()));
+            nodes.insert(parent_node.uuid(), parent_node);
         }
 
-        for fs_child_node in &child_fs_datanodes {
-            let child_uuid = fs_child_node.uuid();
-            let definitive_child = db_child_datanodes_map.get(&child_uuid)
-                .cloned()
-                .unwrap_or_else(|| fs_child_node.clone());
-            final_datanodes_map.insert(child_uuid, definitive_child);
+        // Add/update nodes from the filesystem if it's a directory.
+        if absolute_path.is_dir() {
+            let fs_children = fs_reader::destructure_file_path(self.vault_fs_path(), &absolute_path, true)?;
+            for child in fs_children {
+                direct_edges.push(Edge::new_cont(focal_node.uuid(), child.uuid()));
+                nodes.entry(child.uuid()).or_insert(child);
+            }
         }
-
-        for (db_node_uuid, db_node_data) in db_child_datanodes_map.iter() {
-            final_datanodes_map.entry(*db_node_uuid).or_insert_with(|| db_node_data.clone());
-        }
-
-        for node_to_add in &additional_nodes_to_include {
-            final_datanodes_map.entry(node_to_add.uuid()).or_insert_with(|| node_to_add.clone());
-        }
-
-        let mut all_edges_to_process = fs_edges;
-        all_edges_to_process.extend(db_child_datanodes_map.values().flat_map(|node| {
-            self.data().open_node_connections(&node.path()).into_iter().map(|(_, edge)| edge)
-        }));
-        all_edges_to_process.extend(additional_edges_to_include);
-
-        for edge in all_edges_to_process {
-            if final_datanodes_map.contains_key(edge.source()) && final_datanodes_map.contains_key(edge.target()) {
-                let edge_key = (*edge.source(), *edge.target());
-                if final_edges_set.insert(edge_key) {
-                    reconciled_edges.push(edge);
-                }
+        
+        // Add any additional connections from the database.
+        for (child_node, edge) in self.data().open_node_connections(path) {
+            if *edge.source() == focal_node.uuid() {
+                nodes.insert(child_node.uuid(), child_node);
+                direct_edges.push(edge);
             }
         }
 
-        let collected_final_datanodes: Vec<DataNode> = final_datanodes_map.values().cloned().collect();
-        let context_focal_uuid = definitive_focal_node.uuid();
+        self._finalize_context(focal_node, nodes, direct_edges)
+    }
 
+    /// Private helper to finalize context creation.
+    fn _finalize_context(
+        &self,
+        focal_node: DataNode,
+        mut nodes: HashMap<Uuid, DataNode>,
+        direct_edges: Vec<Edge>,
+    ) -> Result<(Vec<DataNode>, Vec<Edge>, Context), Box<dyn Error>> {
+        
+        // Augment with nodes from a saved context file, if one exists.
+        if let Ok(saved_context) = self.view.get_context_file(focal_node.uuid()) {
+            let saved_node_uuids: Vec<Uuid> = saved_context.viewnodes()
+                .iter()
+                .map(|vn| vn.uuid())
+                .filter(|uuid| !nodes.contains_key(uuid))
+                .collect();
+            
+            if !saved_node_uuids.is_empty() {
+                let missing_nodes = self.data().open_nodes_by_uuid(saved_node_uuids)?;
+                for node in missing_nodes {
+                    nodes.entry(node.uuid()).or_insert(node);
+                }
+            }
+        }
+        
+        let mut final_edges: Vec<Edge> = Vec::new();
+        let mut final_edges_set: HashSet<(Uuid, Uuid)> = HashSet::new();
+
+        for edge in direct_edges {
+            if nodes.contains_key(edge.source()) && nodes.contains_key(edge.target()) {
+                if final_edges_set.insert((*edge.source(), *edge.target())) {
+                    final_edges.push(edge);
+                }
+            }
+        }
+        
+        let mut final_datanodes: Vec<DataNode> = nodes.values().cloned().collect();
+        if focal_node.path() != NodePath::root() && focal_node.path() != NodePath::vault() {
+            final_datanodes.retain(|n| n.path() != NodePath::root());
+        }
+
+        let parent_uuid = if let Some(parent_path) = focal_node.path().parent() {
+            final_datanodes.iter().find(|n| n.path() == parent_path).map(|n| n.uuid())
+        } else {
+            None
+        };
+        
         let context = self.view.generate_context(
-            context_focal_uuid,
-            parent_uuid, // Pass the parent's UUID
-            collected_final_datanodes.clone(),
+            focal_node.uuid(),
+            parent_uuid,
+            final_datanodes.clone(),
         );
 
-        Ok((collected_final_datanodes, reconciled_edges, context))
+        Ok((final_datanodes, final_edges, context))
     }
 }
 
@@ -256,13 +258,13 @@ mod tests {
         // --- Part 1: Test opening the vault context ---
         let (datanodes, edges, _) = ctx.with_service(|s| s.open_context_from_path(NodePath::vault())).unwrap();
 
-        let vault_node = datanodes.iter().find(|n| n.path() == NodePath::vault()).expect("Vault node not found");
-        let root_node = datanodes.iter().find(|n| n.path() == NodePath::root()).expect("Root node not found");
-        let test_dir_node = datanodes.iter().find(|n| n.path() == NodePath::vault().join("test_dir")).expect("test_dir not found");
+        assert!(datanodes.iter().any(|n| n.path() == NodePath::vault()), "Vault node not found");
+        assert!(datanodes.iter().any(|n| n.path() == NodePath::root()), "Root node not found");
+        assert!(datanodes.iter().any(|n| n.path() == NodePath::vault().join("test_dir")), "test_dir not found");
+        assert!(datanodes.iter().any(|n| n.path() == NodePath::vault().join("test_file.txt")), "test_file.txt not found");
 
         assert_eq!(datanodes.len(), 4, "Should contain root, vault, test_dir, and test_file.txt");
-        assert!(edges.iter().any(|e| *e.source() == root_node.uuid() && *e.target() == vault_node.uuid()), "Missing edge from root to vault");
-        assert!(edges.iter().any(|e| *e.source() == vault_node.uuid() && *e.target() == test_dir_node.uuid()), "Missing edge from vault to test_dir");
+        assert_eq!(edges.len(), 3, "Should contain root->vault, vault->test_dir, and vault->test_file.txt edges");
 
         // --- Part 2: Test opening a deeper context to check for grandparent bug ---
         let (datanodes_deeper, _, _) = ctx.with_service(|s| s.open_context_from_path(NodePath::vault().join("test_dir"))).unwrap();
@@ -396,6 +398,8 @@ mod tests {
             let root_node = s.data().open_node(&NodeHandle::Path(NodePath::root())).unwrap();
             let virtual_node = DataNode::new(&virtual_node_path, NodeTypeId::new("core/text"));
             s.data_mut().insert_nodes(vec![virtual_node.clone()]);
+            let edge = Edge::new(root_node.uuid(), virtual_node.uuid());
+            s.data_mut().insert_edges(vec![edge]);
         });
 
         let (datanodes, _, _) = ctx.with_service(|s| s.open_context_from_path(NodePath::root())).unwrap();

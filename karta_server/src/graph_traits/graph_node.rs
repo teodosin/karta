@@ -1,4 +1,5 @@
 use std::{error::Error, path::PathBuf};
+use uuid::Uuid;
 
 use crate::elements::node_path::NodeHandle;
 
@@ -11,6 +12,9 @@ pub trait GraphNodes {
     /// Retrieves a particular node's data from the database.
     /// The path is relative to the root of the graph.
     fn open_node(&self, handle: &NodeHandle) -> Result<DataNode, Box<dyn Error>>;
+
+    /// Retrieves a set of nodes by their UUIDs.
+    fn open_nodes_by_uuid(&self, uuids: Vec<Uuid>) -> Result<Vec<DataNode>, Box<dyn Error>>;
 
     // Retrieves the edges of a particular node.
     // fn get_node_edges(&self, path: &NodePath) -> Vec<Edge>;
