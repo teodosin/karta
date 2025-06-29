@@ -392,7 +392,7 @@ mod tests {
         let func_name = "test_load_root_context_shows_only_direct_children";
         let ctx = KartaServiceTestContext::new(func_name);
         
-        let virtual_node_path = NodePath::new("/root_virtual_node".into());
+        let virtual_node_path = NodePath::new("root_virtual_node".into());
 
         ctx.with_service_mut(|s| {
             let root_node = s.data().open_node(&NodeHandle::Path(NodePath::root())).unwrap();
