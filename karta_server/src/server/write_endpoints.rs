@@ -160,11 +160,12 @@ mod tests {
         let (router, test_ctx) = setup_test_environment("save_creates_file");
 
         // Arrange
-        test_ctx.create_dir_in_vault("test_dir").unwrap();
-        let (_, _, initial_context) = test_ctx
-            .with_service(|s| s.open_context_from_path("vault/test_dir".into()))
-            .unwrap();
-        let focal_uuid = initial_context.focal();
+        let focal_uuid = test_ctx.with_service_mut(|s| {
+            s.data_mut().insert_nodes(vec![DataNode::new(&"vault/test_dir".into(), NodeTypeId::dir_type())]);
+            s.open_context_from_path("vault/test_dir".into()).unwrap().2.focal()
+        });
+        
+        let initial_context = test_ctx.with_service(|s| s.open_context_from_path("vault/test_dir".into()).unwrap().2);
         let view_node_to_modify = initial_context.viewnodes().get(0).unwrap().clone();
         let modified_view_node = view_node_to_modify.positioned(123.0, 456.0);
         let context_payload = Context::with_viewnodes(focal_uuid, vec![modified_view_node.clone()]);
@@ -189,10 +190,13 @@ mod tests {
 
         // Arrange: Create a directory and save a context for it first.
         test_ctx.create_dir_in_vault("dir_to_delete").unwrap();
-        let (_, _, initial_context) = test_ctx
-            .with_service(|s| s.open_context_from_path("vault/dir_to_delete".into()))
-            .unwrap();
-        let focal_uuid = initial_context.focal();
+        // Manually insert the node to ensure it's indexed before we try to save its context by UUID.
+        let focal_uuid = test_ctx.with_service_mut(|s| {
+            let node_to_insert = DataNode::new(&"vault/dir_to_delete".into(), NodeTypeId::dir_type());
+            s.data_mut().insert_nodes(vec![node_to_insert]);
+            s.open_context_from_path("vault/dir_to_delete".into()).unwrap().2.focal()
+        });
+        let initial_context = test_ctx.with_service(|s| s.open_context_from_path("vault/dir_to_delete".into()).unwrap().2);
         let view_node = initial_context.viewnodes().get(0).unwrap().clone();
         let initial_payload = Context::with_viewnodes(focal_uuid, vec![view_node]);
         let initial_payload_json = serde_json::to_string(&initial_payload).unwrap();
@@ -229,19 +233,19 @@ mod tests {
     async fn test_reload_context_merges_saved_and_default_nodes() {
         let (router, test_ctx) = setup_test_environment("reload_merges");
 
-        // Arrange: FS setup
-        test_ctx.create_dir_in_vault("test_dir").unwrap();
-        test_ctx.create_file_in_vault("test_dir/A.txt", b"").unwrap();
-        test_ctx.create_file_in_vault("test_dir/B.txt", b"").unwrap();
-
-        // Arrange: Get initial state to find the node to modify.
-        let (initial_nodes, _, initial_context) = test_ctx
-            .with_service(|s| s.open_context_from_path("vault/test_dir".into()))
-            .unwrap();
+        // Arrange: FS setup and index the nodes to simulate modification before saving.
+        let (initial_nodes, _, initial_context) = test_ctx.with_service_mut(|s| {
+            s.data_mut().insert_nodes(vec![
+                DataNode::new(&"vault/test_dir".into(), NodeTypeId::dir_type()),
+                DataNode::new(&"vault/test_dir/A.txt".into(), NodeTypeId::file_type()),
+                DataNode::new(&"vault/test_dir/B.txt".into(), NodeTypeId::file_type()),
+            ]);
+            s.open_context_from_path("vault/test_dir".into()).unwrap()
+        });
         let focal_uuid = initial_context.focal();
-        let node_b_data = initial_nodes.iter().find(|n| n.path().name() == "B.txt").unwrap();
-        let node_b_view = initial_context.viewnodes().iter().find(|vn| vn.uuid == node_b_data.uuid()).unwrap();
-
+        let node_b_data = initial_nodes.iter().find(|n| n.path().name() == "B.txt").expect("Node B data not found");
+        let node_b_view = initial_context.viewnodes().iter().find(|vn| vn.uuid == node_b_data.uuid()).expect("Node B view not found");
+        
         // Arrange: Save a modified position for node B.
         let modified_node_b = node_b_view.clone().positioned(500.0, 500.0);
         let save_payload = Context::with_viewnodes(focal_uuid, vec![modified_node_b]);
