@@ -91,16 +91,22 @@ pub async fn save_context(
     AxumPath(id): AxumPath<Uuid>,
     Json(payload): Json<Context>,
 ) -> StatusCode {
+    println!("[SAVE_CONTEXT] Received save request for context ID: {}", id);
+    println!("[SAVE_CONTEXT] Payload: {:?}", payload);
     // The `id` from the path should match the `focal` id in the payload.
     if id != payload.focal() {
+        eprintln!("[SAVE_CONTEXT] Mismatch between path ID ({}) and payload focal ID ({}).", id, payload.focal());
         return StatusCode::BAD_REQUEST;
     }
 
     let service = app_state.service.read().unwrap();
     match service.view().save_context(&payload) {
-        Ok(_) => StatusCode::OK,
+        Ok(_) => {
+            println!("[SAVE_CONTEXT] Successfully saved context {}", id);
+            StatusCode::OK
+        },
         Err(e) => {
-            eprintln!("Error saving context: {:?}", e);
+            eprintln!("[SAVE_CONTEXT] Error saving context {}: {:?}", id, e);
             StatusCode::INTERNAL_SERVER_ERROR
         }
     }
