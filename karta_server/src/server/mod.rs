@@ -63,7 +63,11 @@ pub fn create_router(state: AppState) -> Router<()> {
         .route("/", get(|| async { "Karta Server" }))
         .route("/api/asset/{*path}", get(asset_endpoints::get_asset))
         .route("/api/nodes", post(write_endpoints::create_node))
-        .route("/api/nodes/{id}", put(write_endpoints::update_node))
+        .route(
+            "/api/nodes/{id}",
+            put(write_endpoints::update_node)
+            .get(data_endpoints::get_node_by_uuid)
+        )
         .route("/api/ctx/{id}", put(write_endpoints::save_context))
         .route("/ctx/{*id}", get(context_endpoints::open_context_from_fs_path)) // Corrected wildcard syntax
         .layer(cors) // Apply the CORS layer

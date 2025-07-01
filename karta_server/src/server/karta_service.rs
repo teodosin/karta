@@ -410,4 +410,46 @@ mod tests {
         assert!(!datanodes.iter().any(|n| n.path().buf().to_string_lossy().starts_with("/vault/")));
         assert_eq!(datanodes.len(), 3);
     }
+
+    #[test]
+    fn inserting_nested_node_does_not_pollute_root_context() {
+        let func_name = "inserting_nested_node_does_not_pollute_root_context";
+        let ctx = KartaServiceTestContext::new(func_name);
+
+        let nested_path = NodePath::new("vault/dir1/dir2".into());
+        let node = DataNode::new(&nested_path, NodeTypeId::dir_type());
+        
+        ctx.with_service_mut(|s| s.data_mut().insert_nodes(vec![node]));
+
+        // Check connections for 'vault'
+        let vault_node = ctx.with_service(|s| s.data().open_node(&NodeHandle::Path(NodePath::vault()))).unwrap();
+        let vault_connections = ctx.with_service(|s| s.data().open_node_connections(&NodePath::vault()));
+        
+        println!("\n--- Vault Connections (Total: {}) ---", vault_connections.len());
+        for (node, edge) in &vault_connections {
+            println!("  - Node: {:?}, Edge: {:?} -> {:?}", node.path(), edge.source(), edge.target());
+        }
+
+        // The only *child* of vault should be 'dir1'.
+        let vault_children: Vec<_> = vault_connections.iter().filter(|(_, edge)| *edge.source() == vault_node.uuid()).collect();
+        assert_eq!(vault_children.len(), 1, "Vault should have exactly one child: 'dir1'");
+        assert!(vault_children.iter().any(|(n, _)| n.path().name() == "dir1"), "Child 'dir1' not found for vault");
+
+        // CRITICAL: Check connections for 'root'
+        let root_connections = ctx.with_service(|s| s.data().open_node_connections(&NodePath::root()));
+
+        println!("\n--- Root Connections (Total: {}) ---", root_connections.len());
+        for (node, edge) in &root_connections {
+            println!("  - Node: {:?}, Edge: {:?} -> {:?}", node.path(), edge.source(), edge.target());
+        }
+        
+        // The only direct children of root should be archetypes like 'vault'. 'dir1' should NOT be a direct child.
+        let has_dir1_as_child_of_root = root_connections.iter().any(|(n, edge)| {
+            n.path().name() == "dir1" && *edge.source() == crate::elements::node::ROOT_UUID
+        });
+        
+        assert!(!has_dir1_as_child_of_root, "Root context should not contain 'dir1' as a direct child after nested insertion.");
+    }
+
+
 }
