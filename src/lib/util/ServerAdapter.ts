@@ -365,7 +365,7 @@ export class ServerAdapter implements PersistenceService {
 
         const url = `${SERVER_BASE_URL}/api/ctx/${context.id}`;
         try {
-            console.log(`[ServerAdapter.saveContext] Sending payload for context ${context.id}:`, JSON.stringify(payload, null, 2));
+            console.log(`[ServerAdapter.saveContext] Saving context ${context.id}. Payload:`, JSON.parse(JSON.stringify(payload)));
             const response = await fetch(url, {
                 method: 'PUT',
                 headers: {
@@ -392,7 +392,34 @@ export class ServerAdapter implements PersistenceService {
         // This can be a wrapper, but for now we expect the caller to use create/update directly.
         console.warn('[ServerAdapter.saveNode] Deprecated. Use createNode or updateNode directly.');
     }
-    async getNode(nodeId: string): Promise<DataNode | undefined> { console.warn(`[ServerAdapter.getNode] Not implemented for ID: ${nodeId}`); return undefined; }
+    async getNode(nodeId: string): Promise<DataNode | undefined> {
+        const url = `${SERVER_BASE_URL}/api/nodes/${nodeId}`;
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                if (response.status !== 404) {
+                    console.error(`[ServerAdapter.getNode] Error fetching node ${nodeId}. Status: ${response.status}`);
+                }
+                return undefined;
+            }
+            const serverNode: ServerDataNode = await response.json();
+            const attributes = transformServerAttributesToRecord(serverNode.attributes);
+            attributes['name'] = serverNode.name;
+
+            return {
+                id: serverNode.uuid,
+                ntype: serverNode.ntype.type_path,
+                createdAt: (serverNode.created_time?.secs_since_epoch ?? 0) * 1000,
+                modifiedAt: (serverNode.modified_time?.secs_since_epoch ?? 0) * 1000,
+                path: serverNode.path,
+                attributes: attributes,
+                isSearchable: attributes['isSearchable'] ?? true,
+            };
+        } catch (error) {
+            console.error(`[ServerAdapter.getNode] Network error fetching node ${nodeId}:`, error);
+            return undefined;
+        }
+    }
     async deleteNode(nodeId: string): Promise<void> { console.warn(`[ServerAdapter.deleteNode] Not implemented for ID: ${nodeId}`); }
     async getNodes(): Promise<DataNode[]> { console.warn('[ServerAdapter.getNodes] Not implemented'); return []; }
     async checkNameExists(name: string): Promise<boolean> { console.warn(`[ServerAdapter.checkNameExists] Not implemented for name: ${name}`); return false; }

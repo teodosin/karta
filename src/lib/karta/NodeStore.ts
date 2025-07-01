@@ -107,14 +107,50 @@ export async function createNodeAtPosition(
     if (persistenceService) {
         try {
             // For ServerAdapter, we need the parent path.
-            const parentNode = get(nodes).get(contextId);
-            const parentPath = parentNode?.path || '/'; // Fallback to root
+            // New logic to find the correct physical parent path
+            let currentId = contextId;
+            let parentPath: string | undefined;
+            const allNodes = get(nodes);
+            const MAX_DEPTH = 10; // Safeguard against infinite loops
+            let depth = 0;
+
+            while (depth < MAX_DEPTH) {
+                const currentNode = allNodes.get(currentId);
+                if (!currentNode) {
+                    throw new Error(`Could not find node data for ID: ${currentId} while searching for a physical parent.`);
+                }
+
+                // Check if the current node is a valid physical parent
+                if (currentNode.ntype === 'core/root' || currentNode.ntype === 'core/fs/dir') {
+                    parentPath = currentNode.path;
+                    break;
+                }
+                
+                // If not, move up to the parent
+                const currentPath = currentNode.path;
+                const parentPathStr = currentPath.substring(0, currentPath.lastIndexOf('/')) || '/';
+
+                const parentNode = Array.from(allNodes.values()).find(n => n.path === parentPathStr);
+
+                if (!parentNode) {
+                    throw new Error(`Could not find parent node with path: ${parentPathStr}`);
+                }
+                currentId = parentNode.id;
+                depth++;
+            }
+
+            if (!parentPath) {
+                throw new Error(`Could not find a valid physical parent for node creation within context ${contextId}.`);
+            }
             
+            console.log(`[NodeStore.createNodeAtPosition] About to create node '${newNodeData.attributes.name}' in parent '${parentPath}'. Current context: ${contextId}`);
             const persistedNode = await (persistenceService as ServerAdapter).createNode(newNodeData, parentPath);
 
             if (!persistedNode) {
+                console.error("[NodeStore.createNodeAtPosition] Node creation failed on the server.");
                 throw new Error("Node creation failed on the server.");
             }
+            console.log(`[NodeStore.createNodeAtPosition] Server returned persisted node:`, JSON.parse(JSON.stringify(persistedNode)));
 
             // NOW, update the stores with the definitive node data from the server
             nodes.update(n => n.set(persistedNode.id, persistedNode)); // Add the persisted DataNode
@@ -122,9 +158,10 @@ export async function createNodeAtPosition(
             // CRITICAL FIX: The ViewNode was created with a temporary client-side ID.
             // We need to update the contexts store to use the server-authoritative ID.
             contexts.update((ctxMap: Map<NodeId, Context>) => {
+                console.log(`[NodeStore.createNodeAtPosition] CONTEXTS MAP BEFORE UPDATE:`, new Map(ctxMap));
                 let currentCtx = ctxMap.get(contextId);
                 if (!currentCtx) {
-                    console.warn(`Context ${contextId} not found when creating node ${persistedNode.id}. Creating context.`);
+                    console.warn(`[NodeStore.createNodeAtPosition] Context ${contextId} not found when creating node ${persistedNode.id}. Creating context.`);
                     currentCtx = { id: contextId, viewNodes: new Map() };
                     ctxMap.set(contextId, currentCtx);
                 }
@@ -132,14 +169,10 @@ export async function createNodeAtPosition(
                 currentCtx.viewNodes.delete(newNodeId);
                 newViewNode.id = persistedNode.id; // Update the ViewNode's ID
                 currentCtx.viewNodes.set(persistedNode.id, newViewNode);
+                console.log(`[NodeStore.createNodeAtPosition] CONTEXTS MAP AFTER UPDATE:`, new Map(ctxMap));
                 return ctxMap;
             });
             
-            const updatedCtx = get(contexts).get(contextId);
-            if (updatedCtx) {
-                updatedCtx.viewportSettings = { ...viewTransform.current };
-                await persistenceService.saveContext(updatedCtx);
-            }
             return persistedNode.id; // Return ID on successful save
         } catch (error) {
             console.error("Error saving node or context after creation:", error);

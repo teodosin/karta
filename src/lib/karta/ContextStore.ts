@@ -113,10 +113,8 @@ async function _loadAndProcessContext(
             const existingViewNode = oldContext?.viewNodes.get(nodeId);
 
             if (existingViewNode) {
-                existingViewNode.state.set(targetState, NODE_TWEEN_OPTIONS); // Update existing tween
-                existingViewNode.attributes = storableNode.attributes; // Copy attributes
-                existingViewNode.status = storableNode.status; // Update status
-                finalViewNodes.set(nodeId, existingViewNode); // Reuse ViewNode object
+                console.log(`[ContextStore._loadAndProcessContext] Cloning existing ViewNode ${nodeId} from old context for storable node.`);
+                finalViewNodes.set(nodeId, cloneViewNode(existingViewNode, targetState));
             } else {
                 // Create new ViewNode with a new Tween, starting from target state? Or current if exists? Start from target.
                 finalViewNodes.set(nodeId, { id: nodeId, state: new Tween(targetState, NODE_TWEEN_OPTIONS), attributes: storableNode.attributes, status: storableNode.status });
@@ -160,7 +158,8 @@ async function _loadAndProcessContext(
     		if (previousContextId && previousContextId !== contextId && !finalViewNodes.has(previousContextId)) {
     			const previousFocalViewNode = oldContext?.viewNodes.get(previousContextId);
     			if (previousFocalViewNode) {
-    				finalViewNodes.set(previousContextId, previousFocalViewNode);
+    			 console.log(`[ContextStore._loadAndProcessContext] Cloning previous focal node ${previousContextId} from old context.`);
+    			             finalViewNodes.set(previousContextId, cloneViewNode(previousFocalViewNode));
     			}
     		}
     	}
@@ -199,7 +198,8 @@ async function _loadAndProcessContext(
             };
 
             if (existingViewNodeInOldContext) {
-                finalViewNodes.set(connectedId, existingViewNodeInOldContext);
+                console.log(`[ContextStore._loadAndProcessContext] Cloning existing connected ViewNode ${connectedId} from old context.`);
+                finalViewNodes.set(connectedId, cloneViewNode(existingViewNodeInOldContext, defaultState));
             } else {
                 // Create new ViewNode/Tween
                 finalViewNodes.set(connectedId, { id: connectedId, state: new Tween(defaultState, NODE_TWEEN_OPTIONS), status: 'modified' });
@@ -328,7 +328,31 @@ function _applyStoresUpdate(
 
     // --- Update current context ID ---
     currentContextId.set(newContextId);
-   }
+}
+
+/**
+ * Creates a deep copy of a ViewNode, particularly its tweened state, to prevent reference sharing across contexts.
+ * @param viewNode The source ViewNode to clone.
+ * @param newTargetState An optional new target state for the tween.
+ */
+function cloneViewNode(viewNode: ViewNode, newTargetState?: TweenableNodeState): ViewNode {
+	// Deep copy the current state of the tween.
+	const initialState = { ...viewNode.state.current };
+	const newTween = new Tween(initialState, NODE_TWEEN_OPTIONS);
+
+	// If a new target state is provided (e.g., when moving to a new context), set it.
+	if (newTargetState) {
+		newTween.set(newTargetState, { duration: NODE_TWEEN_DURATION });
+	}
+
+	return {
+		id: viewNode.id,
+		state: newTween,
+		// Deep copy attributes to be safe.
+		attributes: viewNode.attributes ? { ...viewNode.attributes } : {},
+		status: viewNode.status
+	};
+}
 
 
 export function updateNodeLayout(nodeId: NodeId, newX: number, newY: number) {
@@ -485,6 +509,7 @@ export async function switchContext(newContextId: NodeId, isUndoRedo: boolean = 
     const oldContext = get(contexts).get(oldContextId);
     if (oldContext) {
         oldContext.viewportSettings = { ...viewTransform.current }; // Capture current viewport - Access .current directly
+        console.log(`[ContextStore.switchContext] About to save old context ${oldContextId}. Current state of its viewNodes:`, new Map(oldContext.viewNodes));
         activeAdapter.saveContext(oldContext) // Use activeAdapter // Adapter converts ViewNode with Tween back to Storable
             .catch(error => console.error(`[switchContext] Error saving old context ${oldContextId}:`, error));
 
