@@ -18,7 +18,7 @@ use crate::{
     server::AppState,
 };
 
-#[derive(Deserialize)]
+#[derive(Deserialize, serde::Serialize)]
 pub struct CreateNodePayload {
     name: String,
     ntype: NodeTypeId,
@@ -36,7 +36,12 @@ pub async fn create_node(
     Json(payload): Json<CreateNodePayload>,
 ) -> Result<Json<DataNode>, StatusCode> {
     let mut service = app_state.service.write().unwrap();
-    let parent_path = NodePath::from(payload.parent_path);
+    let parent_path = NodePath::from_alias(&payload.parent_path);
+
+    if !parent_path.alias().starts_with("/vault") {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
     let mut name = payload.name.clone();
     let mut final_path = parent_path.join(&name);
     let mut counter = 2;
@@ -141,9 +146,25 @@ mod tests {
                 "/ctx/{*id}",
                 axum::routing::get(crate::server::context_endpoints::open_context_from_fs_path),
             )
-            .route("/api/ctx/{id}", axum::routing::put(save_context)) // Corrected syntax
+            .route("/api/ctx/{id}", axum::routing::put(save_context))
+            .route("/api/nodes", axum::routing::post(create_node))
             .with_state(app_state);
         (router, test_ctx)
+    }
+
+    // Helper for POST requests
+    async fn execute_post_request(router: Router, uri: &str, body: String) -> http::Response<Body> {
+        router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri(uri)
+                    .header(http::header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(body))
+                    .unwrap(),
+            )
+            .await
+            .unwrap()
     }
 
     // Helper for PUT requests
@@ -281,5 +302,54 @@ mod tests {
         assert_eq!(reloaded_b.relX, 500.0, "Node B should have saved X pos");
         assert_ne!(reloaded_a.relX, 0.0, "Node A should have default X pos");
         assert_ne!(reloaded_a.relX, reloaded_b.relX, "A and B should have different X positions");
+    }
+
+    #[tokio::test]
+    async fn test_create_node_outside_vault_fails() {
+        let (router, _test_ctx) = setup_test_environment("create_node_fails");
+
+        // Arrange
+        let payload = CreateNodePayload {
+            name: "test_node".to_string(),
+            ntype: NodeTypeId::file_type(),
+            parent_path: "/some_other_path".to_string(),
+            attributes: vec![],
+        };
+        let payload_json = serde_json::to_string(&payload).unwrap();
+
+        // Act
+        let response = execute_post_request(router, "/api/nodes", payload_json).await;
+
+        // Assert
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn test_create_node_inside_vault_succeeds() {
+        let (router, test_ctx) = setup_test_environment("create_node_succeeds");
+
+        // Arrange
+        let payload = CreateNodePayload {
+            name: "test_node".to_string(),
+            ntype: NodeTypeId::file_type(),
+            parent_path: "/vault/some_dir".to_string(),
+            attributes: vec![],
+        };
+        let payload_json = serde_json::to_string(&payload).unwrap();
+
+        // Act
+        let response = execute_post_request(router, "/api/nodes", payload_json).await;
+
+        // Assert
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let created_node: DataNode = serde_json::from_slice(&body).unwrap();
+        assert_eq!(created_node.path().alias(), "/vault/some_dir/test_node");
+
+        // Verify it was actually inserted
+        let node_from_db = test_ctx.with_service(|s| {
+            s.data().open_node(&NodeHandle::Path(created_node.path()))
+        });
+        assert!(node_from_db.is_ok());
     }
 }
