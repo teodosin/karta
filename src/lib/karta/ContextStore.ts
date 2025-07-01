@@ -509,7 +509,7 @@ export async function switchContext(newContextId: NodeId, isUndoRedo: boolean = 
     const oldContext = get(contexts).get(oldContextId);
     if (oldContext) {
         oldContext.viewportSettings = { ...viewTransform.current }; // Capture current viewport - Access .current directly
-        console.log(`[ContextStore.switchContext] About to save old context ${oldContextId}. Current state of its viewNodes:`, new Map(oldContext.viewNodes));
+        console.log(`[ContextStore.switchContext] About to save old context ${oldContextId}. Current state of its viewNodes:`, JSON.stringify(Object.fromEntries(oldContext.viewNodes), null, 2));
         activeAdapter.saveContext(oldContext) // Use activeAdapter // Adapter converts ViewNode with Tween back to Storable
             .catch(error => console.error(`[switchContext] Error saving old context ${oldContextId}:`, error));
 

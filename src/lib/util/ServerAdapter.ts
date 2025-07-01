@@ -365,7 +365,7 @@ export class ServerAdapter implements PersistenceService {
 
         const url = `${SERVER_BASE_URL}/api/ctx/${context.id}`;
         try {
-            console.log(`[ServerAdapter.saveContext] Saving context ${context.id}. Payload:`, JSON.parse(JSON.stringify(payload)));
+            console.log(`[ServerAdapter.saveContext] Saving context ${context.id}. Payload:`, JSON.stringify(payload, null, 2));
             const response = await fetch(url, {
                 method: 'PUT',
                 headers: {

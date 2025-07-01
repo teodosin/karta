@@ -107,41 +107,7 @@ export async function createNodeAtPosition(
     if (persistenceService) {
         try {
             // For ServerAdapter, we need the parent path.
-            // New logic to find the correct physical parent path
-            let currentId = contextId;
-            let parentPath: string | undefined;
-            const allNodes = get(nodes);
-            const MAX_DEPTH = 10; // Safeguard against infinite loops
-            let depth = 0;
-
-            while (depth < MAX_DEPTH) {
-                const currentNode = allNodes.get(currentId);
-                if (!currentNode) {
-                    throw new Error(`Could not find node data for ID: ${currentId} while searching for a physical parent.`);
-                }
-
-                // Check if the current node is a valid physical parent
-                if (currentNode.ntype === 'core/root' || currentNode.ntype === 'core/fs/dir') {
-                    parentPath = currentNode.path;
-                    break;
-                }
-                
-                // If not, move up to the parent
-                const currentPath = currentNode.path;
-                const parentPathStr = currentPath.substring(0, currentPath.lastIndexOf('/')) || '/';
-
-                const parentNode = Array.from(allNodes.values()).find(n => n.path === parentPathStr);
-
-                if (!parentNode) {
-                    throw new Error(`Could not find parent node with path: ${parentPathStr}`);
-                }
-                currentId = parentNode.id;
-                depth++;
-            }
-
-            if (!parentPath) {
-                throw new Error(`Could not find a valid physical parent for node creation within context ${contextId}.`);
-            }
+            const parentPath = findPhysicalParentPath(contextId);
             
             console.log(`[NodeStore.createNodeAtPosition] About to create node '${newNodeData.attributes.name}' in parent '${parentPath}'. Current context: ${contextId}`);
             const persistedNode = await (persistenceService as ServerAdapter).createNode(newNodeData, parentPath);
@@ -150,7 +116,7 @@ export async function createNodeAtPosition(
                 console.error("[NodeStore.createNodeAtPosition] Node creation failed on the server.");
                 throw new Error("Node creation failed on the server.");
             }
-            console.log(`[NodeStore.createNodeAtPosition] Server returned persisted node:`, JSON.parse(JSON.stringify(persistedNode)));
+            console.log(`[NodeStore.createNodeAtPosition] Server returned persisted node:`, JSON.stringify(persistedNode, null, 2));
 
             // NOW, update the stores with the definitive node data from the server
             nodes.update(n => n.set(persistedNode.id, persistedNode)); // Add the persisted DataNode
@@ -158,7 +124,7 @@ export async function createNodeAtPosition(
             // CRITICAL FIX: The ViewNode was created with a temporary client-side ID.
             // We need to update the contexts store to use the server-authoritative ID.
             contexts.update((ctxMap: Map<NodeId, Context>) => {
-                console.log(`[NodeStore.createNodeAtPosition] CONTEXTS MAP BEFORE UPDATE:`, new Map(ctxMap));
+                console.log(`[NodeStore.createNodeAtPosition] CONTEXTS MAP BEFORE UPDATE:`, JSON.stringify(Object.fromEntries(ctxMap), null, 2));
                 let currentCtx = ctxMap.get(contextId);
                 if (!currentCtx) {
                     console.warn(`[NodeStore.createNodeAtPosition] Context ${contextId} not found when creating node ${persistedNode.id}. Creating context.`);
@@ -169,7 +135,7 @@ export async function createNodeAtPosition(
                 currentCtx.viewNodes.delete(newNodeId);
                 newViewNode.id = persistedNode.id; // Update the ViewNode's ID
                 currentCtx.viewNodes.set(persistedNode.id, newViewNode);
-                console.log(`[NodeStore.createNodeAtPosition] CONTEXTS MAP AFTER UPDATE:`, new Map(ctxMap));
+                console.log(`[NodeStore.createNodeAtPosition] CONTEXTS MAP AFTER UPDATE:`, JSON.stringify(Object.fromEntries(ctxMap), null, 2));
                 return ctxMap;
             });
             
@@ -184,6 +150,61 @@ export async function createNodeAtPosition(
         return newNodeId;
         // Or return null if persistence is strictly required? Let's return ID for now.
     }
+}
+
+export function findPhysicalParentPath(contextId: NodeId): string {
+	console.log(`[findPhysicalParentPath] Starting search from contextId: ${contextId}`);
+	let currentId = contextId;
+	let parentPath: string | undefined;
+	const allNodes = get(nodes);
+	const MAX_DEPTH = 10; // Safeguard against infinite loops
+	let depth = 0;
+
+	while (depth < MAX_DEPTH) {
+		console.log(`[findPhysicalParentPath] Depth ${depth}, currentId: ${currentId}`);
+		const currentNode = allNodes.get(currentId);
+		if (!currentNode) {
+			const errorMsg = `[findPhysicalParentPath] Could not find node data for ID: ${currentId}`;
+			console.error(errorMsg);
+			throw new Error(errorMsg);
+		}
+
+		console.log(`[findPhysicalParentPath] Checking node: path='${currentNode.path}', ntype='${currentNode.ntype}'`);
+
+		// Check if the current node is a valid physical parent
+		if (currentNode.ntype === 'core/fs/dir') {
+			parentPath = currentNode.path;
+			console.log(`[findPhysicalParentPath] Found physical parent: '${parentPath}'`);
+			break;
+		}
+		
+		// If not, move up to the parent
+		const currentPath = currentNode.path;
+		if (!currentPath || currentPath === '/') {
+			console.log(`[findPhysicalParentPath] Reached root or invalid path, stopping search.`);
+			break;
+		}
+		const parentPathStr = currentPath.substring(0, currentPath.lastIndexOf('/')) || '/';
+		console.log(`[findPhysicalParentPath] Moving up to parent path: '${parentPathStr}'`);
+
+		const parentNode = Array.from(allNodes.values()).find(n => n.path === parentPathStr);
+
+		if (!parentNode) {
+			const errorMsg = `[findPhysicalParentPath] Could not find parent node with path: '${parentPathStr}'`;
+			console.error(errorMsg);
+			throw new Error(errorMsg);
+		}
+		currentId = parentNode.id;
+		depth++;
+	}
+
+	if (!parentPath) {
+		const errorMsg = `[findPhysicalParentPath] Could not find a valid physical parent for context ${contextId}.`;
+		console.error(errorMsg);
+		throw new Error(errorMsg);
+	}
+	console.log(`[findPhysicalParentPath] Successfully found and returning parent path: '${parentPath}'`);
+	return parentPath;
 }
 
 export async function createImageNodeFromDataUrl(position: { x: number, y: number }, dataUrl: string, width?: number, height?: number) {

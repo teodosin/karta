@@ -63,7 +63,9 @@
 		createTextNodeFromPaste,
 		createImageNodeWithAsset,
 		deleteDataNodePermanently,
+		findPhysicalParentPath,
 	} from "$lib/karta/NodeStore";
+	import { notifications } from '$lib/karta/NotificationStore';
 	import { deleteEdge } from "$lib/karta/EdgeStore";
 	import NodeWrapper from "./NodeWrapper.svelte";
 	import EdgeLayer from "./EdgeLayer.svelte";
@@ -663,6 +665,19 @@
 					rect,
 				);
 
+				try {
+					const parentPath = findPhysicalParentPath(get(currentContextId));
+					console.log(`[Viewport.handleKeyDown] findPhysicalParentPath result: ${parentPath}`);
+					if (!parentPath.startsWith('vault')) {
+						notifications.error("New nodes can only be created inside the Vault.", 4000);
+						return;
+					}
+				} catch (error: any) {
+					console.error(`[Viewport.handleKeyDown] findPhysicalParentPath error:`, JSON.stringify(error, null, 2));
+					notifications.error(error.message, 5000);
+					return;
+				}
+
 				// Open the menu
 				openCreateNodeMenu(screenX, screenY, canvasX, canvasY);
 				// DO NOT call e.preventDefault() here - it's handled globally
@@ -1157,22 +1172,33 @@
 				},
 			];
 		} else if (contextType === "background") {
+			let canCreateNodes = false;
+			try {
+				const parentPath = findPhysicalParentPath(get(currentContextId));
+				console.log(`[Viewport.ContextMenu] findPhysicalParentPath result: ${parentPath}`);
+				if (parentPath.startsWith('vault')) {
+					canCreateNodes = true;
+				}
+			} catch (error: any) {
+				console.error(`[Viewport.ContextMenu] findPhysicalParentPath error:`, JSON.stringify(error, null, 2));
+				// Do nothing, canCreateNodes remains false
+			}
+
 			items = [
 				{
 					label: "Center Focal Node",
 					action: () => centerOnFocalNode(),
-					disabled: !$currentContextId, // Disable if no context (shouldn't happen?)
-				},
-				{
-					label: "Frame Context",
-					action: () => frameContext(), // Action to be implemented in KartaStore
 					disabled: !$currentContextId,
 				},
 				{
-					label: "Create Node Here",
+					label: "Frame Context",
+					action: () => frameContext(),
+					disabled: !$currentContextId,
+				},
+				{
+					label: canCreateNodes ? "Create Node Here" : "Can't create node here",
 					action: () => {
 						const { x: canvasX, y: canvasY } = getCanvasCoords();
-						// Use screenPos.x and screenPos.y for the menu positioning part
 						openCreateNodeMenu(
 							screenPos!.x,
 							screenPos!.y,
@@ -1180,14 +1206,12 @@
 							canvasY,
 						);
 					},
-					disabled: !screenPos,
+					disabled: !screenPos || !canCreateNodes,
 				},
 				{
-					// Add Search Node item
-					label: "Search Node...",
+					label: canCreateNodes ? "Search nodes..." : "Can't search nodes here",
 					action: () => {
 						const { x: canvasX, y: canvasY } = getCanvasCoords();
-						// Use screenPos.x and screenPos.y for the initial modal position hint
 						openNodeSearch(
 							screenPos!.x,
 							screenPos!.y,
@@ -1195,9 +1219,8 @@
 							canvasY,
 						);
 					},
-					disabled: !screenPos, // Disable if position is somehow missing
+					disabled: !screenPos || !canCreateNodes,
 				},
-				// { label: 'Paste', action: () => console.warn('Paste action NYI from context menu.'), disabled: true }
 			];
 		}
 		return items;
