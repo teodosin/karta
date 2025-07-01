@@ -1,4 +1,4 @@
-use std::{error::Error, path::PathBuf, time::SystemTime, vec};
+use std::{collections::VecDeque, error::Error, path::PathBuf, time::SystemTime, vec};
 
 use agdb::{DbElement, DbId, DbUserValue, QueryBuilder};
 use uuid::Uuid;
@@ -135,63 +135,45 @@ impl GraphNodes for GraphAgdb {
         connections
     }
 
-    /// Inserts a Node.
     fn insert_nodes(&mut self, nodes: Vec<DataNode>) {
-        for node in nodes {
-            let node_uuid = node.uuid();
-            let npath = node.path();
+        let mut queue: VecDeque<DataNode> = nodes.into();
+        let mut processed_paths = std::collections::HashSet::new();
 
-            // Check if a node with this UUID already exists.
-            if self
-                .db
-                .exec(&QueryBuilder::select().ids(node_uuid.to_string()).query())
-                .is_ok()
-            {
-                // Node with UUID exists, so update it instead of skipping.
-                self.db
-                    .exec_mut(
-                        &QueryBuilder::insert()
-                            .values_uniform(node.clone().to_db_values())
-                            .ids(node_uuid.to_string())
-                            .query(),
-                    )
-                    .unwrap();
+        while let Some(node) = queue.pop_front() {
+            let node_path = node.path();
+            if processed_paths.contains(&node_path) {
                 continue;
             }
 
-            // Insert the new node using its UUID as the alias.
-            if self
-                .db
-                .exec_mut(
-                    &QueryBuilder::insert()
-                        .nodes()
-                        .aliases(node_uuid.to_string())
-                        .values(node.clone())
-                        .query(),
-                )
-                .is_err()
-            {
-                // Failed to insert, continue to next node.
-                continue;
-            }
-
-            // Handle parent connection
-            if let Some(parent_path) = npath.parent() {
-                // Find the parent node in the DB by its path to get its UUID.
-                if let Ok(parent_node) = self.open_node(&NodeHandle::Path(parent_path.clone())) {
-                    let parent_uuid = parent_node.uuid();
-                    let edge = Edge::new(parent_uuid, node_uuid);
-                    self.insert_edges(vec![edge]);
-                } else {
-                    // If parent doesn't exist, we might need to create it.
-                    // This maintains the behavior of creating parent directories.
-                    let parent_node = DataNode::new(&parent_path, NodeTypeId::dir_type());
-                    let parent_uuid = parent_node.uuid();
-                    self.insert_nodes(vec![parent_node]); // Recursive call
-                    let edge = Edge::new(parent_uuid, node_uuid);
-                    self.insert_edges(vec![edge]);
+            if let Some(parent_path) = node_path.parent() {
+                if self.open_node(&NodeHandle::Path(parent_path.clone())).is_err() {
+                    queue.push_front(node);
+                    queue.push_front(DataNode::new(&parent_path, NodeTypeId::dir_type()));
+                    continue;
                 }
             }
+            
+            let node_uuid = node.uuid();
+
+            let existing_node_query = self.db.exec(&QueryBuilder::select().ids(node_uuid.to_string()).query());
+            if let Ok(query_result) = existing_node_query {
+                if !query_result.elements.is_empty() {
+                    self.db.exec_mut(&QueryBuilder::insert().values_uniform(node.clone().to_db_values()).ids(node_uuid.to_string()).query()).unwrap();
+                } else {
+                     self.db.exec_mut(&QueryBuilder::insert().nodes().aliases(node_uuid.to_string()).values(node.clone()).query()).unwrap();
+                }
+            } else {
+                 self.db.exec_mut(&QueryBuilder::insert().nodes().aliases(node_uuid.to_string()).values(node.clone()).query()).unwrap();
+            }
+
+            if let Some(parent_path) = node.path().parent() {
+                if let Ok(parent_node) = self.open_node(&NodeHandle::Path(parent_path)) {
+                     let edge = Edge::new_cont(parent_node.uuid(), node_uuid);
+                     self.insert_edges(vec![edge]);
+                }
+            }
+
+            processed_paths.insert(node_path.clone());
         }
     }
 }

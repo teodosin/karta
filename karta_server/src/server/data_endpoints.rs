@@ -1,17 +1,24 @@
+use axum::{extract::{Path, State}, http::StatusCode, Json};
+use uuid::Uuid;
 
-use axum::{extract::Path, Extension, Json};
-
-use crate::prelude::NodePath;
+use crate::{
+    elements::node_path::NodeHandle,
+    graph_traits::graph_node::GraphNodes,
+    prelude::{DataNode, NodePath},
+};
 
 use super::AppState;
 
-
-
-
-
-
-
-
+pub async fn get_node_by_uuid(
+    State(app_state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<DataNode>, StatusCode> {
+    let service = app_state.service.read().unwrap();
+    match service.data().open_node(&NodeHandle::Uuid(id)) {
+        Ok(node) => Ok(Json(node)),
+        Err(_) => Err(StatusCode::NOT_FOUND),
+    }
+}
 
 pub async fn root() -> &'static str {
     "Welcome to Karta Server"
