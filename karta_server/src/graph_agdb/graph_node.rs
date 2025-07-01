@@ -141,39 +141,63 @@ impl GraphNodes for GraphAgdb {
 
         while let Some(node) = queue.pop_front() {
             let node_path = node.path();
+            println!("[insert_nodes] Processing node: {:?}", node_path);
+
             if processed_paths.contains(&node_path) {
+                println!("[insert_nodes] -> Path already processed, skipping.");
                 continue;
             }
 
             if let Some(parent_path) = node_path.parent() {
-                if self.open_node(&NodeHandle::Path(parent_path.clone())).is_err() {
+                println!("[insert_nodes] -> Checking parent: {:?}", parent_path);
+                if parent_path != NodePath::root() && parent_path != NodePath::vault() && self.open_node(&NodeHandle::Path(parent_path.clone())).is_err() {
+                    println!("[insert_nodes] -> Parent not found. Creating placeholder for {:?} and requeueing.", parent_path);
                     queue.push_front(node);
                     queue.push_front(DataNode::new(&parent_path, NodeTypeId::dir_type()));
                     continue;
                 }
+                 println!("[insert_nodes] -> Parent found or is archetype. Proceeding with insertion.");
             }
             
             let node_uuid = node.uuid();
+            println!("[insert_nodes] -> Inserting/updating node with UUID: {}", node_uuid);
 
-            let existing_node_query = self.db.exec(&QueryBuilder::select().ids(node_uuid.to_string()).query());
-            if let Ok(query_result) = existing_node_query {
-                if !query_result.elements.is_empty() {
-                    self.db.exec_mut(&QueryBuilder::insert().values_uniform(node.clone().to_db_values()).ids(node_uuid.to_string()).query()).unwrap();
-                } else {
-                     self.db.exec_mut(&QueryBuilder::insert().nodes().aliases(node_uuid.to_string()).values(node.clone()).query()).unwrap();
-                }
+            // Use open_node to check for existence, which is more robust.
+            if self.open_node(&NodeHandle::Uuid(node_uuid)).is_ok() {
+                // Node exists, update its values.
+                println!("[insert_nodes] -> Node {} exists, updating values.", node_uuid);
+                self.db.exec_mut(
+                    &QueryBuilder::insert()
+                        .values_uniform(node.clone().to_db_values())
+                        .ids(node_uuid.to_string())
+                        .query()
+                ).unwrap();
             } else {
-                 self.db.exec_mut(&QueryBuilder::insert().nodes().aliases(node_uuid.to_string()).values(node.clone()).query()).unwrap();
+                // Node does not exist, insert it.
+                println!("[insert_nodes] -> Node {} does not exist, inserting new node.", node_uuid);
+                self.db.exec_mut(
+                    &QueryBuilder::insert()
+                        .nodes()
+                        .aliases(node_uuid.to_string())
+                        .values(node.clone())
+                        .query()
+                ).unwrap();
             }
 
             if let Some(parent_path) = node.path().parent() {
+                let parent_path_clone = parent_path.clone();
+                println!("[insert_nodes] -> Attempting to create edge from parent {:?} to new node.", parent_path_clone);
                 if let Ok(parent_node) = self.open_node(&NodeHandle::Path(parent_path)) {
                      let edge = Edge::new_cont(parent_node.uuid(), node_uuid);
+                     println!("[insert_nodes] -> Edge created: {:?} -> {:?}", parent_node.uuid(), node_uuid);
                      self.insert_edges(vec![edge]);
+                } else {
+                    println!("[insert_nodes] -> FAILED to open parent node {:?} to create edge.", parent_path_clone);
                 }
             }
 
             processed_paths.insert(node_path.clone());
+            println!("[insert_nodes] Finished processing: {:?}", node_path);
         }
     }
 }
