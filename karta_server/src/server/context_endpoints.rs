@@ -45,11 +45,16 @@ pub async fn open_context_from_fs_path(
 
     let vault_path = karta_service.vault_fs_path().clone();
     let processed_api_path_param = path_segments.trim_start_matches('/'); // Keep as &str for direct comparison
+    
+    println!("[open_context_from_fs_path] Received path segments: '{}'", path_segments);
+    println!("[open_context_from_fs_path] Processed API path param: '{}'", processed_api_path_param);
+
 
     let node_path_to_open: NodePath;
     let mut path_for_fs_check_str: String; // Will hold the string for FS path joining
 
     if processed_api_path_param == "root" {
+        println!("[open_context_from_fs_path] Path is 'root', setting node_path_to_open to NodePath::root()");
         node_path_to_open = NodePath::root();
         // No direct FS path to check for the virtual root in this manner
         path_for_fs_check_str = "".to_string(); // Or handle differently, FS checks might be skipped

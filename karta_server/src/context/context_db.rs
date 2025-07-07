@@ -38,6 +38,12 @@ impl ContextDb {
     /// edit any of that data, we don't need to index those nodes in the database nor
     /// create a context file.
     pub fn generate_context(&self, focal_uuid: Uuid, parent_uuid: Option<Uuid>, data_nodes: Vec<DataNode>) -> Context {
+        println!("[generate_context] Generating context for focal UUID: {}", focal_uuid);
+        println!("[generate_context] -> Received {} data nodes.", data_nodes.len());
+        for node in &data_nodes {
+            println!("[generate_context] ->   - Node: '{}', UUID: {}", node.path().alias(), node.uuid());
+        }
+
         let mut view_nodes: Vec<ViewNode> = Vec::new();
         const GRID_COLUMNS: usize = 5;
         const NODE_WIDTH: f32 = 100.0;

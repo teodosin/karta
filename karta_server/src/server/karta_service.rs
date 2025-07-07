@@ -1,5 +1,6 @@
 use std::{collections::{HashMap, HashSet}, error::Error, path::PathBuf, sync::Arc};
 use uuid::Uuid;
+use tracing::info;
 
 use tokio::sync::RwLock;
 
@@ -89,28 +90,41 @@ impl KartaService {
         let is_fs_node = absolute_path.exists();
         let is_db_node = self.data().open_node(&NodeHandle::Path(path.clone())).is_ok();
 
+        println!(
+            "[open_context_from_path] Routing path: {:?}. is_fs_node: {}, is_db_node: {}",
+            path, is_fs_node, is_db_node
+        );
+
         if path == NodePath::root() {
+            println!("[open_context_from_path] -> Routing to open_root_context");
             self.open_root_context()
         } else if is_db_node && !is_fs_node {
+            println!("[open_context_from_path] -> Routing to open_virtual_context");
             self.open_virtual_context(&path)
         } else {
+            println!("[open_context_from_path] -> Routing to open_physical_context");
             self.open_physical_context(&path)
         }
     }
 
     /// Opens the root context. This is a special case as it has no parent and its children are determined differently.
     fn open_root_context(&self) -> Result<(Vec<DataNode>, Vec<Edge>, Context), Box<dyn Error>> {
+        println!("[open_root_context] Opening root context.");
         let mut nodes: HashMap<Uuid, DataNode> = HashMap::new();
         let mut direct_edges: Vec<Edge> = Vec::new();
 
         let focal_node = self.data().open_node(&NodeHandle::Path(NodePath::root()))?;
+        println!("[open_root_context] -> Focal node (root) found: {}", focal_node.uuid());
         nodes.insert(focal_node.uuid(), focal_node.clone());
 
         for (child_node, edge) in self.data().open_node_connections(&NodePath::root()) {
+            println!("[open_root_context] -> Found connected node: path='{}', uuid='{}'", child_node.path().alias(), child_node.uuid());
             nodes.insert(child_node.uuid(), child_node);
             direct_edges.push(edge);
         }
 
+        println!("[open_root_context] -> Total nodes for finalization: {}", nodes.len());
+        println!("[open_root_context] -> Total edges for finalization: {}", direct_edges.len());
         self._finalize_context(focal_node, nodes, direct_edges)
     }
 
@@ -189,9 +203,12 @@ impl KartaService {
         mut nodes: HashMap<Uuid, DataNode>,
         direct_edges: Vec<Edge>,
     ) -> Result<(Vec<DataNode>, Vec<Edge>, Context), Box<dyn Error>> {
+        println!("[_finalize_context] Finalizing context for focal node: '{}'", focal_node.path().alias());
+        println!("[_finalize_context] -> Initial node count: {}", nodes.len());
+        println!("[_finalize_context] -> Initial edge count: {}", direct_edges.len());
         
-        // Augment with nodes from a saved context file, if one exists.
         if let Ok(saved_context) = self.view.get_context_file(focal_node.uuid()) {
+            println!("[_finalize_context] -> Found saved context file. Augmenting nodes.");
             let saved_node_uuids: Vec<Uuid> = saved_context.viewnodes()
                 .iter()
                 .map(|vn| vn.uuid())
@@ -199,8 +216,10 @@ impl KartaService {
                 .collect();
             
             if !saved_node_uuids.is_empty() {
+                println!("[_finalize_context] -> Fetching {} missing nodes from DB.", saved_node_uuids.len());
                 let missing_nodes = self.data().open_nodes_by_uuid(saved_node_uuids)?;
                 for node in missing_nodes {
+                    println!("[_finalize_context] -> Adding node from saved context: '{}' ({})", node.path().alias(), node.uuid());
                     nodes.entry(node.uuid()).or_insert(node);
                 }
             }
@@ -212,15 +231,13 @@ impl KartaService {
         for edge in direct_edges {
             if nodes.contains_key(edge.source()) && nodes.contains_key(edge.target()) {
                 if final_edges_set.insert((*edge.source(), *edge.target())) {
-                    final_edges.push(edge);
+                    final_edges.push(edge.clone());
                 }
             }
         }
+        println!("[_finalize_context] -> Edge count after filtering: {}", final_edges.len());
         
-        let mut final_datanodes: Vec<DataNode> = nodes.values().cloned().collect();
-        if focal_node.path() != NodePath::root() && focal_node.path() != NodePath::vault() {
-            final_datanodes.retain(|n| n.path() != NodePath::root());
-        }
+        let final_datanodes: Vec<DataNode> = nodes.values().cloned().collect();
 
         let parent_uuid = if let Some(parent_path) = focal_node.path().parent() {
             final_datanodes.iter().find(|n| n.path() == parent_path).map(|n| n.uuid())
@@ -228,6 +245,7 @@ impl KartaService {
             None
         };
         
+        println!("[_finalize_context] -> Calling generate_context with {} nodes.", final_datanodes.len());
         let context = self.view.generate_context(
             focal_node.uuid(),
             parent_uuid,

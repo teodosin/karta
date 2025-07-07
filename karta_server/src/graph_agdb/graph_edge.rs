@@ -55,6 +55,8 @@ impl GraphEdge for GraphAgdb {
             let source_uuid = edge.source();
             let target_uuid = edge.target();
 
+            println!("[insert_edges] Creating edge from {} to {}", source_uuid, target_uuid);
+
             let _edge_query_result = self.db.exec_mut(
                 &QueryBuilder::insert()
                     .edges()
