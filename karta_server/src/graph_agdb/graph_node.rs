@@ -1,6 +1,6 @@
 use std::{collections::VecDeque, error::Error, path::PathBuf, time::SystemTime, vec};
 
-use agdb::{DbElement, DbId, DbUserValue, QueryBuilder};
+use agdb::{DbElement, DbId, DbUserValue, QueryBuilder, CountComparison, QueryCondition};
 use uuid::Uuid;
 
 use crate::{
@@ -59,44 +59,40 @@ impl GraphNodes for GraphAgdb {
     }
 
     fn open_node_connections(&self, path: &NodePath) -> Vec<(DataNode, Edge)> {
+        println!("[open_node_connections] Getting connections for path: '{}'", path.alias());
         let focal_node = match self.open_node(&NodeHandle::Path(path.clone())) {
             Ok(node) => node,
-            Err(_) => return vec![], // If the focal node doesn't exist, no connections can be found.
+            Err(_) => {
+                println!("[open_node_connections] -> Focal node not found. Returning empty vec.");
+                return vec![];
+            }
         };
         let focal_uuid_str = focal_node.uuid().to_string();
+        println!("[open_node_connections] -> Focal node UUID: {}", focal_uuid_str);
 
         let mut node_ids: Vec<DbId> = Vec::new();
         let mut edge_ids: Vec<DbId> = Vec::new();
 
-        // Search for outgoing and incoming edges from the focal node's UUID alias
-        let from_query = QueryBuilder::search().from(focal_uuid_str.clone()).query();
-        let to_query = QueryBuilder::search().to(focal_uuid_str).query();
+        let from_query = QueryBuilder::search().from(focal_uuid_str.clone()).where_().distance(CountComparison::LessThan(2)).query();
+        let to_query = QueryBuilder::search().to(focal_uuid_str).where_().distance(CountComparison::LessThan(2)).query();
 
         if let Ok(search_result) = self.db.exec(&from_query) {
+            println!("[open_node_connections] -> Found {} elements connected FROM focal node.", search_result.elements.len());
             for elem in search_result.elements.iter() {
-                if elem.id.0 < 0 {
-                    edge_ids.push(elem.id);
-                } else {
-                    node_ids.push(elem.id);
-                }
+                if elem.id.0 < 0 { edge_ids.push(elem.id); } else { node_ids.push(elem.id); }
             }
         }
 
         if let Ok(search_result) = self.db.exec(&to_query) {
+            println!("[open_node_connections] -> Found {} elements connected TO focal node.", search_result.elements.len());
             for elem in search_result.elements.iter() {
-                if elem.id.0 < 0 {
-                    edge_ids.push(elem.id);
-                } else {
-                    node_ids.push(elem.id);
-                }
+                if elem.id.0 < 0 { edge_ids.push(elem.id); } else { node_ids.push(elem.id); }
             }
         }
-
-        let full_nodes_result = self.db.exec(&QueryBuilder::select().ids(node_ids).query());
+        
         let full_edges_result = self.db.exec(&QueryBuilder::select().ids(edge_ids).query());
-
-        let full_nodes = full_nodes_result.map_or(vec![], |r| r.elements);
         let full_edges = full_edges_result.map_or(vec![], |r| r.elements);
+        println!("[open_node_connections] -> Total unique edges found: {}", full_edges.len());
 
         let mut connections: Vec<(DataNode, Edge)> = Vec::new();
         let mut processed_nodes = std::collections::HashSet::new();
@@ -113,25 +109,17 @@ impl GraphNodes for GraphAgdb {
                 *edge.source()
             };
 
-            if other_node_uuid == focal_node.uuid() {
-                continue;
-            }
+            if other_node_uuid == focal_node.uuid() { continue; }
 
-            if let Some(db_node) = full_nodes.iter().find(|n| {
-                if let Ok(data_node) = DataNode::try_from((*n).clone()) {
-                    data_node.uuid() == other_node_uuid
-                } else {
-                    false
-                }
-            }) {
-                if let Ok(data_node) = DataNode::try_from(db_node.clone()) {
-                    if processed_nodes.insert(data_node.uuid()) {
-                        connections.push((data_node, edge));
-                    }
+            if let Ok(data_node) = self.open_node(&NodeHandle::Uuid(other_node_uuid)) {
+                if processed_nodes.insert(data_node.uuid()) {
+                    println!("[open_node_connections] -> Adding connection: '{}' ({})", data_node.path().alias(), data_node.uuid());
+                    connections.push((data_node, edge));
                 }
             }
         }
-
+        
+        println!("[open_node_connections] -> Returning {} connections.", connections.len());
         connections
     }
 
