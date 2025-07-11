@@ -188,4 +188,29 @@ impl GraphNodes for GraphAgdb {
             println!("[insert_nodes] Finished processing: {:?}", node_path);
         }
     }
+    
+    fn get_all_indexed_paths(&self) -> Result<Vec<String>, Box<dyn Error>> {
+        let query_result = self.db.exec(
+            &QueryBuilder::select()
+                .ids(
+                    QueryBuilder::search()
+                        .elements()
+                        .where_()
+                        .node()
+                        .query()
+                )
+                .query()
+        )?;
+
+        let paths = query_result
+            .elements
+            .into_iter()
+            .filter(|element| element.id.0 > 0) // Filter for nodes only
+            .filter_map(|element| {
+                DataNode::try_from(element).ok().map(|node| node.path().alias().to_string())
+            })
+            .collect();
+
+        Ok(paths)
+    }
 }

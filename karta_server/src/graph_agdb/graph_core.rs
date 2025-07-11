@@ -67,6 +67,11 @@ impl GraphCore for GraphAgdb {
             storage_path: storage_dir,
         };
 
+        // Indexes for faster lookup based on attributes
+        giraphe.db.exec_mut(QueryBuilder::insert().index("uuid").query());
+        giraphe.db.exec_mut(QueryBuilder::insert().index("ntype").query());
+        giraphe.db.exec_mut(QueryBuilder::insert().index("path").query());
+
         if !open_existing {
             let archetypes = ARCHETYPES;
 
@@ -83,17 +88,8 @@ impl GraphCore for GraphAgdb {
                 let node = DataNode::new(&atype_path, ntype);
                 let node_uuid = node.uuid();
 
-                let query_result = giraphe.db.exec_mut(
-                    &QueryBuilder::insert()
-                        .nodes()
-                        .aliases(node_uuid.to_string())
-                        .values(node)
-                        .query(),
-                );
+                giraphe.insert_nodes(vec![node]);
 
-                if let Err(err) = query_result {
-                    panic!("Failed to create archetype node: {}", err);
-                }
 
                 if atype_path != NodePath::root() {
                     let root_to_atype_edge =
@@ -103,11 +99,6 @@ impl GraphCore for GraphAgdb {
                 }
             });
         }
-
-        // Indexes for faster lookup based on attributes
-        giraphe.db.exec_mut(QueryBuilder::insert().index("uuid").query());
-        giraphe.db.exec_mut(QueryBuilder::insert().index("ntype").query());
-        giraphe.db.exec_mut(QueryBuilder::insert().index("path").query());
 
         return giraphe;
     }

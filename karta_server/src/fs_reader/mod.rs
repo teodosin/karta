@@ -71,3 +71,24 @@ pub fn destructure_file_path(
 Ok(nodes)
 }
 
+pub fn get_all_paths(vault_root_path: &PathBuf) -> Result<Vec<String>, Box<dyn Error>> {
+    let mut paths = Vec::new();
+    let mut walker = walkdir::WalkDir::new(vault_root_path).into_iter();
+
+    while let Some(entry) = walker.next() {
+        let entry = entry?;
+        let path = entry.path();
+
+        if path.file_name().map_or(false, |name| name == ".karta") {
+            walker.skip_current_dir();
+            continue;
+        }
+
+        if path.is_dir() || path.is_file() {
+            let node_path = NodePath::from_dir_path(vault_root_path, &path.to_path_buf());
+            paths.push(node_path.alias().to_string());
+        }
+    }
+
+    Ok(paths)
+}

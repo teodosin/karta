@@ -180,47 +180,50 @@ impl TryFrom<DbElement> for DataNode {
     type Error = DbError;
 
     fn try_from(value: DbElement) -> Result<Self, Self::Error> {
-        // let fixed: [&str; 6] = ["path", "ntype", "nphys", "alive", "created_time", "modified_time"];
-        let fixed = super::attribute::RESERVED_NODE_ATTRS;
-        let rest = value
-            .values
-            .iter()
-            .filter(|v| !fixed.contains(&v.key.string().unwrap().as_str()))
-            .collect::<Vec<_>>();
+        let mut uuid = None;
+        let mut created_time = None;
+        let mut modified_time = None;
+        let mut path = None;
+        let mut name = None;
+        let mut ntype = None;
+        let mut alive = None;
+        let mut attributes = Vec::new();
 
-        let db_id = value.id;
-        let uuid = value.values.iter().find(|v| v.key == "uuid".into());
-        let created_time = value.values.iter().find(|v| v.key == "created_time".into());
-        let modified_time = value
-            .values
-            .iter()
-            .find(|v| v.key == "modified_time".into());
-        let path = value.values.iter().find(|v| v.key == "path".into());
-        let name = value.values.iter().find(|v| v.key == "name".into());
-        let ntype = value.values.iter().find(|v| v.key == "ntype".into());
-        let nphys = value.values.iter().find(|v| v.key == "nphys".into());
-        let alive = value.values.iter().find(|v| v.key == "alive".into());
+        for kv in value.values {
+            if let Ok(key) = kv.key.string() {
+                match key.as_str() {
+                    "uuid" => uuid = Uuid::from_str(&kv.value.to_string()).ok(),
+                    "created_time" => created_time = SysTime::try_from(kv.value).ok(),
+                    "modified_time" => modified_time = SysTime::try_from(kv.value).ok(),
+                    "path" => path = NodePath::try_from(kv.value).ok(),
+                    "name" => name = kv.value.string().ok().map(String::from),
+                    "ntype" => ntype = NodeTypeId::try_from(kv.value).ok(),
+                    "alive" => alive = kv.value.to_bool().ok(),
+                    _ => {
+                        if let Ok(attr) = Attribute::try_from(&kv) {
+                            attributes.push(attr);
+                        }
+                    }
+                }
+            }
+        }
 
-        let attrs: Vec<Attribute> = rest
-            .iter()
-            .map(|v| Attribute::try_from(*v).unwrap())
-            .collect();
-
-        let uuid = Uuid::from_str(uuid.unwrap().value.clone().to_string().as_str()).unwrap();
-
-        let node = DataNode {
-            db_id: Some(db_id),
-            uuid,
-            created_time: SysTime::try_from(created_time.unwrap().value.clone())?,
-            modified_time: SysTime::try_from(modified_time.unwrap().value.clone())?,
-
-            path: NodePath::try_from(path.unwrap().value.clone())?,
-            name: name.unwrap().value.clone().to_string(),
-            ntype: NodeTypeId::try_from(ntype.unwrap().value.clone())?,
-            alive: alive.unwrap().value.to_bool().unwrap(),
-            attributes: attrs,
-        };
-
-        Ok(node)
+        if let (Some(uuid), Some(created_time), Some(modified_time), Some(path), Some(name), Some(ntype), Some(alive)) =
+            (uuid, created_time, modified_time, path, name, ntype, alive)
+        {
+            Ok(DataNode {
+                db_id: Some(value.id),
+                uuid,
+                created_time,
+                modified_time,
+                path,
+                name,
+                ntype,
+                alive,
+                attributes,
+            })
+        } else {
+            Err(DbError::from("Missing required fields for DataNode"))
+        }
     }
 }
