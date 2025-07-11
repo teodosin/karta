@@ -77,6 +77,20 @@ impl KartaService {
         &mut self.view
     }
 
+    pub fn get_paths(&self, only_indexed: bool) -> Result<Vec<String>, Box<dyn Error>> {
+        if only_indexed {
+            self.data.get_all_indexed_paths()
+        } else {
+            let physical_paths = fs_reader::get_all_paths(self.vault_fs_path())?;
+            let indexed_paths = self.data.get_all_indexed_paths()?;
+            
+            let mut all_paths = HashSet::new();
+            all_paths.extend(physical_paths);
+            all_paths.extend(indexed_paths);
+
+            Ok(all_paths.into_iter().collect())
+        }
+    }
     /// Opens a context's Data and View.
     /// This is the main function for opening a context.
     /// Reconciles indexed data from the database with physical data from the filesystem.

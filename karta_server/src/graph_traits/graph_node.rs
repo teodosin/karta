@@ -32,6 +32,8 @@ pub trait GraphNodes {
 
     /// Inserts a Node.
     fn insert_nodes(&mut self, nodes: Vec<DataNode>);
+    /// Retrieves all indexed paths from the database.
+    fn get_all_indexed_paths(&self) -> Result<Vec<String>, Box<dyn Error>>;
 }
 
 // --------------------------------------------------------------------
