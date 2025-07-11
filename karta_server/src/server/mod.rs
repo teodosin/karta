@@ -60,8 +60,8 @@ pub fn create_router(state: AppState) -> Router<()> {
         .allow_headers(Any); // Allow any headers
 
     let router = Router::new()
-        .route("/", get(|| async { "Karta Server" }))
-        .route("/api/asset/{*path}", get(asset_endpoints::get_asset))
+    	.route("/", get(data_endpoints::get_vault_info))
+    	.route("/api/asset/{*path}", get(asset_endpoints::get_asset))
         .route("/api/nodes", post(write_endpoints::create_node))
         .route(
             "/api/nodes/{id}",

@@ -65,3 +65,16 @@ pub async fn root() -> &'static str {
 //     let result = graph.open_node_connections(&node_path);
 //     Json(result)
 // }
+use serde_json::json;
+
+pub async fn get_vault_info(
+    State(state): State<AppState>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let service = state.service.read().unwrap();
+    let vault_path = service.vault_fs_path();
+    let vault_name = vault_path.file_name().unwrap().to_str().unwrap();
+
+    Ok(Json(json!({
+        "vault_name": vault_name,
+    })))
+}
