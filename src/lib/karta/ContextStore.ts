@@ -9,7 +9,7 @@ import type { DataNode, KartaEdge, ViewNode, Context, NodeId, EdgeId, AbsoluteTr
 import { getDefaultViewNodeStateForType } from '$lib/node_types/registry';
 import { nodes, _ensureDataNodeExists } from './NodeStore'; // Assuming NodeStore exports these
 import { edges } from './EdgeStore'; // Assuming EdgeStore exports this
-import { viewTransform, DEFAULT_VIEWPORT_SETTINGS, VIEWPORT_TWEEN_DURATION, DEFAULT_FOCAL_TRANSFORM } from './ViewportStore'; // Assuming ViewportStore exports these
+import { viewTransform, DEFAULT_VIEWPORT_SETTINGS, VIEWPORT_TWEEN_DURATION, DEFAULT_FOCAL_TRANSFORM, frameContext, viewportWidth, viewportHeight, centerOnFocalNode } from './ViewportStore'; // Assuming ViewportStore exports these
 import { historyStack, futureStack } from './HistoryStore'; // Assuming HistoryStore exports these
 import { clearSelection } from './SelectionStore'; // Assuming SelectionStore exports these
 import { propertiesPanelPosition, setPropertiesPanelNode, setPropertiesPanelVisibility } from './UIStateStore'; // Assuming UIStateStore exports these
@@ -855,13 +855,10 @@ async function initializeStores() { // Remove export keyword here
             const shouldCenter = !USE_SERVER_ADAPTER ? (get(settings).saveLastViewedContext && localStorage.getItem(LAST_CONTEXT_STORAGE_KEY) === null) || !get(settings).saveLastViewedContext : true;
 
             if (shouldCenter) {
-                const centerX = window.innerWidth / 2;
-                const centerY = window.innerHeight / 2;
-                initialViewportSettings = {
-                    scale: DEFAULT_VIEWPORT_SETTINGS.scale,
-                    posX: centerX,
-                    posY: centerY
-                };
+            	// Use setTimeout to ensure the viewport has its dimensions before framing.
+            	setTimeout(() => {
+            		centerOnFocalNode();
+            	}, 0);
             }
         } else {
         }
