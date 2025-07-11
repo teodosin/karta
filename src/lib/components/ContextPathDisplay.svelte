@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { nodes } from '$lib/karta/NodeStore';
 	import { currentContextId, switchContext, availableContextsMap } from '$lib/karta/ContextStore'; // Import availableContextsMap
+	import { vaultName } from '$lib/karta/VaultStore';
 	import { get } from 'svelte/store'; // Import get
 	// Remove fetchAvailableContextDetails import
 	import { historyStack, futureStack, undoContextSwitch, redoContextSwitch } from '$lib/karta/HistoryStore';
@@ -21,7 +22,7 @@
  displayPath = '/root';
   }
   else if (contextNode && contextNode.path) {
-   displayPath = '/' + contextNode.path;
+   displayPath = '/' + contextNode.path.replace(/^vault/, $vaultName || 'vault');
   } else {
    displayPath = '/?';
   }

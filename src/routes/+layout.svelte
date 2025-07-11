@@ -3,6 +3,7 @@
 	import '../app.css';
 	import { settings } from '$lib/karta/SettingsStore'; // Import the settings store
 	import { initializeStores } from '$lib/karta/ContextStore'; // Import the main store initializer
+	import { initializeVault } from '$lib/karta/VaultStore';
 	import NodeSearchModal from '$lib/components/NodeSearchModal.svelte'; // Import the modal component
 
 	let { children } = $props();
@@ -16,6 +17,7 @@
 			// Initialize all other stores (nodes, contexts, etc.) AFTER settings are loaded
 			// This ensures ContextStore reads the correct setting for loading the last context
 			await initializeStores();
+			await initializeVault();
 		};
 
 		// Call the async initialization function

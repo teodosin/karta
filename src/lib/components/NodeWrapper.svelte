@@ -9,6 +9,7 @@
 	import type { DataNode, ViewNode } from "$lib/types/types";
 	import { nodes, updateNodeAttributes } from "$lib/karta/NodeStore";
 	import { selectedNodeIds } from "$lib/karta/SelectionStore";
+	import { vaultName } from "$lib/karta/VaultStore";
 	import { nodeRenameRequestId } from "$lib/karta/UIStateStore";
 	import { getNodeComponent } from "$lib/node_types/registry";
 	import { tick } from "svelte";
@@ -27,7 +28,7 @@
 	$: NodeComponent = dataNode ? getNodeComponent(dataNode.ntype) : null;
 	// Use viewNode.id for fallback if dataNode is missing (ghost node)
 	$: nodeName =
-		dataNode?.attributes?.name ??
+		dataNode?.attributes?.name?.replace(/^vault/, $vaultName || 'vault') ??
 		dataNode?.ntype ??
 		`Deleted Node (${viewNode.id.substring(0, 8)})`;
 	// Selection and Renamable depend on dataNode existing
