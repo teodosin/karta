@@ -17,8 +17,11 @@
  $: {
   const ctxId = $currentContextId;
   const contextNode: DataNode | undefined = $nodes.get(ctxId);
-  if (contextNode && contextNode.path) {
-   displayPath = contextNode.path;
+  if (ctxId === '00000000-0000-0000-0000-000000000000') {
+ displayPath = '/root';
+  }
+  else if (contextNode && contextNode.path) {
+   displayPath = '/' + contextNode.path;
   } else {
    displayPath = '/?';
   }
