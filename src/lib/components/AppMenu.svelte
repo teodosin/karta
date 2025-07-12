@@ -166,7 +166,7 @@
 
 	{#if isOpen}
 		<div
-			class="absolute left-0 top-full m-2 w-80 rounded-md border border-orange-400 bg-panel-bg p-2 text-white shadow-lg"
+			class="absolute left-0 z-[500] top-full m-2 w-80 rounded-md border border-orange-400 bg-panel-bg p-2 text-white shadow-lg"
 			transition:fly={{ y: -5, duration: 150 }}
 		>
 			<!-- Hidden file input -->

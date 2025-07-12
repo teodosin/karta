@@ -60,8 +60,8 @@ interface ServerViewNode {
 
 interface ServerContextSettings {
     zoom_scale: number;
-    offsetX: number;
-    offsetY: number;
+    view_rel_pos_x: number;
+    view_rel_pos_y: number;
 }
 
 interface ServerContext {
@@ -277,8 +277,8 @@ export class ServerAdapter implements PersistenceService {
 
                 const clientViewportSettings: StorableViewportSettings = {
                     scale: (serverContextData.settings?.zoom_scale ?? 1.0) > 0.001 ? (serverContextData.settings?.zoom_scale ?? 1.0) : 1.0,
-                    relPosX: Number(serverContextData.settings?.offsetX) || 0,
-                    relPosY: Number(serverContextData.settings?.offsetY) || 0,
+                    relPosX: Number(serverContextData.settings?.view_rel_pos_x) || 0,
+                    relPosY: Number(serverContextData.settings?.view_rel_pos_y) || 0,
                 };
 
                 const clientStorableContext: StorableContext = {
