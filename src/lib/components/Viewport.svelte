@@ -73,6 +73,20 @@
 	import ContextMenu from "./ContextMenu.svelte";
 	import SelectionBox from "./SelectionBox.svelte";
 	import ConfirmationDialog from "./ConfirmationDialog.svelte";
+	import {
+		watchStore,
+		lifecycleLogger,
+	} from "$lib/debug";
+	import { vaultName } from "$lib/karta/VaultStore";
+
+	onMount(() => {
+		lifecycleLogger.log("Viewport mounted");
+
+		// Setup reactive store logging
+		watchStore(nodes, "NodeStore");
+		watchStore(contexts, "ContextStore");
+		watchStore(vaultName, "VaultStore");
+	});
 
 	let canvasContainer: HTMLElement;
 
@@ -1232,3 +1246,4 @@
 	</div>
 {/if}
 <ConfirmationDialog />
+

@@ -1,4 +1,5 @@
-    import { writable, get, derived } from 'svelte/store';
+import { writable, get, derived } from 'svelte/store';
+import { apiLogger } from '$lib/debug';
 import { Tween } from 'svelte/motion';
 import { cubicOut } from 'svelte/easing';
 import { LocalAdapter, localAdapter } from '../util/LocalAdapter'; // Import LocalAdapter class
@@ -550,6 +551,7 @@ export async function switchContext(newContextId: NodeId, isUndoRedo: boolean = 
         }
 
         const bundle = await activeAdapter.loadContextBundle(identifierForBundle);
+        apiLogger.log(`Context Bundle from Server for ${identifierForBundle}:`, bundle);
         const { finalContext: processedContext, wasCreated } = await _loadAndProcessContext(
             newContextId,
             focalInitialState, // Pass the full initial state object
