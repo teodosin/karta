@@ -12,7 +12,7 @@
 </script>
 
 <!-- Position left, vertical layout, dark theme styles -->
-<div class="absolute top-1/2 left-2 transform -translate-y-1/2 z-50 flex flex-col gap-2 p-2 backdrop-blur-sm rounded-lg shadow-lg bg-gray-900/40">
+<div class="absolute top-1/2 left-2 transform -translate-y-1/2 z-50 flex flex-col gap-2 p-2 backdrop-blur-sm rounded-lg shadow-lg bg-wine">
     <!-- Tool Button Structure -->
     {#each [
         { tool: 'move', label: 'Move Tool', icon: MousePointer2, instance: MoveTool },

@@ -57,7 +57,6 @@
 		shadow-inner flex items-center justify-center pointer-events-auto
 		${ringClasses}
 	`}
-	title={`Directory Node: ${dataNode?.attributes?.name ?? dataNode.id}`}
 >
 	<!-- Optional: Could add a subtle icon or pattern, e.g., a folder icon -->
 	<!-- <span class="text-white opacity-50 text-xs">D</span> -->

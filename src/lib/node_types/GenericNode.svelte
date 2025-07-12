@@ -59,7 +59,6 @@
 		shadow-inner flex items-center justify-center pointer-events-auto
 		${ringClasses}
 	`}
-	title={`Generic Node: ${dataNode?.attributes?.name ?? dataNode.id}`}
 >
 	<!-- Optional: Could add a subtle icon or pattern -->
 	<!-- <span class="text-white opacity-50 text-xs">G</span> -->

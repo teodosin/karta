@@ -65,7 +65,6 @@
 		flex items-center justify-center p-2 pointer-events-auto
 		${ringClasses}
 	`}
-	title={`Root Node: ${dataNode?.attributes?.name ?? dataNode.id}`}
 >
 	<!-- Use Lucide BrainCog icon -->
 	<BrainCog class="select-none pointer-events-none" strokeWidth={1.5} size={50} color="orange" />

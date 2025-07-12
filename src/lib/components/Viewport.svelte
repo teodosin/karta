@@ -1019,7 +1019,7 @@
 				<NodeWrapper {viewNode} {dataNode} />
 			{/each}
 		{/if}
-		<!-- Selection Box (now always mounted, internal logic handles visibility) - Moved INSIDE transformed canvas -->
+		<!-- Selection Box -->
 		{#if true}
 			<!-- Wrap in valid block to fix {@const} placement -->
 			{@const currentScaleValue = viewTransform.current.scale}

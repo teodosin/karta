@@ -59,7 +59,6 @@
 		shadow-inner flex items-center justify-center pointer-events-auto
 		${ringClasses}
 	`}
-	title={`File Node: ${dataNode?.attributes?.name ?? dataNode.id}`}
 >
 	<!-- Optional: Could add a subtle icon or pattern, e.g., a file icon -->
 	<!-- <span class="text-white opacity-50 text-xs">F</span> -->

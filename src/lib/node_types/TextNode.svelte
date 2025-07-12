@@ -190,7 +190,6 @@
 	`}
 	style:background-color={effectiveFillColor}
 	style:color={effectiveTextColor}
-	title={`Text Node: ${dataNodeAttributes?.name ?? dataNode.id}`}
 	on:dblclick={startEditing}
 >
 	{#if isEditing}
