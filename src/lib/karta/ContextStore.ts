@@ -611,7 +611,7 @@ export async function switchContext(newContextId: NodeId, isUndoRedo: boolean = 
         // If processedContext.viewportSettings is undefined (newly created context),
         // the viewport should remain unchanged.
         if (processedContext.viewportSettings !== undefined) {
-            viewTransform.set(processedContext.viewportSettings, { duration: VIEWPORT_TWEEN_DURATION }); // Restore tween duration
+            viewTransform.set(processedContext.viewportSettings, { duration: VIEWPORT_TWEEN_DURATION });
         }
 
 
@@ -632,13 +632,13 @@ export async function switchContext(newContextId: NodeId, isUndoRedo: boolean = 
     }
 }
 
-async function initializeStores() { // Remove export keyword here
-	initializeTools(); // Initialize tool instances here
+async function initializeStores() {
+	initializeTools();
 
 	// Ensure currentTool is not null before calling activate (this check might be redundant after initializeTools)
     const currentToolInstance = get(currentTool);
     if (currentToolInstance) {
-        currentToolInstance.activate(); // Activate default tool
+        currentToolInstance.activate();
     }
 
 

@@ -629,17 +629,6 @@ export async function fetchAvailableContextDetails(): Promise<{ id: NodeId, name
                 newNodeMap.set(dataNodeId, updatedDataNode);
                 return newNodeMap;
             });
-
-            if (localAdapter) {
-                try {
-                    const updatedDataNode = get(nodes).get(dataNodeId);
-                    if (updatedDataNode) {
-                        await localAdapter.saveNode(updatedDataNode);
-                    }
-                } catch (error) {
-                    console.error(`[updateViewNodeAttribute] Error saving DataNode ${dataNodeId} for attribute default update:`, error);
-                }
-            }
        }
        
    }
