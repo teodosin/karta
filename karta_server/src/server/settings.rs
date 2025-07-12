@@ -1,4 +1,4 @@
-use axum::{extract::State, http::StatusCode, response::Json};
+use axum::{extract::State, http::StatusCode, response::{IntoResponse, Json}};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
@@ -12,6 +12,10 @@ pub struct ColorTheme {
     pub viewport_bg: String,
     #[serde(rename = "panel-bg")]
     pub panel_bg: String,
+    #[serde(rename = "focal-hl")]
+    pub focal_hl: String,
+    #[serde(rename = "panel-hl")]
+    pub panel_hl: String,
 }
 
 impl Default for ColorTheme {
@@ -19,6 +23,8 @@ impl Default for ColorTheme {
         ColorTheme {
             viewport_bg: "#282828".to_string(),
             panel_bg: "#3c3836".to_string(),
+            focal_hl: "#f4902dff".to_string(),
+            panel_hl: "#741f2fff".to_string(),
         }
     }
 }
@@ -79,11 +85,15 @@ pub async fn get_settings_handler(
 pub async fn update_settings_handler(
     State(state): State<AppState>,
     Json(payload): Json<KartaSettings>,
-) -> StatusCode {
+) -> impl IntoResponse {
     let service = state.service.read().unwrap();
     let vault_path = service.vault_fs_path().to_str().unwrap();
     match save_settings(vault_path, &payload) {
-        Ok(_) => StatusCode::OK,
-        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+        Ok(_) => (StatusCode::OK, Json(payload)).into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Failed to save settings: {}", e),
+        )
+            .into_response(),
     }
 }
