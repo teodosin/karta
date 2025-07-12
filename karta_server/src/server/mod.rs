@@ -16,28 +16,24 @@ use axum::{
     routing::{get, post, put},
     Extension, Json, Router, http::Method,
 };
-use tower_http::cors::{Any, CorsLayer}; // Added imports for CORS
+use tower_http::cors::{Any, CorsLayer};
 use karta_service::KartaService;
 use serde::Deserialize;
 use std::{borrow::Cow, io::{self, Write}, sync::RwLock};
 use std::path::PathBuf;
 use std::{error::Error, sync::Arc};
-use std::fs; // For filesystem operations in PathCompleter
+use std::fs;
 
-// Rustyline imports
-use rustyline::{Editor, Config}; // Added Config
-use rustyline::Helper; // Main trait for custom helper
-use rustyline::Context as RustylineContext; // Alias for rustyline::Context
-use rustyline::Result as RustylineResult; // Alias for rustyline::Result
-use rustyline::error::ReadlineError;     // For error handling in match
-use rustyline::completion::{Completer, Pair}; // For completion, Added CompletionType
+use rustyline::{Editor, Config};
+use rustyline::Helper;
+use rustyline::Context as RustylineContext;
+use rustyline::Result as RustylineResult;
+use rustyline::error::ReadlineError;
+use rustyline::completion::{Completer, Pair};
 use rustyline::CompletionType;
-use rustyline::highlight::{Highlighter, CmdKind};   // For syntax highlighting (even if basic), Added CmdKind
-use rustyline::hint::Hinter;             // For hints (even if basic)
-use rustyline::validate::{Validator, ValidationContext, ValidationResult}; // For input validation
-
-// Remove DefaultEditor if not used elsewhere, Editor is used for custom helper
-// use rustyline::DefaultEditor;
+use rustyline::highlight::{Highlighter, CmdKind};
+use rustyline::hint::Hinter;
+use rustyline::validate::{Validator, ValidationContext, ValidationResult};
 
 use tokio::sync::broadcast;
 
@@ -46,6 +42,7 @@ mod context_endpoints;
 mod write_endpoints;
 mod asset_endpoints;
 pub mod karta_service;
+pub mod settings;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -56,8 +53,8 @@ pub struct AppState {
 pub fn create_router(state: AppState) -> Router<()> {
     let cors = CorsLayer::new()
         .allow_origin("http://localhost:5173".parse::<axum::http::HeaderValue>().unwrap())
-        .allow_methods(Any) // Allow all methods
-        .allow_headers(Any); // Allow any headers
+        .allow_methods([Method::GET, Method::POST, Method::PUT, Method::OPTIONS])
+        .allow_headers([axum::http::header::CONTENT_TYPE]);
 
     let router = Router::new()
     	.route("/", get(data_endpoints::get_vault_info))
@@ -70,6 +67,7 @@ pub fn create_router(state: AppState) -> Router<()> {
             .get(data_endpoints::get_node_by_uuid)
         )
         .route("/api/ctx/{id}", put(write_endpoints::save_context))
+        .route("/api/settings", get(settings::get_settings_handler).put(settings::update_settings_handler))
         .route("/ctx/{*id}", get(context_endpoints::open_context_from_fs_path)) // Corrected wildcard syntax
         .layer(cors) // Apply the CORS layer
         // So what routes do we want?
