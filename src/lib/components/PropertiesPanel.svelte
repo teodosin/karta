@@ -460,7 +460,7 @@
 	{#if $propertiesPanelVisible && selectedDataNode}
 		<div
 			bind:this={panelElement}
-			class="properties-panel absolute flex flex-col bg-wine dark:bg-wine border border-wine/50 rounded-lg shadow-xl z-40 text-gray-900 dark:text-gray-100 overflow-hidden"
+			class="properties-panel absolute flex flex-col bg-panel-bg dark:bg-panel-bg border border-panel-bg/50 rounded-lg shadow-xl z-40 text-gray-900 dark:text-gray-100 overflow-hidden"
 			style:height={$propertiesPanelCollapsed
 				? headerHeight > 0
 					? `${headerHeight}px`
@@ -474,7 +474,7 @@
 			<!-- Header -->
 			<div
 				bind:this={headerElement}
-				class="panel-header flex items-center justify-between p-2 border-b border-gray-300 dark:border-gray-600 bg-wine dark:bg-wine rounded-t-lg select-none"
+				class="panel-header flex items-center justify-between p-2 border-b border-gray-300 dark:border-gray-600 bg-panel-bg dark:bg-panel-bg rounded-t-lg select-none"
 				use:measureHeaderHeight
 			>
 				<span

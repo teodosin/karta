@@ -8,14 +8,23 @@
 
 	let { children } = $props();
 
-	onMount(() => { // Remove async here
+	$effect(() => {
+		if ($settings.colorTheme) {
+			const root = document.documentElement;
+
+			for (const [key, value] of Object.entries($settings.colorTheme)) {
+				root.style.setProperty(`--color-${key}`, value);
+			}
+		}
+	});
+
+	onMount(() => {
 		// Define an async function for initialization
 		const initializeApp = async () => {
-			// Load settings from localStorage first
-			settings.loadSettings();
+			// Load settings from the server first
+			await settings.loadSettings();
 
 			// Initialize all other stores (nodes, contexts, etc.) AFTER settings are loaded
-			// This ensures ContextStore reads the correct setting for loading the last context
 			await initializeStores();
 			await initializeVault();
 		};

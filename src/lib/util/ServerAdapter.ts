@@ -8,6 +8,7 @@ import type {
     ContextBundle,
     StorableViewNode,
     StorableViewportSettings,
+    KartaSettings,
 } from '../types/types';
 import type { PersistenceService } from './PersistenceService';
 
@@ -439,4 +440,43 @@ export class ServerAdapter implements PersistenceService {
     async getAsset(assetId: string): Promise<AssetData | undefined> { console.warn(`[ServerAdapter.getAsset] Not implemented for asset ID: ${assetId}`); return undefined; }
     async deleteAsset(assetId: string): Promise<void> { console.warn(`[ServerAdapter.deleteAsset] Not implemented for asset ID: ${assetId}`); }
     async getAssetObjectUrl(assetId: string): Promise<string | null> { console.warn(`[ServerAdapter.getAssetObjectUrl] Not implemented for asset ID: ${assetId}`); return null; }
+
+    async getSettings(): Promise<KartaSettings | undefined> {
+        const url = `${SERVER_BASE_URL}/api/settings`;
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                if (response.status !== 404) {
+                    console.error(`[ServerAdapter.getSettings] Error fetching settings. Status: ${response.status}`);
+                }
+                return undefined;
+            }
+            return await response.json();
+        } catch (error) {
+            console.error(`[ServerAdapter.getSettings] Network error fetching settings:`, error);
+            return undefined;
+        }
+    }
+
+    async saveSettings(settings: KartaSettings): Promise<void> {
+        const url = `${SERVER_BASE_URL}/api/settings`;
+        try {
+            const response = await fetch(url, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(settings),
+            });
+
+            if (!response.ok) {
+                const errorBody = await response.text();
+                console.error(`[ServerAdapter.saveSettings] Error saving settings. Status: ${response.status}`, errorBody);
+                throw new Error(`Server responded with status ${response.status}`);
+            }
+        } catch (error) {
+            console.error(`[ServerAdapter.saveSettings] Network error saving settings:`, error);
+            throw error;
+        }
+    }
 }

@@ -1,54 +1,59 @@
 import { writable } from 'svelte/store';
-import type { KartaSettings } from '$lib/types/types';
+import type { KartaSettings, ColorTheme } from '$lib/types/types';
+import { ServerAdapter } from '$lib/util/ServerAdapter';
 
-const SETTINGS_STORAGE_KEY = 'kartaSettings';
+const adapter = new ServerAdapter();
 
 // Default settings
 const defaultSettings: KartaSettings = {
-	version: 1,
+	version: 0.1,
 	saveLastViewedContext: true,
-	vaultPath: null
+	vaultPath: null,
+	colorTheme: {
+		'viewport-bg': '#2b2b36',
+		'panel-bg': '#431d1f'
+	}
 };
 
 // Create the writable store, initialized with defaults
 const { subscribe, set, update } = writable<KartaSettings>(defaultSettings);
 
-// Function to load settings from localStorage and merge with defaults
-function loadSettings() {
+// Function to load settings from the server
+async function loadSettings() {
 	try {
-		const storedSettingsJson = localStorage.getItem(SETTINGS_STORAGE_KEY);
-		if (storedSettingsJson) {
-			const storedSettings = JSON.parse(storedSettingsJson) as Partial<KartaSettings>;
+		const serverSettings = await adapter.getSettings();
+		if (serverSettings) {
 			// Merge loaded settings with defaults to ensure all keys exist
-			// and new defaults are applied if the stored version is older
-			const mergedSettings = { ...defaultSettings, ...storedSettings };
-			set(mergedSettings); // Update the store with merged settings
+			const mergedSettings = { ...defaultSettings, ...serverSettings };
+			set(mergedSettings);
 		} else {
-			// No settings found, save the defaults to localStorage
-			localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(defaultSettings));
-			set(defaultSettings); // Ensure store has defaults
+			// No settings found on server, save the defaults
+			await adapter.saveSettings(defaultSettings);
+			set(defaultSettings);
 		}
 	} catch (error) {
-		console.error('Error loading Karta settings from localStorage:', error);
-		// Fallback to default settings if loading/parsing fails
+		console.error('Error loading Karta settings from server:', error);
+		// Fallback to default settings if loading fails
 		set(defaultSettings);
-		// Optionally clear corrupted storage
-		// localStorage.removeItem(SETTINGS_STORAGE_KEY);
 	}
 }
 
-// Function to update settings and save to localStorage
-function updateSettings(newSettings: Partial<KartaSettings>) {
+// Function to update settings and save to the server
+export async function updateSettings(newSettings: Partial<KartaSettings>) {
+	let updatedSettings: KartaSettings | undefined;
 	update((currentSettings) => {
-		const updatedSettings = { ...currentSettings, ...newSettings };
-		try {
-			localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(updatedSettings));
-		} catch (error) {
-			console.error('Error saving Karta settings to localStorage:', error);
-			// Decide if we should revert the store update or just log the error
-		}
+		updatedSettings = { ...currentSettings, ...newSettings };
 		return updatedSettings;
 	});
+
+	if (updatedSettings) {
+		try {
+			await adapter.saveSettings(updatedSettings);
+		} catch (error) {
+			console.error('Error saving Karta settings to server:', error);
+			// Optionally, revert the optimistic update here
+		}
+	}
 }
 
 // Export the store interface
@@ -56,8 +61,4 @@ export const settings = {
 	subscribe,
 	loadSettings, // Expose load function to be called on app init
 	updateSettings // Expose update function
-	// Note: Direct 'set' is not exposed to enforce saving via updateSettings
 };
-
-// Initial load when the module is first imported (usually on app startup)
-// loadSettings(); // Moved call to initialization logic

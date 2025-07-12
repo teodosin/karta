@@ -55,7 +55,7 @@
 <!-- Generic Node Appearance: Simple Circle - Apply focus ring here -->
 <div
 	class={`
-		w-full h-full rounded-full bg-wine
+		w-full h-full rounded-full bg-panel-bg
 		shadow-inner flex items-center justify-center pointer-events-auto
 		${ringClasses}
 	`}

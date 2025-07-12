@@ -61,7 +61,7 @@
 <!-- Root Node Appearance - Apply focus ring here -->
 <div
 	class={`
-		w-full h-full rounded-full border-2 border-dashed border-orange-400 bg-wine
+		w-full h-full rounded-full border-2 border-dashed border-orange-400 bg-panel-bg
 		flex items-center justify-center p-2 pointer-events-auto
 		${ringClasses}
 	`}

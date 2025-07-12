@@ -2,6 +2,7 @@
  import { Menu, X } from 'lucide-svelte';
  import { fly } from 'svelte/transition';
  import { localAdapter } from '$lib/util/LocalAdapter'; // Import localAdapter
+ import ThemeEditor from './ThemeEditor.svelte';
 
  let isOpen = false;
  let fileInput: HTMLInputElement | null = null; // Reference for the hidden file input
@@ -151,7 +152,7 @@
 
 	{#if isOpen}
 		<div
-			class="absolute left-0 top-full m-2 w-56 rounded-md border border-orange-400 bg-wine p-2 text-white shadow-lg"
+			class="absolute left-0 top-full m-2 w-56 rounded-md border border-orange-400 bg-panel-bg p-2 text-white shadow-lg"
 			transition:fly={{ y: -5, duration: 150 }}
 		>
 			<!-- Hidden file input -->
@@ -164,20 +165,10 @@
 			/>
 			<!-- Standard HTML buttons for menu items -->
 			<!-- Changed on:click to trigger input click -->
-			<button
-				class="block w-full px-2 py-1.5 text-left text-sm hover:bg-orange-800 rounded-sm"
-				on:click={handleImportClick}
-			>
-				Import Data...
-			</button>
-			<button
-				class="block w-full px-2 py-1.5 text-left text-sm hover:bg-orange-800 rounded-sm"
-				on:click={handleExport}
-			>
-				Export Data...
-			</button>
+			<div class="my-2 border-t border-orange-400" />
+			<ThemeEditor />
 			<div class="mt-2 border-t border-fuchsia-800 pt-2 text-sm text-fuchsia-100">
-				Have any feedback or suggestions for future versions? Get in touch at 
+				Have any feedback or suggestions for future versions? Get in touch at
 					<a href="mailto:karta@teodosin.com" class="underline hover:text-white">
 						karta@teodosin.com
 					</a

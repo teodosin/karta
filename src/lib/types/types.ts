@@ -147,12 +147,19 @@ export interface PropertyDefinition {
 // --- End Storage-Specific Types ---
 
 // --- Global Settings ---
-export interface KartaSettings {
-  version: number; // For potential future migrations
-  saveLastViewedContext: boolean; // Whether to reopen the last context on startup
-  vaultPath: string | null; // The absolute path to the root of the Karta vault
-  // Add other global settings here as needed
-}
+export interface ColorTheme {
+	'viewport-bg': string;
+	'panel-bg': string;
+	// Add other theme properties here
+  }
+  
+  export interface KartaSettings {
+	version: number; // For potential future migrations
+	saveLastViewedContext: boolean; // Whether to reopen the last context on startup
+	vaultPath: string | null; // The absolute path to the root of the Karta vault
+	colorTheme: ColorTheme;
+	// Add other global settings here as needed
+  }
 
 // Represents connections between DataNodes (context-independent)
 export interface KartaEdge {

@@ -10,7 +10,7 @@ export default {
           sans: ['Nunito Sans', ...defaultTheme.fontFamily.sans],
         },
         colors: {
-          'wine': '#29151d',
+          'panel-bg': '#29151d',
         },
       },
     },
