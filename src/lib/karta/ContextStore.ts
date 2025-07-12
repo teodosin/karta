@@ -489,6 +489,17 @@ export async function saveCurrentContext() {
 }
 
 export async function switchContext(newContextId: NodeId, isUndoRedo: boolean = false) { // Added isUndoRedo flag
+	try {
+		const response = await fetch('http://localhost:7370/api/paths?only_indexed=true');
+		if (response.ok) {
+			const paths = await response.json();
+			apiLogger.log(true, "Indexed paths from server:", paths);
+		} else {
+			apiLogger.error(true, "Failed to fetch indexed paths:", response.status, response.statusText);
+		}
+	} catch (error) {
+		apiLogger.error(true, "Error fetching indexed paths:", error);
+	}
 	const oldContextId = get(currentContextId);
 	if (newContextId === oldContextId) return; // No change
 

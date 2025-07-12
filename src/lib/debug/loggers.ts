@@ -58,7 +58,5 @@ export const interactionLogger = new Logger('Interaction');
 
 // Reactive logger for Svelte stores
 export function watchStore(store: any, name: string) {
-    store.subscribe((value: any) => {
-        storeLogger.log(`${name} updated:`, value);
-    });
+    // Temporarily disabled to clean up console
 }
