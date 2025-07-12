@@ -45,6 +45,7 @@
 	// INSTANCE SCRIPT
 	import type { DataNode, ViewNode } from '$lib/types/types';
 	import { currentContextId, availableContextsMap } from '$lib/karta/ContextStore'; // Import availableContextsMap
+	import { settings } from '$lib/karta/SettingsStore';
 	import { onMount } from 'svelte';
 	import { localAdapter } from '$lib/util/LocalAdapter'; // Import localAdapter
 
@@ -124,9 +125,9 @@
 
 	// Determine ring classes based on focal state and context existence
 	$: ringClasses = dataNode.id === $currentContextId
-		? 'ring-4 ring-offset-2 ring-offset-gray-900 ring-orange-500 rounded' // Focal highlight
+		? 'ring-4 ring-offset-2 ring-offset-gray-900 ring-[var(--color-focal-hl)] rounded' // Focal highlight
 		: hasContext
-			? 'ring-2 ring-orange-500/50 rounded' // Use border for context outline
+			? 'ring-2 ring-[var(--color-focal-hl)] rounded' // Use border for context outline
 			: 'rounded shadow-md'; // Default rounded corners and shadow
 </script>
 

@@ -48,6 +48,7 @@
 	import type { DataNode, ViewNode, AvailableFont } from '$lib/types/types'; // Import AvailableFont
 	import { updateNodeAttributes } from '$lib/karta/NodeStore'; // Corrected import
 	import { currentContextId, availableContextsMap } from '$lib/karta/ContextStore'; // Import availableContextsMap
+	import { settings } from '$lib/karta/SettingsStore';
 	import { tick, onDestroy } from 'svelte'; // Import onDestroy
 	import { AVAILABLE_FONTS } from '$lib/types/types'; // Import AVAILABLE_FONTS
 
@@ -91,9 +92,9 @@
 
 	// Determine ring classes based on focal state and context existence
 	$: ringClasses = dataNode.id === $currentContextId
-		? 'ring-4 ring-offset-2 ring-offset-gray-900 ring-orange-500 rounded' // Focal highlight
+		? 'ring-4 ring-offset-2 ring-offset-gray-900 ring-[var(--color-focal-hl)] rounded' // Focal highlight
 		: hasContext
-			? 'ring-2 ring-orange-500/50 rounded' // Use border for context outline
+			? 'ring-2 ring-[var(--color-focal-hl)] rounded' // Use border for context outline
 			: 'rounded shadow-md'; // Default rounded corners and shadow
 
 	let isEditing = false;

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { settings } from '$lib/karta/SettingsStore';
     import { currentTool, setTool } from '$lib/karta/ToolStore';
     import { saveCurrentContext } from '$lib/karta/ContextStore';
     // Tool instances are used for instanceof checks
@@ -23,10 +24,8 @@
         <div class="relative group"> <!-- Container for tooltip positioning -->
             <button
                 type="button"
-                class="toolbar-button p-2 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-orange-700
-                       { $currentTool instanceof item.instance
-                           ? 'bg-panel-bg text-white'
-                           : 'text-gray-300 hover:bg-gray-700 hover:text-white'}"
+                class="toolbar-button p-2 rounded transition-colors focus:outline-none focus:ring-2"
+                style="--panel-hl: {$settings.colorTheme['panel-hl']}; { $currentTool instanceof item.instance ? `background-color: ${$settings.colorTheme['panel-hl']};` : '' }"
                 on:click={() => setTool(item.tool as 'move' | 'connect' | 'context')}
                 aria-label={item.label}
             >
@@ -52,7 +51,8 @@
     <div class="relative group">
         <button
             type="button"
-            class="toolbar-button p-2 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-orange-700 text-gray-300 hover:bg-gray-700 hover:text-white"
+            class="toolbar-button p-2 rounded transition-colors focus:outline-none focus:ring-2 text-gray-300"
+            style="--panel-hl: {$settings.colorTheme['panel-hl']};"
             on:click={saveCurrentContext}
             aria-label="Save Layout"
         >

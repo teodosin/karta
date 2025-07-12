@@ -2,6 +2,7 @@
 	import { nodes } from '$lib/karta/NodeStore';
 	import { currentContextId, switchContext, availableContextsMap } from '$lib/karta/ContextStore'; // Import availableContextsMap
 	import { vaultName } from '$lib/karta/VaultStore';
+	import { settings } from '$lib/karta/SettingsStore';
 	import { get } from 'svelte/store'; // Import get
 	// Remove fetchAvailableContextDetails import
 	import { historyStack, futureStack, undoContextSwitch, redoContextSwitch } from '$lib/karta/HistoryStore';
@@ -78,7 +79,8 @@
 	<!-- Undo Button -->
 	<button
 		type="button"
-		class="text-xl hover:text-white hover:font-black hover:bg-gray-600 rounded disabled:opacity-50 disabled:font-thin p-1 px-2"
+		class="text-xl hover:text-white hover:font-black rounded disabled:opacity-50 disabled:font-thin p-1 px-2"
+		style="--panel-hl: {$settings.colorTheme['panel-hl']};"
 		disabled={$historyStack.length === 0}
 		on:click={undoContextSwitch}
 		aria-label="Undo Context Switch"
@@ -88,7 +90,8 @@
 	<!-- Redo Button -->
 	<button
 		type="button"
-		class="text-xl hover:text-white hover:font-black hover:bg-gray-600 rounded disabled:opacity-50 disabled:font-thin p-1 px-2"
+		class="text-xl hover:text-white hover:font-black rounded disabled:opacity-50 disabled:font-thin p-1 px-2"
+		style="--panel-hl: {$settings.colorTheme['panel-hl']};"
 		disabled={$futureStack.length === 0}
 		on:click={redoContextSwitch}
 		aria-label="Redo Context Switch"
@@ -102,7 +105,8 @@
 		<button
 			type="button"
 			on:click={toggleContextList}
-			class="flex items-center hover:bg-gray-700 p-1 pl-2 pr-4 rounded"
+			class="flex items-center p-1 pl-2 pr-4 rounded"
+			style="--panel-hl: {$settings.colorTheme['panel-hl']};"
 			aria-haspopup="true"
 			aria-expanded={showContextList}
 		>

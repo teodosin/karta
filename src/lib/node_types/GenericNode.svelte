@@ -47,9 +47,9 @@
 
 	// Determine ring classes based on focal state and context existence
 	$: ringClasses = dataNode.id === $currentContextId
-		? 'ring-4 ring-offset-2 ring-offset-gray-900 ring-orange-500' // Focal highlight
+		? 'ring-4 ring-offset-2 ring-offset-gray-900 ring-[var(--color-focal-hl)]' // Focal highlight
 		: hasContext
-			? 'ring-2 ring-orange-500/50' // Use border for context outline
+			? 'ring-2 ring-[var(--color-focal-hl)]' // Use border for context outline
 			: ''; // No border/ring
 </script>
 <!-- Generic Node Appearance: Simple Circle - Apply focus ring here -->

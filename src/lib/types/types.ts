@@ -150,8 +150,10 @@ export interface PropertyDefinition {
 export interface ColorTheme {
 	'viewport-bg': string;
 	'panel-bg': string;
+	'focal-hl': string;
+	'panel-hl': string;
 	// Add other theme properties here
-  }
+	 }
   
   export interface KartaSettings {
 	version: number; // For potential future migrations

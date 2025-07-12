@@ -11,7 +11,9 @@ const defaultSettings: KartaSettings = {
 	vaultPath: null,
 	colorTheme: {
 		'viewport-bg': '#2b2b36',
-		'panel-bg': '#431d1f'
+		'panel-bg': '#431d1f',
+		'focal-hl': '#f4902dff',
+		'panel-hl': '#741f2fff'
 	}
 };
 
