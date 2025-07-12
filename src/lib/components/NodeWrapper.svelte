@@ -31,13 +31,11 @@
 		dataNode?.attributes?.name?.replace(/^vault/, $vaultName || 'vault') ??
 		dataNode?.ntype ??
 		`Deleted Node (${viewNode.id.substring(0, 8)})`;
-	// Selection and Renamable depend on dataNode existing
-	$: isSelected = dataNode ? $selectedNodeIds.has(dataNode.id) : false;
+
+		$: isSelected = dataNode ? $selectedNodeIds.has(dataNode.id) : false;
 	$: isRenamable = dataNode ? !dataNode.attributes?.isSystemNode : false; // Ghost nodes are not renamable
-	// Ghost state is determined by checking the global $nodes store
 	$: isGhost = !$nodes.has(viewNode.id);
-	// Determine if the name label should be visible
-	// Check ViewNode override, then DataNode default, then fallback to true
+
 	$: isNameVisible =
 		viewNode.attributes?.view_isNameVisible ??
 		dataNode?.attributes?.view_isNameVisible ??

@@ -15,7 +15,7 @@
 	});
 </script>
 
-<div class="w-full min-h-screen bg-gray-100 flex flex-col relative">
+<div class="w-full min-h-screen bg-gray-400 flex flex-col relative">
 	<AppMenu />
 	<Toolbar />
 	<Viewport />

@@ -971,7 +971,7 @@
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <div
 	id="viewport"
-	class="karta-viewport-container w-full h-screen overflow-hidden relative cursor-default bg-gray-950"
+	class="karta-viewport-container w-full h-screen overflow-hidden relative cursor-default bg-viewport-bg"
 	bind:this={canvasContainer}
 	bind:clientWidth={$viewportWidth}
 	bind:clientHeight={$viewportHeight}

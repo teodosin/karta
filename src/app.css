@@ -25,4 +25,5 @@ html, body {
 
 @theme {
   --color-wine: #33101a;
+  --color-viewport-bg: #3b3b3f;
 }
