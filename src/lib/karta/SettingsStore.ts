@@ -63,5 +63,6 @@ export async function updateSettings(newSettings: Partial<KartaSettings>) {
 export const settings = {
 	subscribe,
 	loadSettings, // Expose load function to be called on app init
-	updateSettings // Expose update function
+	updateSettings, // Expose update function
+	defaultSettings // Expose default settings for reset functionality
 };

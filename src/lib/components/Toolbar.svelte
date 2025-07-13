@@ -51,7 +51,7 @@
     <div class="relative group">
         <button
             type="button"
-            class="toolbar-button p-2 rounded transition-colors focus:outline-none focus:ring-2 text-gray-300"
+            class="toolbar-button p-2 rounded transition-colors focus:outline-none focus:ring-2"
             style="--panel-hl: {$settings.colorTheme['panel-hl']};"
             on:click={saveCurrentContext}
             aria-label="Save Layout"

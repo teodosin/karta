@@ -74,7 +74,8 @@
 <!-- Bind the component's root element -->
 <div
 	bind:this={componentElement}
-	class="absolute bottom-2 left-2 px-3 py-1 text-sm rounded backdrop-blur-sm shadow bg-panel-bg text-gray-300 flex items-center z-20"
+	class="absolute bottom-2 left-2 px-3 py-1 text-sm rounded backdrop-blur-sm shadow bg-panel-bg flex items-center z-20"
+	style="color: var(--color-text-color);"
 >
 	<!-- Undo Button -->
 	<button

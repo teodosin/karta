@@ -19,6 +19,12 @@
 		};
 		colorPickerStore.open(initialColor, e, onUpdate);
 	}
+
+	function resetToDefaults() {
+		if (confirm('Are you sure you want to reset the theme to defaults?')) {
+			updateSettings({ colorTheme: settings.defaultSettings.colorTheme });
+		}
+	}
 </script>
 
 <div class="p-4 space-y-4">
@@ -34,5 +40,13 @@
 				></button>
 			</div>
 		{/each}
+	</div>
+	<div class="pt-2">
+		<button
+			class="w-full px-4 py-1 text-sm font-medium text-white bg-gray-800 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+			on:click={resetToDefaults}
+		>
+			Reset to Defaults
+		</button>
 	</div>
 </div>

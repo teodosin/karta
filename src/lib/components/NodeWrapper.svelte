@@ -162,7 +162,8 @@
 			<!-- External Label & Input - Render only if NOT ghost AND isNameVisible is true -->
 			{#if isNameVisible}
 				<div
-					class="node-label absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full mt-1 px-1.5 py-0.5 bg-gray-900 bg-opacity-80 text-white text-center text-xs rounded pointer-events-auto break-words"
+					class="node-label absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full mt-1 px-1.5 py-0.5 bg-gray-900 bg-opacity-80 text-center text-xs rounded pointer-events-auto break-words"
+					style="color: var(--color-text-color);"
 					class:cursor-text={isRenamable}
 					title={isRenamable
 						? "Double-click to rename"
@@ -181,8 +182,8 @@
 								type="text"
 								bind:value={editedName}
 								on:keydown={handleKeyDown}
-								class="bg-gray-900 text-white text-xs p-0 border border-blue-500 rounded outline-none focus:ring-1 focus:ring-blue-400"
-								style:width="{Math.min(
+								class="bg-gray-900 text-xs p-0 border border-blue-500 rounded outline-none focus:ring-1 focus:ring-blue-400"
+								style="color: var(--color-text-color); width:{Math.min(
 									viewNode.state.current.width - 12,
 									Math.max(60, editedName.length * 7 + 10)
 								)}px"
