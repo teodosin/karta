@@ -152,6 +152,7 @@ export interface ColorTheme {
 	'panel-bg': string;
 	'focal-hl': string;
 	'panel-hl': string;
+	'text-color': string;
 	// Add other theme properties here
 	 }
   

@@ -19,9 +19,8 @@
 	import { getNodeTypeDef } from "$lib/node_types/registry"; // To get property schema
 	import { AVAILABLE_FONTS } from "$lib/types/types"; // Import AVAILABLE_FONTS
 	import { onDestroy, onMount } from "svelte";
-	import ColorPicker from "svelte-awesome-color-picker"; // Import ColorPicker
 	import { Move, Minimize2, X } from "lucide-svelte"; // Icons for header
-	import ColorPickerPortalWrapper from "./ColorPickerPortalWrapper.svelte"; // Import the portal wrapper
+	import { colorPickerStore } from '$lib/karta/ColorPickerStore';
 
 	// --- Component State ---
 	let panelElement: HTMLElement | null = null;
@@ -50,92 +49,6 @@
 	const MIN_PANEL_WIDTH = 200; // Minimum width
 	const MIN_PANEL_HEIGHT = 100; // Minimum height (allow smaller for just header)
 	const HANDLE_SIZE = 6; // px size of invisible handles
-
-	// --- Color Picker State ---
-	// Stores the *committed* color value reflecting the node's state
-	let fillColorRgb: { r: number; g: number; b: number; a: number } = {
-		r: 254,
-		g: 249,
-		b: 195,
-		a: 1,
-	};
-	let textColorRgb: { r: number; g: number; b: number; a: number } = {
-		r: 0,
-		g: 0,
-		b: 0,
-		a: 1,
-	};
-
-	// State to control color picker pop-up visibility
-	let isFillPickerOpen = false;
-	let isTextColorPickerOpen = false;
-
-	// Helper to convert hex or rgba string to RGB object
-	function hexOrRgbaToRgb(color: string | undefined): {
-		r: number;
-		g: number;
-		b: number;
-		a: number;
-	} {
-		if (!color) return { r: 0, g: 0, b: 0, a: 1 }; // Default to black if undefined
-
-		// Handle hex color (with or without alpha)
-		const hexMatch = color.match(
-			/^#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/,
-		);
-		if (hexMatch) {
-			let hex = hexMatch[1];
-			if (hex.length === 3)
-				hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
-			if (hex.length === 4)
-				hex =
-					hex[0] +
-					hex[0] +
-					hex[1] +
-					hex[1] +
-					hex[2] +
-					hex[2] +
-					hex[3] +
-					hex[3];
-			const r = parseInt(hex.substring(0, 2), 16);
-			const g = parseInt(hex.substring(2, 4), 16);
-			const b = parseInt(hex.substring(4, 6), 16);
-			const a =
-				hex.length === 8 ? parseInt(hex.substring(6, 8), 16) / 255 : 1;
-			return { r, g, b, a };
-		}
-
-		// Handle rgba color
-		const rgbaMatch = color.match(
-			/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*(\d*\.?\d+)\s*)?\)$/,
-		);
-		if (rgbaMatch) {
-			const r = parseInt(rgbaMatch[1], 10);
-			const g = parseInt(rgbaMatch[2], 10);
-			const b = parseInt(rgbaMatch[3], 10);
-			const a = rgbaMatch[4] ? parseFloat(rgbaMatch[4]) : 1;
-			return { r, g, b, a };
-		}
-
-		return { r: 0, g: 0, b: 0, a: 1 }; // Fallback
-	}
-
-	// Helper to convert RGB object to rgba string
-	function rgbToRgbaString(rgb: {
-		r: number;
-		g: number;
-		b: number;
-		a: number;
-	}): string {
-		// Clamp values to valid ranges
-		const r = Math.max(0, Math.min(255, Math.round(rgb.r)));
-		const g = Math.max(0, Math.min(255, Math.round(rgb.g)));
-		const b = Math.max(0, Math.min(255, Math.round(rgb.b)));
-		const a = Math.max(0, Math.min(1, rgb.a));
-		return `rgba(${r}, ${g}, ${b}, ${a})`;
-	}
-
-	// Removed handleColorChange function as it's no longer used
 
 	// --- Reactive Data ---
 	// Get selected DataNode
@@ -185,7 +98,14 @@
 		}
 	}
 
-	// Removed custom handleClickOutside logic - relying on library behavior with portal
+	function handleColorPickerOpen(key: string, e: MouseEvent) {
+		if (!selectedDataNode) return;
+		const initialColor = displayAttributes[key] ?? '#ffffff';
+		const onUpdate = (newColor: string) => {
+			handleAttributeUpdate(key, newColor);
+		};
+		colorPickerStore.open(initialColor, e, onUpdate);
+	}
 
 	// --- Dragging Logic ---
 	function handleDragStart(event: PointerEvent) {
@@ -577,17 +497,11 @@
 
 									<!-- Color Type -->
 									{#if prop.type === 'color'}
-										<ColorPicker
-											rgb={hexOrRgbaToRgb(displayAttributes[prop.key])}
-											onInput={(data) => {
-												if (data.rgb) {
-													handleAttributeUpdate(prop.key, rgbToRgbaString(data.rgb));
-												}
-											}}
-											position="responsive"
-											components={{ wrapper: ColorPickerPortalWrapper }}
-											disableCloseClickOutside={true}
-										/>
+										<button
+											class="w-8 h-5 rounded border border-gray-400"
+											style="background-color: {displayAttributes[prop.key] ?? '#ffffff'}"
+											on:click={(e) => handleColorPickerOpen(prop.key, e)}
+										></button>
 									{/if}
 								</div>
 							{/each}

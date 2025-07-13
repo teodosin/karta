@@ -13,7 +13,8 @@ const defaultSettings: KartaSettings = {
 		'viewport-bg': '#2b2b36',
 		'panel-bg': '#431d1f',
 		'focal-hl': '#f4902dff',
-		'panel-hl': '#741f2fff'
+		'panel-hl': '#741f2fff',
+		'text-color': '#f0f0f0'
 	}
 };
 

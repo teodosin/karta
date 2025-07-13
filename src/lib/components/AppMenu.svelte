@@ -146,7 +146,7 @@
 	}
 </script>
 
-<div class="fixed top-2 left-2 z-50">
+<div class="fixed top-2 left-2 z-[60]">
 	<!-- Standard HTML button with Tailwind classes for styling -->
 	<button
 		on:click={toggleMenu}

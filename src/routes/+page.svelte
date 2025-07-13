@@ -8,6 +8,7 @@
 	import AppMenu from '$lib/components/AppMenu.svelte';
 	import Notification from '$lib/components/Notification.svelte';
 	import { notifications } from '$lib/karta/NotificationStore';
+	import ColorPickerPopup from '$lib/components/ColorPickerPopup.svelte';
 
 	onMount(() => {
 		// Show a test notification when the page is ready
@@ -23,4 +24,6 @@
 	<!--<KartaDebugOverlay /> -->
 	<PropertiesPanel />
 	<Notification />
+	<ColorPickerPopup />
+	<div id="portal-container"></div>
 </div>
