@@ -16,15 +16,18 @@ pub struct ColorTheme {
     pub focal_hl: String,
     #[serde(rename = "panel-hl")]
     pub panel_hl: String,
+    #[serde(rename = "text-color")]
+    pub text_color: String,
 }
 
 impl Default for ColorTheme {
     fn default() -> Self {
         ColorTheme {
-            viewport_bg: "#282828".to_string(),
-            panel_bg: "#3c3836".to_string(),
+            viewport_bg: "#0d0d11ff".to_string(),
+            panel_bg: "#431d1f".to_string(),
             focal_hl: "#f4902dff".to_string(),
             panel_hl: "#741f2fff".to_string(),
+            text_color: "#f0f0f0".to_string(),
         }
     }
 }
@@ -32,8 +35,9 @@ impl Default for ColorTheme {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct KartaSettings {
-    pub version: u32,
+    pub version: f32,
     pub save_last_viewed_context: bool,
+    pub last_viewed_context_id: Option<String>,
     pub vault_path: Option<String>,
     pub color_theme: ColorTheme,
 }
@@ -41,8 +45,9 @@ pub struct KartaSettings {
 impl Default for KartaSettings {
     fn default() -> Self {
         KartaSettings {
-            version: 1,
+            version: 0.1,
             save_last_viewed_context: true,
+            last_viewed_context_id: None,
             vault_path: None,
             color_theme: ColorTheme::default(),
         }
