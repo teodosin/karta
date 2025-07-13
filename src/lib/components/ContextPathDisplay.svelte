@@ -80,8 +80,7 @@
 	<!-- Undo Button -->
 	<button
 		type="button"
-		class="text-xl hover:text-white hover:font-black rounded disabled:opacity-50 disabled:font-thin p-1 px-2"
-		style="--panel-hl: {$settings.colorTheme['panel-hl']};"
+		class="text-xl hover:text-white hover:font-black rounded disabled:opacity-50 disabled:font-thin p-1 px-2 hover-bg-panel-hl"
 		disabled={$historyStack.length === 0}
 		on:click={undoContextSwitch}
 		aria-label="Undo Context Switch"
@@ -91,8 +90,7 @@
 	<!-- Redo Button -->
 	<button
 		type="button"
-		class="text-xl hover:text-white hover:font-black rounded disabled:opacity-50 disabled:font-thin p-1 px-2"
-		style="--panel-hl: {$settings.colorTheme['panel-hl']};"
+		class="text-xl hover:text-white hover:font-black rounded disabled:opacity-50 disabled:font-thin p-1 px-2 hover-bg-panel-hl"
 		disabled={$futureStack.length === 0}
 		on:click={redoContextSwitch}
 		aria-label="Redo Context Switch"
@@ -106,8 +104,7 @@
 		<button
 			type="button"
 			on:click={toggleContextList}
-			class="flex items-center p-1 pl-2 pr-4 rounded"
-			style="--panel-hl: {$settings.colorTheme['panel-hl']};"
+			class="flex items-center p-1 pl-2 pr-4 rounded hover-bg-panel-hl"
 			aria-haspopup="true"
 			aria-expanded={showContextList}
 		>

@@ -24,8 +24,8 @@
         <div class="relative group"> <!-- Container for tooltip positioning -->
             <button
                 type="button"
-                class="toolbar-button p-2 rounded transition-colors focus:outline-none focus:ring-2"
-                style="--panel-hl: {$settings.colorTheme['panel-hl']}; { $currentTool instanceof item.instance ? `background-color: ${$settings.colorTheme['panel-hl']};` : '' }"
+                class="toolbar-button p-2 rounded transition-colors focus:outline-none focus:ring-2 hover-bg-panel-hl"
+                style="{ $currentTool instanceof item.instance ? `background-color: ${$settings.colorTheme['panel-hl']};` : '' }"
                 on:click={() => setTool(item.tool as 'move' | 'connect' | 'context')}
                 aria-label={item.label}
             >
@@ -51,8 +51,7 @@
     <div class="relative group">
         <button
             type="button"
-            class="toolbar-button p-2 rounded transition-colors focus:outline-none focus:ring-2"
-            style="--panel-hl: {$settings.colorTheme['panel-hl']};"
+            class="toolbar-button p-2 rounded transition-colors focus:outline-none focus:ring-2 hover-bg-panel-hl"
             on:click={saveCurrentContext}
             aria-label="Save Layout"
         >
