@@ -625,10 +625,8 @@ export async function switchContext(newContextId: NodeId, isUndoRedo: boolean = 
 
         try {
             const currentSettings = get(settings);
-            if (currentSettings.savelastViewedContextId && typeof window !== 'undefined') {
-                await updateSettings({
-                    lastViewedContextId: newContextId
-                });
+            if (currentSettings.savelastViewedContextId) {
+                await updateSettings({ lastViewedContextId: newContextId });
             }
         } catch (error) {
             console.error('[switchContext] Error saving last context ID to settings:', error);
@@ -870,7 +868,7 @@ async function initializeStores() {
         if (targetInitialContextId === ROOT_NODE_ID && typeof window !== 'undefined') {
             // Only center if no specific last context was loaded via LocalStorage (for LocalAdapter)
             // Or always center if it's the server adapter and we are at root.
-            const shouldCenter = !USE_SERVER_ADAPTER ? (get(settings).savelastViewedContextId && localStorage.getItem(LAST_CONTEXT_STORAGE_KEY) === null) || !get(settings).savelastViewedContextId : true;
+            const shouldCenter = !USE_SERVER_ADAPTER ? (get(settings).savelastViewedContextId && get(settings).lastViewedContextId === null) || !get(settings).savelastViewedContextId : true;
 
             if (shouldCenter) {
                 // Use setTimeout to ensure the viewport has its dimensions before framing.
