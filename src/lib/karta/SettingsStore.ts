@@ -8,7 +8,7 @@ const adapter = new ServerAdapter();
 const defaultSettings: KartaSettings = {
 	version: 0.1,
 	saveLastViewedContext: true,
-	vaultPath: null,
+	lastViewedContext: null,
 	colorTheme: {
 		'viewport-bg': '#2b2b36',
 		'panel-bg': '#431d1f',
@@ -54,7 +54,6 @@ export async function updateSettings(newSettings: Partial<KartaSettings>) {
 			await adapter.saveSettings(updatedSettings);
 		} catch (error) {
 			console.error('Error saving Karta settings to server:', error);
-			// Optionally, revert the optimistic update here
 		}
 	}
 }

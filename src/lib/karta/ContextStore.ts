@@ -1,5 +1,5 @@
 import { writable, get, derived } from 'svelte/store';
-import { apiLogger } from '$lib/debug';
+import { apiLogger, storeLogger } from '$lib/debug';
 import { Tween } from 'svelte/motion';
 import { cubicOut } from 'svelte/easing';
 import { LocalAdapter, localAdapter } from '../util/LocalAdapter'; // Import LocalAdapter class
@@ -15,7 +15,7 @@ import { historyStack, futureStack } from './HistoryStore'; // Assuming HistoryS
 import { clearSelection } from './SelectionStore'; // Assuming SelectionStore exports these
 import { propertiesPanelPosition, setPropertiesPanelNode, setPropertiesPanelVisibility } from './UIStateStore'; // Assuming UIStateStore exports these
 import { setTool, currentTool, initializeTools } from './ToolStore'; // Assuming ToolStore exports these and initializeTools
-import { settings } from './SettingsStore'; // Import settings store
+import { settings, updateSettings } from './SettingsStore'; // Import settings store
 
 
 // Define the Root Node ID
@@ -56,10 +56,10 @@ export const availableContextsMap = writable<Map<NodeId, string>>(new Map());
 
 // Derived Store for Current Context's ViewNodes
 export const currentViewNodes = derived(
-	[currentContextId, contexts],
-	([$currentContextId, $contexts]) => {
-		return $contexts.get($currentContextId)?.viewNodes ?? new Map<NodeId, ViewNode>();
-	}
+    [currentContextId, contexts],
+    ([$currentContextId, $contexts]) => {
+        return $contexts.get($currentContextId)?.viewNodes ?? new Map<NodeId, ViewNode>();
+    }
 );
 
 // Internal Helper Functions
@@ -138,12 +138,12 @@ async function _loadAndProcessContext(
         }
         // Use the state passed in, which already contains defaults or state from old context
         const correctedFocalInitialState: TweenableNodeState = {
-             x: focalInitialStateFromOldContext.x,
-             y: focalInitialStateFromOldContext.y,
-             scale: focalInitialStateFromOldContext.scale,
-             rotation: focalInitialStateFromOldContext.rotation,
-             width: focalInitialStateFromOldContext.width, // Use width from old context/defaults
-             height: focalInitialStateFromOldContext.height // Use height from old context/defaults
+            x: focalInitialStateFromOldContext.x,
+            y: focalInitialStateFromOldContext.y,
+            scale: focalInitialStateFromOldContext.scale,
+            rotation: focalInitialStateFromOldContext.rotation,
+            width: focalInitialStateFromOldContext.width, // Use width from old context/defaults
+            height: focalInitialStateFromOldContext.height // Use height from old context/defaults
         };
         finalViewNodes.set(contextId, { id: contextId, state: new Tween(correctedFocalInitialState, { duration: 0 }), status: 'modified' });
         // For newly created contexts, don't set viewport settings yet.
@@ -152,18 +152,18 @@ async function _loadAndProcessContext(
         // Let finalViewportSettings remain undefined.
     }
 
-     // --- Add Previous Focal Node (if context is new and applicable) ---
-    	if (contextWasCreated) {
-    		const currentHistory: NodeId[] = get(historyStack); // Explicitly type
-    		const previousContextId = currentHistory.length > 0 ? currentHistory[currentHistory.length - 1] : null;
-    		if (previousContextId && previousContextId !== contextId && !finalViewNodes.has(previousContextId)) {
-    			const previousFocalViewNode = oldContext?.viewNodes.get(previousContextId);
-    			if (previousFocalViewNode) {
-    			 console.log(`[ContextStore._loadAndProcessContext] Cloning previous focal node ${previousContextId} from old context.`);
-    			             finalViewNodes.set(previousContextId, cloneViewNode(previousFocalViewNode));
-    			}
-    		}
-    	}
+    // --- Add Previous Focal Node (if context is new and applicable) ---
+    if (contextWasCreated) {
+        const currentHistory: NodeId[] = get(historyStack); // Explicitly type
+        const previousContextId = currentHistory.length > 0 ? currentHistory[currentHistory.length - 1] : null;
+        if (previousContextId && previousContextId !== contextId && !finalViewNodes.has(previousContextId)) {
+            const previousFocalViewNode = oldContext?.viewNodes.get(previousContextId);
+            if (previousFocalViewNode) {
+                console.log(`[ContextStore._loadAndProcessContext] Cloning previous focal node ${previousContextId} from old context.`);
+                finalViewNodes.set(previousContextId, cloneViewNode(previousFocalViewNode));
+            }
+        }
+    }
 
     // --- Add Default Connected Nodes (if context didn't just load them) ---
     // This ensures nodes connected *after* the context was last saved are still added by default
@@ -218,23 +218,23 @@ async function _loadAndProcessContext(
 
     // Save immediately if it was newly created or defaults were added
     if (contextWasCreated && activeAdapter) { // Use activeAdapter
-    	try {
-    		await activeAdapter.saveContext(finalContext); // Use activeAdapter
-    		// After successful save of a NEW context, update the map
-    		const focalDataNode = get(nodes).get(contextId); // Get node from store
-    		if (focalDataNode?.path) {
-    			availableContextsMap.update(map => {
-    				map.set(contextId, focalDataNode.path);
-    				return map;
-    			});
-    		} else {
-    		}
-    	} catch (error) {
-    		console.error(`[ContextStore] Error saving newly created context ${contextId}:`, error);
-    		// Should we still return the context even if saving failed? Yes, probably.
-    	}
+        try {
+            await activeAdapter.saveContext(finalContext); // Use activeAdapter
+            // After successful save of a NEW context, update the map
+            const focalDataNode = get(nodes).get(contextId); // Get node from store
+            if (focalDataNode?.path) {
+                availableContextsMap.update(map => {
+                    map.set(contextId, focalDataNode.path);
+                    return map;
+                });
+            } else {
+            }
+        } catch (error) {
+            console.error(`[ContextStore] Error saving newly created context ${contextId}:`, error);
+            // Should we still return the context even if saving failed? Yes, probably.
+        }
     }
-   
+
     return { finalContext, wasCreated: contextWasCreated };
 }
 
@@ -244,7 +244,7 @@ function _calculateTargetState(
     focalPlacement: AbsoluteTransform,
     storableNode: StorableViewNode
 ): TweenableNodeState {
-     if (nodeId === contextId) {
+    if (nodeId === contextId) {
         return {
             x: focalPlacement.x, y: focalPlacement.y,
             scale: focalPlacement.scale, rotation: storableNode.rotation,
@@ -283,9 +283,9 @@ function _convertStorableViewportSettings(
 
         const absPosX = storableSettings.relPosX - (focalState.x * storableSettings.scale);
         const absPosY = storableSettings.relPosY - (focalState.y * storableSettings.scale);
-        
+
         const result = { scale: storableSettings.scale, posX: absPosX, posY: absPosY };
-        
+
         if (isNaN(absPosX) || isNaN(absPosY)) {
             console.error('[_convertStorableViewportSettings] CRITICAL: Outputting NaN!', JSON.parse(JSON.stringify(result)));
         }
@@ -318,7 +318,7 @@ function _applyStoresUpdate(
     for (const [edgeId, edge] of loadedEdgesForContext.entries()) {
         // Only keep edges where both source and target nodes are present in the new context's view
         if (processedContext.viewNodes.has(edge.source) && processedContext.viewNodes.has(edge.target)) {
-             nextEdges.set(edgeId, edge);
+            nextEdges.set(edgeId, edge);
         }
     }
     edges.set(nextEdges);
@@ -337,22 +337,22 @@ function _applyStoresUpdate(
  * @param newTargetState An optional new target state for the tween.
  */
 function cloneViewNode(viewNode: ViewNode, newTargetState?: TweenableNodeState): ViewNode {
-	// Deep copy the current state of the tween.
-	const initialState = { ...viewNode.state.current };
-	const newTween = new Tween(initialState, NODE_TWEEN_OPTIONS);
+    // Deep copy the current state of the tween.
+    const initialState = { ...viewNode.state.current };
+    const newTween = new Tween(initialState, NODE_TWEEN_OPTIONS);
 
-	// If a new target state is provided (e.g., when moving to a new context), set it.
-	if (newTargetState) {
-		newTween.set(newTargetState, { duration: NODE_TWEEN_DURATION });
-	}
+    // If a new target state is provided (e.g., when moving to a new context), set it.
+    if (newTargetState) {
+        newTween.set(newTargetState, { duration: NODE_TWEEN_DURATION });
+    }
 
-	return {
-		id: viewNode.id,
-		state: newTween,
-		// Deep copy attributes to be safe.
-		attributes: viewNode.attributes ? { ...viewNode.attributes } : {},
-		status: viewNode.status
-	};
+    return {
+        id: viewNode.id,
+        state: newTween,
+        // Deep copy attributes to be safe.
+        attributes: viewNode.attributes ? { ...viewNode.attributes } : {},
+        status: viewNode.status
+    };
 }
 
 
@@ -433,25 +433,25 @@ export async function removeViewNodeFromContext(contextId: NodeId, viewNodeId: N
  * @param nodeId The ID of the node to mark as modified.
  */
 export function markNodeAsModified(nodeId: NodeId) {
-	const contextId = get(currentContextId);
-	const allContexts = get(contexts);
-	const currentCtx = allContexts.get(contextId);
+    const contextId = get(currentContextId);
+    const allContexts = get(contexts);
+    const currentCtx = allContexts.get(contextId);
 
-	if (currentCtx) {
-		const viewNode = currentCtx.viewNodes.get(nodeId);
-		if (viewNode) {
-			if (viewNode.status !== 'modified') {
-				viewNode.status = 'modified';
-				// Manually trigger reactivity for the contexts store if you want other UI
-				// elements to react to the dirty state, e.g., enabling a save button.
-				contexts.set(allContexts);
-			}
-		} else {
-			console.warn(`[markNodeAsModified] ViewNode ${nodeId} not found in context ${contextId}.`);
-		}
-	} else {
-		console.warn(`[markNodeAsModified] Current context ${contextId} not found.`);
-	}
+    if (currentCtx) {
+        const viewNode = currentCtx.viewNodes.get(nodeId);
+        if (viewNode) {
+            if (viewNode.status !== 'modified') {
+                viewNode.status = 'modified';
+                // Manually trigger reactivity for the contexts store if you want other UI
+                // elements to react to the dirty state, e.g., enabling a save button.
+                contexts.set(allContexts);
+            }
+        } else {
+            console.warn(`[markNodeAsModified] ViewNode ${nodeId} not found in context ${contextId}.`);
+        }
+    } else {
+        console.warn(`[markNodeAsModified] Current context ${contextId} not found.`);
+    }
 }
 
 /**
@@ -459,63 +459,70 @@ export function markNodeAsModified(nodeId: NodeId) {
  * After a successful save, it resets the isModified flag on the saved nodes.
  */
 export async function saveCurrentContext() {
-	const contextId = get(currentContextId);
-	const currentCtx = get(contexts).get(contextId);
+    const contextId = get(currentContextId);
+    const currentCtx = get(contexts).get(contextId);
 
-	if (!currentCtx) {
-		console.error('[saveCurrentContext] No current context found to save.');
-		return;
-	}
+    if (!currentCtx) {
+        console.error('[saveCurrentContext] No current context found to save.');
+        return;
+    }
 
-	if (!activeAdapter) {
-		console.error('[saveCurrentContext] No active persistence adapter found.');
-		return;
-	}
+    if (!activeAdapter) {
+        console.error('[saveCurrentContext] No active persistence adapter found.');
+        return;
+    }
 
-	try {
-		// The adapter's saveContext method is responsible for filtering nodes with status: 'modified'.
-		await activeAdapter.saveContext(currentCtx);
+    try {
+        // The adapter's saveContext method is responsible for filtering nodes with status: 'modified'.
+        await activeAdapter.saveContext(currentCtx);
 
-		// After a successful save, we don't need to reset the status anymore.
-		// The status will be correctly set to 'modified' when the context is loaded next time.
-		// This ensures that all nodes from a saved context are considered modifiable.
+        // After a successful save, we don't need to reset the status anymore.
+        // The status will be correctly set to 'modified' when the context is loaded next time.
+        // This ensures that all nodes from a saved context are considered modifiable.
 
-		console.log(`[saveCurrentContext] Context ${contextId} save operation completed.`);
-		// TODO: Add user feedback here (e.g., a toast notification for success)
-	} catch (error) {
-		console.error(`[saveCurrentContext] Failed to save context ${contextId}:`, error);
-		// TODO: Add user feedback for the error
-	}
+        console.log(`[saveCurrentContext] Context ${contextId} save operation completed.`);
+        // TODO: Add user feedback here (e.g., a toast notification for success)
+    } catch (error) {
+        console.error(`[saveCurrentContext] Failed to save context ${contextId}:`, error);
+        // TODO: Add user feedback for the error
+    }
 }
 
-export async function switchContext(newContextId: NodeId, isUndoRedo: boolean = false) { // Added isUndoRedo flag
-	try {
-		const response = await fetch('http://localhost:7370/api/paths?only_indexed=true');
-		if (response.ok) {
-			const paths = await response.json();
-			apiLogger.log(true, "Indexed paths from server:", paths);
-		} else {
-			apiLogger.error(true, "Failed to fetch indexed paths:", response.status, response.statusText);
-		}
-	} catch (error) {
-		apiLogger.error(true, "Error fetching indexed paths:", error);
-	}
-	const oldContextId = get(currentContextId);
-	if (newContextId === oldContextId) return; // No change
 
-	clearSelection(); // Clear selection when switching context
 
-	// --- History Management ---
+
+
+export async function switchContext(newContextId: NodeId, isUndoRedo: boolean = false) {
+
+    // Debug block, has no effect on the function
+    try {
+        const response = await fetch('http://localhost:7370/api/paths?only_indexed=true');
+        if (response.ok) {
+            const paths = await response.json();
+            apiLogger.log(true, "Indexed paths from server:", paths);
+        } else {
+            apiLogger.error(true, "Failed to fetch indexed paths:", response.status, response.statusText);
+        }
+    } catch (error) {
+        apiLogger.error(true, "Error fetching indexed paths:", error);
+    }
+
+
+    const oldContextId = get(currentContextId);
+    if (newContextId === oldContextId) return;
+    clearSelection();
+
+
     if (!isUndoRedo) {
         historyStack.update((stack: NodeId[]) => [...stack, oldContextId]); // Explicitly type stack
         futureStack.set([]); // Clear future stack on new action
     }
-    // --- End History Management ---
 
 
-    if (!activeAdapter) { // Use activeAdapter
+    if (!activeAdapter) {
         console.error("[switchContext] activeAdapter not available."); return;
     }
+
 
     // --- Phase 1: Save Old Context State (Async) ---
     const oldContext = get(contexts).get(oldContextId);
@@ -615,47 +622,48 @@ export async function switchContext(newContextId: NodeId, isUndoRedo: boolean = 
         }
 
 
-  // --- Save Last Context ID ---
-  try {
-   const currentSettings = get(settings);
-   if (currentSettings.saveLastViewedContext && typeof window !== 'undefined' && window.localStorage) {
-    localStorage.setItem(LAST_CONTEXT_STORAGE_KEY, newContextId);
-   }
-  } catch (error) {
-   console.error('[switchContext] Error saving last context ID to localStorage:', error);
-  }
-  // --- End Save Last Context ID ---
 
- } catch (error) {
-  console.error(`[switchContext] Error switching context to ${newContextId}:`, error);
+        try {
+            const currentSettings = get(settings);
+            if (currentSettings.saveLastViewedContext && typeof window !== 'undefined') {
+                updateSettings({
+                    lastViewedContext: newContextId
+                });
+            }
+        } catch (error) {
+            console.error('[switchContext] Error saving last context ID to settings:', error);
+        }
+
+
+    } catch (error) {
+        console.error(`[switchContext] Error switching context to ${newContextId}:`, error);
         // Consider reverting to oldContextId or showing an error state
     }
 }
 
+
+
+
+
 async function initializeStores() {
-	initializeTools();
 
-	// Ensure currentTool is not null before calling activate (this check might be redundant after initializeTools)
-    const currentToolInstance = get(currentTool);
-    if (currentToolInstance) {
-        currentToolInstance.activate();
-    }
-
-
-    if (!activeAdapter) { // Use activeAdapter
+    if (!activeAdapter) {
         console.error("[initializeStores] activeAdapter not initialized. Cannot proceed.");
         // Set default empty state on critical error
         nodes.set(new Map());
         edges.set(new Map());
         contexts.set(new Map());
+
         currentContextId.set(ROOT_NODE_ID); // Default to root ID even on error
         viewTransform.set(DEFAULT_VIEWPORT_SETTINGS, { duration: 0 });
         setTool('move');
         return;
-       }
-      
+    }
+
+
+    // TODO: Enable this even for server adapter. 
     if (!USE_SERVER_ADAPTER) { // Conditionally run tutorial import
-       // ---> START: First Run Tutorial Import <---
+        // ---> START: First Run Tutorial Import <---
         try {
             const rootNodeExists = await activeAdapter.getNode(ROOT_NODE_ID); // Use activeAdapter
             if (!rootNodeExists) {
@@ -681,18 +689,19 @@ async function initializeStores() {
             console.error("[initializeStores] Error checking for root node before tutorial import:", checkError);
             // Continue initialization even if the check failed
         }
-        // ---> END: First Run Tutorial Import <---
     }
 
 
-       try {
+    // TODO: Implement getAllContextPaths. 
+    try {
         const pathsMap = await activeAdapter.getAllContextPaths(); // Use activeAdapter
+        storeLogger.log('Context paths loaded from adapter:', pathsMap);
         availableContextsMap.set(pathsMap);
-       } catch (error) {
+    } catch (error) {
         console.error("[initializeStores] Error populating availableContextsMap:", error);
         // Continue initialization even if this fails
-       }
-       // ---> END: Populate Available Contexts Map <---
+    }
+
 
     try {
         // 0. Initialize stores to empty state (Import might have already cleared, but this is safe)
@@ -748,7 +757,7 @@ async function initializeStores() {
                 // Try to find the focal node from the bundle's nodes
                 initialDataNode = initialContextBundle.nodes.find(n => n.id === targetInitialContextId);
             }
-             if (!initialDataNode && initialContextBundle) { // If focal not in nodes list, but context exists
+            if (!initialDataNode && initialContextBundle) { // If focal not in nodes list, but context exists
                 // This case implies the server returned a context whose focal node wasn't in the main node list.
                 // This might happen if the root itself isn't explicitly sent as a DataNode but is the focal point.
                 // We might need to create a placeholder or the server should always include the focal DataNode.
@@ -771,11 +780,11 @@ async function initializeStores() {
                 initialDataNode = ensuredNode === null ? undefined : ensuredNode;
             }
         }
-        
+
         if (!initialDataNode && !initialContextBundle) { // If still no node after all attempts (local or server failed to give a starting point)
-             throw new Error("CRITICAL: Initial DataNode could not be found or created during initialization.");
+            throw new Error("CRITICAL: Initial DataNode could not be found or created during initialization.");
         }
-        
+
         // If using ServerAdapter and initialDataNode is still undefined but we have a bundle,
         // it means the server is the source of truth. The focal ID from bundle is targetInitialContextId.
         if (USE_SERVER_ADAPTER && !initialDataNode && initialContextBundle?.storableContext?.id) {
@@ -819,7 +828,7 @@ async function initializeStores() {
         if (!initialContextBundle) { // initialContextBundle would be set if USE_SERVER_ADAPTER
             initialContextBundle = await activeAdapter.loadContextBundle(targetInitialContextId); // Use activeAdapter
         }
-        
+
 
         const { finalContext: processedContext } = await _loadAndProcessContext(
             targetInitialContextId,
@@ -837,7 +846,7 @@ async function initializeStores() {
         // to ensure all necessary DataNodes and KartaEdges for its viewNodes are loaded.
         // If ServerAdapter, bundle might already have nodes/edges. _loadContextData uses activeAdapter.getDataNodesByIds etc.
         // which are stubs for ServerAdapter. So, if ServerAdapter, we should use nodes/edges from the bundle directly.
-        
+
         let contextDataNodes: Map<NodeId, DataNode>;
         let contextEdges: Map<EdgeId, KartaEdge>;
 
@@ -852,7 +861,7 @@ async function initializeStores() {
             contextEdges = new Map(initialContextBundle?.edges?.map(e => [e.id, e]) ?? []);
         }
 
-        
+
         // 5. Apply Initial State
         _applyStoresUpdate(targetInitialContextId, initialProcessedContext, contextDataNodes, contextEdges);
 
@@ -868,10 +877,10 @@ async function initializeStores() {
             const shouldCenter = !USE_SERVER_ADAPTER ? (get(settings).saveLastViewedContext && localStorage.getItem(LAST_CONTEXT_STORAGE_KEY) === null) || !get(settings).saveLastViewedContext : true;
 
             if (shouldCenter) {
-            	// Use setTimeout to ensure the viewport has its dimensions before framing.
-            	setTimeout(() => {
-            		centerOnFocalNode();
-            	}, 0);
+                // Use setTimeout to ensure the viewport has its dimensions before framing.
+                setTimeout(() => {
+                    centerOnFocalNode();
+                }, 0);
             }
         } else {
         }

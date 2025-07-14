@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import '../app.css';
-	import { settings } from '$lib/karta/SettingsStore'; // Import the settings store
-	import { initializeStores } from '$lib/karta/ContextStore'; // Import the main store initializer
+	import { settings } from '$lib/karta/SettingsStore';
+	import { initializeStores } from '$lib/karta/ContextStore';
 	import { initializeVault } from '$lib/karta/VaultStore';
-	import NodeSearchModal from '$lib/components/NodeSearchModal.svelte'; // Import the modal component
+	import NodeSearchModal from '$lib/components/NodeSearchModal.svelte';
+    import { initializeTools } from '$lib/karta/ToolStore';
 
 	let { children } = $props();
 
@@ -19,21 +20,18 @@
 	});
 
 	onMount(() => {
-		// Define an async function for initialization
 		const initializeApp = async () => {
-			// Load settings from the server first
 			await settings.loadSettings();
 
-			// Initialize all other stores (nodes, contexts, etc.) AFTER settings are loaded
-			await initializeStores();
 			await initializeVault();
+			await initializeTools();
+			await initializeStores();
 		};
 
-		// Call the async initialization function
+
 		initializeApp();
 
 		const handleGlobalKeyDown = (event: KeyboardEvent) => {
-			// Prevent default focus cycling for Tab key globally
 			if (event.key === 'Tab') {
 				event.preventDefault();
 			}
@@ -41,11 +39,11 @@
 
 		window.addEventListener('keydown', handleGlobalKeyDown);
 
-		// Cleanup listener on component destroy
 		return () => {
 			window.removeEventListener('keydown', handleGlobalKeyDown);
 		};
 	});
+
 </script>
 
 {@render children()}

@@ -38,19 +38,19 @@ export interface ViewNode {
 
 // Represents an absolute transform in the canvas coordinate space
 export interface AbsoluteTransform {
-    x: number;
-    y: number;
-    scale: number;
-    // Rotation removed - determined later from StorableViewNode
+  x: number;
+  y: number;
+  scale: number;
+  // Rotation removed - determined later from StorableViewNode
 }
 
 export interface TweenableNodeState {
-    x: number;
-    y: number;
-    scale: number; // Note: This might be deprecated if we stick to width/height resizing
-    rotation: number;
-    width: number;  // Include dimensions needed by EdgeLayer
-    height: number; // Include dimensions needed by EdgeLayer
+  x: number;
+  y: number;
+  scale: number; // Note: This might be deprecated if we stick to width/height resizing
+  rotation: number;
+  width: number;  // Include dimensions needed by EdgeLayer
+  height: number; // Include dimensions needed by EdgeLayer
 }
 // Represents a specific view/layout of nodes, associated with a focal node
 export interface Context {
@@ -64,9 +64,9 @@ export interface Context {
 // NOTE: posX/posY here represent ABSOLUTE canvas coordinates for the top-left of the viewport.
 // These are converted to/from relative coordinates for storage.
 export interface ViewportSettings {
-    scale: number;
-    posX: number; // Absolute X
-    posY: number; // Absolute Y
+  scale: number;
+  posX: number; // Absolute X
+  posY: number; // Absolute Y
 }
 
 
@@ -75,60 +75,60 @@ export interface ViewportSettings {
 
 // Represents ViewNode data as stored (relative coordinates)
 export interface StorableViewNode {
-    id: NodeId;
-    relX: number;
-    relY: number;
-    width: number;
-    height: number;
-    relScale: number;
-    rotation: number;
-    status: 'generated' | 'modified';
-    // Holds context-specific attribute overrides for storage (e.g., view_isNameVisible, viewtype_fontSize)
-    // and custom user-defined attributes (unprefixed).
-    attributes?: Record<string, any>;
+  id: NodeId;
+  relX: number;
+  relY: number;
+  width: number;
+  height: number;
+  relScale: number;
+  rotation: number;
+  status: 'generated' | 'modified';
+  // Holds context-specific attribute overrides for storage (e.g., view_isNameVisible, viewtype_fontSize)
+  // and custom user-defined attributes (unprefixed).
+  attributes?: Record<string, any>;
 }
 
 // Represents ViewportSettings as stored (relative coordinates where applicable)
 // Note: In current screen-relative approach, relPosX/Y store screen coords. Scale is absolute.
 export interface StorableViewportSettings {
-    scale: number;
-    relPosX: number; // Stores target screen X
-    relPosY: number; // Stores target screen Y
+  scale: number;
+  relPosX: number; // Stores target screen X
+  relPosY: number; // Stores target screen Y
 }
 
 // Represents Context as stored (using StorableViewNode and StorableViewportSettings)
 export interface StorableContext {
-    id: NodeId;
-    viewNodes: [NodeId, StorableViewNode][]; // Store as array of pairs for IndexedDB compatibility
-    viewportSettings?: StorableViewportSettings;
+  id: NodeId;
+  viewNodes: [NodeId, StorableViewNode][]; // Store as array of pairs for IndexedDB compatibility
+  viewportSettings?: StorableViewportSettings;
 }
 
 // Represents the data stored for a binary asset (like an image)
 export interface AssetData {
-    blob: Blob;
-    mimeType: string;
-    name: string; // Original filename or generated name
+  blob: Blob;
+  mimeType: string;
+  name: string; // Original filename or generated name
 }
 export interface ContextBundle {
-    nodes: DataNode[];
-    edges: KartaEdge[];
-    storableContext: StorableContext;
+  nodes: DataNode[];
+  edges: KartaEdge[];
+  storableContext: StorableContext;
 }
 // --- Import/Export Types ---
 
 // Defines the structure for exported Karta data (JSON format)
 export interface KartaExportData {
-	version: number;
-	exportedAt: string; // ISO timestamp string
-	nodes: DataNode[];
-	edges: KartaEdge[];
-	contexts: StorableContext[];
-	assets: {
-		assetId: string;
-		mimeType: string;
-		name: string;
-		dataUrl: string; // Asset data encoded as Data URL
-	}[];
+  version: number;
+  exportedAt: string; // ISO timestamp string
+  nodes: DataNode[];
+  edges: KartaEdge[];
+  contexts: StorableContext[];
+  assets: {
+    assetId: string;
+    mimeType: string;
+    name: string;
+    dataUrl: string; // Asset data encoded as Data URL
+  }[];
 }
 
 // Interface for defining editable properties for nodes in the Properties Panel
@@ -148,53 +148,52 @@ export interface PropertyDefinition {
 
 // --- Global Settings ---
 export interface ColorTheme {
-	'viewport-bg': string;
-	'panel-bg': string;
-	'focal-hl': string;
-	'panel-hl': string;
-	'text-color': string;
-	// Add other theme properties here
-	 }
-  
-  export interface KartaSettings {
-	version: number; // For potential future migrations
-	saveLastViewedContext: boolean; // Whether to reopen the last context on startup
-	vaultPath: string | null; // The absolute path to the root of the Karta vault
-	colorTheme: ColorTheme;
-	// Add other global settings here as needed
-  }
+  'viewport-bg': string;
+  'panel-bg': string;
+  'focal-hl': string;
+  'panel-hl': string;
+  'text-color': string;
+  // Add other theme properties here
+}
+
+export interface KartaSettings {
+  version: number;
+  saveLastViewedContext: boolean;
+  lastViewedContext: NodeId | null;
+  colorTheme: ColorTheme;
+}
 
 // Represents connections between DataNodes (context-independent)
 export interface KartaEdge {
-	id: EdgeId; // Use EdgeId type
-	source: NodeId; // Use NodeId type
-	target: NodeId; // Use NodeId type
-	// TODO: Add edge attributes or context-specific edge styles later
+  id: EdgeId; // Use EdgeId type
+  source: NodeId; // Use NodeId type
+  target: NodeId; // Use NodeId type
+  // TODO: Add edge attributes or context-specific edge styles later
 }
 
 // Interface for interaction modes (Move, Connect, Context tools)
 // Based on recent refactor and modern PointerEvents
 export interface Tool {
-	// Name of the tool (e.g., 'move', 'connect', 'context')
-	name: string;
+  // Name of the tool (e.g., 'move', 'connect', 'context')
+  name: string;
 
-	// Called when the tool becomes active
-	activate(): void;
-	// Called when the tool becomes inactive
-	deactivate(): void;
+  // Called when the tool becomes active
+  activate(): void;
+  // Called when the tool becomes inactive
+  deactivate(): void;
 
-	// Event handlers delegated from Viewport/NodeWrapper
-	// Using PointerEvent for broader input compatibility (mouse, touch, pen)
-	onPointerDown?(event: PointerEvent, targetElement: EventTarget | null): void;
-	onPointerMove?(event: PointerEvent): void;
-	onPointerUp?(event: PointerEvent): void;
-	onWheel?(event: WheelEvent): void; // WheelEvent is standard for scrolling
-	onKeyDown?(event: KeyboardEvent): void;
-	onKeyUp?(event: KeyboardEvent): void;
-	// Add other relevant event handlers as needed (e.g., onClick, onDoubleClick)
+  // Event handlers delegated from Viewport/NodeWrapper
+  // Using PointerEvent for broader input compatibility (mouse, touch, pen)
+  onPointerDown?(event: PointerEvent, targetElement: EventTarget | null): void;
+  onPointerMove?(event: PointerEvent): void;
+  onPointerUp?(event: PointerEvent): void;
+  onWheel?(event: WheelEvent): void; // WheelEvent is standard for scrolling
+  onKeyDown?(event: KeyboardEvent): void;
+  onKeyUp?(event: KeyboardEvent): void;
+  // Add other relevant event handlers as needed (e.g., onClick, onDoubleClick)
 
-	// Optional method to update the cursor style
-	updateCursor?(): void;
+  // Optional method to update the cursor style
+  updateCursor?(): void;
 }
 
 // --- Available Fonts ---
