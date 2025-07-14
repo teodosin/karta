@@ -55,6 +55,48 @@ pub async fn get_vault_info(
         "vault_name": vault_name,
     })))
 }
+use std::fs;
+use std::collections::HashMap;
+
+pub async fn get_available_contexts(
+    State(state): State<AppState>,
+) -> Result<Json<HashMap<Uuid, String>>, StatusCode> {
+    let service = state.service.read().unwrap();
+    let contexts_dir = service.storage_path().join(".karta").join("contexts");
+
+    if !contexts_dir.exists() {
+        return Ok(Json(HashMap::new()));
+    }
+
+    let mut contexts = HashMap::new();
+    let entries = match fs::read_dir(contexts_dir) {
+        Ok(entries) => entries,
+        Err(_) => return Err(StatusCode::INTERNAL_SERVER_ERROR),
+    };
+
+    for entry in entries {
+        if let Ok(entry) = entry {
+            let path = entry.path();
+            if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("ctx") {
+                if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
+                    if let Ok(uuid) = Uuid::parse_str(stem) {
+                        // We need the node path, not the file path.
+                        // The file name is the UUID of the focal node.
+                        // We need to get the path of that node.
+                        match service.data().open_node(&NodeHandle::Uuid(uuid)) {
+                            Ok(node) => {
+                                contexts.insert(uuid, node.path().alias().to_string());
+                            },
+                            Err(_) => continue,
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(Json(contexts))
+}
 
 #[cfg(test)]
 mod tests {
