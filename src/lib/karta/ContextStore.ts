@@ -625,9 +625,9 @@ export async function switchContext(newContextId: NodeId, isUndoRedo: boolean = 
 
         try {
             const currentSettings = get(settings);
-            if (currentSettings.saveLastViewedContext && typeof window !== 'undefined') {
-                updateSettings({
-                    lastViewedContext: newContextId
+            if (currentSettings.savelastViewedContextId && typeof window !== 'undefined') {
+                await updateSettings({
+                    lastViewedContextId: newContextId
                 });
             }
         } catch (error) {
@@ -716,26 +716,22 @@ async function initializeStores() {
             targetInitialContextId = ROOT_NODE_ID;
         } else {
             try {
-                const currentSettings = get(settings); // Read settings (should be loaded by +layout.svelte)
-                if (currentSettings.saveLastViewedContext && typeof window !== 'undefined' && window.localStorage) {
-                    const savedId = localStorage.getItem(LAST_CONTEXT_STORAGE_KEY);
-                    if (savedId) {
-                        // Check if the saved ID corresponds to an existing node in the DB
-                        const nodeExists = await activeAdapter.getNode(savedId); // Use activeAdapter
-                        if (nodeExists) {
-                            targetInitialContextId = savedId;
-                        } else {
-                            console.warn(`[initializeStores] Saved last context ID ${savedId} not found in DB. Defaulting to ROOT.`);
-                            targetInitialContextId = ROOT_NODE_ID;
-                        }
+                const currentSettings = get(settings);
+                const savedId = currentSettings.lastViewedContextId;
+
+                if (currentSettings.savelastViewedContextId && savedId) {
+                    const nodeExists = await activeAdapter.getNode(savedId);
+                    if (nodeExists) {
+                        targetInitialContextId = savedId;
                     } else {
+                        console.warn(`[initializeStores] Saved last context ID ${savedId} not found in DB. Defaulting to ROOT.`);
                         targetInitialContextId = ROOT_NODE_ID;
                     }
                 } else {
                     targetInitialContextId = ROOT_NODE_ID;
                 }
             } catch (error) {
-                console.error('[initializeStores] Error reading settings or localStorage for last context ID:', error);
+                console.error('[initializeStores] Error reading last context ID from settings:', error);
                 targetInitialContextId = ROOT_NODE_ID; // Fallback to ROOT on error
             }
         }
@@ -874,7 +870,7 @@ async function initializeStores() {
         if (targetInitialContextId === ROOT_NODE_ID && typeof window !== 'undefined') {
             // Only center if no specific last context was loaded via LocalStorage (for LocalAdapter)
             // Or always center if it's the server adapter and we are at root.
-            const shouldCenter = !USE_SERVER_ADAPTER ? (get(settings).saveLastViewedContext && localStorage.getItem(LAST_CONTEXT_STORAGE_KEY) === null) || !get(settings).saveLastViewedContext : true;
+            const shouldCenter = !USE_SERVER_ADAPTER ? (get(settings).savelastViewedContextId && localStorage.getItem(LAST_CONTEXT_STORAGE_KEY) === null) || !get(settings).savelastViewedContextId : true;
 
             if (shouldCenter) {
                 // Use setTimeout to ensure the viewport has its dimensions before framing.
