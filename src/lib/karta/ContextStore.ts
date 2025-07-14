@@ -13,7 +13,11 @@ import type {
 import { getDefaultViewNodeStateForType } from '$lib/node_types/registry';
 import { nodes, _ensureDataNodeExists } from './NodeStore';
 import { edges } from './EdgeStore';
-import { viewTransform, DEFAULT_VIEWPORT_SETTINGS, VIEWPORT_TWEEN_DURATION, DEFAULT_FOCAL_TRANSFORM, centerOnFocalNode } from './ViewportStore';
+import { 
+    viewTransform, 
+    DEFAULT_VIEWPORT_SETTINGS, VIEWPORT_TWEEN_DURATION, DEFAULT_FOCAL_TRANSFORM, 
+    centerOnFocalNode 
+} from './ViewportStore';
 import { historyStack, futureStack } from './HistoryStore';
 import { clearSelection } from './SelectionStore';
 import { propertiesPanelPosition } from './UIStateStore';
@@ -114,11 +118,6 @@ async function _loadAndProcessContext(
 
     if (!activeAdapter) return { finalContext: undefined, wasCreated: false };
 
-    // const bundle = await activeAdapter.loadContextBundle(contextId); // Call moved to switchContext
-    // const storableContext = bundle ? bundle.storableContext : undefined; // Now passed as argument
-    // TODO: Potentially use bundle.nodes and bundle.edges here to optimize or pre-populate,
-    // but for now, the main logic relies on NodeStore and EdgeStore being updated via _applyStoresUpdate
-    // after _loadContextData fetches all necessary data for the final processedContext.
     let contextWasCreated = false;
     const finalViewNodes = new Map<NodeId, ViewNode>();
     let finalViewportSettings: ViewportSettings | undefined = undefined;
@@ -167,8 +166,6 @@ async function _loadAndProcessContext(
         finalViewNodes.set(contextId, { id: contextId, state: new Tween(correctedFocalInitialState, { duration: 0 }), status: 'modified' });
         // For newly created contexts, don't set viewport settings yet.
         // Let the viewport remain where it is. Settings will be saved on first interaction/switch away.
-        // For newly created contexts, don't set viewport settings here.
-        // Let finalViewportSettings remain undefined.
     }
 
     // --- Add Previous Focal Node (if context is new and applicable) ---
@@ -184,19 +181,19 @@ async function _loadAndProcessContext(
         }
     }
 
-    // Construct the final Context object
+
     const finalContext: Context = {
         id: contextId,
         viewNodes: finalViewNodes,
-        viewportSettings: finalViewportSettings // Allow undefined if context was new/had no settings
+        viewportSettings: finalViewportSettings
     };
 
-    // Save immediately if it was newly created or defaults were added
-    if (contextWasCreated && activeAdapter) { // Use activeAdapter
+
+    if (contextWasCreated && activeAdapter) {
         try {
-            await activeAdapter.saveContext(finalContext); // Use activeAdapter
-            // After successful save of a NEW context, update the map
-            const focalDataNode = get(nodes).get(contextId); // Get node from store
+            await activeAdapter.saveContext(finalContext);
+
+            const focalDataNode = get(nodes).get(contextId);
             if (focalDataNode?.path) {
                 availableContextsMap.update(map => {
                     map.set(contextId, focalDataNode.path);
