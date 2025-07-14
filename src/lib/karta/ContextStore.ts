@@ -18,13 +18,12 @@ import { setTool, currentTool, initializeTools } from './ToolStore'; // Assuming
 import { settings, updateSettings } from './SettingsStore'; // Import settings store
 
 
-// Define the Root Node ID
 export const ROOT_NODE_ID = '00000000-0000-0000-0000-000000000000';
-const LAST_CONTEXT_STORAGE_KEY = 'kartaLastContextId'; // Key for localStorage
 
-// --- Adapter Configuration ---
-const USE_SERVER_ADAPTER = true; // Set to true to use ServerAdapter, false for LocalAdapter
+
+const USE_SERVER_ADAPTER = true;
 let activeAdapter: PersistenceService;
+
 
 if (USE_SERVER_ADAPTER) {
     activeAdapter = new ServerAdapter();
@@ -40,14 +39,12 @@ if (USE_SERVER_ADAPTER) {
         // activeAdapter remains undefined, subsequent checks for activeAdapter will handle this.
     }
 }
-// --- End Adapter Configuration ---
 
 
-// Constants
-const NODE_TWEEN_DURATION = 250; // Duration for node transitions
+const NODE_TWEEN_DURATION = 250; // TODO: Make this configurable in settings
 const NODE_TWEEN_OPTIONS = { duration: NODE_TWEEN_DURATION, easing: cubicOut };
 
-// Stores
+
 export const contexts = writable<Map<NodeId, Context>>(new Map());
 export const currentContextId = writable<NodeId>(ROOT_NODE_ID);
 
@@ -61,6 +58,10 @@ export const currentViewNodes = derived(
         return $contexts.get($currentContextId)?.viewNodes ?? new Map<NodeId, ViewNode>();
     }
 );
+
+
+
+
 
 // Internal Helper Functions
 async function _getFocalNodeInitialState(targetNodeId: NodeId, oldContext: Context | undefined): Promise<TweenableNodeState> {
@@ -85,6 +86,10 @@ async function _getFocalNodeInitialState(targetNodeId: NodeId, oldContext: Conte
         return finalDefaultState;
     }
 }
+
+
+
+
 
 async function _loadAndProcessContext(
     contextId: NodeId,
@@ -238,6 +243,10 @@ async function _loadAndProcessContext(
     return { finalContext, wasCreated: contextWasCreated };
 }
 
+
+
+
+
 function _calculateTargetState(
     nodeId: NodeId,
     contextId: NodeId,
@@ -262,6 +271,10 @@ function _calculateTargetState(
         };
     }
 }
+
+
+
+
 
 function _convertStorableViewportSettings(
     storableSettings: StorableViewportSettings | undefined,
@@ -295,6 +308,10 @@ function _convertStorableViewportSettings(
         return { ...DEFAULT_VIEWPORT_SETTINGS };
     }
 }
+
+
+
+
 
 function _applyStoresUpdate(
     newContextId: NodeId,
@@ -331,6 +348,10 @@ function _applyStoresUpdate(
     currentContextId.set(newContextId);
 }
 
+
+
+
+
 /**
  * Creates a deep copy of a ViewNode, particularly its tweened state, to prevent reference sharing across contexts.
  * @param viewNode The source ViewNode to clone.
@@ -354,6 +375,9 @@ function cloneViewNode(viewNode: ViewNode, newTargetState?: TweenableNodeState):
         status: viewNode.status
     };
 }
+
+
+
 
 
 export function updateNodeLayout(nodeId: NodeId, newX: number, newY: number) {
@@ -393,6 +417,10 @@ export function updateNodeLayout(nodeId: NodeId, newX: number, newY: number) {
     }
 }
 
+
+
+
+
 export async function removeViewNodeFromContext(contextId: NodeId, viewNodeId: NodeId) {
     const currentCtx = get(contexts).get(contextId);
 
@@ -427,6 +455,10 @@ export async function removeViewNodeFromContext(contextId: NodeId, viewNodeId: N
     }
 }
 
+
+
+
+
 /**
  * Marks a specific ViewNode as modified.
  * This is used to track which nodes need to be saved to the server.
@@ -453,6 +485,10 @@ export function markNodeAsModified(nodeId: NodeId) {
         console.warn(`[markNodeAsModified] Current context ${contextId} not found.`);
     }
 }
+
+
+
+
 
 /**
  * Saves the current context's modified nodes to the active persistence layer.
