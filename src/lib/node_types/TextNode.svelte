@@ -47,7 +47,7 @@
 	// INSTANCE SCRIPT
 	import type { DataNode, ViewNode, AvailableFont } from '$lib/types/types'; // Import AvailableFont
 	import { updateNodeAttributes } from '$lib/karta/NodeStore'; // Corrected import
-	import { currentContextId, availableContextsMap } from '$lib/karta/ContextStore'; // Import availableContextsMap
+	import { currentContextId, existingContextsMap } from '$lib/karta/ContextStore'; // Import existingContextsMap
 	import { settings } from '$lib/karta/SettingsStore';
 	import { tick, onDestroy } from 'svelte'; // Import onDestroy
 	import { AVAILABLE_FONTS } from '$lib/types/types'; // Import AVAILABLE_FONTS
@@ -55,7 +55,7 @@
 	export let dataNode: DataNode;
 	export let viewNode: ViewNode;
 	// Check if context exists for this node using the new map
-	$: hasContext = $availableContextsMap.has(viewNode.id);
+	$: hasContext = $existingContextsMap.has(viewNode.id);
 
 	// Type assertion for dataNode attributes - assumes NodeWrapper ensures correct ntype/attributes
 	$: dataNodeAttributes = dataNode.attributes as {

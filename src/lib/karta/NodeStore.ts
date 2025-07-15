@@ -7,8 +7,8 @@ import type { DataNode, NodeId, AssetData, AbsoluteTransform, ViewportSettings, 
 import { v4 as uuidv4 } from 'uuid';
 import { getDefaultAttributesForType, getDefaultViewNodeStateForType } from '$lib/node_types/registry';
 import { Tween } from 'svelte/motion';
-// Import removeViewNodeFromContext and availableContextsMap as well
-import { currentContextId, contexts, ROOT_NODE_ID, removeViewNodeFromContext, availableContextsMap } from './ContextStore';
+// Import removeViewNodeFromContext and existingContextsMap as well
+import { currentContextId, contexts, ROOT_NODE_ID, removeViewNodeFromContext, existingContextsMap } from './ContextStore';
 import { viewTransform, centerViewOnCanvasPoint } from './ViewportStore'; // Import centering function
 
 export const nodes = writable<Map<NodeId, DataNode>>(new Map());
@@ -495,7 +495,7 @@ export async function fetchAvailableContextDetails(): Promise<{ id: NodeId, name
     	try {
     		await persistenceService.deleteContext(nodeId);
     		// If context deletion was successful, remove from the map
-    		availableContextsMap.update(map => {
+    		existingContextsMap.update(map => {
     			if (map.has(nodeId)) {
     				map.delete(nodeId);
     			}

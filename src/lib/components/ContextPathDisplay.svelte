@@ -1,72 +1,86 @@
 <script lang="ts">
-	import { nodes } from '$lib/karta/NodeStore';
-	import { currentContextId, switchContext, availableContextsMap } from '$lib/karta/ContextStore'; // Import availableContextsMap
-	import { vaultName } from '$lib/karta/VaultStore';
-	import { settings } from '$lib/karta/SettingsStore';
-	import { get } from 'svelte/store'; // Import get
-	// Remove fetchAvailableContextDetails import
-	import { historyStack, futureStack, undoContextSwitch, redoContextSwitch } from '$lib/karta/HistoryStore';
-	import type { NodeId, DataNode } from '$lib/types/types';
-	import { onMount, onDestroy } from 'svelte'; // Import onMount and onDestroy
+	import { nodes } from "$lib/karta/NodeStore";
+	import {
+		currentContextId,
+		switchContext,
+		existingContextsMap,
+	} from "$lib/karta/ContextStore";
+	import { vaultName } from "$lib/karta/VaultStore";
+	import { get } from "svelte/store";
+	import {
+		historyStack,
+		futureStack,
+		undoContextSwitch,
+		redoContextSwitch,
+	} from "$lib/karta/HistoryStore";
+	import type { NodeId, DataNode } from "$lib/types/types";
+	import { onMount, onDestroy } from "svelte";
 
- let displayPath: string = '/'; // Default path
- let showContextList = false;
- let availableContexts: { id: NodeId; path: string }[] = []; // Removed 'name' from type
- // Remove isLoadingList
- let componentElement: HTMLElement; // Reference to the main component div for click outside
 
- // Reactively determine the path to display
- $: {
-  const ctxId = $currentContextId;
-  const contextNode: DataNode | undefined = $nodes.get(ctxId);
-  if (ctxId === '00000000-0000-0000-0000-000000000000') {
- displayPath = '/root';
-  }
-  else if (contextNode && contextNode.path) {
-   displayPath = '/' + contextNode.path.replace(/^vault/, $vaultName || 'vault');
-  } else {
-   displayPath = '/?';
-  }
- }
 
- function toggleContextList() {
- 	if (showContextList) {
- 		showContextList = false;
- 	} else {
- 		// Populate directly from the store
- 		const contextsMap = get(availableContextsMap);
- 		availableContexts = Array.from(contextsMap.entries())
- 			.map(([id, path]: [NodeId, string]) => ({ id, path })) // Add explicit types
- 			.sort((a: { path: string }, b: { path: string }) => a.path.localeCompare(b.path)); // Add explicit types
- 		showContextList = true;
- 	}
- }
 
- function handleContextSelect(id: NodeId) {
-  switchContext(id);
-  showContextList = false; // Close list after selection
- }
+	let displayPath: string = "/";
+	let showContextList = false;
+	let availableContexts: { id: NodeId; path: string }[] = [];
+	let componentElement: HTMLElement;
 
- // Close dropdown if clicked outside the main component element
- function handleClickOutside(event: MouseEvent) {
- 	if (showContextList && componentElement && !componentElement.contains(event.target as Node)) {
- 		showContextList = false;
- 	}
- }
+	// Reactively determine the path to display
+	$: {
+		const ctxId = $currentContextId;
+		const contextNode: DataNode | undefined = $nodes.get(ctxId);
+		if (ctxId === "00000000-0000-0000-0000-000000000000") {
+			displayPath = "/root";
+		} else if (contextNode && contextNode.path) {
+			displayPath =
+				"/" + contextNode.path.replace(/^vault/, $vaultName || "vault");
+		} else {
+			displayPath = "/?";
+		}
+	}
 
- onMount(() => {
-  window.addEventListener('click', handleClickOutside, true); // Use capture phase
-  return () => {
-   window.removeEventListener('click', handleClickOutside, true);
-  };
- });
+	function toggleContextList() {
+		if (showContextList) {
+			showContextList = false;
+		} else {
+			const contextsMap = get(existingContextsMap);
+			availableContexts = Array.from(contextsMap.entries())
+				.map(([id, path]: [NodeId, string]) => ({ id, path }))
+				.sort((a: { path: string }, b: { path: string }) =>
+					a.path.localeCompare(b.path),
+				);
+			showContextList = true;
+		}
+	}
 
- // Handle Escape key to close the list
- function handleKeyDown(event: KeyboardEvent) {
-     if (showContextList && event.key === 'Escape') {
-         showContextList = false;
-     }
- }
+	function handleContextSelect(id: NodeId) {
+		switchContext(id);
+		showContextList = false; // Close list after selection
+	}
+
+	// Close dropdown if clicked outside the main component element
+	function handleClickOutside(event: MouseEvent) {
+		if (
+			showContextList &&
+			componentElement &&
+			!componentElement.contains(event.target as Node)
+		) {
+			showContextList = false;
+		}
+	}
+
+	onMount(() => {
+		window.addEventListener("click", handleClickOutside, true); // Use capture phase
+		return () => {
+			window.removeEventListener("click", handleClickOutside, true);
+		};
+	});
+
+	// Handle Escape key to close the list
+	function handleKeyDown(event: KeyboardEvent) {
+		if (showContextList && event.key === "Escape") {
+			showContextList = false;
+		}
+	}
 </script>
 
 <svelte:window on:keydown={handleKeyDown} />
@@ -120,13 +134,16 @@
 			>
 				<!-- Remove loading state -->
 				{#if availableContexts.length === 0}
-					<div class="px-2 py-1 text-gray-400">No contexts found.</div>
+					<div class="px-2 py-1 text-gray-400">
+						No contexts found.
+					</div>
 				{:else}
 					{#each availableContexts as ctx (ctx.id)}
 						<button
 							role="option"
 							class="block w-full text-left px-2 py-1 hover:bg-gray-600"
-							on:click|stopPropagation={() => handleContextSelect(ctx.id)}
+							on:click|stopPropagation={() =>
+								handleContextSelect(ctx.id)}
 							title={ctx.path}
 						>
 							{ctx.path}

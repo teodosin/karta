@@ -158,8 +158,8 @@ export interface ColorTheme {
 
 export interface KartaSettings {
   version: number;
-  savelastViewedContextId: boolean;
-  lastViewedContextId: NodeId | null;
+  savelastViewedContextPath: boolean;
+  lastViewedContextPath: string | null;
   colorTheme: ColorTheme;
 }
 

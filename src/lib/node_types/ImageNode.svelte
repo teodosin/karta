@@ -44,7 +44,7 @@
 <script lang="ts">
 	// INSTANCE SCRIPT
 	import type { DataNode, ViewNode } from '$lib/types/types';
-	import { currentContextId, availableContextsMap } from '$lib/karta/ContextStore'; // Import availableContextsMap
+	import { currentContextId, existingContextsMap } from '$lib/karta/ContextStore'; // Import existingContextsMap
 	import { settings } from '$lib/karta/SettingsStore';
 	import { onMount } from 'svelte';
 	import { localAdapter } from '$lib/util/LocalAdapter'; // Import localAdapter
@@ -52,7 +52,7 @@
 	export let dataNode: DataNode;
 	export let viewNode: ViewNode;
 	// Check if context exists for this node using the new map
-	$: hasContext = $availableContextsMap.has(viewNode.id);
+	$: hasContext = $existingContextsMap.has(viewNode.id);
 
 	// Type assertion for attributes
 	$: attributes = dataNode.attributes as {

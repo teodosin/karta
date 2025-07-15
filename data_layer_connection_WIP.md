@@ -339,7 +339,7 @@ index 69e7ab4..c72cc99 100644
 -    		await localAdapter.deleteContext(nodeId);
 +    		await persistenceService.deleteContext(nodeId);
      		// If context deletion was successful, remove from the map
-     		availableContextsMap.update(map => {
+     		existingContextsMap.update(map => {
      			if (map.has(nodeId)) {
 diff --git a/src/lib/util/ServerAdapter.ts b/src/lib/util/ServerAdapter.ts
 index a93183f..5fe97ac 100644

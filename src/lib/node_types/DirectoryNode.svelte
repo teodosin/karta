@@ -36,11 +36,11 @@
 <script lang="ts">
 	// INSTANCE SCRIPT
 	import type { DataNode, ViewNode } from '$lib/types/types';
-	import { currentContextId, availableContextsMap } from '$lib/karta/ContextStore';
+	import { currentContextId, existingContextsMap } from '$lib/karta/ContextStore';
 
 	export let dataNode: DataNode;
 	export let viewNode: ViewNode;
-	$: hasContext = $availableContextsMap.has(viewNode.id);
+	$: hasContext = $existingContextsMap.has(viewNode.id);
 
 	// Instance logic...
 

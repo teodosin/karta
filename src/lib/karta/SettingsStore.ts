@@ -7,8 +7,8 @@ const adapter = new ServerAdapter();
 // Default settings
 const defaultSettings: KartaSettings = {
 	version: 0.1,
-	savelastViewedContextId: true,
-	lastViewedContextId: null,
+	savelastViewedContextPath: true,
+	lastViewedContextPath: null,
 	colorTheme: {
 		'viewport-bg': '#2b2b36',
 		'panel-bg': '#431d1f',

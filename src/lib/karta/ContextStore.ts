@@ -56,7 +56,7 @@ export const contexts = writable<Map<NodeId, Context>>(new Map());
 export const currentContextId = writable<NodeId>(ROOT_NODE_ID);
 
 // Store for available contexts (ID -> Path)
-export const availableContextsMap = writable<Map<NodeId, string>>(new Map());
+export const existingContextsMap = writable<Map<NodeId, string>>(new Map());
 
 // Derived Store for Current Context's ViewNodes
 export const currentViewNodes = derived(
@@ -195,7 +195,7 @@ async function _loadAndProcessContext(
 
             const focalDataNode = get(nodes).get(contextId);
             if (focalDataNode?.path) {
-                availableContextsMap.update(map => {
+                existingContextsMap.update(map => {
                     map.set(contextId, focalDataNode.path);
                     return map;
                 });
@@ -629,8 +629,8 @@ export async function switchContext(newContextId: NodeId, isUndoRedo: boolean = 
 
         try {
             const currentSettings = get(settings);
-            if (currentSettings.savelastViewedContextId) {
-                await updateSettings({ lastViewedContextId: newContextId });
+            if (currentSettings.savelastViewedContextPath) {
+                await updateSettings({ lastViewedContextPath: newContextId });
             }
         } catch (error) {
             console.error('[switchContext] Error saving last context ID to settings:', error);
@@ -698,9 +698,9 @@ async function initializeStores() {
     try {
         const pathsMap = await activeAdapter.getAllContextPaths(); // Use activeAdapter
         storeLogger.log('Context paths loaded from adapter:', pathsMap);
-        availableContextsMap.set(pathsMap);
+        existingContextsMap.set(pathsMap);
     } catch (error) {
-        console.error("[initializeStores] Error populating availableContextsMap:", error);
+        console.error("[initializeStores] Error populating existingContextsMap:", error);
         // Continue initialization even if this fails
     }
 
@@ -719,9 +719,9 @@ async function initializeStores() {
         } else {
             try {
                 const currentSettings = get(settings);
-                const savedId = currentSettings.lastViewedContextId;
+                const savedId = currentSettings.lastViewedContextPath;
 
-                if (currentSettings.savelastViewedContextId && savedId) {
+                if (currentSettings.savelastViewedContextPath && savedId) {
                     const nodeExists = await activeAdapter.getNode(savedId);
                     if (nodeExists) {
                         targetInitialContextId = savedId;
@@ -872,7 +872,7 @@ async function initializeStores() {
         if (targetInitialContextId === ROOT_NODE_ID && typeof window !== 'undefined') {
             // Only center if no specific last context was loaded via LocalStorage (for LocalAdapter)
             // Or always center if it's the server adapter and we are at root.
-            const shouldCenter = !USE_SERVER_ADAPTER ? (get(settings).savelastViewedContextId && get(settings).lastViewedContextId === null) || !get(settings).savelastViewedContextId : true;
+            const shouldCenter = !USE_SERVER_ADAPTER ? (get(settings).savelastViewedContextPath && get(settings).lastViewedContextPath === null) || !get(settings).savelastViewedContextPath : true;
 
             if (shouldCenter) {
                 // Use setTimeout to ensure the viewport has its dimensions before framing.
