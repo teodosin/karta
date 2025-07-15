@@ -1,3 +1,4 @@
+import { KARTA_VERSION } from '$lib/constants';
 import type {
     DataNode,
     KartaEdge,
@@ -128,7 +129,7 @@ export class ServerAdapter implements PersistenceService {
         const url = `${SERVER_BASE_URL}/api/nodes`;
         const payload = {
             name: node.attributes['name'] || 'Unnamed Node',
-            ntype: { type_path: node.ntype, version: "0.1.0" },
+            ntype: { type_path: node.ntype, version: KARTA_VERSION },
             parent_path: parentPath,
             attributes: transformAttributesToServerFormat(node.attributes),
         };
@@ -234,8 +235,8 @@ export class ServerAdapter implements PersistenceService {
                                         ? sNode.created_time
                                         : (sNode.created_time?.secs_since_epoch ?? 0);
                     const modifiedTime = typeof sNode.modified_time === 'number'
-                                         ? sNode.modified_time
-                                         : (sNode.modified_time?.secs_since_epoch ?? 0);
+                                        ? sNode.modified_time
+                                        : (sNode.modified_time?.secs_since_epoch ?? 0);
 
                     return {
                         id: sNode.uuid,
@@ -421,6 +422,8 @@ export class ServerAdapter implements PersistenceService {
             return undefined;
         }
     }
+
+
     async deleteNode(nodeId: string): Promise<void> { console.warn(`[ServerAdapter.deleteNode] Not implemented for ID: ${nodeId}`); }
     async getNodes(): Promise<DataNode[]> { console.warn('[ServerAdapter.getNodes] Not implemented'); return []; }
     async checkNameExists(name: string): Promise<boolean> { console.warn(`[ServerAdapter.checkNameExists] Not implemented for name: ${name}`); return false; }
@@ -441,6 +444,7 @@ export class ServerAdapter implements PersistenceService {
     async deleteAsset(assetId: string): Promise<void> { console.warn(`[ServerAdapter.deleteAsset] Not implemented for asset ID: ${assetId}`); }
     async getAssetObjectUrl(assetId: string): Promise<string | null> { console.warn(`[ServerAdapter.getAssetObjectUrl] Not implemented for asset ID: ${assetId}`); return null; }
 
+    
     async getSettings(): Promise<KartaSettings | undefined> {
         const url = `${SERVER_BASE_URL}/api/settings`;
         try {

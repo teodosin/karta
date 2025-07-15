@@ -319,6 +319,7 @@ export class LocalAdapter implements PersistenceService { // Added export here
 					height: nodeState.height,
 					relScale: 1,
 					rotation: nodeState.rotation,
+					status: 'modified',
 					attributes: viewNode.attributes // Include generic attributes
 				};
 			} else {
@@ -337,6 +338,7 @@ export class LocalAdapter implements PersistenceService { // Added export here
 					height: nodeState.height,
 					relScale,
 					rotation: nodeState.rotation,
+					status: 'modified',
 					attributes: viewNode.attributes // Include generic attributes
 				};
 			}

@@ -92,8 +92,8 @@ export interface StorableViewNode {
 // Note: In current screen-relative approach, relPosX/Y store screen coords. Scale is absolute.
 export interface StorableViewportSettings {
   scale: number;
-  relPosX: number; // Stores target screen X
-  relPosY: number; // Stores target screen Y
+  relPosX: number;
+  relPosY: number;
 }
 
 // Represents Context as stored (using StorableViewNode and StorableViewportSettings)

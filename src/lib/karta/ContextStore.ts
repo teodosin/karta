@@ -23,9 +23,8 @@ import { clearSelection } from './SelectionStore';
 import { propertiesPanelPosition } from './UIStateStore';
 import { setTool } from './ToolStore';
 import { settings, updateSettings } from './SettingsStore';
+import { ROOT_NODE_ID } from '$lib/constants';
 
-
-export const ROOT_NODE_ID = '00000000-0000-0000-0000-000000000000';
 
 
 const USE_SERVER_ADAPTER = true;
@@ -145,32 +144,24 @@ async function _loadAndProcessContext(
     } else {
         // --- Context needs creation ---
         contextWasCreated = true;
-        const focalDataNode = await activeAdapter.getNode(contextId); // Use activeAdapter
+        const focalDataNode = await activeAdapter.getNode(contextId);
         if (!focalDataNode) throw new Error(`Cannot create context for non-existent node: ${contextId}`);
-        if (contextId === ROOT_NODE_ID) {
-        }
 
-        // Create initial state and ViewNode for the focal node
-        // Use type-specific defaults for size/scale/rotation
-        if (contextId === ROOT_NODE_ID) {
-        }
         // Use the state passed in, which already contains defaults or state from old context
         const correctedFocalInitialState: TweenableNodeState = {
             x: focalInitialStateFromOldContext.x,
             y: focalInitialStateFromOldContext.y,
             scale: focalInitialStateFromOldContext.scale,
             rotation: focalInitialStateFromOldContext.rotation,
-            width: focalInitialStateFromOldContext.width, // Use width from old context/defaults
-            height: focalInitialStateFromOldContext.height // Use height from old context/defaults
+            width: focalInitialStateFromOldContext.width,
+            height: focalInitialStateFromOldContext.height
         };
         finalViewNodes.set(contextId, { id: contextId, state: new Tween(correctedFocalInitialState, { duration: 0 }), status: 'modified' });
-        // For newly created contexts, don't set viewport settings yet.
-        // Let the viewport remain where it is. Settings will be saved on first interaction/switch away.
     }
 
     // --- Add Previous Focal Node (if context is new and applicable) ---
     if (contextWasCreated) {
-        const currentHistory: NodeId[] = get(historyStack); // Explicitly type
+        const currentHistory: NodeId[] = get(historyStack);
         const previousContextId = currentHistory.length > 0 ? currentHistory[currentHistory.length - 1] : null;
         if (previousContextId && previousContextId !== contextId && !finalViewNodes.has(previousContextId)) {
             const previousFocalViewNode = oldContext?.viewNodes.get(previousContextId);
@@ -221,20 +212,31 @@ function _calculateTargetState(
     storableNode: StorableViewNode
 ): TweenableNodeState {
     if (nodeId === contextId) {
+
         return {
-            x: focalPlacement.x, y: focalPlacement.y,
-            scale: focalPlacement.scale, rotation: storableNode.rotation,
-            width: storableNode.width, height: storableNode.height
+            x: focalPlacement.x,
+			y: focalPlacement.y,
+            scale: focalPlacement.scale,
+			rotation: storableNode.rotation,
+            width: storableNode.width,
+			height: storableNode.height
         };
+
     } else {
-        const absScale = focalPlacement.scale * storableNode.relScale;
-        const scaledRelX = storableNode.relX * focalPlacement.scale;
-        const scaledRelY = storableNode.relY * focalPlacement.scale;
-        const absX = focalPlacement.x + scaledRelX;
-        const absY = focalPlacement.y + scaledRelY;
+
+        const absScale 		= focalPlacement.scale 	* storableNode.relScale;
+        const scaledRelX 	= storableNode.relX 	* focalPlacement.scale;
+        const scaledRelY 	= storableNode.relY 	* focalPlacement.scale;
+        const absX 			= focalPlacement.x 		+ scaledRelX;
+        const absY 			= focalPlacement.y 		+ scaledRelY;
+
         return {
-            x: absX, y: absY, scale: absScale, rotation: storableNode.rotation,
-            width: storableNode.width, height: storableNode.height
+            x: absX,
+			y: absY,
+			scale: absScale,
+			rotation: storableNode.rotation,
+            width: storableNode.width,
+			height: storableNode.height
         };
     }
 }
@@ -247,6 +249,7 @@ function _convertStorableViewportSettings(
     storableSettings: StorableViewportSettings | undefined,
     focalViewNode: ViewNode | undefined
 ): ViewportSettings | undefined {
+
     if (!storableSettings) {
         return undefined;
     }
@@ -255,10 +258,23 @@ function _convertStorableViewportSettings(
 
     if (focalState) {
         // Explicitly check for NaN before calculation
-        if (isNaN(focalState.x) || isNaN(focalState.y) || isNaN(storableSettings.scale) || isNaN(storableSettings.relPosX) || isNaN(storableSettings.relPosY)) {
-            console.error('[_convertStorableViewportSettings] NaN detected in input values!',
-                { x: focalState.x, y: focalState.y, scale: storableSettings.scale, relPosX: storableSettings.relPosX, relPosY: storableSettings.relPosY }
+        if (
+				isNaN(focalState.x) 
+			|| 	isNaN(focalState.y) 
+			|| 	isNaN(storableSettings.scale) 
+			|| 	isNaN(storableSettings.relPosX) 
+			|| 	isNaN(storableSettings.relPosY)
+		) {
+			storeLogger.error("CRITICAL: NaN in viewport settings conversion!",
+                {
+					x: focalState.x,
+					y: focalState.y,
+					scale: storableSettings.scale,
+					relPosX: storableSettings.relPosX,
+					relPosY: storableSettings.relPosY 
+				}
             );
+
         }
 
         const absPosX = storableSettings.relPosX - (focalState.x * storableSettings.scale);
@@ -267,11 +283,14 @@ function _convertStorableViewportSettings(
         const result = { scale: storableSettings.scale, posX: absPosX, posY: absPosY };
 
         if (isNaN(absPosX) || isNaN(absPosY)) {
-            console.error('[_convertStorableViewportSettings] CRITICAL: Outputting NaN!', JSON.parse(JSON.stringify(result)));
+			storeLogger.error("CRITICAL: NaN in viewport settings conversion!", result);
         }
+
         return result;
+
     } else {
-        console.warn("[_convertStorableViewportSettings] Focal node state not found. Returning DEFAULT_VIEWPORT_SETTINGS.");
+
+		storeLogger.warn("Focal node state not found. Returning DEFAULT_VIEWPORT_SETTINGS.");
         return { ...DEFAULT_VIEWPORT_SETTINGS };
     }
 }
@@ -282,16 +301,17 @@ function _convertStorableViewportSettings(
 
 function _applyStoresUpdate(
     newContextId: NodeId,
-    processedContext: Context, // The fully processed context with ViewNodes/Tweens
-    loadedDataNodesForContext: Map<NodeId, DataNode>, // Renamed for clarity
-    loadedEdgesForContext: Map<EdgeId, KartaEdge> // Renamed for clarity
+    processedContext: Context,
+    loadedDataNodesForContext: Map<NodeId, DataNode>,
+    loadedEdgesForContext: Map<EdgeId, KartaEdge>
 ) {
+
     // --- Update nodes store (Merge) ---
     // Keep all existing nodes, only add/update the ones loaded for the new context
     nodes.update(currentNodesMap => {
-        const nextNodes = new Map<NodeId, DataNode>(currentNodesMap); // Start with all existing nodes
+        const nextNodes = new Map<NodeId, DataNode>(currentNodesMap);
         for (const [nodeId, dataNode] of loadedDataNodesForContext.entries()) {
-            nextNodes.set(nodeId, dataNode); // Add or overwrite node data loaded for this context
+            nextNodes.set(nodeId, dataNode);
         }
         return nextNodes;
     });

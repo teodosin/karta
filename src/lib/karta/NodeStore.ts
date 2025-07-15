@@ -8,7 +8,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { getDefaultAttributesForType, getDefaultViewNodeStateForType } from '$lib/node_types/registry';
 import { Tween } from 'svelte/motion';
 // Import removeViewNodeFromContext and existingContextsMap as well
-import { currentContextId, contexts, ROOT_NODE_ID, removeViewNodeFromContext, existingContextsMap } from './ContextStore';
+import { currentContextId, contexts, removeViewNodeFromContext, existingContextsMap } from './ContextStore';
 import { viewTransform, centerViewOnCanvasPoint } from './ViewportStore'; // Import centering function
 
 export const nodes = writable<Map<NodeId, DataNode>>(new Map());
@@ -23,8 +23,7 @@ async function _ensureDataNodeExists(nodeId: NodeId): Promise<DataNode | null> {
     }
     try {
         let dataNode = await persistenceService.getNode(nodeId);
-        if (nodeId === ROOT_NODE_ID) {
-        }
+
         if (!dataNode) {
             console.warn(`[_ensureDataNodeExists] DataNode ${nodeId} not found. Creating default.`);
             const now = Date.now();
@@ -38,11 +37,11 @@ async function _ensureDataNodeExists(nodeId: NodeId): Promise<DataNode | null> {
 
             dataNode = {
                 id: nodeId,
-                ntype: defaultNtype, // Set type correctly
+                ntype: defaultNtype,
                 createdAt: now,
                 modifiedAt: now,
-                path: defaultPath, // Set path correctly
-                attributes: { name: defaultName, ...(isRoot && { isSystemNode: true, view_isNameVisible: false }) }, // Set name, system flag, and hide label for root
+                path: defaultPath,
+                attributes: { name: defaultName, ...(isRoot && { isSystemNode: true, view_isNameVisible: false }) },
             };
             // This initial save might need to be adapted for ServerAdapter if it requires a parent path
             // For now, we assume it can handle a simple save.
@@ -56,29 +55,30 @@ async function _ensureDataNodeExists(nodeId: NodeId): Promise<DataNode | null> {
 }
 
 export async function createNodeAtPosition(
-	canvasX: number,
-	canvasY: number,
-	ntype: string = 'core/text',
-	attributes: Record<string, any> = {},
-	initialWidth?: number, // Optional initial width
-	initialHeight?: number // Optional initial height
+    canvasX: number,
+    canvasY: number,
+    ntype: string = 'core/text',
+    attributes: Record<string, any> = {},
+    initialWidth?: number,
+    initialHeight?: number
 ): Promise<NodeId | null> {
-	const newNodeId: NodeId = uuidv4();
+    
+    const newNodeId: NodeId = uuidv4();
     const now = Date.now();
     const baseName = attributes.name || ntype;
 
- // 1. Create DataNode
+    // 1. Create DataNode
     // The client no longer determines the finalName or path. It sends the desired name,
     // and the server returns the authoritative state.
- const newNodeData: DataNode = {
-  id: newNodeId, ntype: ntype, createdAt: now, modifiedAt: now,
+    const newNodeData: DataNode = {
+        id: newNodeId, ntype: ntype, createdAt: now, modifiedAt: now,
         path: `/${baseName}`, // Path will be corrected by the server response.
-  attributes: {
+        attributes: {
             ...getDefaultAttributesForType(ntype),
             ...attributes,
             name: baseName
         },
- };
+    };
 
     // 2. Get default view state based on ntype and create initial state for the ViewNode's tween
     const defaultViewState = getDefaultViewNodeStateForType(ntype); // Gets { width, height, scale, rotation }
@@ -108,7 +108,7 @@ export async function createNodeAtPosition(
         try {
             // For ServerAdapter, we need the parent path.
             const parentPath = findPhysicalParentPath(contextId);
-            
+
             console.log(`[NodeStore.createNodeAtPosition] About to create node '${newNodeData.attributes.name}' in parent '${parentPath}'. Current context: ${contextId}`);
             const persistedNode = await (persistenceService as ServerAdapter).createNode(newNodeData, parentPath);
 
@@ -120,7 +120,7 @@ export async function createNodeAtPosition(
 
             // NOW, update the stores with the definitive node data from the server
             nodes.update(n => n.set(persistedNode.id, persistedNode)); // Add the persisted DataNode
-            
+
             // CRITICAL FIX: The ViewNode was created with a temporary client-side ID.
             // We need to update the contexts store to use the server-authoritative ID.
             contexts.update((ctxMap: Map<NodeId, Context>) => {
@@ -138,7 +138,7 @@ export async function createNodeAtPosition(
                 console.log(`[NodeStore.createNodeAtPosition] CONTEXTS MAP AFTER UPDATE:`, JSON.stringify(Object.fromEntries(ctxMap), null, 2));
                 return ctxMap;
             });
-            
+
             return persistedNode.id; // Return ID on successful save
         } catch (error) {
             console.error("Error saving node or context after creation:", error);
@@ -153,94 +153,94 @@ export async function createNodeAtPosition(
 }
 
 export function findPhysicalParentPath(contextId: NodeId): string {
-	console.log(`[findPhysicalParentPath] Starting search from contextId: ${contextId}`);
-	let currentId = contextId;
-	let parentPath: string | undefined;
-	const allNodes = get(nodes);
-	const MAX_DEPTH = 10; // Safeguard against infinite loops
-	let depth = 0;
+    console.log(`[findPhysicalParentPath] Starting search from contextId: ${contextId}`);
+    let currentId = contextId;
+    let parentPath: string | undefined;
+    const allNodes = get(nodes);
+    const MAX_DEPTH = 10; // Safeguard against infinite loops
+    let depth = 0;
 
-	while (depth < MAX_DEPTH) {
-		console.log(`[findPhysicalParentPath] Depth ${depth}, currentId: ${currentId}`);
-		const currentNode = allNodes.get(currentId);
-		if (!currentNode) {
-			const errorMsg = `[findPhysicalParentPath] Could not find node data for ID: ${currentId}`;
-			console.error(errorMsg);
-			throw new Error(errorMsg);
-		}
+    while (depth < MAX_DEPTH) {
+        console.log(`[findPhysicalParentPath] Depth ${depth}, currentId: ${currentId}`);
+        const currentNode = allNodes.get(currentId);
+        if (!currentNode) {
+            const errorMsg = `[findPhysicalParentPath] Could not find node data for ID: ${currentId}`;
+            console.error(errorMsg);
+            throw new Error(errorMsg);
+        }
 
-		console.log(`[findPhysicalParentPath] Checking node: path='${currentNode.path}', ntype='${currentNode.ntype}'`);
+        console.log(`[findPhysicalParentPath] Checking node: path='${currentNode.path}', ntype='${currentNode.ntype}'`);
 
-		// Check if the current node is a valid physical parent
-		if (currentNode.ntype === 'core/fs/dir') {
-			parentPath = currentNode.path;
-			console.log(`[findPhysicalParentPath] Found physical parent: '${parentPath}'`);
-			break;
-		}
-		
-		// If not, move up to the parent
-		const currentPath = currentNode.path;
-		if (!currentPath || currentPath === '/') {
-			console.log(`[findPhysicalParentPath] Reached root or invalid path, stopping search.`);
-			break;
-		}
-		const parentPathStr = currentPath.substring(0, currentPath.lastIndexOf('/')) || '/';
-		console.log(`[findPhysicalParentPath] Moving up to parent path: '${parentPathStr}'`);
+        // Check if the current node is a valid physical parent
+        if (currentNode.ntype === 'core/fs/dir') {
+            parentPath = currentNode.path;
+            console.log(`[findPhysicalParentPath] Found physical parent: '${parentPath}'`);
+            break;
+        }
 
-		const parentNode = Array.from(allNodes.values()).find(n => n.path === parentPathStr);
+        // If not, move up to the parent
+        const currentPath = currentNode.path;
+        if (!currentPath || currentPath === '/') {
+            console.log(`[findPhysicalParentPath] Reached root or invalid path, stopping search.`);
+            break;
+        }
+        const parentPathStr = currentPath.substring(0, currentPath.lastIndexOf('/')) || '/';
+        console.log(`[findPhysicalParentPath] Moving up to parent path: '${parentPathStr}'`);
 
-		if (!parentNode) {
-			const errorMsg = `[findPhysicalParentPath] Could not find parent node with path: '${parentPathStr}'`;
-			console.error(errorMsg);
-			throw new Error(errorMsg);
-		}
-		currentId = parentNode.id;
-		depth++;
-	}
+        const parentNode = Array.from(allNodes.values()).find(n => n.path === parentPathStr);
 
-	if (!parentPath) {
-		const errorMsg = `[findPhysicalParentPath] Could not find a valid physical parent for context ${contextId}.`;
-		console.error(errorMsg);
-		throw new Error(errorMsg);
-	}
-	console.log(`[findPhysicalParentPath] Successfully found and returning parent path: '${parentPath}'`);
-	return parentPath;
+        if (!parentNode) {
+            const errorMsg = `[findPhysicalParentPath] Could not find parent node with path: '${parentPathStr}'`;
+            console.error(errorMsg);
+            throw new Error(errorMsg);
+        }
+        currentId = parentNode.id;
+        depth++;
+    }
+
+    if (!parentPath) {
+        const errorMsg = `[findPhysicalParentPath] Could not find a valid physical parent for context ${contextId}.`;
+        console.error(errorMsg);
+        throw new Error(errorMsg);
+    }
+    console.log(`[findPhysicalParentPath] Successfully found and returning parent path: '${parentPath}'`);
+    return parentPath;
 }
 
 export async function createImageNodeFromDataUrl(position: { x: number, y: number }, dataUrl: string, width?: number, height?: number) {
-	try {
-		// Create the basic node structure first
-		// Pass optional width and height to createNodeAtPosition
-		const newNodeId = await createNodeAtPosition(position.x, position.y, 'core/image', {}, width, height);
-		if (!newNodeId) {
-			console.error("[KartaStore] Failed to create base node for image paste.");
-			return;
-		}
+    try {
+        // Create the basic node structure first
+        // Pass optional width and height to createNodeAtPosition
+        const newNodeId = await createNodeAtPosition(position.x, position.y, 'core/image', {}, width, height);
+        if (!newNodeId) {
+            console.error("[KartaStore] Failed to create base node for image paste.");
+            return;
+        }
 
-		// Update the attributes with the image source
-		// TODO: Consider adding warnings or size limits for very large images.
-		await updateNodeAttributes(newNodeId, { src: dataUrl });
+        // Update the attributes with the image source
+        // TODO: Consider adding warnings or size limits for very large images.
+        await updateNodeAttributes(newNodeId, { src: dataUrl });
 
-	} catch (error) {
-		console.error("[KartaStore] Error creating image node from Data URL:", error);
-	}
+    } catch (error) {
+        console.error("[KartaStore] Error creating image node from Data URL:", error);
+    }
 }
 
 export async function createTextNodeFromPaste(position: { x: number, y: number }, text: string) {
-	try {
-		// Create the basic node structure first
-		const newNodeId = await createNodeAtPosition(position.x, position.y, 'core/text');
-		if (!newNodeId) {
-			console.error("[KartaStore] Failed to create base node for text paste.");
-			return;
-		}
+    try {
+        // Create the basic node structure first
+        const newNodeId = await createNodeAtPosition(position.x, position.y, 'core/text');
+        if (!newNodeId) {
+            console.error("[KartaStore] Failed to create base node for text paste.");
+            return;
+        }
 
-		// Update the attributes with the pasted text
-		await updateNodeAttributes(newNodeId, { text: text });
+        // Update the attributes with the pasted text
+        await updateNodeAttributes(newNodeId, { text: text });
 
-	} catch (error) {
-		console.error("[KartaStore] Error creating text node from paste:", error);
-	}
+    } catch (error) {
+        console.error("[KartaStore] Error creating text node from paste:", error);
+    }
 }
 
 export async function createImageNodeWithAsset(
@@ -363,7 +363,7 @@ export async function updateNodeAttributes(nodeId: NodeId, newAttributes: Record
         }
     } else {
     }
-   }
+}
 export async function updateNodeSearchableFlag(nodeId: NodeId, isSearchable: boolean): Promise<void> {
     const currentNodes = get(nodes);
     const dataNode = currentNodes.get(nodeId);
@@ -419,9 +419,9 @@ export async function fetchAvailableContextDetails(): Promise<{ id: NodeId, name
         const dataNodesMap = await persistenceService.getDataNodesByIds(contextIds);
         // Add type assertion for iterator
         const contextDetails = Array.from(dataNodesMap.values() as IterableIterator<DataNode>)
-        	.map((node: DataNode) => ({ // Explicitly type node
-        		id: node.id,
-        		name: node.attributes?.name ?? `Node ${node.id.substring(0, 8)}`, // Fallback name
+            .map((node: DataNode) => ({ // Explicitly type node
+                id: node.id,
+                name: node.attributes?.name ?? `Node ${node.id.substring(0, 8)}`, // Fallback name
                 path: node.path ?? `/${node.attributes?.name ?? node.id.substring(0, 8)}` // Fallback path
             }))
             .sort((a, b) => a.path.localeCompare(b.path)); // Sort alphabetically by path
@@ -432,206 +432,207 @@ export async function fetchAvailableContextDetails(): Promise<{ id: NodeId, name
         console.error("[fetchAvailableContextDetails] Error fetching context details:", error);
         return [];
     }
-   }
-   
-   // Import necessary stores and types for deletion
-   import { edges, deleteEdge } from './EdgeStore'; // Assuming EdgeStore exports edges store and deleteEdge action
-   
-   export async function deleteDataNodePermanently(nodeId: NodeId): Promise<void> {
+}
+
+// Import necessary stores and types for deletion
+import { edges, deleteEdge } from './EdgeStore'; // Assuming EdgeStore exports edges store and deleteEdge action
+import { ROOT_NODE_ID } from '$lib/constants';
+
+export async function deleteDataNodePermanently(nodeId: NodeId): Promise<void> {
     if (!persistenceService) {
-    	console.error("[deleteDataNodePermanently] Persistence service not available.");
-    	return;
+        console.error("[deleteDataNodePermanently] Persistence service not available.");
+        return;
     }
-   
+
     try {
-    	// 1. Get the node data to check type for asset deletion
-    	const dataNodeToDelete = get(nodes).get(nodeId); // Get from store first
-    	if (!dataNodeToDelete) {
-    		// If not in store, try fetching from DB (might be a ghost node scenario)
-    		const nodeFromDb = await persistenceService.getNode(nodeId);
-    		if (!nodeFromDb) {
-    			console.warn(`[deleteDataNodePermanently] Node ${nodeId} not found in store or DB. Cannot delete.`);
-    			return;
-    		}
-    		// If found in DB but not store, proceed with deletion from DB
-    		console.warn(`[deleteDataNodePermanently] Node ${nodeId} found in DB but not in store. Proceeding with DB deletion.`);
-    	}
-   
-    	// 2. Find connected edges
-    	const allEdges = get(edges);
-    	const connectedEdges = [...allEdges.values()].filter(edge => edge.source === nodeId || edge.target === nodeId);
-   
-    	// 3. Remove DataNode from the store *first* to trigger UI updates (like ghosting)
-    	let nodeRemovedFromStore = false;
-    	nodes.update(n => {
-    		if (n.has(nodeId)) {
-    			n.delete(nodeId);
-    			nodeRemovedFromStore = true;
-    			return n;
-    		}
-    		return n; // Return original map if node wasn't there
-    	});
-    	if (nodeRemovedFromStore) {
-    	}
-   
-   
-    	// 4. Delete connected edges (store update + persistence handled by deleteEdge)
-    	for (const edge of connectedEdges) {
-    		await deleteEdge(edge.id); // deleteEdge should handle store and persistence
-    	}
-   
-    	// 5. Delete asset if it's an image node
-    	// Use the node data we fetched earlier (either from store or DB)
-    	const nodeType = dataNodeToDelete?.ntype ?? (await persistenceService.getNode(nodeId))?.ntype; // Check type
-    	if (nodeType === 'core/image') {
-    		// Asset ID is the same as Node ID for images currently
-    		await persistenceService.deleteAsset(nodeId);
-    	}
-   
-    	// 6. Delete the DataNode from persistence
-    	await persistenceService.deleteNode(nodeId);
-    
-    	// 7. Delete the corresponding Context (if it exists) and update the map
-    	try {
-    		await persistenceService.deleteContext(nodeId);
-    		// If context deletion was successful, remove from the map
-    		existingContextsMap.update(map => {
-    			if (map.has(nodeId)) {
-    				map.delete(nodeId);
-    			}
-    			return map;
-    		});
-    	} catch (contextDeleteError) {
-    		// Log error, but continue node deletion process
-    		console.error(`[deleteDataNodePermanently] Error deleting context for node ${nodeId}:`, contextDeleteError);
-    	}
-    
-    	// 8. Remove the ViewNode from the *current* context
-    	const currentCtxId = get(currentContextId);
-    	if (currentCtxId) {
-    		await removeViewNodeFromContext(currentCtxId, nodeId);
-    	} else {
-    		console.warn(`[deleteDataNodePermanently] Could not determine current context ID to remove ViewNode ${nodeId}.`);
-    	}
-   
-   
-    } catch (error) {
-    	console.error(`[deleteDataNodePermanently] Error deleting node ${nodeId}:`, error);
-    	// Consider adding rollback logic if needed, though complex.
-    	// For now, log the error. The node might be partially deleted.
-    }
-   }
-   
-   
-   export { _ensureDataNodeExists };
+        // 1. Get the node data to check type for asset deletion
+        const dataNodeToDelete = get(nodes).get(nodeId); // Get from store first
+        if (!dataNodeToDelete) {
+            // If not in store, try fetching from DB (might be a ghost node scenario)
+            const nodeFromDb = await persistenceService.getNode(nodeId);
+            if (!nodeFromDb) {
+                console.warn(`[deleteDataNodePermanently] Node ${nodeId} not found in store or DB. Cannot delete.`);
+                return;
+            }
+            // If found in DB but not store, proceed with deletion from DB
+            console.warn(`[deleteDataNodePermanently] Node ${nodeId} found in DB but not in store. Proceeding with DB deletion.`);
+        }
 
-   // --- Generic ViewNode Attribute Update ---
-   export async function updateViewNodeAttribute(viewNodeId: string, attributeKey: string, attributeValue: any): Promise<void> {
-       const currentCtxId = get(currentContextId);
-       if (!currentCtxId) {
-           console.error("[updateViewNodeAttribute] Cannot update attribute: No current context ID");
-           return;
-       }
+        // 2. Find connected edges
+        const allEdges = get(edges);
+        const connectedEdges = [...allEdges.values()].filter(edge => edge.source === nodeId || edge.target === nodeId);
 
-       const currentContexts = get(contexts);
-       const currentContext = currentContexts.get(currentCtxId);
-       if (!currentContext) {
-           console.error(`[updateViewNodeAttribute] Cannot update attribute: Context ${currentCtxId} not found`);
-           return;
-       }
+        // 3. Remove DataNode from the store *first* to trigger UI updates (like ghosting)
+        let nodeRemovedFromStore = false;
+        nodes.update(n => {
+            if (n.has(nodeId)) {
+                n.delete(nodeId);
+                nodeRemovedFromStore = true;
+                return n;
+            }
+            return n; // Return original map if node wasn't there
+        });
+        if (nodeRemovedFromStore) {
+        }
 
-       const viewNode = currentContext.viewNodes.get(viewNodeId);
-       if (!viewNode) {
-           console.error(`[updateViewNodeAttribute] Cannot update attribute: ViewNode ${viewNodeId} not found in context ${currentCtxId}`);
-           return;
-       }
 
-       const dataNodeId = viewNode.id; // ViewNode ID is same as DataNode ID
-       const allNodes = get(nodes);
-       const dataNode = allNodes.get(dataNodeId);
+        // 4. Delete connected edges (store update + persistence handled by deleteEdge)
+        for (const edge of connectedEdges) {
+            await deleteEdge(edge.id); // deleteEdge should handle store and persistence
+        }
 
-       if (!dataNode) {
-            console.error(`[updateViewNodeAttribute] Cannot update attribute: DataNode ${dataNodeId} not found`);
-           return;
-       }
+        // 5. Delete asset if it's an image node
+        // Use the node data we fetched earlier (either from store or DB)
+        const nodeType = dataNodeToDelete?.ntype ?? (await persistenceService.getNode(nodeId))?.ntype; // Check type
+        if (nodeType === 'core/image') {
+            // Asset ID is the same as Node ID for images currently
+            await persistenceService.deleteAsset(nodeId);
+        }
 
-       // --- Type Check ---
-       let isValidAttribute = true; // Assume valid by default
-       if (attributeKey.startsWith('type_')) {
-           isValidAttribute = false;
-           console.error(`[updateViewNodeAttribute] Attribute key "${attributeKey}" starts with 'type_' and cannot be set on a ViewNode.`);
-       }
-       // Add more specific validation for known view_* and viewtype_* attributes if needed,
-       // or ensure the component handles unknown attributes gracefully.
-       // For now, allow any unprefixed, view_*, or viewtype_* attribute.
- 
-       if (!isValidAttribute) {
-           return;
-       }
- 
-       // --- Determine if updates are needed (compare with original values) ---
-       const needsViewNodeUpdate = viewNode.attributes?.[attributeKey] !== attributeValue;
-       let needsDataNodeUpdate = false;
-       
-       // Determine if DataNode also needs update (only for view_ and viewtype_ attributes)
-       if (attributeKey.startsWith('view_') || attributeKey.startsWith('viewtype_')) {
-           needsDataNodeUpdate = dataNode.attributes?.[attributeKey] !== attributeValue;
-       }
+        // 6. Delete the DataNode from persistence
+        await persistenceService.deleteNode(nodeId);
 
-       // --- Update ViewNode (Context Specific) ---
-       if (needsViewNodeUpdate) {
-           contexts.update(ctxMap => {
-               const originalContext = ctxMap.get(currentCtxId);
-               if (!originalContext) return ctxMap;
-               const originalViewNode = originalContext.viewNodes.get(viewNodeId);
-               if (!originalViewNode) return ctxMap;
-
-               const newViewAttributes = { ...(originalViewNode.attributes ?? {}), [attributeKey]: attributeValue };
-               const newViewNode = { ...originalViewNode, attributes: newViewAttributes };
-               const newViewNodes = new Map(originalContext.viewNodes).set(viewNodeId, newViewNode);
-               const newContext = { ...originalContext, viewNodes: newViewNodes };
-               
-               const newCtxMap = new Map(ctxMap);
-               newCtxMap.set(currentCtxId, newContext);
-               return newCtxMap;
-           });
-
-           if (localAdapter) {
-               try {
-                   const updatedContext = get(contexts).get(currentCtxId);
-                   if (updatedContext) {
-                       await localAdapter.saveContext(updatedContext);
-                   }
-               } catch (error) {
-                   console.error(`[updateViewNodeAttribute] Error saving context ${currentCtxId} for ViewNode update:`, error);
-               }
-           }
-       }
-
-       // --- Update DataNode (Global Default for this node instance) ---
-       if (needsDataNodeUpdate) { // This condition now correctly checks if a view_ or viewtype_ attribute changed
-            nodes.update(nodeMap => {
-                const originalDataNode = nodeMap.get(dataNodeId); // dataNode is already available from outer scope
-                if (!originalDataNode) return nodeMap;
-
-                const newDataAttributes = {
-                    ...(originalDataNode.attributes ?? {}),
-                    [attributeKey]: attributeValue // Update the specific view_ or viewtype_ attribute
-                };
-
-                const updatedDataNode: DataNode = {
-                    ...originalDataNode,
-                    attributes: newDataAttributes,
-                    modifiedAt: Date.now()
-                };
-                
-                const newNodeMap = new Map(nodeMap);
-                newNodeMap.set(dataNodeId, updatedDataNode);
-                return newNodeMap;
+        // 7. Delete the corresponding Context (if it exists) and update the map
+        try {
+            await persistenceService.deleteContext(nodeId);
+            // If context deletion was successful, remove from the map
+            existingContextsMap.update(map => {
+                if (map.has(nodeId)) {
+                    map.delete(nodeId);
+                }
+                return map;
             });
-       }
-       
-   }
+        } catch (contextDeleteError) {
+            // Log error, but continue node deletion process
+            console.error(`[deleteDataNodePermanently] Error deleting context for node ${nodeId}:`, contextDeleteError);
+        }
+
+        // 8. Remove the ViewNode from the *current* context
+        const currentCtxId = get(currentContextId);
+        if (currentCtxId) {
+            await removeViewNodeFromContext(currentCtxId, nodeId);
+        } else {
+            console.warn(`[deleteDataNodePermanently] Could not determine current context ID to remove ViewNode ${nodeId}.`);
+        }
+
+
+    } catch (error) {
+        console.error(`[deleteDataNodePermanently] Error deleting node ${nodeId}:`, error);
+        // Consider adding rollback logic if needed, though complex.
+        // For now, log the error. The node might be partially deleted.
+    }
+}
+
+
+export { _ensureDataNodeExists };
+
+// --- Generic ViewNode Attribute Update ---
+export async function updateViewNodeAttribute(viewNodeId: string, attributeKey: string, attributeValue: any): Promise<void> {
+    const currentCtxId = get(currentContextId);
+    if (!currentCtxId) {
+        console.error("[updateViewNodeAttribute] Cannot update attribute: No current context ID");
+        return;
+    }
+
+    const currentContexts = get(contexts);
+    const currentContext = currentContexts.get(currentCtxId);
+    if (!currentContext) {
+        console.error(`[updateViewNodeAttribute] Cannot update attribute: Context ${currentCtxId} not found`);
+        return;
+    }
+
+    const viewNode = currentContext.viewNodes.get(viewNodeId);
+    if (!viewNode) {
+        console.error(`[updateViewNodeAttribute] Cannot update attribute: ViewNode ${viewNodeId} not found in context ${currentCtxId}`);
+        return;
+    }
+
+    const dataNodeId = viewNode.id; // ViewNode ID is same as DataNode ID
+    const allNodes = get(nodes);
+    const dataNode = allNodes.get(dataNodeId);
+
+    if (!dataNode) {
+        console.error(`[updateViewNodeAttribute] Cannot update attribute: DataNode ${dataNodeId} not found`);
+        return;
+    }
+
+    // --- Type Check ---
+    let isValidAttribute = true; // Assume valid by default
+    if (attributeKey.startsWith('type_')) {
+        isValidAttribute = false;
+        console.error(`[updateViewNodeAttribute] Attribute key "${attributeKey}" starts with 'type_' and cannot be set on a ViewNode.`);
+    }
+    // Add more specific validation for known view_* and viewtype_* attributes if needed,
+    // or ensure the component handles unknown attributes gracefully.
+    // For now, allow any unprefixed, view_*, or viewtype_* attribute.
+
+    if (!isValidAttribute) {
+        return;
+    }
+
+    // --- Determine if updates are needed (compare with original values) ---
+    const needsViewNodeUpdate = viewNode.attributes?.[attributeKey] !== attributeValue;
+    let needsDataNodeUpdate = false;
+
+    // Determine if DataNode also needs update (only for view_ and viewtype_ attributes)
+    if (attributeKey.startsWith('view_') || attributeKey.startsWith('viewtype_')) {
+        needsDataNodeUpdate = dataNode.attributes?.[attributeKey] !== attributeValue;
+    }
+
+    // --- Update ViewNode (Context Specific) ---
+    if (needsViewNodeUpdate) {
+        contexts.update(ctxMap => {
+            const originalContext = ctxMap.get(currentCtxId);
+            if (!originalContext) return ctxMap;
+            const originalViewNode = originalContext.viewNodes.get(viewNodeId);
+            if (!originalViewNode) return ctxMap;
+
+            const newViewAttributes = { ...(originalViewNode.attributes ?? {}), [attributeKey]: attributeValue };
+            const newViewNode = { ...originalViewNode, attributes: newViewAttributes };
+            const newViewNodes = new Map(originalContext.viewNodes).set(viewNodeId, newViewNode);
+            const newContext = { ...originalContext, viewNodes: newViewNodes };
+
+            const newCtxMap = new Map(ctxMap);
+            newCtxMap.set(currentCtxId, newContext);
+            return newCtxMap;
+        });
+
+        if (localAdapter) {
+            try {
+                const updatedContext = get(contexts).get(currentCtxId);
+                if (updatedContext) {
+                    await localAdapter.saveContext(updatedContext);
+                }
+            } catch (error) {
+                console.error(`[updateViewNodeAttribute] Error saving context ${currentCtxId} for ViewNode update:`, error);
+            }
+        }
+    }
+
+    // --- Update DataNode (Global Default for this node instance) ---
+    if (needsDataNodeUpdate) { // This condition now correctly checks if a view_ or viewtype_ attribute changed
+        nodes.update(nodeMap => {
+            const originalDataNode = nodeMap.get(dataNodeId); // dataNode is already available from outer scope
+            if (!originalDataNode) return nodeMap;
+
+            const newDataAttributes = {
+                ...(originalDataNode.attributes ?? {}),
+                [attributeKey]: attributeValue // Update the specific view_ or viewtype_ attribute
+            };
+
+            const updatedDataNode: DataNode = {
+                ...originalDataNode,
+                attributes: newDataAttributes,
+                modifiedAt: Date.now()
+            };
+
+            const newNodeMap = new Map(nodeMap);
+            newNodeMap.set(dataNodeId, updatedDataNode);
+            return newNodeMap;
+        });
+    }
+
+}
 // --- Node Search Action ---
 
 /**
@@ -645,22 +646,22 @@ export async function fetchAvailableContextDetails(): Promise<{ id: NodeId, name
  */
 export async function addExistingNodeToCurrentContext(path: string, position: { x: number; y: number }): Promise<void> {
 
- // 1. Check localAdapter
- if (!localAdapter) {
+    // 1. Check localAdapter
+    if (!localAdapter) {
         console.error("[addExistingNodeToCurrentContext] LocalAdapter not available.");
         return;
     }
 
     try {
-    	// 2. Call localAdapter.getDataNodeByPath(path)
-    	const dataNode = await localAdapter.getDataNodeByPath(path);
-   
-    	// 3. Check if DataNode exists
-    	if (!dataNode) {
-    		console.error(`[addExistingNodeToCurrentContext] DataNode with path "${path}" not found.`);
-    		// TODO: Provide user feedback? Maybe via a notification store?
-    		return;
-    	}
+        // 2. Call localAdapter.getDataNodeByPath(path)
+        const dataNode = await localAdapter.getDataNodeByPath(path);
+
+        // 3. Check if DataNode exists
+        if (!dataNode) {
+            console.error(`[addExistingNodeToCurrentContext] DataNode with path "${path}" not found.`);
+            // TODO: Provide user feedback? Maybe via a notification store?
+            return;
+        }
 
         // 4. Add the fetched DataNode to the global store if it's not already there
         // This prevents it from appearing as a ghost node
@@ -767,14 +768,14 @@ export async function addExistingNodeToCurrentContext(path: string, position: { 
         // 8d. Persist context via localAdapter.saveContext()
         if (updatedContext) {
             await localAdapter.saveContext(updatedContext);
-             // Optionally select the newly added node
-             setSelectedNodes(new Set([dataNode.id]));
+            // Optionally select the newly added node
+            setSelectedNodes(new Set([dataNode.id]));
         } else {
             console.error(`[addExistingNodeToCurrentContext] Failed to get updated context ${currentCtxId} for saving after adding ViewNode.`);
             // TODO: Consider rolling back store update?
         }
 
     } catch (error) {
-    	console.error(`[addExistingNodeToCurrentContext] Error adding node with path "${path}":`, error);
+        console.error(`[addExistingNodeToCurrentContext] Error adding node with path "${path}":`, error);
     }
-   }
+}
