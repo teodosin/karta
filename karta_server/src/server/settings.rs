@@ -3,6 +3,8 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
 
+use crate::prelude::NodePath;
+
 use super::AppState;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -37,7 +39,7 @@ impl Default for ColorTheme {
 pub struct KartaSettings {
     pub version: f32,
     pub save_last_viewed_context: bool,
-    pub last_viewed_context_id: Option<String>,
+    pub last_viewed_context_path: Option<NodePath>,
     pub vault_path: Option<String>,
     pub color_theme: ColorTheme,
 }
@@ -47,7 +49,7 @@ impl Default for KartaSettings {
         KartaSettings {
             version: 0.1,
             save_last_viewed_context: true,
-            last_viewed_context_id: None,
+            last_viewed_context_path: None,
             vault_path: None,
             color_theme: ColorTheme::default(),
         }

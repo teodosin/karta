@@ -57,6 +57,7 @@ pub fn create_router(state: AppState) -> Router<()> {
         .allow_headers([axum::http::header::CONTENT_TYPE]);
 
     let router = Router::new()
+    
     	.route("/", get(data_endpoints::get_vault_info))
     	.route("/api/asset/{*path}", get(asset_endpoints::get_asset))
         .route("/api/paths", get(data_endpoints::get_paths))
