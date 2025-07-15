@@ -530,6 +530,34 @@ export async function switchContext(newContextId: NodeId, isUndoRedo: boolean = 
         apiLogger.error(true, "Error fetching indexed paths:", error);
     }
 
+	const nnewContextId = newContextId;
+	let newContextPath: string | undefined = undefined;
+
+	if (activeAdapter instanceof ServerAdapter) {
+		const dataNode = get(nodes).get(newContextId);
+		if (dataNode && typeof dataNode.path === 'string') {
+			newContextPath = dataNode.path;
+
+		} else {
+			// If the node isn't in the store, fetch if from the server
+			try {
+
+				const fetchedNode = await activeAdapter.getNode(newContextId);
+				if (fetchedNode && typeof fetchedNode.path === 'string') {
+					newContextPath = fetchedNode.path;
+				} else {
+					storeLogger.error(`Node ${newContextId} not found or has no path.`);
+				}
+
+			} catch (error) {
+				storeLogger.error(`Error fetching node ${newContextId}:`, error);
+			}
+		}
+	} else {
+		// LocalAdapter (and potentially other future adapters) might expect the NodeId (UUID)
+		newContextPath = newContextId;
+	}
+
 
     const oldContextId = get(currentContextId);
     if (newContextId === oldContextId) return;
@@ -650,7 +678,7 @@ export async function switchContext(newContextId: NodeId, isUndoRedo: boolean = 
         try {
             const currentSettings = get(settings);
             if (currentSettings.savelastViewedContextPath) {
-                await updateSettings({ lastViewedContextPath: newContextId });
+                await updateSettings({ lastViewedContextPath: newContextPath });
             }
         } catch (error) {
             console.error('[switchContext] Error saving last context ID to settings:', error);
@@ -658,7 +686,7 @@ export async function switchContext(newContextId: NodeId, isUndoRedo: boolean = 
 
 
     } catch (error) {
-        console.error(`[switchContext] Error switching context to ${newContextId}:`, error);
+        console.error(`[switchContext] Error switching context to ${newContextPath}:`, error);
         // Consider reverting to oldContextId or showing an error state
     }
 }
@@ -892,7 +920,12 @@ async function initializeStores() {
         if (targetInitialContextId === ROOT_NODE_ID && typeof window !== 'undefined') {
             // Only center if no specific last context was loaded via LocalStorage (for LocalAdapter)
             // Or always center if it's the server adapter and we are at root.
-            const shouldCenter = !USE_SERVER_ADAPTER ? (get(settings).savelastViewedContextPath && get(settings).lastViewedContextPath === null) || !get(settings).savelastViewedContextPath : true;
+            const shouldCenter = 
+				!USE_SERVER_ADAPTER 
+				? 	(get(settings).savelastViewedContextPath 
+				&&	 get(settings).lastViewedContextPath === null) 
+				|| 	!get(settings).savelastViewedContextPath 
+				: true;
 
             if (shouldCenter) {
                 // Use setTimeout to ensure the viewport has its dimensions before framing.
@@ -903,21 +936,21 @@ async function initializeStores() {
         } else {
         }
 
-        viewTransform.set(initialViewportSettings, { duration: 0 }); // Set instantly
+        viewTransform.set(initialViewportSettings, { duration: 0 });
 
     } catch (error) {
-        console.error("[initializeStores] Error during store initialization:", error);
-        // Set default empty state on error
-        nodes.set(new Map());
+		storeLogger.error("CRITICAL: Initialization failed, setting empty state.", error);
+
+		nodes.set(new Map());
         edges.set(new Map());
         contexts.set(new Map());
-        currentContextId.set(ROOT_NODE_ID); // Default to root ID even on error
+        currentContextId.set(ROOT_NODE_ID);
         viewTransform.set(DEFAULT_VIEWPORT_SETTINGS, { duration: 0 });
     }
 
     // 7. Set Initial Properties Panel Position (calculated only in browser)
     if (typeof window !== 'undefined') {
-        propertiesPanelPosition.set({ x: window.innerWidth - 320, y: 50 }); // Set browser-dependent default
+        propertiesPanelPosition.set({ x: window.innerWidth - 320, y: 50 });
     }
 
 
