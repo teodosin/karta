@@ -4,24 +4,27 @@
 // Essential for both editor and runtime.
 // Needs to include definitions for storing "Play Mode" interaction configurations.
 
-// import type { Tween } from 'svelte/motion'; // Removed duplicate import
-
-import type { Tween } from 'svelte/motion'; // Import Tween type
+import type { Tween } from 'svelte/motion';
 
 // Basic ID types (UUIDs represented as strings)
 export type NodeId = string;
 export type EdgeId = string;
 // No separate ContextId needed, it's just a NodeId
 
-// Core data, independent of context
+export type NodeHandle = {
+  type: 'path', value: string
+} | {
+  type: 'uuid', value: NodeId
+}
+
 export interface DataNode {
-  id: NodeId; // UUID
-  ntype: string; // e.g., 'text', 'image', 'context'
-  createdAt: number; // Unix timestamp (ms)
-  modifiedAt: number; // Unix timestamp (ms)
-  path: string; // Added: Represents the node's path (simplified for client)
-  attributes: Record<string, any>; // Holds core data (e.g., type_text), view defaults (e.g., view_isNameVisible, viewtype_fontSize), and other attributes.
-  isSearchable?: boolean; // Added: Controls visibility in node search
+  id: NodeId;
+  ntype: string;
+  createdAt: number;
+  modifiedAt: number;
+  path: string;
+  attributes: Record<string, any>;
+  isSearchable?: boolean;
 }
 
 // Represents the complete state needed for rendering and tweening a node's visual representation
@@ -36,12 +39,10 @@ export interface ViewNode {
   status: 'generated' | 'modified';
 }
 
-// Represents an absolute transform in the canvas coordinate space
 export interface AbsoluteTransform {
   x: number;
   y: number;
   scale: number;
-  // Rotation removed - determined later from StorableViewNode
 }
 
 export interface TweenableNodeState {
@@ -49,8 +50,8 @@ export interface TweenableNodeState {
   y: number;
   scale: number; // Note: This might be deprecated if we stick to width/height resizing
   rotation: number;
-  width: number;  // Include dimensions needed by EdgeLayer
-  height: number; // Include dimensions needed by EdgeLayer
+  width: number;
+  height: number;
 }
 // Represents a specific view/layout of nodes, associated with a focal node
 export interface Context {
