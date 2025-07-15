@@ -10,14 +10,16 @@ use axum::{
 use dunce;
 use std::error::Error as StdError;
 use std::path::PathBuf;
-use std::sync::Arc; // Keep Arc for KartaService within AppState // Added use for dunce crate
+use std::sync::Arc;
 
 use crate::context::context::Context;
 use crate::elements::edge::Edge;
 use crate::elements::node::DataNode;
 use crate::elements::node_path::NodePath;
 use crate::server::karta_service::KartaService;
-use crate::server::AppState; // Import AppState
+use crate::server::AppState;
+
+
 
 // Helper to convert Box<dyn StdError> to an Axum Response
 fn box_error_to_response(err: Box<dyn StdError>) -> Response {
