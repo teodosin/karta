@@ -1,7 +1,7 @@
 import { writable, get, derived } from 'svelte/store';
 import { apiLogger, storeLogger } from '$lib/debug';
 import { Tween } from 'svelte/motion';
-import { cubicOut } from 'svelte/easing';
+import { cubicInOut, cubicOut } from 'svelte/easing';
 import { LocalAdapter, localAdapter } from '../util/LocalAdapter';
 import { ServerAdapter } from '../util/ServerAdapter';
 import type { PersistenceService } from '../util/PersistenceService';
@@ -47,8 +47,8 @@ if (USE_SERVER_ADAPTER) {
 }
 
 
-const NODE_TWEEN_DURATION = 250; // TODO: Make this configurable in settings
-const NODE_TWEEN_OPTIONS = { duration: NODE_TWEEN_DURATION, easing: cubicOut };
+const NODE_TWEEN_DURATION = 1000; // TODO: Make this configurable in settings
+const NODE_TWEEN_OPTIONS = { duration: NODE_TWEEN_DURATION, easing: cubicInOut };
 
 
 export const contexts = writable<Map<NodeId, Context>>(new Map());
@@ -515,6 +515,10 @@ export async function saveCurrentContext() {
 
 
 
+/** 
+	Triggers a transition to another context.
+	Smoothly transitions common nodes, fades out old and fades in new.
+*/
 export async function switchContext(newContextId: NodeId, isUndoRedo: boolean = false) {
 
     // Debug block, has no effect on the function
@@ -530,9 +534,12 @@ export async function switchContext(newContextId: NodeId, isUndoRedo: boolean = 
         apiLogger.error(true, "Error fetching indexed paths:", error);
     }
 
+
+
 	const nnewContextId = newContextId;
 	let newContextPath: string | undefined = undefined;
 
+	
 	if (activeAdapter instanceof ServerAdapter) {
 		const dataNode = get(nodes).get(newContextId);
 		if (dataNode && typeof dataNode.path === 'string') {
