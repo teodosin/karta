@@ -1,4 +1,5 @@
 import { KARTA_VERSION } from '$lib/constants';
+import { apiLogger } from '$lib/debug/loggers';
 import type {
     DataNode,
     KartaEdge,
@@ -394,6 +395,8 @@ export class ServerAdapter implements PersistenceService {
         // This can be a wrapper, but for now we expect the caller to use create/update directly.
         console.warn('[ServerAdapter.saveNode] Deprecated. Use createNode or updateNode directly.');
     }
+
+    
     async getNode(nodeId: string): Promise<DataNode | undefined> {
         const url = `${SERVER_BASE_URL}/api/nodes/${nodeId}`;
         try {
@@ -429,7 +432,37 @@ export class ServerAdapter implements PersistenceService {
     async checkNameExists(name: string): Promise<boolean> { console.warn(`[ServerAdapter.checkNameExists] Not implemented for name: ${name}`); return false; }
     async getDataNodesByIds(nodeIds: NodeId[]): Promise<Map<NodeId, DataNode>> { console.warn(`[ServerAdapter.getDataNodesByIds] Not implemented`); return new Map(); }
     async getAllNodePaths(): Promise<string[]> { console.warn('[ServerAdapter.getAllNodePaths] Not implemented'); return []; }
-    async getDataNodeByPath(path: string): Promise<DataNode | undefined> { console.warn(`[ServerAdapter.getDataNodeByPath] Not implemented for path: ${path}`); return undefined; }
+    
+    async getDataNodeByPath(path: string): Promise<DataNode | undefined> {
+        const encodedPath = encodeURIComponent(path);
+        const url = `${SERVER_BASE_URL}/api/nodes/by-path/${encodedPath}`;
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                if (response.status !== 404) {
+                    apiLogger.error(`Error fetching node with path "${path}". Status: ${response.status}`);
+                }
+                return undefined;
+            }
+            const serverNode: ServerDataNode = await response.json();
+            const attributes = transformServerAttributesToRecord(serverNode.attributes);
+            attributes['name'] = serverNode.name;
+
+            return {
+                id: serverNode.uuid,
+                ntype: serverNode.ntype.type_path,
+                createdAt: (serverNode.created_time?.secs_since_epoch ?? 0) * 1000,
+                modifiedAt: (serverNode.modified_time?.secs_since_epoch ?? 0) * 1000,
+                path: serverNode.path,
+                attributes: attributes,
+                isSearchable: attributes['isSearchable'] ?? true,
+            };
+        } catch (error) {
+            apiLogger.error(` Network error:`, error);
+            return undefined;
+        }
+    }
+
     async saveEdge(edge: KartaEdge): Promise<void> { console.warn('[ServerAdapter.saveEdge] Not implemented'); }
     async getEdge(edgeId: string): Promise<KartaEdge | undefined> { console.warn(`[ServerAdapter.getEdge] Not implemented for ID: ${edgeId}`); return undefined; }
     async getEdges(): Promise<KartaEdge[]> { console.warn('[ServerAdapter.getEdges] Not implemented'); return []; }

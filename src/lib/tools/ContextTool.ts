@@ -20,8 +20,8 @@ export class ContextTool implements Tool {
         const nodeId = nodeEl.dataset.id;
 
         // Call the KartaStore action to handle the switch
-        switchContext(nodeId);
-    }
+        switchContext({ type: 'uuid', value: nodeId });
+       }
 
     // --- Removed Obsolete Methods ---
     // onNodeMouseDown, onWindowMouseMove, onWindowMouseUp,

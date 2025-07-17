@@ -1097,7 +1097,8 @@
 				{
 					label: "Enter Context",
 					action: () => {
-						if (targetNodeId) switchContext(targetNodeId);
+						if (targetNodeId)
+							switchContext({ type: "uuid", value: targetNodeId });
 					},
 					disabled:
 						!targetNodeId || targetNodeId === $currentContextId,

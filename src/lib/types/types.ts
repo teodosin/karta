@@ -4,15 +4,25 @@
 // Essential for both editor and runtime.
 // Needs to include definitions for storing "Play Mode" interaction configurations.
 
+
+
+
+
 import type { Tween } from 'svelte/motion';
+
+
+
+
 
 // Basic ID types (UUIDs represented as strings)
 export type NodeId = string;
 export type EdgeId = string;
 // No separate ContextId needed, it's just a NodeId
 
+export type NodePath = string;
+
 export type NodeHandle = {
-  type: 'path', value: string
+  type: 'path', value: NodePath
 } | {
   type: 'uuid', value: NodeId
 }

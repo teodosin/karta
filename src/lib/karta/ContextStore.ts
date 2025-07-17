@@ -8,7 +8,9 @@ import type { PersistenceService } from '../util/PersistenceService';
 import type { 
     DataNode, KartaEdge, ViewNode, Context, NodeId, EdgeId,
     AbsoluteTransform, ViewportSettings, TweenableNodeState, StorableContext,
-    StorableViewNode, StorableViewportSettings, KartaExportData, ContextBundle 
+    StorableViewNode, StorableViewportSettings, KartaExportData, ContextBundle, 
+	NodePath,
+	NodeHandle
 } from '../types/types';
 import { getDefaultViewNodeStateForType } from '$lib/node_types/registry';
 import { nodes, _ensureDataNodeExists } from './NodeStore';
@@ -519,7 +521,7 @@ export async function saveCurrentContext() {
 	Triggers a transition to another context.
 	Smoothly transitions common nodes, fades out old and fades in new.
 */
-export async function switchContext(newContextId: NodeId, isUndoRedo: boolean = false) {
+export async function switchContext(newContextHandle: NodeHandle, isUndoRedo: boolean = false) {
 
     // Debug block, has no effect on the function
     try {
@@ -534,37 +536,49 @@ export async function switchContext(newContextId: NodeId, isUndoRedo: boolean = 
         apiLogger.error(true, "Error fetching indexed paths:", error);
     }
 
+	// --- Phase 1: Resolve NodeHandle to definitive ID and Path ---
+	// Regardless of input, we need both values for the rest of the function.
+	let newContextId: NodeId;
+	let newContextPath: NodePath;
 
-
-	const nnewContextId = newContextId;
-	let newContextPath: string | undefined = undefined;
-
-	
-	if (activeAdapter instanceof ServerAdapter) {
-		const dataNode = get(nodes).get(newContextId);
-		if (dataNode && typeof dataNode.path === 'string') {
-			newContextPath = dataNode.path;
-
+	if (newContextHandle.type === 'uuid') {
+		newContextId = newContextHandle.value;
+		const localNode = get(nodes).get(newContextId);
+		if (localNode && typeof localNode.path === 'string') {
+			newContextPath = localNode.path;
 		} else {
-			// If the node isn't in the store, fetch if from the server
-			try {
-
-				const fetchedNode = await activeAdapter.getNode(newContextId);
-				if (fetchedNode && typeof fetchedNode.path === 'string') {
-					newContextPath = fetchedNode.path;
-				} else {
-					storeLogger.error(`Node ${newContextId} not found or has no path.`);
-				}
-
-			} catch (error) {
-				storeLogger.error(`Error fetching node ${newContextId}:`, error);
+			const fetchedNode = await activeAdapter.getNode(newContextId);
+			if (fetchedNode && typeof fetchedNode.path === 'string') {
+				newContextPath = fetchedNode.path;
+				nodes.update(n => n.set(fetchedNode.id, fetchedNode)); // Add to store
+			} else {
+				storeLogger.error(`Could not resolve a path for node ID: ${newContextId}`);
+				return;
 			}
 		}
-	} else {
-		// LocalAdapter (and potentially other future adapters) might expect the NodeId (UUID)
-		newContextPath = newContextId;
-	}
+	} else { // type === 'path'
+		newContextPath = newContextHandle.value;
+		let foundNode: DataNode | undefined;
+		for (const node of get(nodes).values()) {
+			if (node.path === newContextPath) {
+				foundNode = node;
+				break;
+			}
+		}
 
+		if (foundNode) {
+			newContextId = foundNode.id;
+		} else {
+			const fetchedNode = await activeAdapter.getDataNodeByPath(newContextPath);
+			if (fetchedNode) {
+				newContextId = fetchedNode.id;
+				nodes.update(n => n.set(fetchedNode.id, fetchedNode)); // Add to store
+			} else {
+				storeLogger.error(`Could not resolve an ID for path: "${newContextPath}"`);
+				return;
+			}
+		}
+	}
 
     const oldContextId = get(currentContextId);
     if (newContextId === oldContextId) return;
@@ -584,7 +598,9 @@ export async function switchContext(newContextId: NodeId, isUndoRedo: boolean = 
 
     // --- Phase 1: Save Old Context State (Async) ---
     const oldContext = get(contexts).get(oldContextId);
+
     if (oldContext) {
+		
         oldContext.viewportSettings = { ...viewTransform.current };
         storeLogger.log(`Saving old context ${oldContextId} with viewNodes:`, oldContext.viewNodes);
 

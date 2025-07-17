@@ -53,7 +53,7 @@
 	}
 
 	function handleContextSelect(id: NodeId) {
-		switchContext(id);
+		switchContext({ type: 'uuid', value: id });
 		showContextList = false; // Close list after selection
 	}
 
