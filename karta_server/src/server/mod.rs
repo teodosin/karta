@@ -68,6 +68,7 @@ pub fn create_router(state: AppState) -> Router<()> {
             put(write_endpoints::update_node)
             .get(data_endpoints::get_node_by_uuid)
         )
+        .route("/api/nodes/by-path/{*path}", get(data_endpoints::get_node_by_path))
         .route("/api/ctx/{id}", put(write_endpoints::save_context))
         .route("/api/settings", get(settings::get_settings_handler).put(settings::update_settings_handler))
         .route("/ctx/{*id}", get(context_endpoints::open_context_from_fs_path)) // Corrected wildcard syntax
