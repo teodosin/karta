@@ -51,7 +51,8 @@ pub async fn get_node_by_path(
         NodePath::from(processed_path.to_string())
     };
 
-    match service.data().open_node(&NodeHandle::Path(node_path_to_open)) {
+    // Use the new KartaService::open_node method which handles both DB and FS nodes.
+    match service.open_node(&NodeHandle::Path(node_path_to_open)) {
         Ok(node) => Ok(Json(node)),
         Err(_) => Err(StatusCode::NOT_FOUND),
     }

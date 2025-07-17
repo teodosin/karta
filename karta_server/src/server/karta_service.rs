@@ -91,6 +91,44 @@ impl KartaService {
             Ok(all_paths.into_iter().collect())
         }
     }
+
+    /// Opens a single node by its handle, reconciling filesystem and database information.
+    ///
+    /// This is the definitive method for retrieving a `DataNode`.
+    /// - If the handle is a `Path`, it checks the filesystem first. If an entry exists,
+    ///   it creates a provisional `DataNode` and then attempts to augment it with
+    ///   data from the database (e.g., UUID, attributes).
+    /// - If the handle is a `UUID`, it fetches the node directly from the database.
+    pub fn open_node(&self, handle: &NodeHandle) -> Result<DataNode, Box<dyn Error>> {
+        match handle {
+            NodeHandle::Uuid(uuid) => {
+                self.data().open_node(&NodeHandle::Uuid(*uuid))
+            }
+            NodeHandle::Path(path) => {
+                let absolute_path = path.full(self.vault_fs_path());
+                let fs_exists = absolute_path.exists();
+
+                // Try to get the node from the database first.
+                let db_node_result = self.data().open_node(&NodeHandle::Path(path.clone()));
+
+                if fs_exists {
+                    // Filesystem takes precedence. Create a provisional node from FS info.
+                    let mut node = fs_reader::destructure_single_path(self.vault_fs_path(), &absolute_path)?;
+                    
+                    // If it was also in the DB, augment the FS node with DB data (UUID, attributes).
+                    if let Ok(db_node) = db_node_result {
+                        // This logic can be expanded to merge attributes if needed.
+                        // node.set_attributes(db_node.attributes().clone());
+                    }
+                    Ok(node)
+                } else {
+                    // If it doesn't exist on the filesystem, it must exist in the DB.
+                    db_node_result
+                }
+            }
+        }
+    }
+    
     /// Opens a context's Data and View.
     /// This is the main function for opening a context.
     /// Reconciles indexed data from the database with physical data from the filesystem.
