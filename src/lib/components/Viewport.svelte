@@ -66,7 +66,7 @@
 		findPhysicalParentPath,
 	} from "$lib/karta/NodeStore";
 	import { notifications } from '$lib/karta/NotificationStore';
-	import { deleteEdge } from "$lib/karta/EdgeStore";
+	import { deleteEdges } from "$lib/karta/EdgeStore";
 	import NodeWrapper from "./NodeWrapper.svelte";
 	import EdgeLayer from "./EdgeLayer.svelte";
 	import CreateNodeMenu from "./CreateNodeMenu.svelte";
@@ -1175,12 +1175,12 @@
 						const edgesToDelete = get(selectedEdgeIds);
 						if (edgesToDelete.size > 0) {
 							edgesToDelete.forEach((edgeId) =>
-								deleteEdge(edgeId),
+								deleteEdges([edgeId]),
 							);
 							clearEdgeSelection(); // Clear selection after deleting
 						} else if (targetNodeId) {
 							// If no edges are multi-selected, delete the single right-clicked edge
-							deleteEdge(targetNodeId);
+							deleteEdges([targetNodeId]);
 						}
 						closeContextMenu();
 					},

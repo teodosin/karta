@@ -5,9 +5,13 @@ import {
     updateTempLinePosition,
     finishConnectionProcess,
     cancelConnectionProcess,
-    isConnecting // Need to check if already connecting
+    isConnecting
 } from '$lib/karta/ToolStore';
 import { screenToCanvasCoordinates } from '$lib/karta/ViewportStore';
+
+
+
+
 
 export class ConnectTool implements Tool {
     readonly name = 'connect';

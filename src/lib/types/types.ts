@@ -176,21 +176,23 @@ export interface KartaSettings {
 
 // Represents connections between DataNodes (context-independent)
 export interface KartaEdge {
-  id: EdgeId; // Use EdgeId type
-  source: NodeId; // Use NodeId type
-  target: NodeId; // Use NodeId type
-  // TODO: Add edge attributes or context-specific edge styles later
+  id: EdgeId;
+  source: NodeId;
+  target: NodeId;
+  attributes: Record<string, any>;
+}
+
+export interface KartaEdgeCreationPayload extends KartaEdge {
+  source_path: string;
+  target_path: string;
 }
 
 // Interface for interaction modes (Move, Connect, Context tools)
 // Based on recent refactor and modern PointerEvents
 export interface Tool {
-  // Name of the tool (e.g., 'move', 'connect', 'context')
   name: string;
 
-  // Called when the tool becomes active
   activate(): void;
-  // Called when the tool becomes inactive
   deactivate(): void;
 
   // Event handlers delegated from Viewport/NodeWrapper

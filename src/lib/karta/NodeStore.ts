@@ -435,7 +435,7 @@ export async function fetchAvailableContextDetails(): Promise<{ id: NodeId, name
 }
 
 // Import necessary stores and types for deletion
-import { edges, deleteEdge } from './EdgeStore'; // Assuming EdgeStore exports edges store and deleteEdge action
+import { edges, deleteEdges } from './EdgeStore'; // Assuming EdgeStore exports edges store and deleteEdges action
 import { ROOT_NODE_ID } from '$lib/constants';
 
 export async function deleteDataNodePermanently(nodeId: NodeId): Promise<void> {
@@ -476,9 +476,10 @@ export async function deleteDataNodePermanently(nodeId: NodeId): Promise<void> {
         }
 
 
-        // 4. Delete connected edges (store update + persistence handled by deleteEdge)
-        for (const edge of connectedEdges) {
-            await deleteEdge(edge.id); // deleteEdge should handle store and persistence
+        // 4. Delete connected edges in a batch
+        const connectedEdgeIds = connectedEdges.map(edge => edge.id);
+        if (connectedEdgeIds.length > 0) {
+            await deleteEdges(connectedEdgeIds); // deleteEdges handles store and persistence
         }
 
         // 5. Delete asset if it's an image node

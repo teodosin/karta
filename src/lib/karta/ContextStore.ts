@@ -30,7 +30,7 @@ import { ROOT_NODE_ID } from '$lib/constants';
 
 
 const USE_SERVER_ADAPTER = true;
-let activeAdapter: PersistenceService;
+export let activeAdapter: PersistenceService;
 
 
 if (USE_SERVER_ADAPTER) {

@@ -178,11 +178,12 @@ export class LocalAdapter implements PersistenceService { // Added export here
 
 	// --- Edge Methods ---
 
-	async saveEdge(edge: KartaEdge): Promise<void> {
+	async createEdges(edges: KartaEdge[]): Promise<KartaEdge[] | undefined> {
 		const db = await this.dbPromise;
 		const tx = db.transaction('edges', 'readwrite');
-		await tx.objectStore('edges').put(edge);
+		await Promise.all(edges.map(edge => tx.objectStore('edges').put(edge)));
 		await tx.done;
+		return edges;
 	}
 
 	async getEdge(edgeId: string): Promise<KartaEdge | undefined> {
@@ -195,10 +196,10 @@ export class LocalAdapter implements PersistenceService { // Added export here
 		return db.getAll('edges');
 	}
 
-	async deleteEdge(edgeId: string): Promise<void> {
+	async deleteEdges(edgeIds: string[]): Promise<void> {
 		const db = await this.dbPromise;
 		const tx = db.transaction('edges', 'readwrite');
-		await tx.objectStore('edges').delete(edgeId);
+		await Promise.all(edgeIds.map(id => tx.objectStore('edges').delete(id)));
 		await tx.done;
 	}
 
