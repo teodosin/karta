@@ -352,7 +352,11 @@ export async function updateNodeAttributes(nodeId: NodeId, newAttributes: Record
         // Persist changes
         if (persistenceService) {
             try {
-                await (persistenceService as ServerAdapter).updateNode(updatedNodeData);
+                const persistedNode = await (persistenceService as ServerAdapter).updateNode(updatedNodeData);
+                if (persistedNode) {
+                    // Re-update the store with the authoritative data from the server
+                    nodes.update(n => n.set(nodeId, persistedNode));
+                }
             } catch (error) {
                 console.error(`[updateNodeAttributes] Error saving node ${nodeId} after attribute update:`, error);
                 // Optionally revert store update on save failure?
