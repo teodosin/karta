@@ -18,6 +18,20 @@ fn get_node_type_from_path(path: &Path) -> NodeTypeId {
     NodeTypeId::file_type()
 }
 
+pub fn destructure_single_path(
+    vault_root_path: &PathBuf,
+    path_to_destructure: &PathBuf,
+) -> Result<DataNode, Box<dyn Error>> {
+    if !path_to_destructure.exists() {
+        return Err(format!("Path does not exist: {:?}", path_to_destructure).into());
+    }
+
+    let node_path = NodePath::from_dir_path(vault_root_path, path_to_destructure);
+    let ntype = get_node_type_from_path(path_to_destructure);
+    let node = DataNode::new(&node_path, ntype);
+    Ok(node)
+}
+
 pub fn destructure_file_path(
     vault_root_path: &PathBuf, // New parameter: the root of the Karta vault
     path_to_destructure: &PathBuf, // This is the absolute path of the item to destructure
