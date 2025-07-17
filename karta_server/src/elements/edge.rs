@@ -69,6 +69,10 @@ impl Edge {
         }
     }
 
+    pub fn uuid(&self) -> Uuid {
+        self.uuid
+    }
+
     pub fn db_id(&self) -> Option<DbId> {
         self.db_id
     }
@@ -96,7 +100,11 @@ impl Edge {
     pub fn attributes(&self) -> &Vec<Attribute> {
         &self.attributes
     }
-} 
+
+    pub fn set_attributes(&mut self, attributes: Vec<Attribute>) {
+        self.attributes = attributes;
+    }
+}
 
 impl DbUserValue for Edge {
     type ValueType = Self;
