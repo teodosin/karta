@@ -719,266 +719,91 @@ export async function switchContext(newContextHandle: NodeHandle, isUndoRedo: bo
 
 
 async function initializeStores() {
+	if (!activeAdapter) {
+		console.error("[initializeStores] activeAdapter not initialized. Cannot proceed.");
+		// Set a minimal safe state if the adapter is missing.
+		nodes.set(new Map());
+		edges.set(new Map());
+		contexts.set(new Map());
+		currentContextId.set(ROOT_NODE_ID);
+		viewTransform.set(DEFAULT_VIEWPORT_SETTINGS, { duration: 0 });
+		setTool('move');
+		return;
+	}
 
-    if (!activeAdapter) {
-        console.error("[initializeStores] activeAdapter not initialized. Cannot proceed.");
-        // Set default empty state on critical error
-        nodes.set(new Map());
-        edges.set(new Map());
-        contexts.set(new Map());
-
-        currentContextId.set(ROOT_NODE_ID); // Default to root ID even on error
-        viewTransform.set(DEFAULT_VIEWPORT_SETTINGS, { duration: 0 });
-        setTool('move');
-        return;
-    }
-
-
-    // TODO: Enable this even for server adapter. 
-    if (!USE_SERVER_ADAPTER) { // Conditionally run tutorial import
-        // ---> START: First Run Tutorial Import <---
+    // TODO: Determine how to handle hardcoded contexts
+	/*
+    if (!USE_SERVER_ADAPTER) {
         try {
-            const rootNodeExists = await activeAdapter.getNode(ROOT_NODE_ID); // Use activeAdapter
+            const rootNodeExists = await activeAdapter.getNode(ROOT_NODE_ID);
             if (!rootNodeExists) {
                 try {
-                    const response = await fetch('/tutorial.json'); // Fetch from static path relative to public/static
-                    if (!response.ok) {
-                        throw new Error(`Failed to fetch tutorial.json: ${response.statusText}`);
-                    }
+                    const response = await fetch('/tutorial.json');
+                    if (!response.ok) throw new Error(`Failed to fetch: ${response.statusText}`);
                     const tutorialData: KartaExportData = await response.json();
-                    // Assuming LocalAdapter has importData. ServerAdapter would not.
-                    if (activeAdapter instanceof LocalAdapter) { // Now LocalAdapter class can be used for instanceof
-                        await (activeAdapter as LocalAdapter).importData(tutorialData); // Cast to LocalAdapter
-                    } else {
-                        console.warn("[initializeStores] ServerAdapter is active, skipping tutorial.json import to DB.");
+                    if (activeAdapter instanceof LocalAdapter) {
+                        await activeAdapter.importData(tutorialData);
                     }
-
                 } catch (importError) {
-                    console.error("[initializeStores] CRITICAL: Failed to import tutorial data on first run:", importError);
-                    // Continue initialization even if tutorial import fails
+                    console.error("Failed to import tutorial data:", importError);
                 }
             }
         } catch (checkError) {
-            console.error("[initializeStores] Error checking for root node before tutorial import:", checkError);
-            // Continue initialization even if the check failed
+            console.error("Error checking for root node:", checkError);
         }
     }
+    */
 
+	try {
+		// Pre-populate the map of all available context paths for the UI.
+		const pathsMap = await activeAdapter.getAllContextPaths();
+		storeLogger.log('Context paths loaded from adapter:', pathsMap);
+		existingContextsMap.set(pathsMap);
 
-    // TODO: Implement getAllContextPaths. 
-    try {
-        const pathsMap = await activeAdapter.getAllContextPaths(); // Use activeAdapter
-        storeLogger.log('Context paths loaded from adapter:', pathsMap);
-        existingContextsMap.set(pathsMap);
-    } catch (error) {
-        console.error("[initializeStores] Error populating existingContextsMap:", error);
-        // Continue initialization even if this fails
-    }
+		// Determine the initial context to load.
+		const currentSettings = get(settings);
+		const savedPath = currentSettings.lastViewedContextPath;
+		let initialHandle: NodeHandle;
+		let fellbackToRoot = false;
 
+		if (currentSettings.savelastViewedContextPath && savedPath) {
+			// If a path is saved, we'll try to load it.
+			// We optimistically assume the path exists. switchContext will handle errors.
+			initialHandle = { type: 'path', value: savedPath };
+		} else {
+			// If no path is saved or the feature is disabled, default to the root.
+			initialHandle = { type: 'uuid', value: ROOT_NODE_ID };
+			fellbackToRoot = true;
+		}
 
-    try {
-        // 0. Initialize stores to empty state (Import might have already cleared, but this is safe)
-        nodes.set(new Map());
-        edges.set(new Map());
-        contexts.set(new Map());
-        currentContextId.set(ROOT_NODE_ID); // Temporarily set to root
+		// Centralize all loading logic into a single call.
+		// switchContext is now responsible for fetching all necessary data.
+		await switchContext(initialHandle);
 
-        // 1. Determine Target Initial Context ID based on settings
-        let targetInitialContextId = ROOT_NODE_ID;
-        if (USE_SERVER_ADAPTER) {
-            targetInitialContextId = ROOT_NODE_ID;
-        } else {
-            try {
-                const currentSettings = get(settings);
-                const savedId = currentSettings.lastViewedContextPath;
+		// Post-load actions.
+		if (fellbackToRoot && typeof window !== 'undefined') {
+			// Only center the view if we explicitly fell back to the root context.
+			// This avoids recentering a context that was loaded with specific viewport settings.
+			setTimeout(() => {
+				centerOnFocalNode();
+			}, 0);
+		}
 
-                if (currentSettings.savelastViewedContextPath && savedId) {
-                    const nodeExists = await activeAdapter.getNode(savedId);
-                    if (nodeExists) {
-                        targetInitialContextId = savedId;
-                    } else {
-                        console.warn(`[initializeStores] Saved last context ID ${savedId} not found in DB. Defaulting to ROOT.`);
-                        targetInitialContextId = ROOT_NODE_ID;
-                    }
-                } else {
-                    targetInitialContextId = ROOT_NODE_ID;
-                }
-            } catch (error) {
-                console.error('[initializeStores] Error reading last context ID from settings:', error);
-                targetInitialContextId = ROOT_NODE_ID; // Fallback to ROOT on error
-            }
-        }
-
-
-        // 2. Ensure and Load Initial DataNode (Target or Root)
-        // For ServerAdapter, getNode might be a stub. loadContextBundle will be the primary way to get data.
-        // If ServerAdapter is active, we rely on loadContextBundle to bring in the initial node.
-        let initialDataNode: DataNode | undefined;
-        let initialContextBundle: ContextBundle | undefined;
-
-        if (USE_SERVER_ADAPTER) {
-            // For ServerAdapter, the "path" to load is the root.
-            // The server's /ctx/. or /ctx// should resolve to the vault root.
-            // Let's explicitly request "root" which is known to work in tests.
-            initialContextBundle = await activeAdapter.loadContextBundle("root");
-            if (initialContextBundle?.storableContext?.id) {
-                targetInitialContextId = initialContextBundle.storableContext.id;
-                // Try to find the focal node from the bundle's nodes
-                initialDataNode = initialContextBundle.nodes.find(n => n.id === targetInitialContextId);
-            }
-            if (!initialDataNode && initialContextBundle) { // If focal not in nodes list, but context exists
-                // This case implies the server returned a context whose focal node wasn't in the main node list.
-                // This might happen if the root itself isn't explicitly sent as a DataNode but is the focal point.
-                // We might need to create a placeholder or the server should always include the focal DataNode.
-                // For now, if ServerAdapter, we assume the bundle contains the necessary focal node if it exists.
-                console.warn(`[initializeStores] ServerAdapter: Focal node ${targetInitialContextId} for root context not found in bundled nodes. This might be okay if it's an implicit root.`);
-            }
-
-        } else { // LocalAdapter logic
-            initialDataNode = await activeAdapter.getNode(targetInitialContextId); // Use activeAdapter
-        }
-
-
-        if (!initialDataNode && !USE_SERVER_ADAPTER) { // Fallback for LocalAdapter if target not found
-            console.warn(`[initializeStores] Target node ${targetInitialContextId} not found in DB. Falling back to ROOT.`);
-            targetInitialContextId = ROOT_NODE_ID; // Reset target ID to root
-            initialDataNode = await activeAdapter.getNode(ROOT_NODE_ID); // Use activeAdapter
-            if (!initialDataNode) {
-                // If even the root is not in the DB, ensure it exists
-                const ensuredNode = await _ensureDataNodeExists(ROOT_NODE_ID); // This creates and saves if needed
-                initialDataNode = ensuredNode === null ? undefined : ensuredNode;
-            }
-        }
-
-        if (!initialDataNode && !initialContextBundle) { // If still no node after all attempts (local or server failed to give a starting point)
-            throw new Error("CRITICAL: Initial DataNode could not be found or created during initialization.");
-        }
-
-        // If using ServerAdapter and initialDataNode is still undefined but we have a bundle,
-        // it means the server is the source of truth. The focal ID from bundle is targetInitialContextId.
-        if (USE_SERVER_ADAPTER && !initialDataNode && initialContextBundle?.storableContext?.id) {
-            targetInitialContextId = initialContextBundle.storableContext.id;
-            // We will proceed with this ID, _loadAndProcessContext will use the bundle.
-        } else if (initialDataNode) {
-            // Add the successfully loaded/ensured initial node to the nodes store
-            nodes.update(n => n.set(initialDataNode!.id, initialDataNode!));
-            targetInitialContextId = initialDataNode.id; // Ensure targetInitialContextId is set from the found node
-        }
-
-
-        // 3. Ensure Root Node has isSystemNode flag (if the initial node IS the root node)
-        // This logic is primarily for LocalAdapter. Server should manage its own node properties.
-        if (!USE_SERVER_ADAPTER && initialDataNode && initialDataNode.id === ROOT_NODE_ID && !initialDataNode.attributes?.isSystemNode) {
-            console.warn(`[initializeStores] Root node ${ROOT_NODE_ID} is missing the isSystemNode flag. Adding and saving...`);
-            initialDataNode.attributes = { ...initialDataNode.attributes, isSystemNode: true };
-            initialDataNode.modifiedAt = Date.now();
-            try {
-                await activeAdapter.saveNode(initialDataNode); // Use activeAdapter
-                // Update the node in the store as well
-                nodes.update(n => n.set(initialDataNode!.id, initialDataNode!));
-            } catch (saveError) {
-                console.error(`[initializeStores] CRITICAL: Failed to save isSystemNode flag to root node:`, saveError);
-                // Continue initialization, but the root might remain unprotected if saving failed.
-            }
-        }
-
-
-        // 4. Load Initial Context & Data (Generalized)
-        // Construct the default initial state for the root node (or any initial node)
-        const defaultViewState = getDefaultViewNodeStateForType(initialDataNode?.ntype ?? 'core/root'); // Use ntype of loaded node or fallback
-        const initialFocalState: TweenableNodeState = {
-            ...DEFAULT_FOCAL_TRANSFORM, // x, y, scale
-            width: defaultViewState.width,
-            height: defaultViewState.height,
-            rotation: defaultViewState.rotation
-        };
-
-        // Fetch the bundle for the initial context if not already fetched (e.g. for LocalAdapter)
-        if (!initialContextBundle) { // initialContextBundle would be set if USE_SERVER_ADAPTER
-            initialContextBundle = await activeAdapter.loadContextBundle(targetInitialContextId); // Use activeAdapter
-        }
-
-
-        const { finalContext: processedContext } = await _loadAndProcessContext(
-            targetInitialContextId,
-            initialFocalState,
-            undefined,          // No old context on init
-            initialContextBundle ? initialContextBundle.storableContext : undefined // Pass storableContext from bundle
-        );
-        let initialProcessedContext = processedContext;
-
-        if (!initialProcessedContext) {
-            throw new Error(`Failed to load or process initial context for node: ${targetInitialContextId}`);
-        }
-
-        // Always call _loadContextData based on the final initialProcessedContext
-        // to ensure all necessary DataNodes and KartaEdges for its viewNodes are loaded.
-        // If ServerAdapter, bundle might already have nodes/edges. _loadContextData uses activeAdapter.getDataNodesByIds etc.
-        // which are stubs for ServerAdapter. So, if ServerAdapter, we should use nodes/edges from the bundle directly.
-
-        let contextDataNodes: Map<NodeId, DataNode>;
-        let contextEdges: Map<EdgeId, KartaEdge>;
-
-        if (USE_SERVER_ADAPTER && initialContextBundle) {
-            contextDataNodes = new Map(initialContextBundle.nodes.map(n => [n.id, n]));
-            contextEdges = new Map(initialContextBundle.edges.map(e => [e.id, e]));
-        } else {
-            // For LocalAdapter, initialContextBundle was fetched if not USE_SERVER_ADAPTER
-            // This path ensures that if bundle was fetched, its contents are used.
-            // If initialContextBundle is undefined here (e.g. error fetching), maps will be empty.
-            contextDataNodes = new Map(initialContextBundle?.nodes?.map(n => [n.id, n]) ?? []);
-            contextEdges = new Map(initialContextBundle?.edges?.map(e => [e.id, e]) ?? []);
-        }
-
-
-        // 5. Apply Initial State
-        _applyStoresUpdate(targetInitialContextId, initialProcessedContext, contextDataNodes, contextEdges);
-
-        // 6. Set Initial Viewport
-        // If loading the root context and no last context was saved, center the root node.
-        // Otherwise, use loaded viewport settings or defaults.
-        let initialViewportSettings = initialProcessedContext.viewportSettings || DEFAULT_VIEWPORT_SETTINGS;
-
-        // Centering logic for root node, applies if ServerAdapter is not used OR if it is used and we are indeed at the root.
-        if (targetInitialContextId === ROOT_NODE_ID && typeof window !== 'undefined') {
-            // Only center if no specific last context was loaded via LocalStorage (for LocalAdapter)
-            // Or always center if it's the server adapter and we are at root.
-            const shouldCenter = 
-				!USE_SERVER_ADAPTER 
-				? 	(get(settings).savelastViewedContextPath 
-				&&	 get(settings).lastViewedContextPath === null) 
-				|| 	!get(settings).savelastViewedContextPath 
-				: true;
-
-            if (shouldCenter) {
-                // Use setTimeout to ensure the viewport has its dimensions before framing.
-                setTimeout(() => {
-                    centerOnFocalNode();
-                }, 0);
-            }
-        } else {
-        }
-
-        viewTransform.set(initialViewportSettings, { duration: 0 });
-
-    } catch (error) {
+	} catch (error) {
 		storeLogger.error("CRITICAL: Initialization failed, setting empty state.", error);
-
+		// Set a minimal safe state on critical failure.
 		nodes.set(new Map());
-        edges.set(new Map());
-        contexts.set(new Map());
-        currentContextId.set(ROOT_NODE_ID);
-        viewTransform.set(DEFAULT_VIEWPORT_SETTINGS, { duration: 0 });
-    }
+		edges.set(new Map());
+		contexts.set(new Map());
+		currentContextId.set(ROOT_NODE_ID);
+		viewTransform.set(DEFAULT_VIEWPORT_SETTINGS, { duration: 0 });
+	}
 
-    // 7. Set Initial Properties Panel Position (calculated only in browser)
-    if (typeof window !== 'undefined') {
-        propertiesPanelPosition.set({ x: window.innerWidth - 320, y: 50 });
-    }
-
-
-    // 8. Set Initial Tool (runs even if init fails partially)
-    setTool('move');
+	// Final setup steps that should run regardless of success or failure.
+	if (typeof window !== 'undefined') {
+		propertiesPanelPosition.set({ x: window.innerWidth - 320, y: 50 });
+	}
+	setTool('move');
 }
 
 // Export internal helpers AND the initializeStores function
