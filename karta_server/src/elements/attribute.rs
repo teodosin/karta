@@ -44,14 +44,36 @@ impl Attribute {
         }
     }
 }
+    
+    impl From<serde_json::Value> for AttrValue {
+        fn from(value: serde_json::Value) -> Self {
+            match value {
+                serde_json::Value::Number(n) => {
+                    if let Some(f) = n.as_f64() {
+                        AttrValue::Float(f as f32)
+                    } else if let Some(u) = n.as_u64() {
+                        AttrValue::UInt(u as u32)
+                    } else {
+                        // Fallback for other number types, maybe default to 0 or handle error
+                        AttrValue::Float(0.0)
+                    }
+                }
+                serde_json::Value::String(s) => AttrValue::String(s),
+                // Add other cases as needed, e.g., Bool -> UInt
+                _ => AttrValue::String("Unsupported value type".to_string()),
+            }
+        }
+    }
+
+
 
 impl Into<Vec<DbKeyValue>> for Attribute {
     fn into(self) -> Vec<DbKeyValue> {
         vec![
             match self.value {
-                AttrValue::Float(f) => DbKeyValue::from((self.name, f)),
-                AttrValue::String(s) => DbKeyValue::from((self.name, s)),
-                AttrValue::UInt(u) => DbKeyValue::from((self.name, u)),
+                AttrValue::Float(f)     => DbKeyValue::from((self.name, f)),
+                AttrValue::String(s)    => DbKeyValue::from((self.name, s)),
+                AttrValue::UInt(u)      => DbKeyValue::from((self.name, u)),
             },
         ]
     }
@@ -60,9 +82,9 @@ impl Into<Vec<DbKeyValue>> for Attribute {
 impl Into<DbKeyValue> for Attribute {
     fn into(self) -> DbKeyValue {
         match self.value {
-            AttrValue::Float(f) => DbKeyValue::from((self.name, f)),
+            AttrValue::Float(f)     => DbKeyValue::from((self.name, f)),
             AttrValue::String(s) => DbKeyValue::from((self.name, s)),
-            AttrValue::UInt(u) => DbKeyValue::from((self.name, u)),
+            AttrValue::UInt(u)      => DbKeyValue::from((self.name, u)),
         }
     }
 }
@@ -70,9 +92,9 @@ impl Into<DbKeyValue> for Attribute {
 impl Into<DbKeyValue> for &Attribute {
     fn into(self) -> DbKeyValue {
         match &self.value {
-            AttrValue::Float(f) => DbKeyValue::from((self.name.clone(), *f)),
+            AttrValue::Float(f)     => DbKeyValue::from((self.name.clone(), *f)),
             AttrValue::String(s) => DbKeyValue::from((self.name.clone(), s.clone())),
-            AttrValue::UInt(u) => DbKeyValue::from((self.name.clone(), *u)),
+            AttrValue::UInt(u)      => DbKeyValue::from((self.name.clone(), *u)),
         }
     }
 }
@@ -82,9 +104,9 @@ impl Into<Attribute> for DbKeyValue {
         Attribute {
             name: self.key.to_string(),
             value: match self.value {
-                DbValue::F64(f) => AttrValue::Float(f.to_f64() as f32),
+                DbValue::F64(f)     => AttrValue::Float(f.to_f64() as f32),
                 DbValue::String(s) => AttrValue::String(s),
-                DbValue::U64(u) => AttrValue::UInt(u as u32),
+                DbValue::U64(u)       => AttrValue::UInt(u as u32),
                 _ => panic!("Invalid attribute value"),
             }
         }

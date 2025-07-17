@@ -41,6 +41,7 @@ mod data_endpoints;
 mod context_endpoints;
 mod write_endpoints;
 mod asset_endpoints;
+mod edge_endpoints;
 pub mod karta_service;
 pub mod settings;
 
@@ -69,6 +70,7 @@ pub fn create_router(state: AppState) -> Router<()> {
             .get(data_endpoints::get_node_by_uuid)
         )
         .route("/api/nodes/by-path/{*path}", get(data_endpoints::get_node_by_path))
+        .route("/api/edges", post(edge_endpoints::create_edges))
         .route("/api/ctx/{id}", put(write_endpoints::save_context))
         .route("/api/settings", get(settings::get_settings_handler).put(settings::update_settings_handler))
         .route("/ctx/{*id}", get(context_endpoints::open_context_from_fs_path)) // Corrected wildcard syntax

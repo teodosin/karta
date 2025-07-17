@@ -1,10 +1,12 @@
-use std::{collections::{HashMap, HashSet}, error::Error, path::PathBuf, sync::Arc};
+use std::{collections::{HashMap, HashSet}, error::Error, path::PathBuf, str::FromStr, sync::Arc};
 use uuid::Uuid;
 use tracing::info;
 
 use tokio::sync::RwLock;
 
-use crate::{context::{context::Context, context_db::ContextDb}, elements::node_path::NodeHandle, fs_reader, prelude::*};
+use crate::{context::{context::Context, context_db::ContextDb}, elements::{attribute::AttrValue, node_path::NodeHandle}, fs_reader, prelude::*};
+
+use super::edge_endpoints::CreateEdgePayload;
 
 
 pub struct KartaService {
@@ -75,6 +77,65 @@ impl KartaService {
     
     pub fn view_mut(&mut self) -> &mut ContextDb {
         &mut self.view
+    }
+
+    pub fn create_edges(
+        &mut self,
+        payload: Vec<CreateEdgePayload>,
+    ) -> Result<Vec<CreateEdgePayload>, String> {
+        let mut created_edges_payload = Vec::new();
+        let mut edges_to_insert = Vec::new();
+
+        for edge_payload in payload {
+            let source_path = NodePath::from_alias(&edge_payload.source_path);
+            let target_path = NodePath::from_alias(&edge_payload.target_path);
+
+            let source_node = match self.data().open_node(&NodeHandle::Path(source_path.clone())) {
+                Ok(node) => node,
+                Err(_) => {
+                    let node = fs_reader::destructure_single_path(self.vault_fs_path(), &source_path.full(self.vault_fs_path())).unwrap();
+                    self.data_mut().insert_nodes(vec![node.clone()]);
+                    node
+                }
+            };
+
+            let target_node = match self.data().open_node(&NodeHandle::Path(target_path.clone())) {
+                Ok(node) => node,
+                Err(_) => {
+                    let node = fs_reader::destructure_single_path(self.vault_fs_path(), &target_path.full(self.vault_fs_path())).unwrap();
+                    self.data_mut().insert_nodes(vec![node.clone()]);
+                    node
+                }
+            };
+
+            let mut new_edge = Edge::new(source_node.uuid(), target_node.uuid());
+
+            let attributes: Vec<Attribute> = (&edge_payload.attributes).into_iter().map(|(key, value)| {
+                match value {
+                    serde_json::Value::Number(n) => {
+                        if let Some(f) = n.as_f64() {
+                            Attribute::new_float(key.clone(), f as f32)
+                        } else if let Some(u) = n.as_u64() {
+                            Attribute::new_uint(key.clone(), u as u32)
+                        } else {
+                            Attribute::new_string(key.clone(), n.to_string())
+                        }
+                    }
+                    serde_json::Value::String(s) => Attribute::new_string(key.clone(), s.clone()),
+                    serde_json::Value::Bool(b) => Attribute::new_uint(key.clone(), *b as u32),
+                    _ => Attribute::new_string(key.clone(), value.to_string()),
+                }
+            }).collect();
+
+            new_edge.set_attributes(attributes);
+            edges_to_insert.push(new_edge);
+            created_edges_payload.push(edge_payload);
+        }
+
+        dbg!(&edges_to_insert);
+        self.data.insert_edges(edges_to_insert);
+
+        Ok(created_edges_payload)
     }
 
     pub fn get_paths(&self, only_indexed: bool) -> Result<Vec<String>, Box<dyn Error>> {
@@ -198,10 +259,8 @@ impl KartaService {
         
         // Add DB connections (children and others).
         for (child_node, edge) in self.data().open_node_connections(path) {
-            if *edge.source() == focal_node.uuid() {
-                nodes.insert(child_node.uuid(), child_node);
-                direct_edges.push(edge);
-            }
+            nodes.insert(child_node.uuid(), child_node);
+            direct_edges.push(edge);
         }
 
         self._finalize_context(focal_node, nodes, direct_edges)
@@ -239,10 +298,8 @@ impl KartaService {
         
         // Add any additional connections from the database.
         for (child_node, edge) in self.data().open_node_connections(path) {
-            if *edge.source() == focal_node.uuid() {
-                nodes.insert(child_node.uuid(), child_node);
-                direct_edges.push(edge);
-            }
+            nodes.insert(child_node.uuid(), child_node);
+            direct_edges.push(edge);
         }
 
         self._finalize_context(focal_node, nodes, direct_edges)
@@ -287,9 +344,21 @@ impl KartaService {
                 }
             }
         }
-        println!("[_finalize_context] -> Edge count after filtering: {}", final_edges.len());
-        
+        println!("[_finalize_context] -> Edge count after filtering direct edges: {}", final_edges.len());
+
         let final_datanodes: Vec<DataNode> = nodes.values().cloned().collect();
+        let final_datanode_uuids: Vec<Uuid> = final_datanodes.iter().map(|n| n.uuid()).collect();
+
+        // Get all edges between the nodes in the context.
+        if let Ok(interconnect_edges) = self.data.get_edges_between_nodes(&final_datanode_uuids) {
+            println!("[_finalize_context] -> Found {} interconnecting edges.", interconnect_edges.len());
+            for edge in interconnect_edges {
+                if final_edges_set.insert((*edge.source(), *edge.target())) {
+                    final_edges.push(edge);
+                }
+            }
+        }
+        println!("[_finalize_context] -> Total final edge count: {}", final_edges.len());
 
         let parent_uuid = if let Some(parent_path) = focal_node.path().parent() {
             final_datanodes.iter().find(|n| n.path() == parent_path).map(|n| n.uuid())

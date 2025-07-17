@@ -14,6 +14,8 @@ pub trait GraphEdge {
 
     fn insert_edges(&mut self, edges: Vec<Edge>);
 
+    fn get_edges_between_nodes(&self, nodes: &[Uuid]) -> Result<Vec<Edge>, Box<dyn Error>>;
+
     /// Delete an edge from the graph. Edges with the attribute "contains" refer to the parent-child relationship
     /// between nodes and will be ignored. All other attributes will be cleared from them instead.
     fn delete_edge(&mut self, edge: Edge) -> Result<(), Box<dyn Error>>;

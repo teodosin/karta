@@ -1,0 +1,30 @@
+use axum::{extract::State, http::StatusCode, response::Json};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+
+use crate::server::{karta_service::KartaService, AppState};
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct CreateEdgePayload {
+    pub id: String,
+    pub source: String,
+    pub target: String,
+    pub attributes: HashMap<String, serde_json::Value>,
+    pub source_path: String,
+    pub target_path: String,
+}
+
+#[axum::debug_handler]
+pub async fn create_edges(
+    State(state): State<AppState>,
+    Json(payload): Json<Vec<CreateEdgePayload>>,
+) -> Result<Json<Vec<CreateEdgePayload>>, StatusCode> {
+
+    dbg!(&payload);
+    let mut service = state.service.write().unwrap();
+    
+    match service.create_edges(payload) {
+        Ok(created_edges) => Ok(Json(created_edges)),
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
