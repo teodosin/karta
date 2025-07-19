@@ -16,55 +16,37 @@ pub trait GraphEdge {
 
     fn get_edges_between_nodes(&self, nodes: &[Uuid]) -> Result<Vec<Edge>, Box<dyn Error>>;
 
-    /// Delete an edge from the graph. Edges with the attribute "contains" refer to the parent-child relationship
-    /// between nodes and will be ignored. All other attributes will be cleared from them instead.
-    fn delete_edge(&mut self, edge: Edge) -> Result<(), Box<dyn Error>>;
+    fn delete_edges(&mut self, edges: &[(Uuid, Uuid)]) -> Result<(), Box<dyn Error>>;
 }
 
 #[cfg(test)]
 mod tests {
-//     #![allow(warnings)]
+    use crate::{
+        elements::{node::DataNode, node_path::NodePath, edge::Edge, nodetype::NodeTypeId},
+        graph_agdb::GraphAgdb,
+        graph_traits::{graph_edge::GraphEdge, graph_node::GraphNodes},
+        utils::utils::KartaServiceTestContext,
+    };
 
-//     use crate::{
-//         elements::NodePath,
-//         graph_agdb::GraphAgdb,
-//         graph_traits::{graph_edge::GraphEdge, graph_node::GraphNode},
-//         utils::{cleanup_graph, setup_graph},
-//     };
-//     use std::path::PathBuf;
+    #[test]
+    fn test_delete_edge() {
+        let mut ctx = KartaServiceTestContext::new("test_delete_edge");
+        let node1 = DataNode::new(&NodePath::from("node1"), NodeTypeId::new("core/text"));
+        let node2 = DataNode::new(&NodePath::from("node2"), NodeTypeId::new("core/text"));
+        let edge = Edge::new(node1.uuid(), node2.uuid());
 
-//     #[test]
-//     fn create_new_edge() {
-//         let func_name = "create_new_edge";
-//         let mut graph = setup_graph(func_name);
+        ctx.with_service_mut(|s| {
+            s.data_mut().insert_nodes(vec![node1.clone(), node2.clone()]);
+            s.data_mut().insert_edges(vec![edge.clone()]);
+        });
 
-//         // Create two nodes
-//         let path1 = NodePath::from("node1");
-//         let path2 = NodePath::from("node2");
+        let edge_result = ctx.with_service(|s| s.data().get_edge_strict(&node1.uuid(), &node2.uuid()));
+        assert!(edge_result.is_ok());
 
-//         let node1 = graph.create_node_by_path(path1.clone(), None).unwrap();
-//         let node2 = graph.create_node_by_path(path2.clone(), None).unwrap();
+        let result = ctx.with_service_mut(|s| s.data_mut().delete_edges(&[(node1.uuid(), node2.uuid())]));
+        assert!(result.is_ok());
 
-//         // Create an edge between the nodes
-//         let edge = graph.create_edge(&path1, &path2);
-
-//         assert!(edge.is_ok(), "Failed to create edge");
-
-//         // Verify the edge exists
-//         // let edge_exists = graph.edge_exists(node1.id, node2.id);
-//         // assert!(edge_exists, "Edge does not exist after creation");
-
-//         cleanup_graph(func_name);
-//     }
-
-//     // Test creating an Edge with attributes
-//     // Test converting Attribute to DbKeyValue
-//     // Test creating Edge with reserved attribute names
-//     // Test inserting a new edge
-//     // Test reconnecting an edge
-//     // Test deleting an edge (non-parent edge)
-//     // Test deleting a parent edge (should fail or be ignored)
-//     // Test inserting edge attributes (normal and reserved)
-//     // Test deleting edge attributes (normal and reserved)
-//     // Test creating a parent-child relationship between nodes
+        let edge_result = ctx.with_service(|s| s.data().get_edge_strict(&node1.uuid(), &node2.uuid()));
+        assert!(edge_result.is_err());
+    }
 }

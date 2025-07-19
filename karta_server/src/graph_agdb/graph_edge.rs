@@ -1,6 +1,6 @@
 use std::error::Error;
 
-use agdb::{DbElement, QueryBuilder};
+use agdb::{DbElement, DbUserValue, QueryBuilder};
 use uuid::Uuid;
 
 use crate::{graph_traits::graph_edge::GraphEdge, prelude::Edge};
@@ -73,12 +73,8 @@ impl GraphEdge for GraphAgdb {
         }
     }
 
-    /// Delete an edge from the graph. Edges with the attribute "contains" refer to the parent-child relationship
-    /// between nodes and will be ignored. All other attributes will be cleared from them instead.
-    fn delete_edge(&mut self, edge: Edge) -> Result<(), Box<dyn Error>> {
-        Ok(())
-    }
 
+    /// Delete edges by their UUIDs. If an edge has the "contains" attribute, it will be cleared instead of deleted.
     fn get_edges_between_nodes(&self, nodes: &[Uuid]) -> Result<Vec<Edge>, Box<dyn Error>> {
         if nodes.len() < 2 {
             return Ok(Vec::new());
@@ -113,5 +109,40 @@ impl GraphEdge for GraphAgdb {
         }
 
         Ok(all_edges.values().cloned().collect())
+    }
+
+    fn delete_edges(&mut self, edges: &[(Uuid, Uuid)]) -> Result<(), Box<dyn Error>> {
+        self.db.transaction_mut(|t| -> Result<(), agdb::QueryError> {
+            for (source, target) in edges {
+                // First, get the edge to determine if it's a "contains" edge.
+                let get_edge_query = QueryBuilder::select().ids(
+                    QueryBuilder::search()
+                        .from(source.to_string())
+                        .to(target.to_string())
+                        .query()
+                ).query();
+
+                let query_result = t.exec(&get_edge_query)?;
+
+                if let Some(element) = query_result.elements.iter().find(|e| e.id.0 < 0) {
+                    let edge = Edge::try_from(element.clone())?;
+
+                    if edge.is_contains() {
+                        // It's a "contains" edge. This type of edge cannot be deleted via this endpoint.
+                        // Return an error to abort the transaction.
+                        return Err(agdb::QueryError::from("Deletion of 'contains' edges is not allowed."));
+                    } else {
+                        // It's a normal edge, so we can remove it entirely.
+                        let remove_edge_query = QueryBuilder::remove()
+                            .ids(element.id)
+                            .query();
+                        t.exec_mut(&remove_edge_query)?;
+                    }
+                }
+            }
+            Ok(())
+        })?;
+
+        Ok(())
     }
 }

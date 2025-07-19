@@ -54,7 +54,7 @@ pub struct AppState {
 pub fn create_router(state: AppState) -> Router<()> {
     let cors = CorsLayer::new()
         .allow_origin("http://localhost:5173".parse::<axum::http::HeaderValue>().unwrap())
-        .allow_methods([Method::GET, Method::POST, Method::PUT, Method::OPTIONS])
+        .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE, Method::OPTIONS])
         .allow_headers([axum::http::header::CONTENT_TYPE]);
 
     let router = Router::new()
@@ -70,7 +70,7 @@ pub fn create_router(state: AppState) -> Router<()> {
             .get(data_endpoints::get_node_by_uuid)
         )
         .route("/api/nodes/by-path/{*path}", get(data_endpoints::get_node_by_path))
-        .route("/api/edges", post(edge_endpoints::create_edges))
+        .route("/api/edges", post(edge_endpoints::create_edges).delete(edge_endpoints::delete_edges))
         .route("/api/ctx/{id}", put(write_endpoints::save_context))
         .route("/api/settings", get(settings::get_settings_handler).put(settings::update_settings_handler))
         .route("/ctx/{*id}", get(context_endpoints::open_context_from_fs_path)) // Corrected wildcard syntax

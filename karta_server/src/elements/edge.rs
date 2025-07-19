@@ -85,8 +85,8 @@ impl Edge {
         &self.target
     }
 
-    pub fn contains(&self) -> bool {
-        self.contains
+    pub fn is_contains(&self) -> bool {
+        self.attributes.iter().any(|a| a.name == "contains")
     }
 
     pub fn created_time(&self) -> SysTime {
@@ -103,6 +103,19 @@ impl Edge {
 
     pub fn set_attributes(&mut self, attributes: Vec<Attribute>) {
         self.attributes = attributes;
+    }
+
+    pub fn set_attribute(&mut self, name: String, value: super::attribute::AttrValue) {
+        if let Some(attr) = self.attributes.iter_mut().find(|a| a.name == name) {
+            attr.value = value;
+        } else {
+            self.attributes.push(Attribute { name, value });
+        }
+    }
+
+    pub fn clear_user_attributes(&mut self) {
+        // Clear all attributes except for the reserved ones
+        self.attributes.retain(|a| RESERVED_EDGE_ATTRS.contains(&a.name.as_str()));
     }
 }
 
