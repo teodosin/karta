@@ -481,9 +481,9 @@ export async function deleteDataNodePermanently(nodeId: NodeId): Promise<void> {
 
 
         // 4. Delete connected edges in a batch
-        const connectedEdgeIds = connectedEdges.map(edge => edge.id);
-        if (connectedEdgeIds.length > 0) {
-            await deleteEdges(connectedEdgeIds); // deleteEdges handles store and persistence
+        const deletionPayloads = connectedEdges.map(edge => ({ source: edge.source, target: edge.target }));
+        if (deletionPayloads.length > 0) {
+            await deleteEdges(deletionPayloads); // deleteEdges handles store and persistence
         }
 
         // 5. Delete asset if it's an image node

@@ -180,11 +180,17 @@ export interface KartaEdge {
   source: NodeId;
   target: NodeId;
   attributes: Record<string, any>;
+  contains: boolean;
 }
 
 export interface KartaEdgeCreationPayload extends KartaEdge {
   source_path: string;
   target_path: string;
+}
+
+export interface EdgeDeletionPayload {
+  source: NodeId;
+  target: NodeId;
 }
 
 // Interface for interaction modes (Move, Connect, Context tools)

@@ -66,7 +66,7 @@
 		findPhysicalParentPath,
 	} from "$lib/karta/NodeStore";
 	import { notifications } from '$lib/karta/NotificationStore';
-	import { deleteEdges } from "$lib/karta/EdgeStore";
+	import { edges, deleteEdges } from "$lib/karta/EdgeStore";
 	import NodeWrapper from "./NodeWrapper.svelte";
 	import EdgeLayer from "./EdgeLayer.svelte";
 	import CreateNodeMenu from "./CreateNodeMenu.svelte";
@@ -1167,23 +1167,28 @@
 						!targetNodeId || targetNodeId === $currentContextId, // Disable if it's the focal node
 				},
 			];
-		} else if (contextType === "edge" && targetNodeId) {
+		} else if (contextType === "edge") {
+			const selectedEdgesSet = get(selectedEdgeIds);
+			const allKartaEdges = get(edges);
+
 			items = [
 				{
-					label: "Delete Edge(s)", // Changed label to indicate multi-deletion
+					label: `Delete ${selectedEdgesSet.size > 1 ? 'Edges' : 'Edge'}`,
 					action: () => {
-						const edgesToDelete = get(selectedEdgeIds);
-						if (edgesToDelete.size > 0) {
-							edgesToDelete.forEach((edgeId) =>
-								deleteEdges([edgeId]),
-							);
-							clearEdgeSelection(); // Clear selection after deleting
-						} else if (targetNodeId) {
-							// If no edges are multi-selected, delete the single right-clicked edge
-							deleteEdges([targetNodeId]);
+						if (selectedEdgesSet.size === 0) return;
+
+						const payloads = Array.from(selectedEdgesSet).map(id => {
+							const edge = allKartaEdges.get(id);
+							return edge ? { source: edge.source, target: edge.target } : null;
+						}).filter(p => p !== null) as { source: string, target: string }[];
+
+						if (payloads.length > 0) {
+							deleteEdges(payloads);
+							clearEdgeSelection();
 						}
 						closeContextMenu();
 					},
+					disabled: selectedEdgesSet.size === 0,
 				},
 			];
 		} else if (contextType === "background") {

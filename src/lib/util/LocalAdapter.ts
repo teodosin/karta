@@ -9,7 +9,8 @@ import type {
 	StorableViewportSettings,
 	AssetData,
 	KartaExportData,
-	ContextBundle
+	ContextBundle,
+	EdgeDeletionPayload
 } from '../types/types';
 import type { PersistenceService } from './PersistenceService';
 
@@ -196,10 +197,29 @@ export class LocalAdapter implements PersistenceService { // Added export here
 		return db.getAll('edges');
 	}
 
-	async deleteEdges(edgeIds: string[]): Promise<void> {
+	async deleteEdges(payloads: EdgeDeletionPayload[]): Promise<void> {
 		const db = await this.dbPromise;
 		const tx = db.transaction('edges', 'readwrite');
-		await Promise.all(edgeIds.map(id => tx.objectStore('edges').delete(id)));
+		const store = tx.objectStore('edges');
+		const allEdges = await store.getAll();
+
+		const edgeIdsToDelete: string[] = [];
+
+		for (const payload of payloads) {
+			for (const edge of allEdges) {
+				if (
+					(edge.source === payload.source && edge.target === payload.target) ||
+					(edge.source === payload.target && edge.target === payload.source)
+				) {
+					edgeIdsToDelete.push(edge.id);
+				}
+			}
+		}
+
+		if (edgeIdsToDelete.length > 0) {
+			await Promise.all(edgeIdsToDelete.map(id => store.delete(id)));
+		}
+
 		await tx.done;
 	}
 

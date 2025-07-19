@@ -5,20 +5,20 @@ import { cubicInOut, cubicOut } from 'svelte/easing';
 import { LocalAdapter, localAdapter } from '../util/LocalAdapter';
 import { ServerAdapter } from '../util/ServerAdapter';
 import type { PersistenceService } from '../util/PersistenceService';
-import type { 
+import type {
     DataNode, KartaEdge, ViewNode, Context, NodeId, EdgeId,
     AbsoluteTransform, ViewportSettings, TweenableNodeState, StorableContext,
-    StorableViewNode, StorableViewportSettings, KartaExportData, ContextBundle, 
-	NodePath,
-	NodeHandle
+    StorableViewNode, StorableViewportSettings, KartaExportData, ContextBundle,
+    NodePath,
+    NodeHandle
 } from '../types/types';
 import { getDefaultViewNodeStateForType } from '$lib/node_types/registry';
 import { nodes, _ensureDataNodeExists } from './NodeStore';
 import { edges } from './EdgeStore';
-import { 
-    viewTransform, 
-    DEFAULT_VIEWPORT_SETTINGS, VIEWPORT_TWEEN_DURATION, DEFAULT_FOCAL_TRANSFORM, 
-    centerOnFocalNode 
+import {
+    viewTransform,
+    DEFAULT_VIEWPORT_SETTINGS, VIEWPORT_TWEEN_DURATION, DEFAULT_FOCAL_TRANSFORM,
+    centerOnFocalNode
 } from './ViewportStore';
 import { historyStack, futureStack } from './HistoryStore';
 import { clearSelection } from './SelectionStore';
@@ -83,8 +83,8 @@ async function _getFocalNodeInitialState(targetNodeId: NodeId, oldContext: Conte
 
     } else {
         const dataNode = await _ensureDataNodeExists(targetNodeId);
-        const defaultState: { 
-            width: number; height: number; scale: number; rotation: number; 
+        const defaultState: {
+            width: number; height: number; scale: number; rotation: number;
         } = dataNode ? getDefaultViewNodeStateForType(dataNode.ntype) : getDefaultViewNodeStateForType('core/generic');
 
         const finalDefaultState = {
@@ -217,28 +217,28 @@ function _calculateTargetState(
 
         return {
             x: focalPlacement.x,
-			y: focalPlacement.y,
+            y: focalPlacement.y,
             scale: focalPlacement.scale,
-			rotation: storableNode.rotation,
+            rotation: storableNode.rotation,
             width: storableNode.width,
-			height: storableNode.height
+            height: storableNode.height
         };
 
     } else {
 
-        const absScale 		= focalPlacement.scale 	* storableNode.relScale;
-        const scaledRelX 	= storableNode.relX 	* focalPlacement.scale;
-        const scaledRelY 	= storableNode.relY 	* focalPlacement.scale;
-        const absX 			= focalPlacement.x 		+ scaledRelX;
-        const absY 			= focalPlacement.y 		+ scaledRelY;
+        const absScale = focalPlacement.scale * storableNode.relScale;
+        const scaledRelX = storableNode.relX * focalPlacement.scale;
+        const scaledRelY = storableNode.relY * focalPlacement.scale;
+        const absX = focalPlacement.x + scaledRelX;
+        const absY = focalPlacement.y + scaledRelY;
 
         return {
             x: absX,
-			y: absY,
-			scale: absScale,
-			rotation: storableNode.rotation,
+            y: absY,
+            scale: absScale,
+            rotation: storableNode.rotation,
             width: storableNode.width,
-			height: storableNode.height
+            height: storableNode.height
         };
     }
 }
@@ -261,20 +261,20 @@ function _convertStorableViewportSettings(
     if (focalState) {
         // Explicitly check for NaN before calculation
         if (
-				isNaN(focalState.x) 
-			|| 	isNaN(focalState.y) 
-			|| 	isNaN(storableSettings.scale) 
-			|| 	isNaN(storableSettings.relPosX) 
-			|| 	isNaN(storableSettings.relPosY)
-		) {
-			storeLogger.error("CRITICAL: NaN in viewport settings conversion!",
+            isNaN(focalState.x)
+            || isNaN(focalState.y)
+            || isNaN(storableSettings.scale)
+            || isNaN(storableSettings.relPosX)
+            || isNaN(storableSettings.relPosY)
+        ) {
+            storeLogger.error("CRITICAL: NaN in viewport settings conversion!",
                 {
-					x: focalState.x,
-					y: focalState.y,
-					scale: storableSettings.scale,
-					relPosX: storableSettings.relPosX,
-					relPosY: storableSettings.relPosY 
-				}
+                    x: focalState.x,
+                    y: focalState.y,
+                    scale: storableSettings.scale,
+                    relPosX: storableSettings.relPosX,
+                    relPosY: storableSettings.relPosY
+                }
             );
 
         }
@@ -285,14 +285,14 @@ function _convertStorableViewportSettings(
         const result = { scale: storableSettings.scale, posX: absPosX, posY: absPosY };
 
         if (isNaN(absPosX) || isNaN(absPosY)) {
-			storeLogger.error("CRITICAL: NaN in viewport settings conversion!", result);
+            storeLogger.error("CRITICAL: NaN in viewport settings conversion!", result);
         }
 
         return result;
 
     } else {
 
-		storeLogger.warn("Focal node state not found. Returning DEFAULT_VIEWPORT_SETTINGS.");
+        storeLogger.warn("Focal node state not found. Returning DEFAULT_VIEWPORT_SETTINGS.");
         return { ...DEFAULT_VIEWPORT_SETTINGS };
     }
 }
@@ -518,8 +518,8 @@ export async function saveCurrentContext() {
 
 
 /** 
-	Triggers a transition to another context.
-	Smoothly transitions common nodes, fades out old and fades in new.
+    Triggers a transition to another context.
+    Smoothly transitions common nodes, fades out old and fades in new.
 */
 export async function switchContext(newContextHandle: NodeHandle, isUndoRedo: boolean = false) {
 
@@ -536,52 +536,60 @@ export async function switchContext(newContextHandle: NodeHandle, isUndoRedo: bo
         apiLogger.error(true, "Error fetching indexed paths:", error);
     }
 
-	// --- Phase 1: Resolve NodeHandle to definitive ID and Path ---
-	// Regardless of input, we need both values for the rest of the function.
-	let newContextId: NodeId;
-	let newContextPath: NodePath;
+    // --- Phase 1: Resolve NodeHandle to definitive ID and Path ---
+    // Regardless of input, we need both values for the rest of the function.
+    let newContextId: NodeId;
+    let newContextPath: NodePath;
 
-	if (newContextHandle.type === 'uuid') {
-		newContextId = newContextHandle.value;
-		const localNode = get(nodes).get(newContextId);
-		if (localNode && typeof localNode.path === 'string') {
-			newContextPath = localNode.path;
-		} else {
-			const fetchedNode = await activeAdapter.getNode(newContextId);
-			if (fetchedNode && typeof fetchedNode.path === 'string') {
-				newContextPath = fetchedNode.path;
-				nodes.update(n => n.set(fetchedNode.id, fetchedNode)); // Add to store
-			} else {
-				storeLogger.error(`Could not resolve a path for node ID: ${newContextId}`);
-				return;
-			}
-		}
-	} else { // type === 'path'
-		newContextPath = newContextHandle.value;
-		let foundNode: DataNode | undefined;
-		for (const node of get(nodes).values()) {
-			if (node.path === newContextPath) {
-				foundNode = node;
-				break;
-			}
-		}
+    if (newContextHandle.type === 'uuid') {
+        newContextId = newContextHandle.value;
+        const localNode = get(nodes).get(newContextId);
+        if (localNode && typeof localNode.path === 'string') {
+            newContextPath = localNode.path;
+        } else {
+            const fetchedNode = await activeAdapter.getNode(newContextId);
+            if (fetchedNode && typeof fetchedNode.path === 'string') {
+                newContextPath = fetchedNode.path;
+                nodes.update(n => n.set(fetchedNode.id, fetchedNode)); // Add to store
+            } else {
+                storeLogger.error(`Could not resolve a path for node ID: ${newContextId}`);
+                return;
+            }
+        }
+    } else { // type === 'path'
+        newContextPath = newContextHandle.value;
+        let foundNode: DataNode | undefined;
+        for (const node of get(nodes).values()) {
+            if (node.path === newContextPath) {
+                foundNode = node;
+                break;
+            }
+        }
 
-		if (foundNode) {
-			newContextId = foundNode.id;
-		} else {
-			const fetchedNode = await activeAdapter.getDataNodeByPath(newContextPath);
-			if (fetchedNode) {
-				newContextId = fetchedNode.id;
-				nodes.update(n => n.set(fetchedNode.id, fetchedNode)); // Add to store
-			} else {
-				storeLogger.error(`Could not resolve an ID for path: "${newContextPath}"`);
-				return;
-			}
-		}
-	}
+        if (foundNode) {
+            newContextId = foundNode.id;
+        } else {
+            if (newContextPath === '') {
+                console.log("[switchContext] Empty path: Switching to the virtual root node.");
+                newContextId = ROOT_NODE_ID;
+            } else {
+                const fetchedNode = await activeAdapter.getDataNodeByPath(newContextPath);
+                if (fetchedNode) {
+                    newContextId = fetchedNode.id;
+                    nodes.update(n => n.set(fetchedNode.id, fetchedNode)); // Add to store
+                    console.log(`[switchContext] Fetched node for path "${newContextPath}":`, fetchedNode);
+                } else {
+                    storeLogger.error(`Could not resolve an ID for path: "${newContextPath}"`);
+                    console.log("[switchContext] No node found for the given path, cannot switch context.");
+                    return;
+                }
+            }
+        }
+    }
 
     const oldContextId = get(currentContextId);
-    if (newContextId === oldContextId) return;
+    console.log(`[switchContext] Switching from context ${oldContextId} to ${newContextId} (${newContextPath})`);
+    if (newContextId === oldContextId && oldContextId !== ROOT_NODE_ID) return;
     clearSelection();
 
 
@@ -600,7 +608,7 @@ export async function switchContext(newContextHandle: NodeHandle, isUndoRedo: bo
     const oldContext = get(contexts).get(oldContextId);
 
     if (oldContext) {
-		
+
         oldContext.viewportSettings = { ...viewTransform.current };
         storeLogger.log(`Saving old context ${oldContextId} with viewNodes:`, oldContext.viewNodes);
 
@@ -623,20 +631,20 @@ export async function switchContext(newContextHandle: NodeHandle, isUndoRedo: bo
     try {
         // Determine initial state (x,y,scale,width,height,rotation) for the new focal node based on old context
         const focalInitialState = await _getFocalNodeInitialState(newContextId, oldContext);
+        console.log(`[switchContext] Focal initial state for ${newContextId}:`, focalInitialState);
 
         // Load StorableContext via bundle, then convert/merge into in-memory Context with Tweens, add defaults
         let identifierForBundle: string;
         if (activeAdapter instanceof ServerAdapter) {
-            const dataNodeForContext = get(nodes).get(newContextId);
-            if (!dataNodeForContext || typeof dataNodeForContext.path !== 'string') {
-                console.error(`[switchContext] Critical: DataNode or its path not found for newContextId: ${newContextId} when using ServerAdapter.`);
-                throw new Error(`DataNode path not found for ${newContextId}, required by ServerAdapter.`);
-            }
-            identifierForBundle = dataNodeForContext.path;
-            // The server endpoint /ctx/root handles the virtual root.
-            // An empty string path ("") corresponds to NodePath::root() on the server.
-            if (identifierForBundle === "") {
+            if (newContextId === ROOT_NODE_ID) {
                 identifierForBundle = "root";
+            } else {
+                const dataNodeForContext = get(nodes).get(newContextId);
+                if (!dataNodeForContext || typeof dataNodeForContext.path !== 'string') {
+                    console.error(`[switchContext] Critical: DataNode or its path not found for newContextId: ${newContextId} when using ServerAdapter.`);
+                    throw new Error(`DataNode path not found for ${newContextId}, required by ServerAdapter.`);
+                }
+                identifierForBundle = dataNodeForContext.path;
             }
         } else {
             // LocalAdapter (and potentially other future adapters) might expect the NodeId (UUID)
@@ -644,7 +652,7 @@ export async function switchContext(newContextHandle: NodeHandle, isUndoRedo: bo
         }
 
         const bundle = await activeAdapter.loadContextBundle(identifierForBundle);
-        apiLogger.log(`Context Bundle from Server for ${identifierForBundle}:`, bundle);
+        apiLogger.log(`Context Bundle from Server for ${identifierForBundle}:`, JSON.stringify(bundle, null, 2));
         const { finalContext: processedContext, wasCreated } = await _loadAndProcessContext(
             newContextId,
             focalInitialState, // Pass the full initial state object
@@ -686,6 +694,7 @@ export async function switchContext(newContextHandle: NodeHandle, isUndoRedo: bo
             return currentNodes;
         });
 
+        storeLogger.log(`Processed context for ${newContextId}:`, JSON.stringify(processedContext, null, 2));
         _applyStoresUpdate(newContextId, processedContext, loadedDataNodesMap, loadedEdgesMap);
 
         // --- Phase 4: Update Viewport ---
@@ -719,20 +728,20 @@ export async function switchContext(newContextHandle: NodeHandle, isUndoRedo: bo
 
 
 async function initializeStores() {
-	if (!activeAdapter) {
-		console.error("[initializeStores] activeAdapter not initialized. Cannot proceed.");
-		// Set a minimal safe state if the adapter is missing.
-		nodes.set(new Map());
-		edges.set(new Map());
-		contexts.set(new Map());
-		currentContextId.set(ROOT_NODE_ID);
-		viewTransform.set(DEFAULT_VIEWPORT_SETTINGS, { duration: 0 });
-		setTool('move');
-		return;
-	}
+    if (!activeAdapter) {
+        console.error("[initializeStores] activeAdapter not initialized. Cannot proceed.");
+        // Set a minimal safe state if the adapter is missing.
+        nodes.set(new Map());
+        edges.set(new Map());
+        contexts.set(new Map());
+        currentContextId.set(ROOT_NODE_ID);
+        viewTransform.set(DEFAULT_VIEWPORT_SETTINGS, { duration: 0 });
+        setTool('move');
+        return;
+    }
 
     // TODO: Determine how to handle hardcoded contexts
-	/*
+    /*
     if (!USE_SERVER_ADAPTER) {
         try {
             const rootNodeExists = await activeAdapter.getNode(ROOT_NODE_ID);
@@ -754,56 +763,57 @@ async function initializeStores() {
     }
     */
 
-	try {
-		// Pre-populate the map of all available context paths for the UI.
-		const pathsMap = await activeAdapter.getAllContextPaths();
-		storeLogger.log('Context paths loaded from adapter:', pathsMap);
-		existingContextsMap.set(pathsMap);
+    try {
+        // Pre-populate the map of all available context paths for the UI.
+        const pathsMap = await activeAdapter.getAllContextPaths();
+        storeLogger.log('Context paths loaded from adapter:', pathsMap);
+        existingContextsMap.set(pathsMap);
 
-		// Determine the initial context to load.
-		const currentSettings = get(settings);
-		const savedPath = currentSettings.lastViewedContextPath;
-		let initialHandle: NodeHandle;
-		let fellbackToRoot = false;
+        // Determine the initial context to load.
+        const currentSettings = get(settings);
+        const savedPath = currentSettings.lastViewedContextPath;
+        let initialHandle: NodeHandle;
+        let fellbackToRoot = false;
 
-		if (currentSettings.savelastViewedContextPath && savedPath) {
-			// If a path is saved, we'll try to load it.
-			// We optimistically assume the path exists. switchContext will handle errors.
-			initialHandle = { type: 'path', value: savedPath };
-		} else {
-			// If no path is saved or the feature is disabled, default to the root.
-			initialHandle = { type: 'uuid', value: ROOT_NODE_ID };
-			fellbackToRoot = true;
-		}
+        if (currentSettings.savelastViewedContextPath && savedPath !== undefined && savedPath !== null) {
+            // If a path is saved (including an empty string for the root), we'll try to load it.
+            // We optimistically assume the path exists. switchContext will handle errors.
+            initialHandle = { type: 'path', value: savedPath };
+        } else {
+            // If no path is saved or the feature is disabled, default to the root.
+            initialHandle = { type: 'uuid', value: ROOT_NODE_ID };
+            fellbackToRoot = true;
+        }
 
-		// Centralize all loading logic into a single call.
-		// switchContext is now responsible for fetching all necessary data.
-		await switchContext(initialHandle);
+        // Centralize all loading logic into a single call.
+        // switchContext is now responsible for fetching all necessary data.
+        await switchContext(initialHandle);
 
-		// Post-load actions.
-		if (fellbackToRoot && typeof window !== 'undefined') {
-			// Only center the view if we explicitly fell back to the root context.
-			// This avoids recentering a context that was loaded with specific viewport settings.
-			setTimeout(() => {
-				centerOnFocalNode();
-			}, 0);
-		}
+        // Post-load actions.
+        if ((fellbackToRoot || savedPath === '') && typeof window !== 'undefined') {
+            // Center the view if we explicitly fell back to the root,
+            // or if the saved path was the root itself.
+            // This avoids recentering a context that was loaded with specific viewport settings.
+            setTimeout(() => {
+                centerOnFocalNode();
+            }, 0);
+        }
 
-	} catch (error) {
-		storeLogger.error("CRITICAL: Initialization failed, setting empty state.", error);
-		// Set a minimal safe state on critical failure.
-		nodes.set(new Map());
-		edges.set(new Map());
-		contexts.set(new Map());
-		currentContextId.set(ROOT_NODE_ID);
-		viewTransform.set(DEFAULT_VIEWPORT_SETTINGS, { duration: 0 });
-	}
+    } catch (error) {
+        storeLogger.error("CRITICAL: Initialization failed, setting empty state.", error);
+        // Set a minimal safe state on critical failure.
+        nodes.set(new Map());
+        edges.set(new Map());
+        contexts.set(new Map());
+        currentContextId.set(ROOT_NODE_ID);
+        viewTransform.set(DEFAULT_VIEWPORT_SETTINGS, { duration: 0 });
+    }
 
-	// Final setup steps that should run regardless of success or failure.
-	if (typeof window !== 'undefined') {
-		propertiesPanelPosition.set({ x: window.innerWidth - 320, y: 50 });
-	}
-	setTool('move');
+    // Final setup steps that should run regardless of success or failure.
+    if (typeof window !== 'undefined') {
+        propertiesPanelPosition.set({ x: window.innerWidth - 320, y: 50 });
+    }
+    setTool('move');
 }
 
 // Export internal helpers AND the initializeStores function

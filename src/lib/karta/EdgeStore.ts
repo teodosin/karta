@@ -1,6 +1,6 @@
 import { writable, get } from 'svelte/store';
 import { activeAdapter } from './ContextStore';
-import type { KartaEdge, EdgeId, NodeId, KartaEdgeCreationPayload } from '../types/types';
+import type { KartaEdge, EdgeId, NodeId, KartaEdgeCreationPayload, EdgeDeletionPayload } from '../types/types';
 import { nodes } from './NodeStore';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -44,6 +44,7 @@ export async function createEdges(sourceIds: NodeId[], targetId: NodeId) {
             source: sourceId,
             target: targetId,
             attributes: {},
+            contains: false,
             source_path: sourceNode.path,
             target_path: targetNode.path,
         };
@@ -72,21 +73,54 @@ export async function createEdges(sourceIds: NodeId[], targetId: NodeId) {
     }
 }
 
-export async function deleteEdges(edgeIds: EdgeId[]) {
-    edges.update(e => {
-        for (const id of edgeIds) {
-            e.delete(id);
+export async function deleteEdges(payloads: EdgeDeletionPayload[]) {
+    const edgeIdsToDelete: EdgeId[] = [];
+    const currentEdges = get(edges);
+    const deletablePayloads: EdgeDeletionPayload[] = [];
+
+    // TODO: Optimize this to avoid multiple loops
+    for (const payload of payloads) {
+        for (const [id, edge] of currentEdges.entries()) {
+            if (
+                (edge.source === payload.source && edge.target === payload.target) ||
+                (edge.source === payload.target && edge.target === payload.source)
+            ) {
+                console.log(`[EdgeStore] Checking edge ${id} for deletion:`, edge);
+                if (!edge.contains) {
+                    edgeIdsToDelete.push(id);
+                    deletablePayloads.push(payload);
+                }
+                break;
+            }
         }
-        return e;
-    });
+    }
+
+    if (edgeIdsToDelete.length === 0) return;
+
     if (activeAdapter) {
         try {
-            await activeAdapter.deleteEdges(edgeIds);
+            // The adapter will now receive the source/target payload
+            await activeAdapter.deleteEdges(deletablePayloads);
+
+            // On successful deletion from the server, update the local store
+            edges.update(e => {
+                for (const id of edgeIdsToDelete) {
+                    e.delete(id);
+                }
+                return e;
+            });
         } catch (error) {
             console.error("Error deleting edges:", error);
-            // TODO: Add error handling, maybe revert the store update
+            // If the server call fails, the local store is not changed.
         }
     } else {
+        // If there's no adapter, just update the local store directly.
+        edges.update(e => {
+            for (const id of edgeIdsToDelete) {
+                e.delete(id);
+            }
+            return e;
+        });
         console.warn("ActiveAdapter not initialized, persistence disabled.");
     }
 }

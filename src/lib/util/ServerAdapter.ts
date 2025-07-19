@@ -11,6 +11,8 @@ import type {
     StorableViewNode,
     StorableViewportSettings,
     KartaSettings,
+    EdgeId,
+    EdgeDeletionPayload,
 } from '../types/types';
 import type { KartaEdgeCreationPayload } from '$lib/types/types';
 import type { PersistenceService } from './PersistenceService';
@@ -251,12 +253,18 @@ export class ServerAdapter implements PersistenceService {
                     };
                 });
 
-                const clientKartaEdges: KartaEdge[] = serverKartaEdges.map(sEdge => ({
-                    id: sEdge.uuid,
-                    source: sEdge.source,
-                    target: sEdge.target,
-                    attributes: transformServerAttributesToRecord(sEdge.attributes),
-                }));
+                const clientKartaEdges: KartaEdge[] = serverKartaEdges.map(sEdge => {
+                    const attributes = transformServerAttributesToRecord(sEdge.attributes);
+                    const clientEdge = {
+                        id: sEdge.uuid,
+                        source: sEdge.source,
+                        target: sEdge.target,
+                        attributes: attributes,
+                        contains: sEdge.contains,
+                    };
+                    console.log(`[ServerAdapter] Mapped server edge ${sEdge.uuid}:`, { server: sEdge, client: clientEdge });
+                    return clientEdge;
+                });
 
                 const clientViewNodes: [NodeId, StorableViewNode][] = serverContextData.nodes.map(sViewNode => {
                     const attributes = transformServerAttributesToRecord(sViewNode.attributes);
@@ -490,7 +498,40 @@ export class ServerAdapter implements PersistenceService {
     }
     async getEdge(edgeId: string): Promise<KartaEdge | undefined> { console.warn(`[ServerAdapter.getEdge] Not implemented for ID: ${edgeId}`); return undefined; }
     async getEdges(): Promise<KartaEdge[]> { console.warn('[ServerAdapter.getEdges] Not implemented'); return []; }
-    async deleteEdges(edgeIds: string[]): Promise<void> { console.warn(`[ServerAdapter.deleteEdges] Not implemented for IDs: ${edgeIds.join(', ')}`); }
+
+
+
+    async deleteEdges(payload: EdgeDeletionPayload[]): Promise<void> {
+        if (payload.length === 0) {
+            return Promise.resolve();
+        }
+
+        const url = `${SERVER_BASE_URL}/api/edges`;
+        try {
+            const response = await fetch(url, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+            });
+
+            if (!response.ok) {
+                const errorBody = await response.text();
+                console.error(`[ServerAdapter.deleteEdges] Error deleting edges. Status: ${response.status}`, errorBody);
+                throw new Error(`Server responded with status ${response.status}`);
+            }
+
+            console.log(`[ServerAdapter.deleteEdges] Successfully requested deletion of ${payload.length} edges.`);
+
+        } catch (error) {
+            console.error(`[ServerAdapter.deleteEdges] Network error deleting edges:`, error);
+            throw error;
+        }
+    }
+
+
+
     async loadEdges(): Promise<KartaEdge[]> { console.warn('[ServerAdapter.loadEdges] Not implemented'); return []; }
     async getEdgesByNodeIds(nodeIds: NodeId[]): Promise<Map<string, KartaEdge>> { console.warn(`[ServerAdapter.getEdgesByNodeIds] Not implemented`); return new Map(); }
     async getAllContextIds(): Promise<NodeId[]> { console.warn('[ServerAdapter.getAllContextIds] Not implemented'); return []; }
