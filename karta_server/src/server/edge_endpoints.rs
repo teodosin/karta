@@ -1,6 +1,7 @@
 use axum::{extract::State, http::StatusCode, response::Json};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::{collections::HashMap, str::FromStr};
+use uuid::Uuid;
 
 use crate::server::{karta_service::KartaService, AppState};
 
@@ -26,5 +27,30 @@ pub async fn create_edges(
     match service.create_edges(payload) {
         Ok(created_edges) => Ok(Json(created_edges)),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct DeleteEdgePayload {
+    pub source: Uuid,
+    pub target: Uuid,
+}
+
+#[axum::debug_handler]
+pub async fn delete_edges(
+    State(state): State<AppState>,
+    Json(payload): Json<Vec<DeleteEdgePayload>>,
+) -> Result<StatusCode, StatusCode> {
+    let mut service = state.service.write().unwrap();
+
+    match service.delete_edges(payload) {
+        Ok(_) => Ok(StatusCode::NO_CONTENT),
+        Err(e) => {
+            if e.to_string().contains("Deletion of 'contains' edges is not allowed.") {
+                Err(StatusCode::BAD_REQUEST)
+            } else {
+                Err(StatusCode::INTERNAL_SERVER_ERROR)
+            }
+        }
     }
 }

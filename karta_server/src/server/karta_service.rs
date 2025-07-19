@@ -6,7 +6,7 @@ use tokio::sync::RwLock;
 
 use crate::{context::{context::Context, context_db::ContextDb}, elements::{attribute::AttrValue, node_path::NodeHandle}, fs_reader, prelude::*};
 
-use super::edge_endpoints::CreateEdgePayload;
+use super::edge_endpoints::{CreateEdgePayload, DeleteEdgePayload};
 
 
 pub struct KartaService {
@@ -137,6 +137,18 @@ impl KartaService {
 
         Ok(created_edges_payload)
     }
+
+
+
+    pub fn delete_edges(&mut self, payload: Vec<DeleteEdgePayload>) -> Result<(), Box<dyn Error>> {
+        let edges_to_delete: Vec<(Uuid, Uuid)> = payload
+            .into_iter()
+            .map(|p| (p.source, p.target))
+            .collect();
+        self.data.delete_edges(&edges_to_delete)
+    }
+ 
+
 
     pub fn get_paths(&self, only_indexed: bool) -> Result<Vec<String>, Box<dyn Error>> {
         if only_indexed {
