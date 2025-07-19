@@ -230,7 +230,7 @@
 	/* Apply hover only to non-ghost nodes */
 	.node-wrapper:not(.ghost-node).node-hover .node-content {
 		/* Example hover effect: slightly brighter */
-		filter: brightness(1.1);
+		/* filter: brightness(1.1); */ /* This filter interferes with backdrop-filter on child nodes like TextNode */
 	}
 	.node-wrapper:not(.ghost-node).node-hover .node-label {
 		/* Make label more prominent on hover */

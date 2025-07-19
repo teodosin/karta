@@ -185,7 +185,7 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
 	class={`
-		w-full h-full p-2 pr-0 overflow-hidden
+		w-full h-full p-2 pr-0 overflow-hidden backdrop-blur-xl
 		flex items-center justify-center pointer-events-auto
 		${ringClasses}
 	`}

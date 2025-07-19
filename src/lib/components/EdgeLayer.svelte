@@ -9,9 +9,9 @@
 	import { edges } from '$lib/karta/EdgeStore';
 	import { contexts, currentContextId } from '$lib/karta/ContextStore';
 	import { isConnecting, connectionSourceNodeIds, tempLineTargetPosition } from '$lib/karta/ToolStore';
-	import { selectedEdgeIds } from '$lib/karta/EdgeSelectionStore'; // Import the edge selection store
-	// Removed: import { viewTransform } from '$lib/karta/ViewportStore';
-	import type { NodeId } from '../types/types'; // Import from types.ts
+	import { selectedEdgeIds } from '$lib/karta/EdgeSelectionStore';
+	import { settings } from '$lib/karta/SettingsStore';
+	import type { NodeId } from '../types/types';
 	import { get } from 'svelte/store';
 
 	// Declare inverseScale as a prop passed from Viewport
@@ -19,8 +19,6 @@
 
 	// Get the current context object reactively
 	$: currentCtx = $contexts.get($currentContextId);
-
-	// Removed internal inverseScale calculation and log
 
 </script>
 
@@ -30,38 +28,74 @@
 >
 
 	<!-- Edges -->
-	   {#each [...$edges.values()] as edge (edge.id)}
-	           {@const sourceViewNode = currentCtx?.viewNodes.get(edge.source)}
-	           {@const targetViewNode = currentCtx?.viewNodes.get(edge.target)}
+	{#each [...$edges.values()] as edge (edge.id)}
+	 {@const sourceViewNode = currentCtx?.viewNodes.get(edge.source)}
+	 {@const targetViewNode = currentCtx?.viewNodes.get(edge.target)}
 
-	           {#if sourceViewNode && targetViewNode}
-	               {@const sourceState = sourceViewNode.state.current}
-	               {@const targetState = targetViewNode.state.current}
-	               {@const sourceX = sourceState.x}
-	               {@const sourceY = sourceState.y}
-	               {@const targetX = targetState.x}
-	               {@const targetY = targetState.y}
-	               <!-- The 'each' block key is on the edge.id, so when an edge is removed from the store, this whole block is removed. -->
-	               <!-- Applying the transition to the wrapping 'g' element ensures both the visible path and its hit-area fade together. -->
-	               <!-- Hit area for interaction -->
-	               <path
-	                   id={`hit-area-${edge.id}`}
-	                   class="edge-hit-area"
-	                   d={`M ${sourceX} ${sourceY} L ${targetX} ${targetY}`}
-	                   data-edge-id={edge.id}
-	                   stroke-width={30 * inverseScale}
-	               />
-	               <!-- Visible edge -->
-	               <path
-	                   in:fade={{ duration: 1000 }}
-	                   out:fade={{ duration: 1000 }}
-	                   id={edge.id}
-	                   class={`edge ${$selectedEdgeIds.has(edge.id) ? 'selected' : ''}`}
-	                   d={`M ${sourceX} ${sourceY} L ${targetX} ${targetY}`}
-	                   stroke-width={$selectedEdgeIds.has(edge.id) ? 3 * inverseScale : 2 * inverseScale}
-	               />
-	           {/if}
-	   {/each}
+	 {#if sourceViewNode && targetViewNode}
+	  {@const sourceState = sourceViewNode.state.current}
+	  {@const targetState = targetViewNode.state.current}
+	  {@const sourceX = sourceState.x}
+	  {@const sourceY = sourceState.y}
+	  {@const targetX = targetState.x}
+	  {@const targetY = targetState.y}
+
+	  <!-- Hit area for interaction (common for both edge types) -->
+	  <path
+	   id={`hit-area-${edge.id}`}
+	   class="edge-hit-area"
+	   d={`M ${sourceX} ${sourceY} L ${targetX} ${targetY}`}
+	   data-edge-id={edge.id}
+	   stroke-width={30 * inverseScale}
+	  />
+
+	  {#if edge.contains}
+	   {@const dx = targetX - sourceX}
+	   {@const dy = targetY - sourceY}
+	   {@const length = Math.sqrt(dx * dx + dy * dy)}
+	   {@const gapSize = Math.min(10, length * 0.2) * inverseScale}
+	   {@const ux = dx / length}
+	   {@const uy = dy / length}
+	   {@const midX = sourceX + dx * 0.5}
+	   {@const midY = sourceY + dy * 0.5}
+	   {@const gapStartX = midX - ux * (gapSize / 2)}
+	   {@const gapStartY = midY - uy * (gapSize / 2)}
+	   {@const gapEndX = midX + ux * (gapSize / 2)}
+	   {@const gapEndY = midY + uy * (gapSize / 2)}
+
+	  <g class={`edge-group contains ${$selectedEdgeIds.has(edge.id) ? 'selected' : ''}`}>
+	   <!-- Source side of the contains edge -->
+	   <path
+	   	in:fade={{ duration: 1000 }}
+	   	out:fade={{ duration: 1000 }}
+	   	id={`${edge.id}-source`}
+	   	class="edge-part"
+	   	d={`M ${sourceX} ${sourceY} L ${gapStartX} ${gapStartY}`}
+	   	stroke-width={6 * inverseScale}
+	   />
+	   <!-- Target side of the contains edge -->
+	   <path
+	   	in:fade={{ duration: 1000 }}
+	   	out:fade={{ duration: 1000 }}
+	   	id={`${edge.id}-target`}
+	   	class="edge-part"
+	   	d={`M ${gapEndX} ${gapEndY} L ${targetX} ${targetY}`}
+	   	stroke-width={2 * inverseScale}
+	   />
+	  </g>
+	  {:else}
+	   <!-- Standard visible edge -->
+	   <path
+	   	in:fade={{ duration: 1000 }}
+	   	out:fade={{ duration: 1000 }}
+	   	id={edge.id}
+	   	class={`edge ${$selectedEdgeIds.has(edge.id) ? 'selected' : ''}`}
+	   	d={`M ${sourceX} ${sourceY} L ${targetX} ${targetY}`}
+	   	stroke-width={$selectedEdgeIds.has(edge.id) ? 3 * inverseScale : 2 * inverseScale}
+	   />
+	  {/if}
+	 {/if}
+	{/each}
 
 	<!-- Temporary connection line(s) -->
 	{#if $isConnecting && $tempLineTargetPosition}
@@ -87,7 +121,7 @@
 		fill: none;
 	}
 	:global(.edge) {
-		stroke: #9ca3af; /* gray-400 */
+		stroke: #6b7280; /* gray-500 */
 		/* stroke-width is now set inline based on inverseScale */
 		fill: none;
 		/* The transition for the hover effect (stroke color) is now handled by the browser's default transition behavior,
@@ -96,7 +130,7 @@
 	}
 	/* Apply hover style to the visible edge when the hit area is hovered */
 	:global(.edge-hit-area:hover + .edge) {
-		stroke: #d1d5db; /* gray-300 */
+		stroke: #9ca3af; /* gray-400 */
 	}
 	:global(.edge.selected) {
 		stroke: #3b82f6; /* blue-500 */
@@ -104,6 +138,21 @@
 	/* New rule for selected edge hover */
 	:global(.edge-hit-area:hover + .edge.selected) {
 		stroke: #93c5fd; /* blue-300 */ /* Lighter blue for selected hover */
+	}
+
+	/* --- Contains Edge Styles --- */
+	:global(.edge-group.contains .edge-part) {
+		stroke: rgba(156, 163, 175, 0.1); /* gray-400 at 10% opacity */
+		transition: stroke 0.2s ease-in-out;
+	}
+
+	/* Hovering over the hit area affects the whole group */
+	:global(.edge-hit-area:hover + .edge-group.contains .edge-part) {
+		stroke: rgba(156, 163, 175, 0.4); /* gray-400 at 40% opacity */
+	}
+
+	:global(.edge-group.contains.selected .edge-part) {
+		stroke: rgba(59, 130, 246, 0.5); /* blue-500 at 50% opacity */
 	}
 	:global(.edge-hit-area) {
 		stroke: transparent;
