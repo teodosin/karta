@@ -264,7 +264,10 @@ impl KartaService {
         // Add parent if it exists.
         if let Some(parent_path) = path.parent() {
             if let Ok(parent_node) = self.data().open_node(&NodeHandle::Path(parent_path)) {
-                direct_edges.push(Edge::new(parent_node.uuid(), focal_node.uuid()));
+                let edge = self.data()
+                    .get_edge_strict(&parent_node.uuid(), &focal_node.uuid())
+                    .unwrap_or_else(|_| Edge::new(parent_node.uuid(), focal_node.uuid()));
+                direct_edges.push(edge);
                 nodes.insert(parent_node.uuid(), parent_node);
             }
         }
@@ -295,7 +298,10 @@ impl KartaService {
             let parent_node = self.data()
                 .open_node(&NodeHandle::Path(parent_path.clone()))
                 .unwrap_or_else(|_| DataNode::new(&parent_path, NodeTypeId::dir_type()));
-            direct_edges.push(Edge::new(parent_node.uuid(), focal_node.uuid()));
+            let edge = self.data()
+                .get_edge_strict(&parent_node.uuid(), &focal_node.uuid())
+                .unwrap_or_else(|_| Edge::new(parent_node.uuid(), focal_node.uuid()));
+            direct_edges.push(edge);
             nodes.insert(parent_node.uuid(), parent_node);
         }
 
