@@ -262,7 +262,6 @@ export class ServerAdapter implements PersistenceService {
                         attributes: attributes,
                         contains: sEdge.contains,
                     };
-                    console.log(`[ServerAdapter] Mapped server edge ${sEdge.uuid}:`, { server: sEdge, client: clientEdge });
                     return clientEdge;
                 });
 

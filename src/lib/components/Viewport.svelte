@@ -78,6 +78,7 @@
 		lifecycleLogger,
 	} from "$lib/debug";
 	import { vaultName } from "$lib/karta/VaultStore";
+    import { type KartaEdge } from "$lib/types/types";
 
 	onMount(() => {
 		lifecycleLogger.log("Viewport mounted");
@@ -1171,16 +1172,19 @@
 			const selectedEdgesSet = get(selectedEdgeIds);
 			const allKartaEdges = get(edges);
 
+			const selectedEdges = Array.from(selectedEdgesSet)
+				.map(id => allKartaEdges.get(id))
+				.filter((edge): edge is KartaEdge => !!edge);
+
+			const deletableEdges = selectedEdges.filter(edge => !edge.contains);
+
 			items = [
 				{
-					label: `Delete ${selectedEdgesSet.size > 1 ? 'Edges' : 'Edge'}`,
+					label: `Delete ${deletableEdges.length} Edge(s)`,
 					action: () => {
-						if (selectedEdgesSet.size === 0) return;
+						if (deletableEdges.length === 0) return;
 
-						const payloads = Array.from(selectedEdgesSet).map(id => {
-							const edge = allKartaEdges.get(id);
-							return edge ? { source: edge.source, target: edge.target } : null;
-						}).filter(p => p !== null) as { source: string, target: string }[];
+						const payloads = deletableEdges.map(edge => ({ source: edge.source, target: edge.target }));
 
 						if (payloads.length > 0) {
 							deleteEdges(payloads);
@@ -1188,7 +1192,7 @@
 						}
 						closeContextMenu();
 					},
-					disabled: selectedEdgesSet.size === 0,
+					disabled: deletableEdges.length === 0,
 				},
 			];
 		} else if (contextType === "background") {
