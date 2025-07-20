@@ -145,4 +145,69 @@ impl GraphEdge for GraphAgdb {
 
         Ok(())
     }
+
+    fn reconnect_edge(
+        &mut self,
+        from: &Uuid,
+        to: &Uuid,
+        new_to: &Uuid,
+    ) -> Result<Edge, Box<dyn Error>> {
+        let new_edge = self.db.transaction_mut(|t| {
+            // Replicate get_edge_strict logic inside transaction
+            let edge_query = t.exec(
+                &QueryBuilder::search()
+                    .from(from.to_string())
+                    .to(to.to_string())
+                    .query(),
+            )?;
+
+            let edge_elems: Vec<&DbElement> = edge_query
+                .elements
+                .iter()
+                .filter(|e| e.id.0 < 0)
+                .collect::<Vec<_>>();
+
+            if edge_elems.len() != 1 {
+                return Err(agdb::QueryError::from(format!(
+                    "Expected 1 edge, got {}",
+                    edge_elems.len()
+                )));
+            }
+            let edge_id = edge_elems.first().unwrap().id;
+
+            let data_query = t.exec(&QueryBuilder::select().ids(edge_id).query())?;
+            let data_elem = data_query
+                .elements
+                .first()
+                .ok_or_else(|| agdb::QueryError::from("No element found for edge id"))?;
+
+            let original_edge = Edge::try_from(data_elem.clone())?;
+
+            if original_edge.is_contains() {
+                return Err(agdb::QueryError::from(
+                    "Reconnection of 'contains' edges is not allowed via this method.",
+                ));
+            }
+
+            // 1. Delete old edge
+            t.exec_mut(&QueryBuilder::remove().ids(edge_id).query())?;
+
+            // 2. Create new edge
+            let mut new_edge = Edge::new(*from, *new_to);
+            new_edge.set_attributes(original_edge.attributes().clone());
+
+            t.exec_mut(
+                &QueryBuilder::insert()
+                    .edges()
+                    .from(from.to_string())
+                    .to(new_to.to_string())
+                    .values_uniform(new_edge.clone())
+                    .query(),
+            )?;
+
+            Ok(new_edge)
+        })?;
+
+        Ok(new_edge)
+    }
 }

@@ -17,6 +17,13 @@ pub trait GraphEdge {
     fn get_edges_between_nodes(&self, nodes: &[Uuid]) -> Result<Vec<Edge>, Box<dyn Error>>;
 
     fn delete_edges(&mut self, edges: &[(Uuid, Uuid)]) -> Result<(), Box<dyn Error>>;
+
+    fn reconnect_edge(
+        &mut self,
+        from: &Uuid,
+        to: &Uuid,
+        new_to: &Uuid,
+    ) -> Result<Edge, Box<dyn Error>>;
 }
 
 #[cfg(test)]
@@ -48,5 +55,38 @@ mod tests {
 
         let edge_result = ctx.with_service(|s| s.data().get_edge_strict(&node1.uuid(), &node2.uuid()));
         assert!(edge_result.is_err());
+    }
+
+    #[test]
+    fn test_reconnect_edge() {
+        let mut ctx = KartaServiceTestContext::new("test_reconnect_edge");
+        let node1 = DataNode::new(&NodePath::from("node1"), NodeTypeId::new("core/text"));
+        let node2 = DataNode::new(&NodePath::from("node2"), NodeTypeId::new("core/text"));
+        let node3 = DataNode::new(&NodePath::from("node3"), NodeTypeId::new("core/text"));
+        let edge = Edge::new(node1.uuid(), node2.uuid());
+
+        ctx.with_service_mut(|s| {
+            s.data_mut().insert_nodes(vec![node1.clone(), node2.clone(), node3.clone()]);
+            s.data_mut().insert_edges(vec![edge.clone()]);
+        });
+
+        let initial_edge = 
+            ctx.with_service(|s| s.data().get_edge_strict(&node1.uuid(), &node2.uuid()));
+        assert!(initial_edge.is_ok());
+
+        let result = ctx.with_service_mut(|s| {
+            s.data_mut()
+                .reconnect_edge(&node1.uuid(), &node2.uuid(), &node3.uuid())
+        });
+
+        assert!(result.is_ok());
+
+        let old_edge =
+            ctx.with_service(|s| s.data().get_edge_strict(&node1.uuid(), &node2.uuid()));
+        assert!(old_edge.is_err());
+
+        let new_edge =
+            ctx.with_service(|s| s.data().get_edge_strict(&node1.uuid(), &node3.uuid()));
+        assert!(new_edge.is_ok());
     }
 }
