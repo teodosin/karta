@@ -36,6 +36,8 @@ pub struct ReconnectEdgePayload {
     pub old_to: Uuid,
     pub new_from: Uuid,
     pub new_to: Uuid,
+    pub new_from_path: String,
+    pub new_to_path: String,
 }
 
 #[axum::debug_handler]
@@ -45,7 +47,7 @@ pub async fn reconnect_edge(
 ) -> Result<Json<Edge>, StatusCode> {
     let mut service = state.service.write().unwrap();
 
-    match service.reconnect_edge(&payload.old_from, &payload.old_to, &payload.new_from, &payload.new_to) {
+    match service.reconnect_edge(&payload.old_from, &payload.old_to, &payload.new_from, &payload.new_to, &payload.new_from_path, &payload.new_to_path) {
         Ok(edge) => Ok(Json(edge)),
         Err(e) => {
             if e.to_string()
