@@ -114,13 +114,15 @@
 								class="edge"
 								d={`M ${sourceX} ${sourceY} L ${targetX} ${targetY}`}
 								stroke-width={$selectedEdgeIds.has(edge.id)
-									? 3 * inverseScale
+									? 4 * inverseScale
 									: 2 * inverseScale}
 							/>
 							<path
 								class="edge-marker"
 								d="M -4 -3 L 4 0 L -4 3 z"
-								transform={`translate(${markerX}, ${markerY}) rotate(${angle}) scale(${inverseScale})`}
+								transform={`translate(${markerX}, ${markerY}) rotate(${angle}) scale(${$selectedEdgeIds.has(edge.id)
+									? 1.3 * inverseScale
+									: inverseScale})`}
 							/>
 						</g>
 						<!-- Hit Areas on Top -->
@@ -189,14 +191,13 @@
 		which is sufficient for this simple color change. Removing the explicit 'transition' property resolves the
 		conflict with Svelte's 'fade' transition, which needs to animate the 'opacity' property. */
 	}
-	:global(.edge.selected) {
+	:global(.edge-group.selected .edge) {
 		stroke: #3b82f6; /* blue-500 */
 	}
 
 	/* --- Contains Edge Styles --- */
 	:global(.edge-group.contains .edge-part) {
 		stroke: rgba(156, 163, 175, 0.1); /* gray-400 at 10% opacity */
-		transition: stroke 0.2s ease-in-out;
 	}
 	:global(.edge-group.contains.selected .edge-part) {
 		stroke: rgba(59, 130, 246, 0.5); /* blue-500 at 50% opacity */
@@ -228,7 +229,6 @@
 	:global(.edge-marker) {
 		fill: #6b7280; /* gray-500 */
 		stroke: none;
-		transition: fill 0.2s ease-in-out;
 	}
 	:global(.edge-group.selected .edge-marker) {
 		fill: #3b82f6; /* blue-500 */
