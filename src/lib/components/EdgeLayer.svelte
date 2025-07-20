@@ -18,27 +18,21 @@
 		reconnectingEndpoint,
 		startReconnectionProcess,
 		finishReconnectionProcess,
-		updateTempLinePosition,
-		cancelReconnectionProcess
+		updateTempLinePosition
 	} from '$lib/karta/ToolStore';
-	import { selectedEdgeIds, toggleEdgeSelection } from '$lib/karta/EdgeSelectionStore';
+	import { selectedEdgeIds } from '$lib/karta/EdgeSelectionStore';
 	import { screenToCanvasCoordinates } from '$lib/karta/ViewportStore';
 	import type { NodeId } from '$lib/types/types';
 
-	// Note: Scaling edges currently not functional, do fix at some point
 	export let inverseScale: number;
 
 	$: currentCtx = $contexts.get($currentContextId);
 	$: reconnectingEdge = $reconnectingEdgeId ? $edges.get($reconnectingEdgeId) : null;
 
 	function handlePointerDown(edgeId: NodeId, endpoint: 'from' | 'to', event: PointerEvent) {
-		// Also handle selection
-		toggleEdgeSelection(edgeId, event.shiftKey);
-
-		// For now, we allow reconnecting any edge.
-		// Later, we will add a check here to prevent reconnecting 'contains' edges from the child side.
+		// This event is now triggered by the Viewport's master handler
+		// We just need to start the reconnection process
 		startReconnectionProcess(edgeId, endpoint);
-
 		window.addEventListener('pointermove', handlePointerMove);
 		window.addEventListener('pointerup', handlePointerUp, { once: true });
 	}
@@ -79,62 +73,60 @@
 	class="absolute top-0 left-0 w-full h-full pointer-events-none"
 	style="overflow: visible;"
 >
-
 	<!-- Edges -->
 	{#each [...$edges.values()] as edge (edge.id)}
-	 {@const sourceViewNode = currentCtx?.viewNodes.get(edge.source)}
-	 {@const targetViewNode = currentCtx?.viewNodes.get(edge.target)}
+		{@const sourceViewNode = currentCtx?.viewNodes.get(edge.source)}
+		{@const targetViewNode = currentCtx?.viewNodes.get(edge.target)}
 
-	 {#if sourceViewNode && targetViewNode}
-	 {@const sourceState = sourceViewNode.state.current}
-	 {@const targetState = targetViewNode.state.current}
-	 {@const sourceX = sourceState.x}
-	 {@const sourceY = sourceState.y}
-	 {@const targetX = targetState.x}
-	 {@const targetY = targetState.y}
-	 {@const midX = (sourceX + targetX) / 2}
-	 {@const midY = (sourceY + targetY) / 2}
-	 {@const dx = targetX - sourceX}
-	 {@const dy = targetY - sourceY}
-	 {@const length = Math.sqrt(dx * dx + dy * dy)}
-	 {@const ux = length === 0 ? 0 : dx / length}
-	 {@const uy = length === 0 ? 0 : dy / length}
+		{#if sourceViewNode && targetViewNode}
+			{@const sourceState = sourceViewNode.state.current}
+			{@const targetState = targetViewNode.state.current}
+			{@const sourceX = sourceState.x}
+			{@const sourceY = sourceState.y}
+			{@const targetX = targetState.x}
+			{@const targetY = targetState.y}
+			{@const midX = (sourceX + targetX) / 2}
+			{@const midY = (sourceY + targetY) / 2}
+			{@const dx = targetX - sourceX}
+			{@const dy = targetY - sourceY}
+			{@const length = Math.sqrt(dx * dx + dy * dy)}
+			{@const ux = length === 0 ? 0 : dx / length}
+			{@const uy = length === 0 ? 0 : dy / length}
 
-		{#if $reconnectingEdgeId !== edge.id}
-			{#if edge.contains}
-				{@const gapSize = Math.min(10, length * 0.2) * inverseScale}
-				{@const gapStartX = midX - ux * (gapSize / 2)}
-				{@const gapStartY = midY - uy * (gapSize / 2)}
-				{@const gapEndX = midX + ux * (gapSize / 2)}
-				{@const gapEndY = midY + uy * (gapSize / 2)}
-				<g class="edge-container contains" class:selected={$selectedEdgeIds.has(edge.id)}>
-					<!-- Hit Areas -->
-					<path class="edge-hit-area" d={`M ${sourceX} ${sourceY} L ${midX} ${midY}`} stroke-width={30 * inverseScale} on:pointerdown={(e) => handlePointerDown(edge.id, 'from', e)} />
-					<path class="edge-hit-area" d={`M ${midX} ${midY} L ${targetX} ${targetY}`} stroke-width={30 * inverseScale} on:pointerdown={(e) => handlePointerDown(edge.id, 'to', e)} />
-					<!-- Visual Parts -->
-					<g class="edge-group">
+			{#if $reconnectingEdgeId !== edge.id}
+				{#if edge.contains}
+					{@const gapSize = Math.min(10, length * 0.2) * inverseScale}
+					{@const gapStartX = midX - ux * (gapSize / 2)}
+					{@const gapStartY = midY - uy * (gapSize / 2)}
+					{@const gapEndX = midX + ux * (gapSize / 2)}
+					{@const gapEndY = midY + uy * (gapSize / 2)}
+					
+					<!-- Visual Parts First -->
+					<g class="edge-group contains" class:selected={$selectedEdgeIds.has(edge.id)}>
 						<path in:fade={{ duration: 1000 }} out:fade={{ duration: 1000 }} id={`${edge.id}-source`} class="edge-part" d={`M ${sourceX} ${sourceY} L ${gapStartX} ${gapStartY}`} stroke-width={6 * inverseScale} />
 						<path in:fade={{ duration: 1000 }} out:fade={{ duration: 1000 }} id={`${edge.id}-target`} class="edge-part" d={`M ${gapEndX} ${gapEndY} L ${targetX} ${targetY}`} stroke-width={2 * inverseScale} />
 					</g>
-				</g>
-			{:else}
-				{@const angle = (Math.atan2(dy, dx) * 180) / Math.PI}
-				{@const markerX = sourceX + ux * (length * 0.5)}
-				{@const markerY = sourceY + uy * (length * 0.5)}
-				<g class="edge-container" class:selected={$selectedEdgeIds.has(edge.id)}>
-					<!-- Hit Areas -->
-					<path class="edge-hit-area" d={`M ${sourceX} ${sourceY} L ${midX} ${midY}`} stroke-width={30 * inverseScale} on:pointerdown={(e) => handlePointerDown(edge.id, 'from', e)} />
-					<path class="edge-hit-area" d={`M ${midX} ${midY} L ${targetX} ${targetY}`} stroke-width={30 * inverseScale} on:pointerdown={(e) => handlePointerDown(edge.id, 'to', e)} />
-					<!-- Visual Parts -->
-					<g class="edge-group">
+					<!-- Hit Areas on Top -->
+					<path class="edge-hit-area" data-edge-id={edge.id} data-endpoint="from" d={`M ${sourceX} ${sourceY} L ${midX} ${midY}`} stroke-width={30 * inverseScale} />
+					<path class="edge-hit-area" data-edge-id={edge.id} data-endpoint="to" d={`M ${midX} ${midY} L ${targetX} ${targetY}`} stroke-width={30 * inverseScale} />
+
+				{:else}
+					{@const angle = (Math.atan2(dy, dx) * 180) / Math.PI}
+					{@const markerX = sourceX + ux * (length * 0.5)}
+					{@const markerY = sourceY + uy * (length * 0.5)}
+
+					<!-- Visual Parts First -->
+					<g class="edge-group" class:selected={$selectedEdgeIds.has(edge.id)}>
 						<path in:fade={{ duration: 1000 }} out:fade={{ duration: 1000 }} id={edge.id} class="edge" d={`M ${sourceX} ${sourceY} L ${targetX} ${targetY}`} stroke-width={$selectedEdgeIds.has(edge.id) ? 3 * inverseScale : 2 * inverseScale} />
 						<path class="edge-marker" d="M -4 -3 L 4 0 L -4 3 z" transform={`translate(${markerX}, ${markerY}) rotate(${angle}) scale(${inverseScale})`} />
 					</g>
-				</g>
+					<!-- Hit Areas on Top -->
+					<path class="edge-hit-area" data-edge-id={edge.id} data-endpoint="from" d={`M ${sourceX} ${sourceY} L ${midX} ${midY}`} stroke-width={30 * inverseScale} />
+					<path class="edge-hit-area" data-edge-id={edge.id} data-endpoint="to" d={`M ${midX} ${midY} L ${targetX} ${targetY}`} stroke-width={30 * inverseScale} />
+				{/if}
 			{/if}
 		{/if}
-	{/if}
-{/each}
+	{/each}
 
 	<!-- Temporary connection line(s) -->
 	{#if $isConnecting && $tempLineTargetPosition}
@@ -186,11 +178,11 @@
 	}
 
 	/* --- Contains Edge Styles --- */
-	:global(.edge-container.contains .edge-part) {
+	:global(.edge-group.contains .edge-part) {
 		stroke: rgba(156, 163, 175, 0.1); /* gray-400 at 10% opacity */
 		transition: stroke 0.2s ease-in-out;
 	}
-	:global(.edge-container.contains.selected .edge-part) {
+	:global(.edge-group.contains.selected .edge-part) {
 		stroke: rgba(59, 130, 246, 0.5); /* blue-500 at 50% opacity */
 	}
 
@@ -201,13 +193,13 @@
 		pointer-events: stroke;
 		cursor: pointer;
 	}
-	:global(.edge-container:hover .edge) {
+	:global(.edge-hit-area:hover ~ .edge-group .edge) {
 		stroke: #9ca3af; /* gray-400 */
 	}
-	:global(.edge-container.selected:hover .edge) {
+	:global(.edge-hit-area:hover ~ .edge-group.selected .edge) {
 		stroke: #93c5fd; /* blue-300 */
 	}
-	:global(.edge-container:hover .edge-part) {
+	:global(.edge-hit-area:hover ~ .edge-group .edge-part) {
 		stroke: rgba(156, 163, 175, 0.4); /* gray-400 at 40% opacity */
 	}
 
@@ -217,13 +209,13 @@
 		stroke: none;
 		transition: fill 0.2s ease-in-out;
 	}
-	:global(.edge-container.selected .edge-marker) {
+	:global(.edge-group.selected .edge-marker) {
 		fill: #3b82f6; /* blue-500 */
 	}
-	:global(.edge-container:hover .edge-marker) {
+	:global(.edge-hit-area:hover ~ .edge-group .edge-marker) {
 		fill: #9ca3af; /* gray-400 */
 	}
-	:global(.edge-container.selected:hover .edge-marker) {
+	:global(.edge-hit-area:hover ~ .edge-group.selected .edge-marker) {
 		fill: #93c5fd; /* blue-300 */
 	}
 

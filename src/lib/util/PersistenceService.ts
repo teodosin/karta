@@ -16,7 +16,7 @@ export interface PersistenceService {
     getEdge(edgeId: string): Promise<KartaEdge | undefined>;
     getEdges(): Promise<KartaEdge[]>;
     deleteEdges(payload: EdgeDeletionPayload[]): Promise<void>;
-    reconnectEdge(old_from: NodeId, old_to: NodeId, new_from: NodeId, new_to: NodeId): Promise<KartaEdge | undefined>;
+    reconnectEdge(old_from: NodeId, old_to: NodeId, new_from: NodeId, new_to: NodeId, new_from_path: string, new_to_path: string): Promise<KartaEdge | undefined>;
     loadEdges(): Promise<KartaEdge[]>;
     getEdgesByNodeIds(nodeIds: NodeId[]): Promise<Map<string, KartaEdge>>;
 

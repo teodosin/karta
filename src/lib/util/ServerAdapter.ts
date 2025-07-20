@@ -498,9 +498,17 @@ export class ServerAdapter implements PersistenceService {
     async getEdge(edgeId: string): Promise<KartaEdge | undefined> { console.warn(`[ServerAdapter.getEdge] Not implemented for ID: ${edgeId}`); return undefined; }
     async getEdges(): Promise<KartaEdge[]> { console.warn('[ServerAdapter.getEdges] Not implemented'); return []; }
 
-    async reconnectEdge(old_from: NodeId, old_to: NodeId, new_from: NodeId, new_to: NodeId): Promise<KartaEdge | undefined> {
+    async reconnectEdge(old_from: NodeId, old_to: NodeId, new_from: NodeId, new_to: NodeId, new_from_path: string, new_to_path: string): Promise<KartaEdge | undefined> {
         const url = `${SERVER_BASE_URL}/api/edges`;
-        const payload = { old_from, old_to, new_from, new_to };
+        const payload = {
+            old_from,
+            old_to,
+            new_from,
+            new_to,
+            new_from_path,
+            new_to_path,
+        };
+
         try {
             const response = await fetch(url, {
                 method: 'PATCH',
@@ -515,14 +523,14 @@ export class ServerAdapter implements PersistenceService {
             }
 
             const serverEdge: ServerKartaEdge = await response.json();
-            const attributes = transformServerAttributesToRecord(serverEdge.attributes);
             return {
                 id: serverEdge.uuid,
                 source: serverEdge.source,
                 target: serverEdge.target,
-                attributes: attributes,
+                attributes: transformServerAttributesToRecord(serverEdge.attributes),
                 contains: serverEdge.contains,
             };
+
         } catch (error) {
             console.error(`[ServerAdapter.reconnectEdge] Network error reconnecting edge:`, error);
             throw error;

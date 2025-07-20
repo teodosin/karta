@@ -516,6 +516,35 @@ export async function deleteDataNodePermanently(nodeId: NodeId): Promise<void> {
 }
 
 
+export async function ensureNodesExist(nodeIds: NodeId[]): Promise<void> {
+	const currentNodes = get(nodes);
+	const missingNodeIds = nodeIds.filter((id) => !currentNodes.has(id));
+
+	if (missingNodeIds.length === 0) {
+		return;
+	}
+
+	console.log(`[ensureNodesExist] Missing nodes, fetching: ${missingNodeIds.join(', ')}`);
+
+	if (persistenceService) {
+		try {
+			const fetchedNodesPromises = missingNodeIds.map(id => (persistenceService as ServerAdapter).getNode(id));
+			const fetchedNodes = (await Promise.all(fetchedNodesPromises)).filter(n => n !== undefined) as DataNode[];
+			
+			nodes.update((n) => {
+				for (const node of fetchedNodes) {
+					n.set(node.id, node);
+				}
+				return n;
+			});
+		} catch (error) {
+			console.error('[ensureNodesExist] Error fetching missing nodes:', error);
+		}
+	} else {
+		console.warn('[ensureNodesExist] Persistence service not initialized.');
+	}
+}
+
 export { _ensureDataNodeExists };
 
 // --- Generic ViewNode Attribute Update ---
