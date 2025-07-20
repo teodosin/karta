@@ -294,40 +294,37 @@
 
 		// --- Handle Edge Click & Reconnection ---
 		if (clickedOnEdge && e.button === 0) {
+			e.preventDefault();
+			
 			const edgeId = (clickedOnEdge as HTMLElement).dataset.edgeId;
 			const endpoint = (clickedOnEdge as HTMLElement).dataset.endpoint as 'from' | 'to' | undefined;
-
-			// If an endpoint is clicked, we initiate reconnection.
-			if (edgeId && endpoint) {
-				e.preventDefault(); // Prevent default actions like text selection
-				startReconnectionProcess(edgeId, endpoint);
-
-				// Add global listeners for the drag
-				window.addEventListener('pointermove', handleReconnectionPointerMove);
-				window.addEventListener('pointerup', handleReconnectionPointerUp, { once: true });
-				
-				// We still want to allow selection to happen on the initial click,
-				// so we don't return here. The drag will visually start on pointermove.
-			}
-
-			// This part handles simple selection. It runs for both endpoint clicks and general edge clicks.
+			
 			if (edgeId) {
+				// Handle selection first (this should always happen)
 				clearSelection(); // Clear node selection
 				const currentEdgeSelection = get(selectedEdgeIds);
 				const isSelected = currentEdgeSelection.has(edgeId);
-
+				
 				if (e.shiftKey || e.ctrlKey || e.metaKey) {
 					toggleEdgeSelection(edgeId);
 				} else {
 					if (!isSelected || currentEdgeSelection.size > 1) {
 						setSelectedEdges([edgeId]);
 					} else {
-						// If it's already the only selected edge, a click without modifiers should deselect it.
 						clearEdgeSelection();
 					}
 				}
+				
+				// Handle reconnection initiation if an endpoint was clicked
+				if (endpoint) {
+					startReconnectionProcess(edgeId, endpoint);
+					
+					// Add global listeners for the drag
+					window.addEventListener('pointermove', handleReconnectionPointerMove);
+					window.addEventListener('pointerup', handleReconnectionPointerUp, { once: true });
+				}
 			}
-			// We return here to prevent the event from falling through to the background click handler
+			
 			return;
 		}
 
@@ -816,6 +813,13 @@
 			// Corrected typo here
 			const edgeId = (clickedOnEdge as HTMLElement).dataset.edgeId; // Corrected typo here
 			context = { type: "edge", id: edgeId || "unknown" }; // Use unknown if ID not found yet
+			
+			// Add this selection logic for right-click on edges
+			const currentEdgeSelection = get(selectedEdgeIds);
+			if (edgeId && !currentEdgeSelection.has(edgeId)) {
+				setSelectedEdges([edgeId]); // Clear existing and select only this edge
+			}
+			// If the edge is already selected, do nothing to the selection.
 		} else {
 			context = { type: "background" };
 		}

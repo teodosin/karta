@@ -11,29 +11,29 @@ export function clearEdgeSelection() {
 
 // Action to set the selected edges (replaces current selection)
 export function setSelectedEdges(edgeIds: EdgeId[]) {
+    console.log('[EdgeSelectionStore] Setting selected edges:', edgeIds);
     selectedEdgeIds.set(new Set(edgeIds));
 }
 
 // Action to toggle the selection state of a single edge
 export function toggleEdgeSelection(edgeId: EdgeId, add: boolean = false, subtract: boolean = false) {
 	selectedEdgeIds.update(currentSelection => {
+		console.log('[EdgeSelectionStore] Current selection before toggle:', Array.from(currentSelection));
+		const newSelection = new Set(currentSelection);
 		if (add) {
-			const newSelection = new Set(currentSelection);
 			newSelection.add(edgeId);
-			return newSelection;
-		}
-		if (subtract) {
-			const newSelection = new Set(currentSelection);
+		} else if (subtract) {
 			newSelection.delete(edgeId);
-			return newSelection;
-		}
-		// Default behavior: if the edge is already the only thing selected, deselect it.
-		// Otherwise, select only this edge.
-		if (currentSelection.has(edgeId) && currentSelection.size === 1) {
-			return new Set();
 		} else {
-			return new Set([edgeId]);
+			// Default behavior: toggle
+			if (newSelection.has(edgeId)) {
+				newSelection.delete(edgeId);
+			} else {
+				newSelection.add(edgeId);
+			}
 		}
+		console.log('[EdgeSelectionStore] New selection after toggle:', Array.from(newSelection));
+		return newSelection;
 	});
 }
 
