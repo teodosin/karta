@@ -287,17 +287,13 @@ impl KartaService {
         let mut direct_edges: Vec<Edge> = Vec::new();
         let absolute_path = path.full(self.vault_fs_path());
 
-        // Get the DB version of the focal node if it exists, otherwise create a provisional one.
-        let focal_node = self.data()
-            .open_node(&NodeHandle::Path(path.clone()))
-            .unwrap_or_else(|_| DataNode::new(path, NodeTypeId::dir_type()));
+        // Get the focal node, which must exist on the filesystem.
+        let focal_node = self.open_node(&NodeHandle::Path(path.clone()))?;
         nodes.insert(focal_node.uuid(), focal_node.clone());
 
         // Add parent if it exists.
         if let Some(parent_path) = path.parent() {
-            let parent_node = self.data()
-                .open_node(&NodeHandle::Path(parent_path.clone()))
-                .unwrap_or_else(|_| DataNode::new(&parent_path, NodeTypeId::dir_type()));
+            let parent_node = self.open_node(&NodeHandle::Path(parent_path.clone()))?;
             let edge = self.data()
                 .get_edge_strict(&parent_node.uuid(), &focal_node.uuid())
                 .unwrap_or_else(|_| Edge::new_cont(parent_node.uuid(), focal_node.uuid()));
