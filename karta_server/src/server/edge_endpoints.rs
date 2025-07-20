@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, str::FromStr};
 use uuid::Uuid;
 
-use crate::server::{karta_service::KartaService, AppState};
+use crate::{prelude::Edge, server::{karta_service::KartaService, AppState}};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct CreateEdgePayload {
@@ -27,6 +27,35 @@ pub async fn create_edges(
     match service.create_edges(payload) {
         Ok(created_edges) => Ok(Json(created_edges)),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ReconnectEdgePayload {
+    pub old_from: Uuid,
+    pub old_to: Uuid,
+    pub new_from: Uuid,
+    pub new_to: Uuid,
+}
+
+#[axum::debug_handler]
+pub async fn reconnect_edge(
+    State(state): State<AppState>,
+    Json(payload): Json<ReconnectEdgePayload>,
+) -> Result<Json<Edge>, StatusCode> {
+    let mut service = state.service.write().unwrap();
+
+    match service.reconnect_edge(&payload.old_from, &payload.old_to, &payload.new_from, &payload.new_to) {
+        Ok(edge) => Ok(Json(edge)),
+        Err(e) => {
+            if e.to_string()
+                .contains("Reconnection of 'contains' edges is not allowed")
+            {
+                Err(StatusCode::BAD_REQUEST)
+            } else {
+                Err(StatusCode::INTERNAL_SERVER_ERROR)
+            }
+        }
     }
 }
 

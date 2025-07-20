@@ -147,6 +147,16 @@ impl KartaService {
             .collect();
         self.data.delete_edges(&edges_to_delete)
     }
+
+    pub fn reconnect_edge(
+        &mut self,
+        old_from: &Uuid,
+        old_to: &Uuid,
+        new_from: &Uuid,
+        new_to: &Uuid,
+    ) -> Result<Edge, Box<dyn Error>> {
+        self.data.reconnect_edge(old_from, old_to, new_from, new_to)
+    }
  
 
 
