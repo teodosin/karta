@@ -148,16 +148,17 @@ impl GraphEdge for GraphAgdb {
 
     fn reconnect_edge(
         &mut self,
-        from: &Uuid,
-        to: &Uuid,
+        old_from: &Uuid,
+        old_to: &Uuid,
+        new_from: &Uuid,
         new_to: &Uuid,
     ) -> Result<Edge, Box<dyn Error>> {
         let new_edge = self.db.transaction_mut(|t| {
             // Replicate get_edge_strict logic inside transaction
             let edge_query = t.exec(
                 &QueryBuilder::search()
-                    .from(from.to_string())
-                    .to(to.to_string())
+                    .from(old_from.to_string())
+                    .to(old_to.to_string())
                     .query(),
             )?;
 
@@ -193,13 +194,13 @@ impl GraphEdge for GraphAgdb {
             t.exec_mut(&QueryBuilder::remove().ids(edge_id).query())?;
 
             // 2. Create new edge
-            let mut new_edge = Edge::new(*from, *new_to);
+            let mut new_edge = Edge::new(*new_from, *new_to);
             new_edge.set_attributes(original_edge.attributes().clone());
 
             t.exec_mut(
                 &QueryBuilder::insert()
                     .edges()
-                    .from(from.to_string())
+                    .from(new_from.to_string())
                     .to(new_to.to_string())
                     .values_uniform(new_edge.clone())
                     .query(),
