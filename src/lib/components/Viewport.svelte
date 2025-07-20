@@ -30,7 +30,10 @@
 		isConnecting,
 		updateTempLinePosition,
 		finishConnectionProcess,
-	} from "$lib/karta/ToolStore";
+		isReconnecting,
+		finishReconnectionProcess,
+		startReconnectionProcess
+	} from '$lib/karta/ToolStore';
 	import {
 		isCreateNodeMenuOpen,
 		createNodeMenuPosition,
@@ -289,33 +292,36 @@
 		const clickedOnBackground =
 			targetElement === canvasContainer || targetElement === canvas;
 
-		// --- Handle Edge Click ---
+		// --- Handle Edge Click & Reconnection ---
 		if (clickedOnEdge && e.button === 0) {
-			// Left click on an edge hit area
-			e.preventDefault();
+			e.preventDefault(); // Prevent default actions like text selection
 
 			const edgeId = (clickedOnEdge as HTMLElement).dataset.edgeId;
-			if (edgeId) {
-				// Clear node selection when selecting an edge
-				clearSelection();
+			const endpoint = (clickedOnEdge as HTMLElement).dataset.endpoint as 'from' | 'to' | undefined;
 
+			if (edgeId && endpoint) {
+				// This is a reconnection attempt.
+				startReconnectionProcess(edgeId, endpoint);
+
+				// Add global listeners for the drag
+				window.addEventListener('pointermove', handleReconnectionPointerMove);
+				window.addEventListener('pointerup', handleReconnectionPointerUp, { once: true });
+
+				return; // Stop further processing
+			}
+			
+			// This part handles simple selection if it wasn't a reconnection endpoint click
+			if (edgeId) {
+				clearSelection(); // Clear node selection
 				const currentEdgeSelection = get(selectedEdgeIds);
 				const isSelected = currentEdgeSelection.has(edgeId);
-				const shiftKey = e.shiftKey;
-				const ctrlOrMetaKey = e.ctrlKey || e.metaKey;
 
-				if (shiftKey) {
-					// Shift+Click: Toggle selection for this edge
-					toggleEdgeSelection(edgeId);
-				} else if (ctrlOrMetaKey) {
-					// Ctrl/Meta+Click: Toggle selection for this edge
+				if (e.shiftKey || e.ctrlKey || e.metaKey) {
 					toggleEdgeSelection(edgeId);
 				} else {
-					// Simple click: Set selection to only this edge, unless it's already the only selected edge
 					if (!isSelected || currentEdgeSelection.size > 1) {
 						setSelectedEdges([edgeId]);
 					} else {
-						// If already the only selected edge, clear selection
 						clearEdgeSelection();
 					}
 				}
@@ -569,6 +575,41 @@
 		// If not middle mouse or marquee start, delegate to the active tool
 		// Pass the event and the direct target element
 		get(currentTool)?.onPointerDown?.(e, e.target as EventTarget | null);
+	}
+
+	// --- Reconnection Handlers ---
+	function handleReconnectionPointerMove(event: PointerEvent) {
+		if (!get(isReconnecting) || !canvasContainer) return;
+		const rect = canvasContainer.getBoundingClientRect();
+		const { x: canvasX, y: canvasY } = screenToCanvasCoordinates(
+			event.clientX,
+			event.clientY,
+			rect,
+		);
+		updateTempLinePosition(canvasX, canvasY);
+	}
+
+	function handleReconnectionPointerUp(event: PointerEvent) {
+		if (!get(isReconnecting)) return;
+
+		let targetNodeId: string | null = null;
+		let currentElement: HTMLElement | null = event.target as HTMLElement;
+
+		while (currentElement) {
+			if (currentElement.dataset?.id && currentElement.classList.contains('node-wrapper')) {
+				targetNodeId = currentElement.dataset.id;
+				break;
+			}
+			if (currentElement === document.body || currentElement === canvasContainer) {
+				break;
+			}
+			currentElement = currentElement.parentElement;
+		}
+
+		finishReconnectionProcess(targetNodeId);
+
+		// Cleanup global listeners
+		window.removeEventListener('pointermove', handleReconnectionPointerMove);
 	}
 
 	// New handler for pointer move on the element during middle-mouse pan
