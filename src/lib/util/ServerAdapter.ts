@@ -498,7 +498,36 @@ export class ServerAdapter implements PersistenceService {
     async getEdge(edgeId: string): Promise<KartaEdge | undefined> { console.warn(`[ServerAdapter.getEdge] Not implemented for ID: ${edgeId}`); return undefined; }
     async getEdges(): Promise<KartaEdge[]> { console.warn('[ServerAdapter.getEdges] Not implemented'); return []; }
 
+    async reconnectEdge(old_from: NodeId, old_to: NodeId, new_from: NodeId, new_to: NodeId): Promise<KartaEdge | undefined> {
+        const url = `${SERVER_BASE_URL}/api/edges`;
+        const payload = { old_from, old_to, new_from, new_to };
+        try {
+            const response = await fetch(url, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
 
+            if (!response.ok) {
+                const errorBody = await response.text();
+                console.error(`[ServerAdapter.reconnectEdge] Error reconnecting edge. Status: ${response.status}`, errorBody);
+                throw new Error(`Server responded with status ${response.status}`);
+            }
+
+            const serverEdge: ServerKartaEdge = await response.json();
+            const attributes = transformServerAttributesToRecord(serverEdge.attributes);
+            return {
+                id: serverEdge.uuid,
+                source: serverEdge.source,
+                target: serverEdge.target,
+                attributes: attributes,
+                contains: serverEdge.contains,
+            };
+        } catch (error) {
+            console.error(`[ServerAdapter.reconnectEdge] Network error reconnecting edge:`, error);
+            throw error;
+        }
+    }
 
     async deleteEdges(payload: EdgeDeletionPayload[]): Promise<void> {
         if (payload.length === 0) {

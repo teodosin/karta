@@ -642,9 +642,11 @@ export class LocalAdapter implements PersistenceService { // Added export here
 			throw error; // Re-throw the error
 		}
 	}
-
-	// getContexts needs similar conversion logic for viewportSettings
-	// Removed unused getContexts function
+	
+    async reconnectEdge(old_from: NodeId, old_to: NodeId, new_from: NodeId, new_to: NodeId): Promise<KartaEdge | undefined> {
+  console.warn('[LocalAdapter.reconnectEdge] Not implemented.');
+        return undefined;
+    }
 }
 
 // Define database schema (for TypeScript type checking)

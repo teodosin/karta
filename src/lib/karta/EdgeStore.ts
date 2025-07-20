@@ -73,6 +73,36 @@ export async function createEdges(sourceIds: NodeId[], targetId: NodeId) {
     }
 }
 
+export async function reconnectEdge(edgeId: EdgeId, newSource?: NodeId, newTarget?: NodeId) {
+    const originalEdge = get(edges).get(edgeId);
+    if (!originalEdge) {
+        console.error(`[reconnectEdge] Edge ${edgeId} not found.`);
+        return;
+    }
+
+    const old_from = originalEdge.source;
+    const old_to = originalEdge.target;
+    const new_from = newSource || old_from;
+    const new_to = newTarget || old_to;
+
+    if (activeAdapter) {
+        try {
+            const newEdge = await activeAdapter.reconnectEdge(old_from, old_to, new_from, new_to);
+            if (newEdge) {
+                edges.update(e => {
+                    e.delete(edgeId);
+                    e.set(newEdge.id, newEdge);
+                    return e;
+                });
+            }
+        } catch (error) {
+            console.error("Error reconnecting edge:", error);
+        }
+    } else {
+        console.warn("ActiveAdapter not initialized, persistence disabled.");
+    }
+}
+
 export async function deleteEdges(payloads: EdgeDeletionPayload[]) {
     const edgeIdsToDelete: EdgeId[] = [];
     const currentEdges = get(edges);

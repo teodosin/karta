@@ -6,15 +6,73 @@
 -->
 <script lang="ts">
 	import { fade } from 'svelte/transition';
+	import { get } from 'svelte/store';
 	import { edges } from '$lib/karta/EdgeStore';
 	import { contexts, currentContextId } from '$lib/karta/ContextStore';
-	import { isConnecting, connectionSourceNodeIds, tempLineTargetPosition } from '$lib/karta/ToolStore';
-	import { selectedEdgeIds } from '$lib/karta/EdgeSelectionStore';
+	import {
+		isConnecting,
+		connectionSourceNodeIds,
+		tempLineTargetPosition,
+		isReconnecting,
+		reconnectingEdgeId,
+		reconnectingEndpoint,
+		startReconnectionProcess,
+		finishReconnectionProcess,
+		updateTempLinePosition,
+		cancelReconnectionProcess
+	} from '$lib/karta/ToolStore';
+	import { selectedEdgeIds, toggleEdgeSelection } from '$lib/karta/EdgeSelectionStore';
+	import { screenToCanvasCoordinates } from '$lib/karta/ViewportStore';
+	import type { NodeId } from '$lib/types/types';
 
 	// Note: Scaling edges currently not functional, do fix at some point
 	export let inverseScale: number;
 
 	$: currentCtx = $contexts.get($currentContextId);
+	$: reconnectingEdge = $reconnectingEdgeId ? $edges.get($reconnectingEdgeId) : null;
+
+	function handlePointerDown(edgeId: NodeId, endpoint: 'from' | 'to', event: PointerEvent) {
+		// Also handle selection
+		toggleEdgeSelection(edgeId, event.shiftKey);
+
+		// For now, we allow reconnecting any edge.
+		// Later, we will add a check here to prevent reconnecting 'contains' edges from the child side.
+		startReconnectionProcess(edgeId, endpoint);
+
+		window.addEventListener('pointermove', handlePointerMove);
+		window.addEventListener('pointerup', handlePointerUp, { once: true });
+	}
+
+	function handlePointerMove(event: PointerEvent) {
+		if (!get(isReconnecting)) return;
+		const containerEl = document.querySelector('.w-full.h-screen.overflow-hidden') as HTMLElement;
+		if (!containerEl) return;
+		const containerRect = containerEl.getBoundingClientRect();
+		const { x, y } = screenToCanvasCoordinates(event.clientX, event.clientY, containerRect);
+		updateTempLinePosition(x, y);
+	}
+
+	function handlePointerUp(event: PointerEvent) {
+		if (!get(isReconnecting)) return;
+
+		let targetNodeId: NodeId | null = null;
+		let currentElement = event.target as HTMLElement;
+
+		while (currentElement) {
+			if (currentElement.dataset?.id && currentElement.classList.contains('node-wrapper')) {
+				targetNodeId = currentElement.dataset.id;
+				break;
+			}
+			const viewportContainer = document.querySelector('.w-full.h-screen.overflow-hidden');
+			if (currentElement === document.body || currentElement === viewportContainer) {
+				break;
+			}
+			currentElement = currentElement.parentElement as HTMLElement;
+		}
+
+		finishReconnectionProcess(targetNodeId);
+		window.removeEventListener('pointermove', handlePointerMove);
+	}
 </script>
 
 <svg
@@ -35,17 +93,28 @@
 	  {@const targetX = targetState.x}
 	  {@const targetY = targetState.y}
 
-	  <!-- Hit area for interaction (common for both edge types) -->
+	  {@const midX = (sourceX + targetX) / 2}
+	  {@const midY = (sourceY + targetY) / 2}
+
+	  <!-- Source Hit Area -->
 	  <path
-	   id={`hit-area-${edge.id}`}
-	   class="edge-hit-area"
-	   d={`M ${sourceX} ${sourceY} L ${targetX} ${targetY}`}
-	   data-edge-id={edge.id}
-	   stroke-width={30 * inverseScale}
+	  class="edge-hit-area"
+	  d={`M ${sourceX} ${sourceY} L ${midX} ${midY}`}
+	  stroke-width={30 * inverseScale}
+	  on:pointerdown={(e) => handlePointerDown(edge.id, 'from', e)}
 	  />
 
-	  {#if edge.contains}
-	   {@const dx = targetX - sourceX}
+	  <!-- Target Hit Area -->
+	  <path
+	  class="edge-hit-area"
+	  d={`M ${midX} ${midY} L ${targetX} ${targetY}`}
+	  stroke-width={30 * inverseScale}
+	  on:pointerdown={(e) => handlePointerDown(edge.id, 'to', e)}
+	  />
+
+	  {#if $reconnectingEdgeId !== edge.id}
+	   {#if edge.contains}
+	    {@const dx = targetX - sourceX}
 	   {@const dy = targetY - sourceY}
 	   {@const length = Math.sqrt(dx * dx + dy * dy)}
 	   {@const gapSize = Math.min(10, length * 0.2) * inverseScale}
@@ -89,8 +158,9 @@
 	   	stroke-width={$selectedEdgeIds.has(edge.id) ? 3 * inverseScale : 2 * inverseScale}
 	   />
 	  {/if}
-	 {/if}
-	{/each}
+	{/if}
+	{/if}
+{/each}
 
 	<!-- Temporary connection line(s) -->
 	{#if $isConnecting && $tempLineTargetPosition}
@@ -106,6 +176,20 @@
 				/>
 			{/if}
 		{/each}
+	{/if}
+
+	<!-- Temporary reconnection line -->
+	{#if $isReconnecting && $tempLineTargetPosition && reconnectingEdge}
+		{@const endpointToKeepId = $reconnectingEndpoint === 'from' ? reconnectingEdge.target : reconnectingEdge.source}
+		{@const staticViewNode = currentCtx?.viewNodes.get(endpointToKeepId)}
+		{@const staticState = staticViewNode?.state.current}
+		{#if staticState}
+			<path
+				class="edge"
+				d={`M ${staticState.x} ${staticState.y} L ${$tempLineTargetPosition.x} ${$tempLineTargetPosition.y}`}
+				stroke-width={2 * inverseScale}
+			/>
+		{/if}
 	{/if}
 </svg>
 
