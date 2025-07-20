@@ -1104,7 +1104,18 @@
 					disabled:
 						!targetNodeId || targetNodeId === $currentContextId,
 				},
-				{
+			];
+
+			// Conditionally add "Remove from Context"
+			const allEdges = get(edges);
+			const focalNodeId = get(currentContextId);
+			const isConnectedToFocal = [...allEdges.values()].some(edge =>
+				(edge.source === targetNodeId && edge.target === focalNodeId) ||
+				(edge.source === focalNodeId && edge.target === targetNodeId)
+			);
+
+			if (!isConnectedToFocal) {
+				items.push({
 					label: "Remove from Context",
 					action: () => {
 						const selected = get(selectedNodeIds);
@@ -1125,7 +1136,10 @@
 					// Disable if it's the focal node
 					disabled:
 						!targetNodeId || targetNodeId === $currentContextId,
-				},
+				});
+			}
+
+			items.push(
 				{
 					label: "Center View",
 					action: () => {
@@ -1166,8 +1180,8 @@
 					},
 					disabled:
 						!targetNodeId || targetNodeId === $currentContextId, // Disable if it's the focal node
-				},
-			];
+				}
+			);
 		} else if (contextType === "edge") {
 			const selectedEdgesSet = get(selectedEdgeIds);
 			const allKartaEdges = get(edges);
