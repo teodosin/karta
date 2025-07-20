@@ -162,7 +162,7 @@
 			<!-- External Label & Input - Render only if NOT ghost AND isNameVisible is true -->
 			{#if isNameVisible}
 				<div
-					class="node-label absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full mt-1 px-1.5 py-0.5 bg-gray-900 bg-opacity-80 text-center text-xs rounded pointer-events-auto break-words"
+					class="node-label absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full mt-1 px-1.5 py-0.5 bg-gray-900 bg-opacity-80 text-center text-xs rounded pointer-events-auto line-clamp-3"
 					style="color: var(--color-text-color);"
 					class:cursor-text={isRenamable}
 					title={isRenamable

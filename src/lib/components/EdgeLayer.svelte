@@ -10,16 +10,11 @@
 	import { contexts, currentContextId } from '$lib/karta/ContextStore';
 	import { isConnecting, connectionSourceNodeIds, tempLineTargetPosition } from '$lib/karta/ToolStore';
 	import { selectedEdgeIds } from '$lib/karta/EdgeSelectionStore';
-	import { settings } from '$lib/karta/SettingsStore';
-	import type { NodeId } from '../types/types';
-	import { get } from 'svelte/store';
 
-	// Declare inverseScale as a prop passed from Viewport
+	// Note: Scaling edges currently not functional, do fix at some point
 	export let inverseScale: number;
 
-	// Get the current context object reactively
 	$: currentCtx = $contexts.get($currentContextId);
-
 </script>
 
 <svg
