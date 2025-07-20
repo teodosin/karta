@@ -48,7 +48,7 @@ impl ContextDb {
         const GRID_COLUMNS: usize = 5;
         const NODE_WIDTH: f32 = 100.0;
         const NODE_HEIGHT: f32 = 100.0;
-        const GAPX: f32 = 20.0;
+        const GAPX: f32 = 25.0;
         const GAPY: f32 = GAPX * 3.2;
 
         // --- Find Focal, Parent, and Children Nodes ---
@@ -111,7 +111,7 @@ impl ContextDb {
             let col = i % GRID_COLUMNS;
             let row = i / GRID_COLUMNS;
             let child_x = grid_offset_x + ((col as f32) * (NODE_WIDTH + GAPX));
-            let child_y = NODE_HEIGHT + GAPY + ((row as f32) * (NODE_HEIGHT + GAPX)); // Below focal
+            let child_y = NODE_HEIGHT + GAPY + ((row as f32) * (NODE_HEIGHT + GAPY)); // Below focal
             let child_view_node = ViewNode::from_data_node((*child_node).clone())
                 .sized(NODE_WIDTH, NODE_HEIGHT)
                 .positioned(child_x, child_y);
