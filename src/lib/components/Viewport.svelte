@@ -294,23 +294,23 @@
 
 		// --- Handle Edge Click & Reconnection ---
 		if (clickedOnEdge && e.button === 0) {
-			e.preventDefault(); // Prevent default actions like text selection
-
 			const edgeId = (clickedOnEdge as HTMLElement).dataset.edgeId;
 			const endpoint = (clickedOnEdge as HTMLElement).dataset.endpoint as 'from' | 'to' | undefined;
 
+			// If an endpoint is clicked, we initiate reconnection.
 			if (edgeId && endpoint) {
-				// This is a reconnection attempt.
+				e.preventDefault(); // Prevent default actions like text selection
 				startReconnectionProcess(edgeId, endpoint);
 
 				// Add global listeners for the drag
 				window.addEventListener('pointermove', handleReconnectionPointerMove);
 				window.addEventListener('pointerup', handleReconnectionPointerUp, { once: true });
-
-				return; // Stop further processing
+				
+				// We still want to allow selection to happen on the initial click,
+				// so we don't return here. The drag will visually start on pointermove.
 			}
-			
-			// This part handles simple selection if it wasn't a reconnection endpoint click
+
+			// This part handles simple selection. It runs for both endpoint clicks and general edge clicks.
 			if (edgeId) {
 				clearSelection(); // Clear node selection
 				const currentEdgeSelection = get(selectedEdgeIds);
@@ -322,10 +322,12 @@
 					if (!isSelected || currentEdgeSelection.size > 1) {
 						setSelectedEdges([edgeId]);
 					} else {
+						// If it's already the only selected edge, a click without modifiers should deselect it.
 						clearEdgeSelection();
 					}
 				}
 			}
+			// We return here to prevent the event from falling through to the background click handler
 			return;
 		}
 

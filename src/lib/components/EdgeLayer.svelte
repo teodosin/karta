@@ -25,6 +25,7 @@
 
 	$: currentCtx = $contexts.get($currentContextId);
 	$: reconnectingEdge = $reconnectingEdgeId ? $edges.get($reconnectingEdgeId) : null;
+	$: isDraggingReconnection = $isReconnecting && $tempLineTargetPosition !== null;
 </script>
 
 <svg
@@ -57,7 +58,7 @@
 				The .edge-container class is the new parent for targeting.
 			-->
 			<g class="edge-container">
-				{#if $reconnectingEdgeId !== edge.id}
+				{#if !isDraggingReconnection || $reconnectingEdgeId !== edge.id}
 					{#if edge.contains}
 						{@const gapSize = Math.min(10, length * 0.2) * inverseScale}
 						{@const gapStartX = midX - ux * (gapSize / 2)}
