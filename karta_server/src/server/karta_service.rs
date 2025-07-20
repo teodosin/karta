@@ -352,7 +352,7 @@ impl KartaService {
         let mut final_edges_set: HashSet<(Uuid, Uuid)> = HashSet::new();
 
         for edge in direct_edges {
-            if nodes.contains_key(edge.source()) && nodes.contains_key(edge.target()) {
+            if edge.source() != edge.target() && nodes.contains_key(edge.source()) && nodes.contains_key(edge.target()) {
                 if final_edges_set.insert((*edge.source(), *edge.target())) {
                     final_edges.push(edge.clone());
                 }
