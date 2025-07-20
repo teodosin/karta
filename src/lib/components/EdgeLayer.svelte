@@ -86,79 +86,53 @@
 	 {@const targetViewNode = currentCtx?.viewNodes.get(edge.target)}
 
 	 {#if sourceViewNode && targetViewNode}
-	  {@const sourceState = sourceViewNode.state.current}
-	  {@const targetState = targetViewNode.state.current}
-	  {@const sourceX = sourceState.x}
-	  {@const sourceY = sourceState.y}
-	  {@const targetX = targetState.x}
-	  {@const targetY = targetState.y}
+	 {@const sourceState = sourceViewNode.state.current}
+	 {@const targetState = targetViewNode.state.current}
+	 {@const sourceX = sourceState.x}
+	 {@const sourceY = sourceState.y}
+	 {@const targetX = targetState.x}
+	 {@const targetY = targetState.y}
+	 {@const midX = (sourceX + targetX) / 2}
+	 {@const midY = (sourceY + targetY) / 2}
+	 {@const dx = targetX - sourceX}
+	 {@const dy = targetY - sourceY}
+	 {@const length = Math.sqrt(dx * dx + dy * dy)}
+	 {@const ux = length === 0 ? 0 : dx / length}
+	 {@const uy = length === 0 ? 0 : dy / length}
 
-	  {@const midX = (sourceX + targetX) / 2}
-	  {@const midY = (sourceY + targetY) / 2}
-
-	  <!-- Source Hit Area -->
-	  <path
-	  class="edge-hit-area"
-	  d={`M ${sourceX} ${sourceY} L ${midX} ${midY}`}
-	  stroke-width={30 * inverseScale}
-	  on:pointerdown={(e) => handlePointerDown(edge.id, 'from', e)}
-	  />
-
-	  <!-- Target Hit Area -->
-	  <path
-	  class="edge-hit-area"
-	  d={`M ${midX} ${midY} L ${targetX} ${targetY}`}
-	  stroke-width={30 * inverseScale}
-	  on:pointerdown={(e) => handlePointerDown(edge.id, 'to', e)}
-	  />
-
-	  {#if $reconnectingEdgeId !== edge.id}
-	   {#if edge.contains}
-	    {@const dx = targetX - sourceX}
-	   {@const dy = targetY - sourceY}
-	   {@const length = Math.sqrt(dx * dx + dy * dy)}
-	   {@const gapSize = Math.min(10, length * 0.2) * inverseScale}
-	   {@const ux = dx / length}
-	   {@const uy = dy / length}
-	   {@const midX = sourceX + dx * 0.5}
-	   {@const midY = sourceY + dy * 0.5}
-	   {@const gapStartX = midX - ux * (gapSize / 2)}
-	   {@const gapStartY = midY - uy * (gapSize / 2)}
-	   {@const gapEndX = midX + ux * (gapSize / 2)}
-	   {@const gapEndY = midY + uy * (gapSize / 2)}
-
-	  <g class={`edge-group contains ${$selectedEdgeIds.has(edge.id) ? 'selected' : ''}`}>
-	   <!-- Source side of the contains edge -->
-	   <path
-	   	in:fade={{ duration: 1000 }}
-	   	out:fade={{ duration: 1000 }}
-	   	id={`${edge.id}-source`}
-	   	class="edge-part"
-	   	d={`M ${sourceX} ${sourceY} L ${gapStartX} ${gapStartY}`}
-	   	stroke-width={6 * inverseScale}
-	   />
-	   <!-- Target side of the contains edge -->
-	   <path
-	   	in:fade={{ duration: 1000 }}
-	   	out:fade={{ duration: 1000 }}
-	   	id={`${edge.id}-target`}
-	   	class="edge-part"
-	   	d={`M ${gapEndX} ${gapEndY} L ${targetX} ${targetY}`}
-	   	stroke-width={2 * inverseScale}
-	   />
-	  </g>
-	  {:else}
-	   <!-- Standard visible edge -->
-	   <path
-	   	in:fade={{ duration: 1000 }}
-	   	out:fade={{ duration: 1000 }}
-	   	id={edge.id}
-	   	class={`edge ${$selectedEdgeIds.has(edge.id) ? 'selected' : ''}`}
-	   	d={`M ${sourceX} ${sourceY} L ${targetX} ${targetY}`}
-	   	stroke-width={$selectedEdgeIds.has(edge.id) ? 3 * inverseScale : 2 * inverseScale}
-	   />
-	  {/if}
-	{/if}
+		{#if $reconnectingEdgeId !== edge.id}
+			{#if edge.contains}
+				{@const gapSize = Math.min(10, length * 0.2) * inverseScale}
+				{@const gapStartX = midX - ux * (gapSize / 2)}
+				{@const gapStartY = midY - uy * (gapSize / 2)}
+				{@const gapEndX = midX + ux * (gapSize / 2)}
+				{@const gapEndY = midY + uy * (gapSize / 2)}
+				<g class="edge-container contains" class:selected={$selectedEdgeIds.has(edge.id)}>
+					<!-- Hit Areas -->
+					<path class="edge-hit-area" d={`M ${sourceX} ${sourceY} L ${midX} ${midY}`} stroke-width={30 * inverseScale} on:pointerdown={(e) => handlePointerDown(edge.id, 'from', e)} />
+					<path class="edge-hit-area" d={`M ${midX} ${midY} L ${targetX} ${targetY}`} stroke-width={30 * inverseScale} on:pointerdown={(e) => handlePointerDown(edge.id, 'to', e)} />
+					<!-- Visual Parts -->
+					<g class="edge-group">
+						<path in:fade={{ duration: 1000 }} out:fade={{ duration: 1000 }} id={`${edge.id}-source`} class="edge-part" d={`M ${sourceX} ${sourceY} L ${gapStartX} ${gapStartY}`} stroke-width={6 * inverseScale} />
+						<path in:fade={{ duration: 1000 }} out:fade={{ duration: 1000 }} id={`${edge.id}-target`} class="edge-part" d={`M ${gapEndX} ${gapEndY} L ${targetX} ${targetY}`} stroke-width={2 * inverseScale} />
+					</g>
+				</g>
+			{:else}
+				{@const angle = (Math.atan2(dy, dx) * 180) / Math.PI}
+				{@const markerX = sourceX + ux * (length * 0.5)}
+				{@const markerY = sourceY + uy * (length * 0.5)}
+				<g class="edge-container" class:selected={$selectedEdgeIds.has(edge.id)}>
+					<!-- Hit Areas -->
+					<path class="edge-hit-area" d={`M ${sourceX} ${sourceY} L ${midX} ${midY}`} stroke-width={30 * inverseScale} on:pointerdown={(e) => handlePointerDown(edge.id, 'from', e)} />
+					<path class="edge-hit-area" d={`M ${midX} ${midY} L ${targetX} ${targetY}`} stroke-width={30 * inverseScale} on:pointerdown={(e) => handlePointerDown(edge.id, 'to', e)} />
+					<!-- Visual Parts -->
+					<g class="edge-group">
+						<path in:fade={{ duration: 1000 }} out:fade={{ duration: 1000 }} id={edge.id} class="edge" d={`M ${sourceX} ${sourceY} L ${targetX} ${targetY}`} stroke-width={$selectedEdgeIds.has(edge.id) ? 3 * inverseScale : 2 * inverseScale} />
+						<path class="edge-marker" d="M -4 -3 L 4 0 L -4 3 z" transform={`translate(${markerX}, ${markerY}) rotate(${angle}) scale(${inverseScale})`} />
+					</g>
+				</g>
+			{/if}
+		{/if}
 	{/if}
 {/each}
 
@@ -207,42 +181,56 @@
 		which is sufficient for this simple color change. Removing the explicit 'transition' property resolves the
 		conflict with Svelte's 'fade' transition, which needs to animate the 'opacity' property. */
 	}
-	/* Apply hover style to the visible edge when the hit area is hovered */
-	:global(.edge-hit-area:hover + .edge) {
-		stroke: #9ca3af; /* gray-400 */
-	}
 	:global(.edge.selected) {
 		stroke: #3b82f6; /* blue-500 */
 	}
-	/* New rule for selected edge hover */
-	:global(.edge-hit-area:hover + .edge.selected) {
-		stroke: #93c5fd; /* blue-300 */ /* Lighter blue for selected hover */
-	}
 
 	/* --- Contains Edge Styles --- */
-	:global(.edge-group.contains .edge-part) {
+	:global(.edge-container.contains .edge-part) {
 		stroke: rgba(156, 163, 175, 0.1); /* gray-400 at 10% opacity */
 		transition: stroke 0.2s ease-in-out;
 	}
+	:global(.edge-container.contains.selected .edge-part) {
+		stroke: rgba(59, 130, 246, 0.5); /* blue-500 at 50% opacity */
+	}
 
-	/* Hovering over the hit area affects the whole group */
-	:global(.edge-hit-area:hover + .edge-group.contains .edge-part) {
+	/* --- Hit Area & Hover Effects --- */
+	:global(.edge-hit-area) {
+		stroke: transparent;
+		fill: none;
+		pointer-events: stroke;
+		cursor: pointer;
+	}
+	:global(.edge-container:hover .edge) {
+		stroke: #9ca3af; /* gray-400 */
+	}
+	:global(.edge-container.selected:hover .edge) {
+		stroke: #93c5fd; /* blue-300 */
+	}
+	:global(.edge-container:hover .edge-part) {
 		stroke: rgba(156, 163, 175, 0.4); /* gray-400 at 40% opacity */
 	}
 
-	:global(.edge-group.contains.selected .edge-part) {
-		stroke: rgba(59, 130, 246, 0.5); /* blue-500 at 50% opacity */
+	/* --- Directional Marker --- */
+	:global(.edge-marker) {
+		fill: #6b7280; /* gray-500 */
+		stroke: none;
+		transition: fill 0.2s ease-in-out;
 	}
-	:global(.edge-hit-area) {
-		stroke: transparent;
-		/* stroke-width is now set inline based on inverseScale */
-		fill: none;
-		pointer-events: stroke; /* Only trigger on stroke */
-		cursor: pointer; /* Indicate interactivity */
+	:global(.edge-container.selected .edge-marker) {
+		fill: #3b82f6; /* blue-500 */
 	}
+	:global(.edge-container:hover .edge-marker) {
+		fill: #9ca3af; /* gray-400 */
+	}
+	:global(.edge-container.selected:hover .edge-marker) {
+		fill: #93c5fd; /* blue-300 */
+	}
+
+	/* --- Temp Lines --- */
 	:global(.temp-edge) {
 		stroke: #86198f; /* pink-900 */
-		stroke-width: 2; /* Keep temp edge constant size for now */
+		stroke-width: 2;
 		stroke-dasharray: 5, 5;
 		fill: none;
 	}
