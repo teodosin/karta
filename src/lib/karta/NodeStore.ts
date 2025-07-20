@@ -1,16 +1,13 @@
 import { writable, get } from 'svelte/store';
-import { setSelectedNodes } from './SelectionStore'; // Import selection action
-// Removed highlightNodeId import
+import { setSelectedNodes } from './SelectionStore';
 import { localAdapter } from '../util/LocalAdapter';
 import { ServerAdapter } from '../util/ServerAdapter';
-import type { DataNode, NodeId, AssetData, AbsoluteTransform, ViewportSettings, TweenableNodeState, StorableContext, StorableViewNode, StorableViewportSettings, ViewNode, Context } from '../types/types'; // Added Context type
+import type { DataNode, NodeId, AssetData, TweenableNodeState, ViewNode, Context, KartaEdge } from '../types/types';
 import { v4 as uuidv4 } from 'uuid';
 import { getDefaultAttributesForType, getDefaultViewNodeStateForType } from '$lib/node_types/registry';
 import { Tween } from 'svelte/motion';
-// Import removeViewNodeFromContext and existingContextsMap as well
 import { currentContextId, contexts, removeViewNodeFromContext, existingContextsMap } from './ContextStore';
-import { viewTransform, centerViewOnCanvasPoint } from './ViewportStore'; // Import centering function
-
+import { viewTransform, centerViewOnCanvasPoint } from './ViewportStore';
 export const nodes = writable<Map<NodeId, DataNode>>(new Map());
 
 // Use a generic persistence service, which can be LocalAdapter or ServerAdapter
@@ -62,7 +59,7 @@ export async function createNodeAtPosition(
     initialWidth?: number,
     initialHeight?: number
 ): Promise<NodeId | null> {
-    
+
     const newNodeId: NodeId = uuidv4();
     const now = Date.now();
     const baseName = attributes.name || ntype;
@@ -139,6 +136,20 @@ export async function createNodeAtPosition(
                 return ctxMap;
             });
 
+            // Optimistically create the edge to the parent
+            const allNodes = get(nodes);
+            const parentNode = Array.from(allNodes.values()).find(n => n.path === parentPath);
+            if (parentNode) {
+                const newEdge: KartaEdge = {
+                    id: uuidv4(),
+                    source: parentNode.id,
+                    target: persistedNode.id,
+                    attributes: {},
+                    contains: true,
+                };
+                edges.update(e => e.set(newEdge.id, newEdge));
+            }
+
             return persistedNode.id; // Return ID on successful save
         } catch (error) {
             console.error("Error saving node or context after creation:", error);
@@ -153,58 +164,34 @@ export async function createNodeAtPosition(
 }
 
 export function findPhysicalParentPath(contextId: NodeId): string {
-    console.log(`[findPhysicalParentPath] Starting search from contextId: ${contextId}`);
-    let currentId = contextId;
-    let parentPath: string | undefined;
     const allNodes = get(nodes);
-    const MAX_DEPTH = 10; // Safeguard against infinite loops
-    let depth = 0;
+    const startNode = allNodes.get(contextId);
 
-    while (depth < MAX_DEPTH) {
-        console.log(`[findPhysicalParentPath] Depth ${depth}, currentId: ${currentId}`);
-        const currentNode = allNodes.get(currentId);
-        if (!currentNode) {
-            const errorMsg = `[findPhysicalParentPath] Could not find node data for ID: ${currentId}`;
-            console.error(errorMsg);
-            throw new Error(errorMsg);
-        }
-
-        console.log(`[findPhysicalParentPath] Checking node: path='${currentNode.path}', ntype='${currentNode.ntype}'`);
-
-        // Check if the current node is a valid physical parent
-        if (currentNode.ntype === 'core/fs/dir') {
-            parentPath = currentNode.path;
-            console.log(`[findPhysicalParentPath] Found physical parent: '${parentPath}'`);
-            break;
-        }
-
-        // If not, move up to the parent
-        const currentPath = currentNode.path;
-        if (!currentPath || currentPath === '/') {
-            console.log(`[findPhysicalParentPath] Reached root or invalid path, stopping search.`);
-            break;
-        }
-        const parentPathStr = currentPath.substring(0, currentPath.lastIndexOf('/')) || '/';
-        console.log(`[findPhysicalParentPath] Moving up to parent path: '${parentPathStr}'`);
-
-        const parentNode = Array.from(allNodes.values()).find(n => n.path === parentPathStr);
-
-        if (!parentNode) {
-            const errorMsg = `[findPhysicalParentPath] Could not find parent node with path: '${parentPathStr}'`;
-            console.error(errorMsg);
-            throw new Error(errorMsg);
-        }
-        currentId = parentNode.id;
-        depth++;
+    if (!startNode) {
+        throw new Error(`[findPhysicalParentPath] Could not find node data for starting context ID: ${contextId}`);
     }
 
-    if (!parentPath) {
-        const errorMsg = `[findPhysicalParentPath] Could not find a valid physical parent for context ${contextId}.`;
-        console.error(errorMsg);
-        throw new Error(errorMsg);
+    // If the starting context node itself is a directory, it's the parent.
+    if (startNode.ntype === 'core/fs/dir') {
+        console.log(`[findPhysicalParentPath] Context node is a directory. Returning its path: '${startNode.path}'`);
+        return startNode.path;
     }
-    console.log(`[findPhysicalParentPath] Successfully found and returning parent path: '${parentPath}'`);
-    return parentPath;
+
+    // If the starting node is not a directory, its immediate parent must be the physical parent.
+    const parentPathStr = startNode.path.substring(0, startNode.path.lastIndexOf('/')) || '/';
+    const parentNode = Array.from(allNodes.values()).find(n => n.path === parentPathStr);
+
+    if (!parentNode) {
+        throw new Error(`[findPhysicalParentPath] Could not find parent node with path: '${parentPathStr}'`);
+    }
+
+    // As a final sanity check, ensure the found parent is actually a directory.
+    if (parentNode.ntype !== 'core/fs/dir') {
+        throw new Error(`[findPhysicalParentPath] Invalid State: Parent node '${parentNode.path}' is not a directory.`);
+    }
+
+    console.log(`[findPhysicalParentPath] Found physical parent: '${parentNode.path}'`);
+    return parentNode.path;
 }
 
 export async function createImageNodeFromDataUrl(position: { x: number, y: number }, dataUrl: string, width?: number, height?: number) {
@@ -439,7 +426,7 @@ export async function fetchAvailableContextDetails(): Promise<{ id: NodeId, name
 }
 
 // Import necessary stores and types for deletion
-import { edges, deleteEdges } from './EdgeStore'; // Assuming EdgeStore exports edges store and deleteEdges action
+import { edges, deleteEdges } from './EdgeStore';
 import { ROOT_NODE_ID } from '$lib/constants';
 
 export async function deleteDataNodePermanently(nodeId: NodeId): Promise<void> {
