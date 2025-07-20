@@ -154,7 +154,23 @@ impl KartaService {
         old_to: &Uuid,
         new_from: &Uuid,
         new_to: &Uuid,
+        new_from_path: &str,
+        new_to_path: &str,
     ) -> Result<Edge, Box<dyn Error>> {
+        let new_from_path = NodePath::from_alias(new_from_path);
+        let new_to_path = NodePath::from_alias(new_to_path);
+
+        // Ensure the new nodes are indexed before attempting to reconnect.
+        if self.data.open_node(&NodeHandle::Uuid(*new_from)).is_err() {
+            let node = fs_reader::destructure_single_path(self.vault_fs_path(), &new_from_path.full(self.vault_fs_path()))?;
+            self.data_mut().insert_nodes(vec![node]);
+        }
+
+        if self.data.open_node(&NodeHandle::Uuid(*new_to)).is_err() {
+            let node = fs_reader::destructure_single_path(self.vault_fs_path(), &new_to_path.full(self.vault_fs_path()))?;
+            self.data_mut().insert_nodes(vec![node]);
+        }
+
         self.data.reconnect_edge(old_from, old_to, new_from, new_to)
     }
  
