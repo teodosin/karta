@@ -507,6 +507,60 @@ impl KartaService {
         Ok(())
     }
 
+    /// Move a node to a target location with optional renaming for collision resolution
+    pub fn move_node_with_rename(
+        &mut self,
+        node_path: &NodePath,
+        target_parent_path: &NodePath,
+        new_name: Option<&str>,
+    ) -> Result<NodePath, Box<dyn Error>> {
+        let source_fs_path = node_path.full(self.vault_fs_path());
+        let is_physical_node = source_fs_path.exists();
+
+        // Determine the final name (either provided or original)
+        let original_name = node_path.name();
+        let final_name = new_name.unwrap_or(&original_name);
+        let target_node_path = target_parent_path.join(final_name);
+
+        // 1. Check if target parent is indexed, and index it if it exists on filesystem
+        let target_parent_indexed = self
+            .data
+            .open_node(&NodeHandle::Path(target_parent_path.clone()))
+            .is_ok();
+            
+        if !target_parent_indexed {
+            // Try to index the target parent if it exists on filesystem
+            let target_parent_fs_path = target_parent_path.full(self.vault_fs_path());
+            if target_parent_fs_path.exists() && target_parent_fs_path.is_dir() {
+                let target_node_data =
+                    fs_reader::destructure_single_path(self.vault_fs_path(), target_parent_path)?;
+                self.data.insert_nodes(vec![target_node_data]);
+            }
+            // Note: If target doesn't exist on filesystem, the move will fail during filesystem operation
+        }
+
+        // 2. Do database updates recursively with the final target path (only if source is indexed)
+        if let Ok(_) = self.data.open_node(&NodeHandle::Path(node_path.clone())) {
+            self.move_node_in_database_with_target(node_path, &target_node_path)?;
+        }
+
+        // 3. Move on filesystem (only once, at the top level)
+        if is_physical_node {
+            let target_fs_path = target_parent_path
+                .full(self.vault_fs_path())
+                .join(final_name);
+            std::fs::rename(&source_fs_path, &target_fs_path)?;
+        } else {
+            // If the node is virtual, the target parent must be a physical directory
+            let target_parent_fs_path = target_parent_path.full(self.vault_fs_path());
+            if !target_parent_fs_path.is_dir() {
+                return Err("Virtual nodes can only be moved to physical directories.".into());
+            }
+        }
+
+        Ok(target_node_path)
+    }
+
     /// Helper function to recursively update database paths without touching the filesystem
     fn move_node_in_database(
         &mut self,
@@ -554,6 +608,64 @@ impl KartaService {
                         
                         // Recursively update the child in database only
                         self.move_node_in_database(&child_path, &new_child_target)?;
+                    }
+                }
+            }
+        } else {
+            // Node not found in database - this is OK for unindexed nodes
+        }
+
+        Ok(())
+    }
+
+    /// Helper function to recursively update database paths to a specific target path (for renaming moves)
+    fn move_node_in_database_with_target(
+        &mut self,
+        node_path: &NodePath,
+        target_path: &NodePath,
+    ) -> Result<(), Box<dyn Error>> {
+        // If the node is indexed in the DB, handle database updates recursively
+        if let Ok(node) = self.data.open_node(&NodeHandle::Path(node_path.clone())) {
+            // Get current parent UUID by looking at edges before reparenting
+            let mut old_parent_uuid = None;
+            let connections = self.data().open_node_connections(&node_path);
+            for (connected_node, edge) in connections {
+                if edge.is_contains() && *edge.target() == node.uuid() {
+                    old_parent_uuid = Some(*edge.source());
+                    break;
+                }
+            }
+            
+            let old_parent_uuid = old_parent_uuid.ok_or_else(|| "Could not find old parent UUID")?;
+            let new_parent_path = target_path.parent().ok_or_else(|| "Target path has no parent")?;
+            let new_parent_node = self
+                .data
+                .open_node(&NodeHandle::Path(new_parent_path.clone()))?;
+
+            // Update this node's path attribute in the database FIRST
+            let new_path_attribute =
+                Attribute::new_string("path".to_string(), target_path.alias().to_string());
+            self.data
+                .update_node_attributes(node.uuid(), vec![new_path_attribute])?;
+
+            // Reconnect the 'contains' edge from the old parent to the new parent
+            // Use the specialized reparent_node method for contains edges
+            self.data.reparent_node(&node.uuid(), &old_parent_uuid, &new_parent_node.uuid())?;
+
+            // Handle children AFTER updating this node's path
+            if node.is_dir() {
+                // Get direct children using the updated path
+                let connections = self.data().open_node_connections(&target_path);
+                
+                for (child_node, edge) in connections {
+                    // Only process "contains" edges (parent-child relationships) where this node is the parent
+                    if edge.is_contains() && *edge.source() == node.uuid() {
+                        let child_original_path = child_node.path();
+                        let child_name = child_original_path.name();
+                        let new_child_target = target_path.join(&child_name);
+                        
+                        // Recursively update the child in database with the exact target path
+                        self.move_node_in_database_with_target(&child_original_path, &new_child_target)?;
                     }
                 }
             }
