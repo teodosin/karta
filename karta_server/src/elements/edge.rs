@@ -86,7 +86,7 @@ impl Edge {
     }
 
     pub fn is_contains(&self) -> bool {
-        self.attributes.iter().any(|a| a.name == "contains")
+        self.contains
     }
 
     pub fn created_time(&self) -> SysTime {

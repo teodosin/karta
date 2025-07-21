@@ -25,6 +25,16 @@ pub trait GraphEdge {
         new_from: &Uuid,
         new_to: &Uuid,
     ) -> Result<Edge, Box<dyn Error>>;
+
+    /// Reparent a node by moving its contains edge from old parent to new parent
+    /// This is specifically for moving nodes in the hierarchy and bypasses the
+    /// normal restrictions on contains edge manipulation
+    fn reparent_node(
+        &mut self,
+        node_uuid: &Uuid,
+        old_parent_uuid: &Uuid,
+        new_parent_uuid: &Uuid,
+    ) -> Result<(), Box<dyn Error>>;
 }
 
 #[cfg(test)]

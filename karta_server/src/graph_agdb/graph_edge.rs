@@ -211,4 +211,56 @@ impl GraphEdge for GraphAgdb {
 
         Ok(new_edge)
     }
+
+    fn reparent_node(
+        &mut self,
+        node_uuid: &Uuid,
+        old_parent_uuid: &Uuid,
+        new_parent_uuid: &Uuid,
+    ) -> Result<(), Box<dyn Error>> {
+        self.db.transaction_mut(|t| -> Result<(), agdb::QueryError> {
+            // 1. Find the existing contains edge from old parent to node
+            let find_edge_query = QueryBuilder::select().ids(
+                QueryBuilder::search()
+                    .from(old_parent_uuid.to_string())
+                    .to(node_uuid.to_string())
+                    .query()
+            ).query();
+
+            let query_result = t.exec(&find_edge_query)?;
+            
+            if let Some(element) = query_result.elements.iter().find(|e| e.id.0 < 0) {
+                let edge = Edge::try_from(element.clone())?;
+                
+                // Verify it's actually a contains edge before proceeding
+                if edge.is_contains() {
+                    // 2. Delete the old contains edge (bypassing normal restrictions)
+                    t.exec_mut(&QueryBuilder::remove().ids(element.id).query())?;
+                    
+                    // 3. Create new contains edge from new parent to node
+                    let new_edge = Edge::new_cont(*new_parent_uuid, *node_uuid);
+                    t.exec_mut(
+                        &QueryBuilder::insert()
+                            .edges()
+                            .from(new_parent_uuid.to_string())
+                            .to(node_uuid.to_string())
+                            .values_uniform(new_edge)
+                            .query(),
+                    )?;
+                } else {
+                    return Err(agdb::QueryError::from(
+                        "Edge found is not a contains edge - reparent_node can only move contains edges"
+                    ));
+                }
+            } else {
+                return Err(agdb::QueryError::from(
+                    "No contains edge found between old parent and node"
+                ));
+            }
+            
+            Ok(())
+        })?;
+
+        Ok(())
+    }
 }

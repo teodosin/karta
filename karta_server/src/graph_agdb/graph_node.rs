@@ -226,4 +226,38 @@ impl GraphNodes for GraphAgdb {
 
         Ok(())
     }
+    fn get_all_descendants(&self, path: &NodePath) -> Result<Vec<DataNode>, Box<dyn Error>> {
+        let mut descendants = Vec::new();
+        let mut stack = Vec::new();
+        let mut visited = std::collections::HashSet::new();
+
+        let start_node = self.open_node(&NodeHandle::Path(path.clone()))?;
+        stack.push(start_node.clone());
+        visited.insert(start_node.uuid());
+
+        while let Some(current_node) = stack.pop() {
+            let search_query = QueryBuilder::search()
+                .from(current_node.db_id().unwrap())
+                .query();
+
+            if let Ok(search_result) = self.db.exec(&search_query) {
+                for element in search_result.elements {
+                    if element.id.0 < 0 { // Is an edge
+                        if let Ok(edge) = Edge::try_from(element) {
+                            if edge.is_contains() {
+                                if let Ok(child_node) = self.open_node(&NodeHandle::Uuid(*edge.target())) {
+                                    if visited.insert(child_node.uuid()) {
+                                        stack.push(child_node.clone());
+                                        descendants.push(child_node);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(descendants)
+    }
 }
