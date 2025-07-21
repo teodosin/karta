@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{error::Error, path::PathBuf};
 
 use agdb::{DbError, DbValue};
 use uuid::Uuid;
@@ -8,7 +8,7 @@ use super::nodetype::ARCHETYPES;
 #[derive(Debug)]
 pub enum NodeHandle {
     Path(NodePath),
-    Uuid(Uuid)
+    Uuid(Uuid),
 }
 
 /// Newtype wrapper for the node path. Acts as the main struct for
@@ -36,7 +36,8 @@ impl NodePath {
     pub fn new(path: PathBuf) -> Self {
         let path_str_opt = path.to_str();
 
-        if path_str_opt.map_or(true, |s| s.is_empty()) { // Handles empty path
+        if path_str_opt.map_or(true, |s| s.is_empty()) {
+            // Handles empty path
             return NodePath::vault();
         }
 
@@ -56,7 +57,7 @@ impl NodePath {
                 return NodePath(path);
             }
         }
-        
+
         // For other paths that do not start with "vault" (e.g., "foo.txt", "bar/baz.txt"),
         // prepend "vault/" to make them relative to the vault concept.
         let vault_prefix_pb = NodePath::vault().0; // PathBuf::from("vault")
@@ -133,7 +134,7 @@ impl NodePath {
             if NodePath::atype(atype) == *self {
                 return true;
             }
-        } 
+        }
         false
     }
 
@@ -141,7 +142,11 @@ impl NodePath {
     /// Note that this function doesn't take into account whether the path exists or not.
     pub fn full(&self, root_path: &PathBuf) -> PathBuf {
         let full_path = root_path.clone();
-        let path_to_join = self.0.strip_prefix("vault").unwrap_or(&self.0).to_path_buf();
+        let path_to_join = self
+            .0
+            .strip_prefix("vault")
+            .unwrap_or(&self.0)
+            .to_path_buf();
         full_path.join(path_to_join)
     }
 
@@ -184,6 +189,19 @@ impl NodePath {
             None
         }
     }
+
+    pub fn reparent(
+        &self,
+        old_base: &NodePath,
+        new_base: &NodePath,
+    ) -> Result<NodePath, Box<dyn Error>> {
+        let relative_path = self
+            .0
+            .strip_prefix(&old_base.0)
+            .map_err(|_| "Node is not a descendant of the old base path")?;
+        let new_path_buf = new_base.0.join(relative_path);
+        Ok(NodePath(new_path_buf))
+    }
 }
 
 impl From<String> for NodePath {
@@ -223,6 +241,4 @@ impl From<NodePath> for DbValue {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    
 }

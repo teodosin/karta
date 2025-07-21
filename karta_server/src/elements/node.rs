@@ -174,6 +174,9 @@ impl DataNode {
     pub fn set_attributes(&mut self, attributes: Vec<Attribute>) {
         self.attributes = attributes;
     }
+    pub fn is_dir(&self) -> bool {
+        self.ntype == NodeTypeId::dir_type()
+    }
 }
 
 impl TryFrom<DbElement> for DataNode {

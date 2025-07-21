@@ -476,56 +476,89 @@ impl KartaService {
         let source_fs_path = node_path.full(self.vault_fs_path());
         let is_physical_node = source_fs_path.exists();
 
-        // If the node is physical, move it on the filesystem.
+        // 1. Ensure the target parent node is indexed before we try to use it.
+        if self
+            .data
+            .open_node(&NodeHandle::Path(target_path.clone()))
+            .is_err()
+        {
+            let target_node_data =
+                fs_reader::destructure_single_path(self.vault_fs_path(), target_path)?;
+            self.data.insert_nodes(vec![target_node_data]);
+        }
+
+        // 2. Do database updates recursively
+        self.move_node_in_database(node_path, target_path)?;
+
+        // 3. Move on filesystem (only once, at the top level)
         if is_physical_node {
             let target_fs_path = target_path
                 .full(self.vault_fs_path())
                 .join(node_path.name());
             std::fs::rename(&source_fs_path, &target_fs_path)?;
         } else {
-            // If the node is virtual, the target parent must be a physical directory.
+            // If the node is virtual, the target parent must be a physical directory
             let target_parent_fs_path = target_path.full(self.vault_fs_path());
             if !target_parent_fs_path.is_dir() {
                 return Err("Virtual nodes can only be moved to physical directories.".into());
             }
         }
 
-        // If the node is indexed in the DB, update its path and parentage.
-        if let Ok(node) = self.data.open_node(&NodeHandle::Path(node_path.clone())) {
-            // 1. Ensure the target parent node is indexed before we try to use it.
-            if self
-                .data
-                .open_node(&NodeHandle::Path(target_path.clone()))
-                .is_err()
-            {
-                let target_node_data =
-                    fs_reader::destructure_single_path(self.vault_fs_path(), target_path)?;
-                self.data.insert_nodes(vec![target_node_data]);
-            }
+        Ok(())
+    }
 
-            // 2. Get the parent nodes.
-            let old_parent_path = node_path
-                .parent()
-                .ok_or_else(|| "Node to move has no parent")?;
-            let old_parent_node = self.data.open_node(&NodeHandle::Path(old_parent_path))?;
+    /// Helper function to recursively update database paths without touching the filesystem
+    fn move_node_in_database(
+        &mut self,
+        node_path: &NodePath,
+        target_path: &NodePath,
+    ) -> Result<(), Box<dyn Error>> {
+        // If the node is indexed in the DB, handle database updates recursively
+        if let Ok(node) = self.data.open_node(&NodeHandle::Path(node_path.clone())) {
+            // Get current parent UUID by looking at edges before reparenting
+            let mut old_parent_uuid = None;
+            let connections = self.data().open_node_connections(&node_path);
+            for (connected_node, edge) in connections {
+                if edge.is_contains() && *edge.target() == node.uuid() {
+                    old_parent_uuid = Some(*edge.source());
+                    break;
+                }
+            }
+            
+            let old_parent_uuid = old_parent_uuid.ok_or_else(|| "Could not find old parent UUID")?;
             let new_parent_node = self
                 .data
                 .open_node(&NodeHandle::Path(target_path.clone()))?;
 
-            // 3. Update the node's path attribute in the database.
+            // Update this node's path attribute in the database FIRST
             let new_path = target_path.join(node_path.name().as_str());
             let new_path_attribute =
                 Attribute::new_string("path".to_string(), new_path.alias().to_string());
             self.data
                 .update_node_attributes(node.uuid(), vec![new_path_attribute])?;
 
-            // 4. Reconnect the 'contains' edge from the old parent to the new parent.
-            self.data.reconnect_edge(
-                &old_parent_node.uuid(),
-                &node.uuid(),
-                &new_parent_node.uuid(),
-                &node.uuid(),
-            )?;
+            // Reconnect the 'contains' edge from the old parent to the new parent
+            // Use the specialized reparent_node method for contains edges
+            self.data.reparent_node(&node.uuid(), &old_parent_uuid, &new_parent_node.uuid())?;
+
+            // Handle children AFTER updating this node's path
+            if node.is_dir() {
+                // Get direct children using the updated path
+                let connections = self.data().open_node_connections(&new_path);
+                
+                for (child_node, edge) in connections {
+                    // Only process "contains" edges (parent-child relationships) where this node is the parent
+                    if edge.is_contains() && *edge.source() == node.uuid() {
+                        let child_path = child_node.path();
+                        let new_child_target = new_path.clone(); // Use the updated path as the target
+                        
+                        // Recursively update the child in database only
+                        self.move_node_in_database(&child_path, &new_child_target)?;
+                    }
+                }
+            }
+        } else {
+            // Node not found in database - this is OK for unindexed nodes
         }
 
         Ok(())
@@ -1030,8 +1063,6 @@ mod tests {
         );
     }
 
-
-
     #[test]
     fn test_move_virtual_node() {
         let func_name = "test_move_virtual_node";
@@ -1078,5 +1109,71 @@ mod tests {
             move_to_virtual_result.is_err(),
             "Moving a virtual node to another virtual node should fail"
         );
+    }
+
+    #[test]
+    fn test_move_directory_with_physical_files() {
+        let func_name = "test_move_directory_with_physical_files";
+        let ctx = KartaServiceTestContext::new(func_name);
+
+        // 1. Setup initial file structure
+        ctx.create_dir_in_vault("source_dir").unwrap();
+        ctx.create_dir_in_vault("dest_dir").unwrap();
+        ctx.create_dir_in_vault("source_dir/movable_dir").unwrap();
+        ctx.create_file_in_vault("source_dir/movable_dir/file.txt", b"content")
+            .unwrap();
+
+        // 2. Index all nodes
+        let nodes_to_index = vec![
+            NodePath::new("vault/source_dir".into()),
+            NodePath::new("vault/dest_dir".into()),
+            NodePath::new("vault/source_dir/movable_dir".into()),
+            NodePath::new("vault/source_dir/movable_dir/file.txt".into()),
+        ];
+
+        ctx.with_service_mut(|s| {
+            for path in nodes_to_index {
+                let node = fs_reader::destructure_single_path(s.vault_fs_path(), &path).unwrap();
+                s.data_mut().insert_nodes(vec![node]);
+            }
+        });
+
+        // 3. Execute the move operation
+        let movable_dir_path = NodePath::new("vault/source_dir/movable_dir".into());
+        let dest_dir_path = NodePath::new("vault/dest_dir".into());
+        ctx.with_service_mut(|s| {
+            s.move_node(&movable_dir_path, &dest_dir_path).unwrap();
+        });
+
+        // 4. Assert filesystem changes
+        assert!(!ctx.get_vault_root().join("source_dir/movable_dir").exists());
+        assert!(ctx.get_vault_root().join("dest_dir/movable_dir").exists());
+        assert!(ctx
+            .get_vault_root()
+            .join("dest_dir/movable_dir/file.txt")
+            .exists());
+
+        // 5. Assert database path changes
+        let moved_dir_new_path = NodePath::new("vault/dest_dir/movable_dir".into());
+        let moved_file_new_path = NodePath::new("vault/dest_dir/movable_dir/file.txt".into());
+
+        ctx.with_service(|s| {
+            // Check the moved directory itself
+            let moved_dir_node = s
+                .data()
+                .open_node(&NodeHandle::Path(moved_dir_new_path))
+                .expect("Moved directory should exist at new path in DB");
+            assert_eq!(moved_dir_node.path().alias(), "/vault/dest_dir/movable_dir");
+
+            // Check the child file
+            let moved_file_node = s
+                .data()
+                .open_node(&NodeHandle::Path(moved_file_new_path))
+                .expect("Child file should exist at new path in DB");
+            assert_eq!(
+                moved_file_node.path().alias(),
+                "/vault/dest_dir/movable_dir/file.txt"
+            );
+        });
     }
 }
