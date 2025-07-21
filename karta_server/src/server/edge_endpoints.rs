@@ -47,14 +47,25 @@ pub async fn reconnect_edge(
 ) -> Result<Json<Edge>, StatusCode> {
     let mut service = state.service.write().unwrap();
 
+    println!("[RECONNECT_EDGE] Attempting edge reconnection:");
+    println!("[RECONNECT_EDGE]   Old: {} -> {}", payload.old_from, payload.old_to);
+    println!("[RECONNECT_EDGE]   New: {} -> {}", payload.new_from, payload.new_to);
+    println!("[RECONNECT_EDGE]   Paths: {} -> {}", payload.new_from_path, payload.new_to_path);
+
     match service.reconnect_edge(&payload.old_from, &payload.old_to, &payload.new_from, &payload.new_to, &payload.new_from_path, &payload.new_to_path) {
-        Ok(edge) => Ok(Json(edge)),
+        Ok(edge) => {
+            println!("[RECONNECT_EDGE] Success: {:?}", edge);
+            Ok(Json(edge))
+        },
         Err(e) => {
+            println!("[RECONNECT_EDGE] Error: {}", e);
             if e.to_string()
                 .contains("Reconnection of 'contains' edges is not allowed")
             {
+                println!("[RECONNECT_EDGE] Returning 400 - Contains edge reconnection not allowed");
                 Err(StatusCode::BAD_REQUEST)
             } else {
+                println!("[RECONNECT_EDGE] Returning 500 - Internal server error");
                 Err(StatusCode::INTERNAL_SERVER_ERROR)
             }
         }

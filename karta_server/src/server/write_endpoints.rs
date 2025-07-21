@@ -146,7 +146,11 @@ pub async fn move_nodes(
     let mut moved_nodes = Vec::new();
     let mut errors = Vec::new();
 
+    println!("[MOVE_NODES] Processing {} move operations", payload.moves.len());
+
     for move_op in payload.moves {
+        println!("[MOVE_NODES] Moving: {} -> {}", move_op.source_path, move_op.target_parent_path);
+        
         let source_path = NodePath::from_alias(&move_op.source_path);
         let target_parent_path = NodePath::from_alias(&move_op.target_parent_path);
 
@@ -214,12 +218,14 @@ pub async fn move_nodes(
 
         match service.move_node_with_rename(&source_path, &target_parent_path, final_name) {
             Ok(final_path) => {
+                println!("[MOVE_NODES] Move successful: {}", final_path.alias());
                 // Get the moved node at its new location
                 if let Ok(moved_node) = service.data().open_node(&NodeHandle::Path(final_path)) {
                     moved_nodes.push(moved_node);
                 }
             }
             Err(e) => {
+                println!("[MOVE_NODES] Move failed: {}", e);
                 errors.push(MoveError {
                     source_path: move_op.source_path.clone(),
                     error: format!("Move operation failed: {}", e),
@@ -228,6 +234,7 @@ pub async fn move_nodes(
         }
     }
 
+    println!("[MOVE_NODES] Completed: {} moved, {} errors", moved_nodes.len(), errors.len());
     Ok(Json(MoveNodesResponse {
         moved_nodes,
         errors,
@@ -239,8 +246,6 @@ pub async fn save_context(
     AxumPath(id): AxumPath<Uuid>,
     Json(payload): Json<Context>,
 ) -> StatusCode {
-    println!("[SAVE_CONTEXT] Received save request for context ID: {}", id);
-    println!("[SAVE_CONTEXT] Payload: {:?}", payload);
     // The `id` from the path should match the `focal` id in the payload.
     if id != payload.focal() {
         eprintln!("[SAVE_CONTEXT] Mismatch between path ID ({}) and payload focal ID ({}).", id, payload.focal());
@@ -249,10 +254,7 @@ pub async fn save_context(
 
     let service = app_state.service.read().unwrap();
     match service.view().save_context(&payload) {
-        Ok(_) => {
-            println!("[SAVE_CONTEXT] Successfully saved context {}", id);
-            StatusCode::OK
-        },
+        Ok(_) => StatusCode::OK,
         Err(e) => {
             eprintln!("[SAVE_CONTEXT] Error saving context {}: {:?}", id, e);
             StatusCode::INTERNAL_SERVER_ERROR
@@ -1060,5 +1062,121 @@ mod tests {
         });
         assert!(dest_has_contains_edge, 
                 "Destination should now have contains edge to moved file");
+    }
+
+
+
+    
+    #[tokio::test]
+    async fn test_move_nodes_preserves_uuid_no_duplicates() {
+        let (router, test_ctx) = setup_test_environment("move_nodes_uuid_preservation");
+
+        // Create test structure
+        std::fs::create_dir_all(test_ctx.get_vault_root().join("source_dir")).unwrap();
+        std::fs::create_dir_all(test_ctx.get_vault_root().join("dest_dir")).unwrap();
+        std::fs::write(test_ctx.get_vault_root().join("source_dir/test_file.txt"), "content").unwrap();
+
+        // Index nodes in database and capture original UUID
+        let original_file_uuid = test_ctx.with_service_mut(|s| {
+            let file_node = DataNode::new(&"vault/source_dir/test_file.txt".into(), NodeTypeId::file_type());
+            let file_uuid = file_node.uuid();
+            s.data_mut().insert_nodes(vec![
+                DataNode::new(&"vault".into(), NodeTypeId::dir_type()),
+                DataNode::new(&"vault/source_dir".into(), NodeTypeId::dir_type()),
+                DataNode::new(&"vault/dest_dir".into(), NodeTypeId::dir_type()),
+                file_node,
+            ]);
+            file_uuid
+        });
+
+        println!("[TEST] Original file UUID: {}", original_file_uuid);
+
+        // Create move request
+        let move_payload = MoveNodesPayload {
+            moves: vec![MoveOperation {
+                source_path: "/vault/source_dir/test_file.txt".to_string(),
+                target_parent_path: "/vault/dest_dir".to_string(),
+            }],
+        };
+
+        let request = Request::builder()
+            .method(http::Method::POST)
+            .uri("/api/nodes/move")
+            .header(http::header::CONTENT_TYPE, "application/json")
+            .body(Body::from(serde_json::to_string(&move_payload).unwrap()))
+            .unwrap();
+
+        let response = router.oneshot(request).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let move_response: MoveNodesResponse = serde_json::from_slice(&body).unwrap();
+        assert_eq!(move_response.moved_nodes.len(), 1);
+        assert_eq!(move_response.errors.len(), 0);
+
+        let moved_node = &move_response.moved_nodes[0];
+        println!("[TEST] Moved node UUID: {}", moved_node.uuid());
+        println!("[TEST] Moved node path: {}", moved_node.path().alias());
+
+        // CRITICAL TEST 1: UUID should be preserved during move
+        assert_eq!(moved_node.uuid(), original_file_uuid, 
+                "Move operation must preserve the original UUID");
+
+        // CRITICAL TEST 2: Opening the destination context should show exactly ONE file with the original UUID
+        let (dest_nodes, _, dest_context) = test_ctx.with_service(|s| {
+            s.open_context_from_path("vault/dest_dir".into()).unwrap()
+        });
+
+        let files_with_same_name: Vec<_> = dest_nodes.iter()
+            .filter(|n| n.path().name() == "test_file.txt")
+            .collect();
+        
+        println!("[TEST] Files with name 'test_file.txt' in destination: {}", files_with_same_name.len());
+        for (i, file) in files_with_same_name.iter().enumerate() {
+            println!("[TEST]   File {}: UUID={}, Path={}", i+1, file.uuid(), file.path().alias());
+        }
+
+        assert_eq!(files_with_same_name.len(), 1, 
+                "Should be exactly ONE file with the moved name in destination context");
+        
+        assert_eq!(files_with_same_name[0].uuid(), original_file_uuid,
+                "The file in destination should have the original UUID");
+
+        // CRITICAL TEST 3: Check ViewNodes in context for duplicates
+        let viewnodes_with_original_uuid: Vec<_> = dest_context.viewnodes().iter()
+            .filter(|vn| vn.uuid == original_file_uuid)
+            .collect();
+
+        println!("[TEST] ViewNodes with original UUID in destination context: {}", viewnodes_with_original_uuid.len());
+        for (i, vn) in viewnodes_with_original_uuid.iter().enumerate() {
+            println!("[TEST]   ViewNode {}: UUID={}", i+1, vn.uuid);
+        }
+
+        assert_eq!(viewnodes_with_original_uuid.len(), 1,
+                "Should be exactly ONE ViewNode with the original UUID in destination context");
+
+        // CRITICAL TEST 4: Check that old path no longer exists in database
+        let old_path_lookup = test_ctx.with_service(|s| {
+            s.data().open_node(&NodeHandle::Path("vault/source_dir/test_file.txt".into()))
+        });
+
+        assert!(old_path_lookup.is_err(),
+                "Old path should no longer exist in database after move");
+
+        // CRITICAL TEST 5: Check that the UUID now points to the new path
+        let uuid_lookup = test_ctx.with_service(|s| {
+            s.data().open_node(&NodeHandle::Uuid(original_file_uuid))
+        });
+
+        assert!(uuid_lookup.is_ok(), "UUID should still be valid after move");
+        let node_by_uuid = uuid_lookup.unwrap();
+        assert_eq!(node_by_uuid.path().alias(), "/vault/dest_dir/test_file.txt",
+                "UUID should now point to the new path");
+
+        // CRITICAL TEST 6: Filesystem should only have the file in the new location
+        assert!(!test_ctx.get_vault_root().join("source_dir/test_file.txt").exists(),
+                "File should no longer exist at old filesystem location");
+        assert!(test_ctx.get_vault_root().join("dest_dir/test_file.txt").exists(),
+                "File should exist at new filesystem location");
     }
 }

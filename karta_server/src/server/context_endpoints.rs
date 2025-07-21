@@ -137,6 +137,19 @@ pub async fn open_context_from_fs_path(
     // For now, direct call:
     match karta_service.open_context_from_path(node_path_to_open) {
         Ok(context_data) => {
+            // Log the viewnodes in this context with their UUIDs and node paths
+            let (data_nodes, _edges, context) = &context_data;
+            println!("[CONTEXT_BUNDLE] Loading context with {} viewnodes:", context.viewnodes().len());
+            
+            for viewnode in context.viewnodes() {
+                // Find the corresponding DataNode by UUID
+                if let Some(data_node) = data_nodes.iter().find(|dn| dn.uuid() == viewnode.uuid) {
+                    println!("[CONTEXT_BUNDLE]   ViewNode: ({}, {})", viewnode.uuid, data_node.path().alias());
+                } else {
+                    println!("[CONTEXT_BUNDLE]   ViewNode: ({}, <no matching DataNode>)", viewnode.uuid);
+                }
+            }
+            
             // println!("Context data: {:#?}", context_data);
             let cdata = Json(context_data);
             // println!("cdata: {:#?}", cdata);
