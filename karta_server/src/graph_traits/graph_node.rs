@@ -32,6 +32,10 @@ pub trait GraphNodes {
 
     /// Inserts a Node.
     fn insert_nodes(&mut self, nodes: Vec<DataNode>);
+
+    /// Updates the attributes of a node.
+    fn update_node_attributes(&mut self, uuid: Uuid, attributes: Vec<Attribute>) -> Result<(), Box<dyn Error>>;
+
     /// Retrieves all indexed paths from the database.
     fn get_all_indexed_paths(&self) -> Result<Vec<String>, Box<dyn Error>>;
 }
@@ -167,5 +171,35 @@ mod tests {
         let found_by_uuid = ctx.with_graph_db(|db| db.open_node(&NodeHandle::Uuid(uuid))).expect("Node should exist");
         
         assert_eq!(found_by_path, found_by_uuid);
+    }
+
+    #[test]
+    fn updating_node_attributes__updates_attributes() {
+        let func_name = "updating_node_attributes__updates_attributes";
+        let mut ctx = KartaServiceTestContext::new(func_name);
+
+        let path = NodePath::new(PathBuf::from("test"));
+        let node = DataNode::new(&path, NodeTypeId::virtual_generic());
+        
+        ctx.with_graph_db_mut(|db_mut| db_mut.insert_nodes(vec![node.clone()]));
+
+        let initial_node = ctx.with_graph_db(|db| db.open_node(&NodeHandle::Uuid(node.uuid()))).unwrap();
+        assert_eq!(initial_node.name(), "test");
+
+        let new_attributes = vec![
+            Attribute::new_string("name".to_string(), "new_name".to_string()),
+            Attribute::new_string("new_attr".to_string(), "new_value".to_string()),
+        ];
+
+        ctx.with_graph_db_mut(|db_mut| {
+            db_mut.update_node_attributes(node.uuid(), new_attributes).unwrap();
+        });
+
+        let updated_node = ctx.with_graph_db(|db| db.open_node(&NodeHandle::Uuid(node.uuid()))).unwrap();
+
+        assert_eq!(updated_node.name(), "new_name");
+        let attributes = updated_node.attributes();
+        let new_attr = attributes.iter().find(|a| a.name == "new_attr").unwrap();
+        assert_eq!(new_attr.value, crate::elements::attribute::AttrValue::String("new_value".to_string()));
     }
 }

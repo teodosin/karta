@@ -213,4 +213,17 @@ impl GraphNodes for GraphAgdb {
 
         Ok(paths)
     }
+
+    fn update_node_attributes(&mut self, uuid: Uuid, attributes: Vec<crate::elements::attribute::Attribute>) -> Result<(), Box<dyn Error>> {
+        let db_values: Vec<agdb::DbKeyValue> = attributes.into_iter().map(|attr| attr.into()).collect();
+
+        self.db.exec_mut(
+            &QueryBuilder::insert()
+                .values_uniform(db_values)
+                .ids(uuid.to_string())
+                .query()
+        )?;
+
+        Ok(())
+    }
 }
