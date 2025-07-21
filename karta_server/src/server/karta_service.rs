@@ -89,11 +89,9 @@ impl KartaService {
             {
                 Ok(node) => node,
                 Err(_) => {
-                    let node = fs_reader::destructure_single_path(
-                        self.vault_fs_path(),
-                        &source_path,
-                    )
-                    .unwrap();
+                    let node =
+                        fs_reader::destructure_single_path(self.vault_fs_path(), &source_path)
+                            .unwrap();
                     self.data_mut().insert_nodes(vec![node.clone()]);
                     node
                 }
@@ -105,11 +103,9 @@ impl KartaService {
             {
                 Ok(node) => node,
                 Err(_) => {
-                    let node = fs_reader::destructure_single_path(
-                        self.vault_fs_path(),
-                        &target_path,
-                    )
-                    .unwrap();
+                    let node =
+                        fs_reader::destructure_single_path(self.vault_fs_path(), &target_path)
+                            .unwrap();
                     self.data_mut().insert_nodes(vec![node.clone()]);
                     node
                 }
@@ -166,18 +162,12 @@ impl KartaService {
 
         // Ensure the new nodes are indexed before attempting to reconnect.
         if self.data.open_node(&NodeHandle::Uuid(*new_from)).is_err() {
-            let node = fs_reader::destructure_single_path(
-                self.vault_fs_path(),
-                &new_from_path,
-            )?;
+            let node = fs_reader::destructure_single_path(self.vault_fs_path(), &new_from_path)?;
             self.data_mut().insert_nodes(vec![node]);
         }
 
         if self.data.open_node(&NodeHandle::Uuid(*new_to)).is_err() {
-            let node = fs_reader::destructure_single_path(
-                self.vault_fs_path(),
-                &new_to_path,
-            )?;
+            let node = fs_reader::destructure_single_path(self.vault_fs_path(), &new_to_path)?;
             self.data_mut().insert_nodes(vec![node]);
         }
 
@@ -218,8 +208,7 @@ impl KartaService {
 
                 if fs_exists {
                     // Filesystem takes precedence. Create a provisional node from FS info.
-                    let mut node =
-                        fs_reader::destructure_single_path(self.vault_fs_path(), &path)?;
+                    let mut node = fs_reader::destructure_single_path(self.vault_fs_path(), &path)?;
 
                     // If it was also in the DB, augment the FS node with DB data (UUID, attributes).
                     if let Ok(db_node) = db_node_result {
@@ -485,22 +474,58 @@ impl KartaService {
         target_path: &NodePath,
     ) -> Result<(), Box<dyn Error>> {
         let source_fs_path = node_path.full(self.vault_fs_path());
-        let target_fs_path = target_path
-            .full(self.vault_fs_path())
-            .join(node_path.name());
+        let is_physical_node = source_fs_path.exists();
 
-        let node_from_db = self.data.open_node(&NodeHandle::Path(node_path.clone()));
+        // If the node is physical, move it on the filesystem.
+        if is_physical_node {
+            let target_fs_path = target_path
+                .full(self.vault_fs_path())
+                .join(node_path.name());
+            std::fs::rename(&source_fs_path, &target_fs_path)?;
+        } else {
+            // If the node is virtual, the target parent must be a physical directory.
+            let target_parent_fs_path = target_path.full(self.vault_fs_path());
+            if !target_parent_fs_path.is_dir() {
+                return Err("Virtual nodes can only be moved to physical directories.".into());
+            }
+        }
 
-        // Move the file on the filesystem first.
-        std::fs::rename(&source_fs_path, &target_fs_path)?;
+        // If the node is indexed in the DB, update its path and parentage.
+        if let Ok(node) = self.data.open_node(&NodeHandle::Path(node_path.clone())) {
+            // 1. Ensure the target parent node is indexed before we try to use it.
+            if self
+                .data
+                .open_node(&NodeHandle::Path(target_path.clone()))
+                .is_err()
+            {
+                let target_node_data =
+                    fs_reader::destructure_single_path(self.vault_fs_path(), target_path)?;
+                self.data.insert_nodes(vec![target_node_data]);
+            }
 
-        if let Ok(node) = node_from_db {
-            // If the node was indexed, update its path attribute.
+            // 2. Get the parent nodes.
+            let old_parent_path = node_path
+                .parent()
+                .ok_or_else(|| "Node to move has no parent")?;
+            let old_parent_node = self.data.open_node(&NodeHandle::Path(old_parent_path))?;
+            let new_parent_node = self
+                .data
+                .open_node(&NodeHandle::Path(target_path.clone()))?;
+
+            // 3. Update the node's path attribute in the database.
             let new_path = target_path.join(node_path.name().as_str());
             let new_path_attribute =
                 Attribute::new_string("path".to_string(), new_path.alias().to_string());
             self.data
                 .update_node_attributes(node.uuid(), vec![new_path_attribute])?;
+
+            // 4. Reconnect the 'contains' edge from the old parent to the new parent.
+            self.data.reconnect_edge(
+                &old_parent_node.uuid(),
+                &node.uuid(),
+                &new_parent_node.uuid(),
+                &node.uuid(),
+            )?;
         }
 
         Ok(())
@@ -770,8 +795,6 @@ mod tests {
         assert_eq!(datanodes.len(), 3);
     }
 
-
-
     #[test]
     fn inserting_nested_node_does_not_pollute_root_context() {
         let func_name = "inserting_nested_node_does_not_pollute_root_context";
@@ -847,11 +870,8 @@ mod tests {
         );
     }
 
-
-
     #[test]
     fn test_move_indexed_physical_file_node() {
-
         let func_name = "test_move_indexed_physical_file_node";
         let ctx = KartaServiceTestContext::new(func_name);
 
@@ -865,20 +885,36 @@ mod tests {
         let target_node_path = NodePath::new("vault/target_dir".into());
 
         ctx.with_service_mut(|s| {
-            let node = fs_reader::destructure_single_path(
-                s.vault_fs_path(),
-                &file_node_path,
-            )
-            .unwrap();
+            let node =
+                fs_reader::destructure_single_path(s.vault_fs_path(), &file_node_path).unwrap();
             s.data_mut().insert_nodes(vec![node]);
         });
 
-        // 2. Execute the move operation
+        // 2. Assert initial context state
+        let original_node_uuid = ctx.with_service(|s| {
+            s.data()
+                .open_node(&NodeHandle::Path(file_node_path.clone()))
+                .unwrap()
+                .uuid()
+        });
+
+        let (initial_dir_nodes, _, _) = ctx.with_service(|s| {
+            s.open_context_from_path(NodePath::new("vault/initial_dir".into()))
+                .unwrap()
+        });
+        assert!(
+            initial_dir_nodes
+                .iter()
+                .any(|n| n.uuid() == original_node_uuid),
+            "Source context should contain the node before move"
+        );
+
+        // 3. Execute the move operation
         ctx.with_service_mut(|s| {
             s.move_node(&file_node_path, &target_node_path).unwrap();
         });
 
-        // 3. Assert the results
+        // 4. Assert the results
         let initial_file_path = ctx.get_vault_root().join("initial_dir/movable_file.txt");
         let target_file_path = ctx.get_vault_root().join("target_dir/movable_file.txt");
         assert!(
@@ -890,6 +926,7 @@ mod tests {
             "File should exist in the new location"
         );
 
+        // Assert DB state
         let new_node_path = NodePath::new("vault/target_dir/movable_file.txt".into());
         let db_node = ctx.with_service(|s| {
             s.data()
@@ -897,13 +934,38 @@ mod tests {
                 .unwrap()
         });
         assert_eq!(db_node.path().alias(), "/vault/target_dir/movable_file.txt");
+        assert_eq!(
+            db_node.uuid(),
+            original_node_uuid,
+            "UUID should not change after move"
+        );
+
+        // Assert context state after move
+        let (initial_dir_nodes_after, _, _) = ctx.with_service(|s| {
+            s.open_context_from_path(NodePath::new("vault/initial_dir".into()))
+                .unwrap()
+        });
+        assert!(
+            !initial_dir_nodes_after
+                .iter()
+                .any(|n| n.uuid() == original_node_uuid),
+            "Source context should not contain the node after move"
+        );
+
+        let (target_dir_nodes_after, _, _) = ctx.with_service(|s| {
+            s.open_context_from_path(NodePath::new("vault/target_dir".into()))
+                .unwrap()
+        });
+        assert!(
+            target_dir_nodes_after
+                .iter()
+                .any(|n| n.uuid() == original_node_uuid),
+            "Target context should contain the node after move"
+        );
     }
-
-
 
     #[test]
     fn test_move_unindexed_physical_file_node() {
-
         let func_name = "test_move_unindexed_physical_file_node";
         let ctx = KartaServiceTestContext::new(func_name);
 
@@ -916,12 +978,22 @@ mod tests {
         let file_node_path = NodePath::new("vault/initial_dir/movable_file.txt".into());
         let target_node_path = NodePath::new("vault/target_dir".into());
 
-        // 2. Execute the move operation
+        // 2. Assert initial context state
+        let (initial_dir_nodes, _, _) = ctx.with_service(|s| {
+            s.open_context_from_path(NodePath::new("vault/initial_dir".into()))
+                .unwrap()
+        });
+        assert!(
+            initial_dir_nodes.iter().any(|n| n.path() == file_node_path),
+            "Source context should contain the node before move"
+        );
+
+        // 3. Execute the move operation
         ctx.with_service_mut(|s| {
             s.move_node(&file_node_path, &target_node_path).unwrap();
         });
 
-        // 3. Assert the results
+        // 4. Assert the results
         let initial_file_path = ctx.get_vault_root().join("initial_dir/movable_file.txt");
         let target_file_path = ctx.get_vault_root().join("target_dir/movable_file.txt");
         assert!(
@@ -933,12 +1005,78 @@ mod tests {
             "File should exist in the new location"
         );
 
+        // Assert context state after move
+        let (initial_dir_nodes_after, _, _) = ctx.with_service(|s| {
+            s.open_context_from_path(NodePath::new("vault/initial_dir".into()))
+                .unwrap()
+        });
+        assert!(
+            !initial_dir_nodes_after
+                .iter()
+                .any(|n| n.path() == file_node_path),
+            "Source context should not contain the node after move"
+        );
+
         let new_node_path = NodePath::new("vault/target_dir/movable_file.txt".into());
-        let opened_node =
-            ctx.with_service(|s| s.open_node(&NodeHandle::Path(new_node_path)).unwrap());
+        let (target_dir_nodes_after, _, _) = ctx.with_service(|s| {
+            s.open_context_from_path(NodePath::new("vault/target_dir".into()))
+                .unwrap()
+        });
+        assert!(
+            target_dir_nodes_after
+                .iter()
+                .any(|n| n.path() == new_node_path),
+            "Target context should contain the node after move"
+        );
+    }
+
+
+
+    #[test]
+    fn test_move_virtual_node() {
+        let func_name = "test_move_virtual_node";
+        let ctx = KartaServiceTestContext::new(func_name);
+
+        // 1. Setup initial nodes
+        ctx.create_dir_in_vault("physical_dir").unwrap();
+        let virtual_node_path = NodePath::new("vault/virtual_node".into());
+        let virtual_node = DataNode::new(&virtual_node_path, NodeTypeId::virtual_generic());
+
+        let invalid_parent_path = NodePath::new("vault/invalid_virtual_parent".into());
+        let invalid_parent_node =
+            DataNode::new(&invalid_parent_path, NodeTypeId::virtual_generic());
+
+        ctx.with_service_mut(|s| {
+            s.data_mut()
+                .insert_nodes(vec![virtual_node.clone(), invalid_parent_node]);
+        });
+
+        // 2. Move virtual node to a physical directory (should succeed)
+        let target_physical_path = NodePath::new("vault/physical_dir".into());
+        ctx.with_service_mut(|s| {
+            s.move_node(&virtual_node_path, &target_physical_path)
+                .unwrap();
+        });
+
+        // 3. Assert successful move
+        let new_virtual_path = NodePath::new("vault/physical_dir/virtual_node".into());
+        let moved_node = ctx.with_service(|s| {
+            s.data()
+                .open_node(&NodeHandle::Path(new_virtual_path))
+                .unwrap()
+        });
+        assert_eq!(moved_node.uuid(), virtual_node.uuid());
         assert_eq!(
-            opened_node.path().alias(),
-            "/vault/target_dir/movable_file.txt"
+            moved_node.path().alias(),
+            "/vault/physical_dir/virtual_node"
+        );
+
+        // 4. Attempt to move virtual node to another virtual node (should fail)
+        let move_to_virtual_result =
+            ctx.with_service_mut(|s| s.move_node(&moved_node.path(), &invalid_parent_path));
+        assert!(
+            move_to_virtual_result.is_err(),
+            "Moving a virtual node to another virtual node should fail"
         );
     }
 }
