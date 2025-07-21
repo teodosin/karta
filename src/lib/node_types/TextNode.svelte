@@ -191,6 +191,7 @@
 	`}
 	style:background-color={effectiveFillColor}
 	style:color={effectiveTextColor}
+	style:transition="background-color 1000ms cubic-bezier(0.165, 0.84, 0.44, 1), color 1000ms cubic-bezier(0.165, 0.84, 0.44, 1)"
 	on:dblclick={startEditing}
 >
 	{#if isEditing}
@@ -205,6 +206,7 @@
 			style:background-color={effectiveFillColor}
 			style:color={effectiveTextColor}
 			style:font-family={effectiveFont}
+			style:transition="background-color 1000ms cubic-bezier(0.165, 0.84, 0.44, 1), color 1000ms cubic-bezier(0.165, 0.84, 0.44, 1)"
 			spellcheck="false"
 		></textarea> <!-- Ensure closing tag -->
 	{:else}

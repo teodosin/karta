@@ -133,7 +133,7 @@ async function _loadAndProcessContext(
             const existingViewNode = oldContext?.viewNodes.get(nodeId);
 
             if (existingViewNode) {
-                console.log(`[ContextStore._loadAndProcessContext] Cloning existing ViewNode ${nodeId} from old context for storable node.`);
+                // Debug: Cloning existing ViewNode for storable node
                 // Clone the ViewNode but use the stored context-specific attributes, not the previous context's attributes
                 const clonedViewNode = cloneViewNode(existingViewNode, targetState);
                 clonedViewNode.attributes = storableNode.attributes ? { ...storableNode.attributes } : {}; // Use context-specific attributes
@@ -171,7 +171,7 @@ async function _loadAndProcessContext(
         if (previousContextId && previousContextId !== contextId && !finalViewNodes.has(previousContextId)) {
             const previousFocalViewNode = oldContext?.viewNodes.get(previousContextId);
             if (previousFocalViewNode) {
-                console.log(`[ContextStore._loadAndProcessContext] Cloning previous focal node ${previousContextId} from old context.`);
+                // Debug: Cloning previous focal node from old context
                 finalViewNodes.set(previousContextId, cloneViewNode(previousFocalViewNode));
             }
         }
@@ -508,7 +508,7 @@ export async function saveCurrentContext() {
         // The status will be correctly set to 'modified' when the context is loaded next time.
         // This ensures that all nodes from a saved context are considered modifiable.
 
-        console.log(`[saveCurrentContext] Context ${contextId} save operation completed.`);
+        // Debug: Context save operation completed
         // TODO: Add user feedback here (e.g., a toast notification for success)
     } catch (error) {
         console.error(`[saveCurrentContext] Failed to save context ${contextId}:`, error);
@@ -591,7 +591,7 @@ export async function switchContext(newContextHandle: NodeHandle, isUndoRedo: bo
     }
 
     const oldContextId = get(currentContextId);
-    console.log(`[switchContext] Switching from context ${oldContextId} to ${newContextId} (${newContextPath})`);
+    // Debug: Switching context
     if (newContextId === oldContextId && oldContextId !== ROOT_NODE_ID) return;
     clearSelection();
 
@@ -634,7 +634,7 @@ export async function switchContext(newContextHandle: NodeHandle, isUndoRedo: bo
     try {
         // Determine initial state (x,y,scale,width,height,rotation) for the new focal node based on old context
         const focalInitialState = await _getFocalNodeInitialState(newContextId, oldContext);
-        console.log(`[switchContext] Focal initial state for ${newContextId}:`, focalInitialState);
+        // Debug: Focal initial state
 
         // Load StorableContext via bundle, then convert/merge into in-memory Context with Tweens, add defaults
         let identifierForBundle: string;

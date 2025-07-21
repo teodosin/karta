@@ -7,7 +7,11 @@ import { v4 as uuidv4 } from 'uuid';
 import { getDefaultAttributesForType, getDefaultViewNodeStateForType } from '$lib/node_types/registry';
 import { Tween } from 'svelte/motion';
 import { currentContextId, contexts, removeViewNodeFromContext, existingContextsMap, activeAdapter } from './ContextStore';
+import { cubicInOut } from 'svelte/easing';
 import { viewTransform, centerViewOnCanvasPoint } from './ViewportStore';
+
+// Animation constants (matching ContextStore)
+const NODE_TWEEN_DURATION = 1000;
 export const nodes = writable<Map<NodeId, DataNode>>(new Map());
 
 // Use a generic persistence service, which can be LocalAdapter or ServerAdapter
@@ -106,14 +110,14 @@ export async function createNodeAtPosition(
             // For ServerAdapter, we need the parent path.
             const parentPath = findPhysicalParentPath(contextId);
 
-            console.log(`[NodeStore.createNodeAtPosition] About to create node '${newNodeData.attributes.name}' in parent '${parentPath}'. Current context: ${contextId}`);
+            // Debug: Creating node at position
             const persistedNode = await (persistenceService as ServerAdapter).createNode(newNodeData, parentPath);
 
             if (!persistedNode) {
                 console.error("[NodeStore.createNodeAtPosition] Node creation failed on the server.");
                 throw new Error("Node creation failed on the server.");
             }
-            console.log(`[NodeStore.createNodeAtPosition] Server returned persisted node:`, JSON.stringify(persistedNode, null, 2));
+            // Debug: Server returned persisted node
 
             // NOW, update the stores with the definitive node data from the server
             nodes.update(n => n.set(persistedNode.id, persistedNode)); // Add the persisted DataNode
@@ -121,7 +125,7 @@ export async function createNodeAtPosition(
             // CRITICAL FIX: The ViewNode was created with a temporary client-side ID.
             // We need to update the contexts store to use the server-authoritative ID.
             contexts.update((ctxMap: Map<NodeId, Context>) => {
-                console.log(`[NodeStore.createNodeAtPosition] CONTEXTS MAP BEFORE UPDATE:`, JSON.stringify(Object.fromEntries(ctxMap), null, 2));
+                // Debug: Context map before update
                 let currentCtx = ctxMap.get(contextId);
                 if (!currentCtx) {
                     console.warn(`[NodeStore.createNodeAtPosition] Context ${contextId} not found when creating node ${persistedNode.id}. Creating context.`);
@@ -132,7 +136,7 @@ export async function createNodeAtPosition(
                 currentCtx.viewNodes.delete(newNodeId);
                 newViewNode.id = persistedNode.id; // Update the ViewNode's ID
                 currentCtx.viewNodes.set(persistedNode.id, newViewNode);
-                console.log(`[NodeStore.createNodeAtPosition] CONTEXTS MAP AFTER UPDATE:`, JSON.stringify(Object.fromEntries(ctxMap), null, 2));
+                // Debug: Context map after update
                 return ctxMap;
             });
 
