@@ -937,4 +937,128 @@ mod tests {
             "/vault/unindexed_folder/test_file.txt"
         );
     }
+
+    #[tokio::test]
+    async fn test_move_nodes_with_context_file_persistence() {
+        let (router, test_ctx) = setup_test_environment("move_nodes_context_files");
+
+        // Create test structure
+        std::fs::create_dir_all(test_ctx.get_vault_root().join("source_dir")).unwrap();
+        std::fs::create_dir_all(test_ctx.get_vault_root().join("dest_dir")).unwrap();
+        std::fs::write(test_ctx.get_vault_root().join("source_dir/test_file.txt"), "content").unwrap();
+
+        // Index nodes in database
+        let file_uuid = test_ctx.with_service_mut(|s| {
+            let file_node = DataNode::new(&"vault/source_dir/test_file.txt".into(), NodeTypeId::file_type());
+            let file_uuid = file_node.uuid();
+            s.data_mut().insert_nodes(vec![
+                DataNode::new(&"vault".into(), NodeTypeId::dir_type()),
+                DataNode::new(&"vault/source_dir".into(), NodeTypeId::dir_type()),
+                DataNode::new(&"vault/dest_dir".into(), NodeTypeId::dir_type()),
+                file_node,
+            ]);
+            file_uuid
+        });
+
+        // Get the source directory context and save it
+        let (source_nodes, _, source_context) = test_ctx.with_service(|s| {
+            s.open_context_from_path("vault/source_dir".into()).unwrap()
+        });
+        let source_focal_uuid = source_context.focal();
+        
+        // Save the source context file BEFORE the move
+        test_ctx.with_service_mut(|s| {
+            s.view_mut().save_context(&source_context).unwrap();
+        });
+
+        // Verify source context contains the file before move
+        assert!(source_nodes.iter().any(|n| n.path().name() == "test_file.txt"), 
+                "Source context should contain file before move");
+
+        // Create move request
+        let move_payload = MoveNodesPayload {
+            moves: vec![MoveOperation {
+                source_path: "/vault/source_dir/test_file.txt".to_string(),
+                target_parent_path: "/vault/dest_dir".to_string(),
+            }],
+        };
+
+        let request = Request::builder()
+            .method(http::Method::POST)
+            .uri("/api/nodes/move")
+            .header(http::header::CONTENT_TYPE, "application/json")
+            .body(Body::from(serde_json::to_string(&move_payload).unwrap()))
+            .unwrap();
+
+        let response = router.oneshot(request).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let move_response: MoveNodesResponse = serde_json::from_slice(&body).unwrap();
+        assert_eq!(move_response.moved_nodes.len(), 1);
+        assert_eq!(move_response.errors.len(), 0);
+
+        // Test 1: When loading a context that has a saved context file, 
+        // it should merge saved nodes (by UUID) with current filesystem children
+        let (source_nodes_with_saved, _, _) = test_ctx.with_service(|s| {
+            s.open_context_from_path("vault/source_dir".into()).unwrap()
+        });
+        
+        // The context should contain the moved file because it's in the saved context file
+        assert!(source_nodes_with_saved.iter().any(|n| n.uuid() == file_uuid), 
+                "Source context WITH saved file should contain moved file by UUID");
+        
+        // Test 2: Verify the moved file now has the updated path in the database
+        let moved_file_node = test_ctx.with_service(|s| {
+            s.data().open_node(&NodeHandle::Uuid(file_uuid)).unwrap()
+        });
+        assert_eq!(moved_file_node.path().alias(), "/vault/dest_dir/test_file.txt",
+                "Moved file should have updated path in database");
+
+        // Test 3: Generated destination context should contain the moved file
+        let (dest_nodes_generated, _, _) = test_ctx.with_service(|s| {
+            s.open_context_from_path("vault/dest_dir".into()).unwrap()
+        });
+        assert!(dest_nodes_generated.iter().any(|n| n.path().name() == "test_file.txt"), 
+                "Destination context should contain moved file");
+
+        // Test 4: Verify saved context files preserve the UUID correctly
+        let saved_source_context = test_ctx.with_service(|s| {
+            s.view().get_context_file(source_focal_uuid).unwrap()
+        });
+        assert!(saved_source_context.viewnodes().iter().any(|vn| vn.uuid == file_uuid), 
+                "Saved source context should preserve file UUID even after move");
+
+        // Test 5: CRITICAL - Verify edges reflect current database state, not saved context
+        // After move, there should be NO "contains" edge between source_dir and the moved file
+        let (_, source_edges_after_move, _) = test_ctx.with_service(|s| {
+            s.open_context_from_path("vault/source_dir".into()).unwrap()
+        });
+        
+        let source_dir_uuid = test_ctx.with_service(|s| {
+            s.data().open_node(&NodeHandle::Path("vault/source_dir".into())).unwrap().uuid()
+        });
+        
+        // There should be NO edge from source_dir to the moved file
+        let has_contains_edge = source_edges_after_move.iter().any(|edge| {
+            edge.source() == &source_dir_uuid && edge.target() == &file_uuid
+        });
+        assert!(!has_contains_edge, 
+                "Should be NO contains edge between source_dir and moved file (edges come from DB, not saved context)");
+        
+        // But the destination should now have the contains edge
+        let (_, dest_edges_after_move, _) = test_ctx.with_service(|s| {
+            s.open_context_from_path("vault/dest_dir".into()).unwrap()
+        });
+        
+        let dest_dir_uuid = test_ctx.with_service(|s| {
+            s.data().open_node(&NodeHandle::Path("vault/dest_dir".into())).unwrap().uuid()
+        });
+        
+        let dest_has_contains_edge = dest_edges_after_move.iter().any(|edge| {
+            edge.source() == &dest_dir_uuid && edge.target() == &file_uuid
+        });
+        assert!(dest_has_contains_edge, 
+                "Destination should now have contains edge to moved file");
+    }
 }
