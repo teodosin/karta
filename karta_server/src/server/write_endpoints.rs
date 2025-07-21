@@ -18,6 +18,31 @@ use crate::{
     server::AppState,
 };
 
+/// Generate a unique name by appending a counter if the original name already exists
+fn generate_unique_name(service: &crate::server::karta_service::KartaService, parent_path: &NodePath, original_name: &str) -> String {
+    let mut name = original_name.to_string();
+    let mut final_path = parent_path.join(&name);
+    let mut counter = 2;
+
+    // Loop until we find a unique path
+    while service.data().open_node(&NodeHandle::Path(final_path.clone())).is_ok() {
+        // Handle file extensions properly
+        if let Some(dot_pos) = original_name.rfind('.') {
+            // Split name and extension
+            let base_name = &original_name[..dot_pos];
+            let extension = &original_name[dot_pos..];
+            name = format!("{}_{}{}", base_name, counter, extension);
+        } else {
+            // No extension, just append counter
+            name = format!("{}_{}", original_name, counter);
+        }
+        final_path = parent_path.join(&name);
+        counter += 1;
+    }
+
+    name
+}
+
 #[derive(Deserialize, serde::Serialize)]
 pub struct CreateNodePayload {
     name: String,
@@ -42,13 +67,13 @@ pub struct MoveOperation {
     target_parent_path: String,
 }
 
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct MoveNodesResponse {
     moved_nodes: Vec<DataNode>,
     errors: Vec<MoveError>,
 }
 
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct MoveError {
     source_path: String,
     error: String,
@@ -66,15 +91,14 @@ pub async fn create_node(
     }
 
     let mut name = payload.name.clone();
-    let mut final_path = parent_path.join(&name);
-    let mut counter = 2;
+    let final_path = parent_path.join(&name);
 
-    // Loop until we find a unique path
-    while service.data().open_node(&NodeHandle::Path(final_path.clone())).is_ok() {
-        name = format!("{}_{}", payload.name.clone(), counter);
-        final_path = parent_path.join(&name);
-        counter += 1;
+    // Check if the path already exists and generate a unique name if needed
+    if service.data().open_node(&NodeHandle::Path(final_path.clone())).is_ok() {
+        name = generate_unique_name(&service, &parent_path, &payload.name);
     }
+
+    let final_path = parent_path.join(&name);
 
     let mut new_node = DataNode::new(&final_path, payload.ntype);
     
@@ -135,8 +159,8 @@ pub async fn move_nodes(
             continue;
         }
 
-        // Validate target parent exists and is a directory
-        match service.data().open_node(&NodeHandle::Path(target_parent_path.clone())) {
+        // Validate target parent exists (either in database or on filesystem)
+        let target_parent_indexed = match service.data().open_node(&NodeHandle::Path(target_parent_path.clone())) {
             Ok(target_node) => {
                 if !target_node.is_dir() {
                     errors.push(MoveError {
@@ -145,15 +169,27 @@ pub async fn move_nodes(
                     });
                     continue;
                 }
+                true // Target is indexed in database
             }
             Err(_) => {
-                errors.push(MoveError {
-                    source_path: move_op.source_path.clone(),
-                    error: "Target parent path not found".to_string(),
-                });
-                continue;
+                // Target not in database, check if it exists on filesystem
+                let target_fs_path = target_parent_path.full(service.vault_fs_path());
+                if !target_fs_path.exists() {
+                    errors.push(MoveError {
+                        source_path: move_op.source_path.clone(),
+                        error: "Target parent path not found".to_string(),
+                    });
+                    continue;
+                } else if !target_fs_path.is_dir() {
+                    errors.push(MoveError {
+                        source_path: move_op.source_path.clone(),
+                        error: "Target parent must be a directory".to_string(),
+                    });
+                    continue;
+                }
+                false // Target exists on filesystem but not indexed
             }
-        }
+        };
 
         // Prevent moving to self or child (circular move)
         if target_parent_path.alias().starts_with(&source_path.alias()) {
@@ -164,12 +200,22 @@ pub async fn move_nodes(
             continue;
         }
 
-        // Perform the move operation
-        match service.move_node(&source_path, &target_parent_path) {
-            Ok(_) => {
+        // Check for name collision at target location and generate unique name if needed
+        let original_name = source_path.name();
+        let unique_name = generate_unique_name(&service, &target_parent_path, &original_name);
+        let target_node_path = target_parent_path.join(&unique_name);
+
+        // Perform the move operation with auto-renaming
+        let final_name = if unique_name != original_name {
+            Some(unique_name.as_str())
+        } else {
+            None
+        };
+
+        match service.move_node_with_rename(&source_path, &target_parent_path, final_name) {
+            Ok(final_path) => {
                 // Get the moved node at its new location
-                let new_path = target_parent_path.join(source_path.name().as_str());
-                if let Ok(moved_node) = service.data().open_node(&NodeHandle::Path(new_path)) {
+                if let Ok(moved_node) = service.data().open_node(&NodeHandle::Path(final_path)) {
                     moved_nodes.push(moved_node);
                 }
             }
@@ -742,5 +788,153 @@ mod tests {
         assert_eq!(move_response.moved_nodes.len(), 0);
         assert_eq!(move_response.errors.len(), 1);
         assert!(move_response.errors[0].error.contains("Cannot move node to itself or its child"));
+    }
+
+    #[tokio::test]
+    async fn test_move_nodes_name_collision_auto_rename() {
+        let (router, test_ctx) = setup_test_environment("move_nodes_collision");
+
+        // Create source directory with a file
+        let source_dir = test_ctx.vault_root_path.join("source_folder");
+        std::fs::create_dir(&source_dir).expect("Failed to create source directory");
+        let source_file = source_dir.join("test_file.txt");
+        std::fs::write(&source_file, "source content").expect("Failed to create source file");
+
+        // Create target directory with a file that has the same name
+        let target_dir = test_ctx.vault_root_path.join("target_folder");
+        std::fs::create_dir(&target_dir).expect("Failed to create target directory");
+        let existing_file = target_dir.join("test_file.txt");
+        std::fs::write(&existing_file, "existing content").expect("Failed to create existing file");
+
+        // Index nodes in database
+        test_ctx.with_service_mut(|s| {
+            s.data_mut().insert_nodes(vec![
+                DataNode::new(&"vault".into(), NodeTypeId::dir_type()),
+                DataNode::new(&"vault/source_folder".into(), NodeTypeId::dir_type()),
+                DataNode::new(&"vault/target_folder".into(), NodeTypeId::dir_type()),
+                DataNode::new(&"vault/source_folder/test_file.txt".into(), NodeTypeId::file_type()),
+                DataNode::new(&"vault/target_folder/test_file.txt".into(), NodeTypeId::file_type()),
+            ]);
+        });
+
+        // Attempt to move source file to target directory (should auto-rename)
+        let move_payload = MoveNodesPayload {
+            moves: vec![MoveOperation {
+                source_path: "/vault/source_folder/test_file.txt".to_string(),
+                target_parent_path: "/vault/target_folder".to_string(),
+            }],
+        };
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/nodes/move")
+                    .header("Content-Type", "application/json")
+                    .body(Body::from(serde_json::to_string(&move_payload).unwrap()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let move_response: MoveNodesResponse = serde_json::from_slice(&body).unwrap();
+        
+        // Should succeed with auto-renaming
+        assert_eq!(move_response.errors.len(), 0);
+        assert_eq!(move_response.moved_nodes.len(), 1);
+
+        // Verify the file was auto-renamed (should be test_file_2.txt)
+        let renamed_file = target_dir.join("test_file_2.txt");
+        assert!(renamed_file.exists(), "Renamed file should exist");
+        assert_eq!(
+            std::fs::read_to_string(&renamed_file).unwrap(),
+            "source content",
+            "Renamed file should have source content"
+        );
+
+        // Original collision file should still exist
+        assert!(existing_file.exists(), "Original file should still exist");
+        assert_eq!(
+            std::fs::read_to_string(&existing_file).unwrap(),
+            "existing content",
+            "Original file content should be unchanged"
+        );
+
+        // Source file should no longer exist
+        assert!(!source_file.exists(), "Source file should be moved");
+    }
+
+    #[tokio::test]
+    async fn test_move_nodes_to_unindexed_directory() {
+        let (router, test_ctx) = setup_test_environment("move_nodes_unindexed");
+
+        // Create source directory with a file
+        let source_dir = test_ctx.vault_root_path.join("source_folder");
+        std::fs::create_dir(&source_dir).expect("Failed to create source directory");
+        let source_file = source_dir.join("test_file.txt");
+        std::fs::write(&source_file, "source content").expect("Failed to create source file");
+
+        // Create target directory but DON'T index it in the database
+        let target_dir = test_ctx.vault_root_path.join("unindexed_folder");
+        std::fs::create_dir(&target_dir).expect("Failed to create target directory");
+
+        // Index only the source nodes in database (not the target)
+        test_ctx.with_service_mut(|s| {
+            s.data_mut().insert_nodes(vec![
+                DataNode::new(&"vault".into(), NodeTypeId::dir_type()),
+                DataNode::new(&"vault/source_folder".into(), NodeTypeId::dir_type()),
+                DataNode::new(&"vault/source_folder/test_file.txt".into(), NodeTypeId::file_type()),
+            ]);
+        });
+
+        // Attempt to move source file to unindexed target directory (should succeed)
+        let move_payload = MoveNodesPayload {
+            moves: vec![MoveOperation {
+                source_path: "/vault/source_folder/test_file.txt".to_string(),
+                target_parent_path: "/vault/unindexed_folder".to_string(),
+            }],
+        };
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/nodes/move")
+                    .header("Content-Type", "application/json")
+                    .body(Body::from(serde_json::to_string(&move_payload).unwrap()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let move_response: MoveNodesResponse = serde_json::from_slice(&body).unwrap();
+        
+        // Should succeed even with unindexed target directory
+        assert_eq!(move_response.errors.len(), 0);
+        assert_eq!(move_response.moved_nodes.len(), 1);
+
+        // Verify the file was moved on filesystem
+        let moved_file = target_dir.join("test_file.txt");
+        assert!(moved_file.exists(), "File should be moved to unindexed directory");
+        assert_eq!(
+            std::fs::read_to_string(&moved_file).unwrap(),
+            "source content",
+            "Moved file should have original content"
+        );
+
+        // Source file should no longer exist
+        assert!(!source_file.exists(), "Source file should be moved");
+
+        // Verify the moved node has the correct path
+        assert_eq!(
+            move_response.moved_nodes[0].path().alias(),
+            "/vault/unindexed_folder/test_file.txt"
+        );
     }
 }
