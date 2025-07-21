@@ -136,12 +136,61 @@ pub async fn update_node(
         Err(_) => return Err(StatusCode::NOT_FOUND),
     };
 
-    node.set_attributes(payload.attributes);
-    node.update_modified_time();
+    // Check if this is a rename operation (name attribute change)
+    let is_rename = payload.attributes.iter()
+        .any(|attr| attr.name == "name" && attr.value != AttrValue::String(node.name().to_string()));
 
-    service.data_mut().insert_nodes(vec![node.clone()]);
+    if is_rename {
+        // Extract the new name from attributes
+        let new_name = payload.attributes.iter()
+            .find(|attr| attr.name == "name")
+            .and_then(|attr| match &attr.value {
+                AttrValue::String(name) => Some(name.as_str()),
+                _ => None,
+            })
+            .ok_or(StatusCode::BAD_REQUEST)?;
 
-    Ok(Json(node))
+        // Validate the new name
+        if new_name.trim().is_empty() {
+            return Err(StatusCode::BAD_REQUEST);
+        }
+
+        // Perform the rename using the rename_node function
+        match service.rename_node(&node.path(), new_name.trim()) {
+            Ok(new_path) => {
+                // Reload the node from the new path to get the updated state
+                match service.data().open_node(&NodeHandle::Path(new_path)) {
+                    Ok(updated_node) => {
+                        // Update any other attributes besides name
+                        let mut other_attributes: Vec<Attribute> = payload.attributes.into_iter()
+                            .filter(|attr| attr.name != "name")
+                            .collect();
+
+                        if !other_attributes.is_empty() {
+                            let mut final_node = updated_node;
+                            final_node.set_attributes(other_attributes);
+                            final_node.update_modified_time();
+                            service.data_mut().insert_nodes(vec![final_node.clone()]);
+                            return Ok(Json(final_node));
+                        }
+
+                        return Ok(Json(updated_node));
+                    }
+                    Err(_) => return Err(StatusCode::INTERNAL_SERVER_ERROR),
+                }
+            }
+            Err(e) => {
+                eprintln!("Failed to rename node: {}", e);
+                return Err(StatusCode::INTERNAL_SERVER_ERROR);
+            }
+        }
+    } else {
+        // No rename, just update attributes normally
+        node.set_attributes(payload.attributes);
+        node.update_modified_time();
+        service.data_mut().insert_nodes(vec![node.clone()]);
+        return Ok(Json(node));
+    }
 }
 
 /// Recursively collect all nodes that will be affected by a move operation

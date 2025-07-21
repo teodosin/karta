@@ -584,6 +584,48 @@ impl KartaService {
         Ok(target_node_path)
     }
 
+    /// Rename a node in place, handling both filesystem and database updates
+    pub fn rename_node(
+        &mut self,
+        node_path: &NodePath,
+        new_name: &str,
+    ) -> Result<NodePath, Box<dyn Error>> {
+        // Get the parent path
+        let parent_path = node_path.parent()
+            .ok_or("Cannot rename root node")?;
+        
+        // Check for name collision and generate unique name if needed
+        let unique_name = self.generate_unique_name(&parent_path, new_name);
+        
+        // Use move_node_with_rename to the same parent with the unique name
+        self.move_node_with_rename(node_path, &parent_path, Some(&unique_name))
+    }
+
+    /// Generate a unique name by appending a counter if the original name already exists
+    fn generate_unique_name(&self, parent_path: &NodePath, original_name: &str) -> String {
+        let mut name = original_name.to_string();
+        let mut final_path = parent_path.join(&name);
+        let mut counter = 2;
+
+        // Loop until we find a unique path
+        while self.data.open_node(&NodeHandle::Path(final_path.clone())).is_ok() {
+            // Handle file extensions properly
+            if let Some(dot_pos) = original_name.rfind('.') {
+                // Split name and extension
+                let base_name = &original_name[..dot_pos];
+                let extension = &original_name[dot_pos..];
+                name = format!("{}_{}{}", base_name, counter, extension);
+            } else {
+                // No extension, just append counter
+                name = format!("{}_{}", original_name, counter);
+            }
+            final_path = parent_path.join(&name);
+            counter += 1;
+        }
+
+        name
+    }
+
     /// Helper function to recursively update database paths without touching the filesystem
     fn move_node_in_database(
         &mut self,
@@ -665,11 +707,13 @@ impl KartaService {
                 .data
                 .open_node(&NodeHandle::Path(new_parent_path.clone()))?;
 
-            // Update this node's path attribute in the database FIRST
+            // Update this node's path and name attributes in the database FIRST
             let new_path_attribute =
                 Attribute::new_string("path".to_string(), target_path.alias().to_string());
+            let new_name_attribute =
+                Attribute::new_string("name".to_string(), target_path.name());
             self.data
-                .update_node_attributes(node.uuid(), vec![new_path_attribute])?;
+                .update_node_attributes(node.uuid(), vec![new_path_attribute, new_name_attribute])?;
 
             // Reconnect the 'contains' edge from the old parent to the new parent
             // Use the specialized reparent_node method for contains edges
@@ -1529,5 +1573,175 @@ mod tests {
             )).unwrap();
             assert_eq!(moved_virtual_nested.path().alias(), "/vault/dest_dir/complex_dir/sub_dir/virtual_nested");
         });
+    }
+
+    #[test]
+    fn test_rename_physical_file_node() {
+        let func_name = "test_rename_physical_file_node";
+        let ctx = KartaServiceTestContext::new(func_name);
+
+        // 1. Create initial file
+        ctx.create_dir_in_vault("test_dir").unwrap();
+        ctx.create_file_in_vault("test_dir/original_name.txt", b"content").unwrap();
+
+        let original_path = NodePath::new("vault/test_dir/original_name.txt".into());
+        let expected_new_path = NodePath::new("vault/test_dir/new_name.txt".into());
+
+        // 2. Index the file
+        let original_uuid = ctx.with_service_mut(|s| {
+            let node = fs_reader::destructure_single_path(s.vault_fs_path(), &original_path).unwrap();
+            let uuid = node.uuid();
+            s.data_mut().insert_nodes(vec![node]);
+            uuid
+        });
+
+        // 3. Perform rename
+        let result_path = ctx.with_service_mut(|s| {
+            s.rename_node(&original_path, "new_name.txt").unwrap()
+        });
+
+        // 4. Assert the results
+        assert_eq!(result_path, expected_new_path);
+
+        // Check filesystem
+        assert!(!ctx.get_vault_root().join("test_dir/original_name.txt").exists());
+        assert!(ctx.get_vault_root().join("test_dir/new_name.txt").exists());
+
+        // Check database
+        let renamed_node = ctx.with_service(|s| {
+            s.data().open_node(&NodeHandle::Path(expected_new_path)).unwrap()
+        });
+        assert_eq!(renamed_node.uuid(), original_uuid);
+        assert_eq!(renamed_node.path().alias(), "/vault/test_dir/new_name.txt");
+        assert_eq!(renamed_node.name(), "new_name.txt");
+    }
+
+    #[test]
+    fn test_rename_physical_directory() {
+        let func_name = "test_rename_physical_directory";
+        let ctx = KartaServiceTestContext::new(func_name);
+
+        // 1. Create directory with children
+        ctx.create_dir_in_vault("parent_dir").unwrap();
+        ctx.create_dir_in_vault("parent_dir/old_dir_name").unwrap();
+        ctx.create_file_in_vault("parent_dir/old_dir_name/child_file.txt", b"content").unwrap();
+
+        let original_dir_path = NodePath::new("vault/parent_dir/old_dir_name".into());
+        let original_file_path = NodePath::new("vault/parent_dir/old_dir_name/child_file.txt".into());
+        let expected_new_dir_path = NodePath::new("vault/parent_dir/new_dir_name".into());
+        let expected_new_file_path = NodePath::new("vault/parent_dir/new_dir_name/child_file.txt".into());
+
+        // 2. Index the nodes
+        let (original_dir_uuid, original_file_uuid) = ctx.with_service_mut(|s| {
+            let dir_node = fs_reader::destructure_single_path(s.vault_fs_path(), &original_dir_path).unwrap();
+            let file_node = fs_reader::destructure_single_path(s.vault_fs_path(), &original_file_path).unwrap();
+            let dir_uuid = dir_node.uuid();
+            let file_uuid = file_node.uuid();
+            s.data_mut().insert_nodes(vec![dir_node, file_node]);
+            (dir_uuid, file_uuid)
+        });
+
+        // 3. Perform rename
+        let result_path = ctx.with_service_mut(|s| {
+            s.rename_node(&original_dir_path, "new_dir_name").unwrap()
+        });
+
+        // 4. Assert the results
+        assert_eq!(result_path, expected_new_dir_path);
+
+        // Check filesystem
+        assert!(!ctx.get_vault_root().join("parent_dir/old_dir_name").exists());
+        assert!(ctx.get_vault_root().join("parent_dir/new_dir_name").exists());
+        assert!(ctx.get_vault_root().join("parent_dir/new_dir_name/child_file.txt").exists());
+
+        // Check database - directory
+        let renamed_dir = ctx.with_service(|s| {
+            s.data().open_node(&NodeHandle::Path(expected_new_dir_path)).unwrap()
+        });
+        assert_eq!(renamed_dir.uuid(), original_dir_uuid);
+        assert_eq!(renamed_dir.path().alias(), "/vault/parent_dir/new_dir_name");
+        assert_eq!(renamed_dir.name(), "new_dir_name");
+
+        // Check database - child file
+        let renamed_file = ctx.with_service(|s| {
+            s.data().open_node(&NodeHandle::Path(expected_new_file_path)).unwrap()
+        });
+        assert_eq!(renamed_file.uuid(), original_file_uuid);
+        assert_eq!(renamed_file.path().alias(), "/vault/parent_dir/new_dir_name/child_file.txt");
+    }
+
+    #[test]
+    fn test_rename_virtual_node() {
+        let func_name = "test_rename_virtual_node";
+        let ctx = KartaServiceTestContext::new(func_name);
+
+        // 1. Create physical parent and virtual child
+        ctx.create_dir_in_vault("parent_dir").unwrap();
+        let virtual_node_path = NodePath::new("vault/parent_dir/old_virtual_name".into());
+        let expected_new_path = NodePath::new("vault/parent_dir/new_virtual_name".into());
+
+        // 2. Index the virtual node
+        let original_uuid = ctx.with_service_mut(|s| {
+            let virtual_node = DataNode::new(&virtual_node_path, NodeTypeId::new("core/text"));
+            let uuid = virtual_node.uuid();
+            s.data_mut().insert_nodes(vec![virtual_node]);
+            uuid
+        });
+
+        // 3. Perform rename
+        let result_path = ctx.with_service_mut(|s| {
+            s.rename_node(&virtual_node_path, "new_virtual_name").unwrap()
+        });
+
+        // 4. Assert the results
+        assert_eq!(result_path, expected_new_path);
+
+        // Check database
+        let renamed_node = ctx.with_service(|s| {
+            s.data().open_node(&NodeHandle::Path(expected_new_path)).unwrap()
+        });
+        assert_eq!(renamed_node.uuid(), original_uuid);
+        assert_eq!(renamed_node.path().alias(), "/vault/parent_dir/new_virtual_name");
+        assert_eq!(renamed_node.name(), "new_virtual_name");
+
+        // Ensure old path no longer exists in database
+        let old_node_result = ctx.with_service(|s| {
+            s.data().open_node(&NodeHandle::Path(virtual_node_path))
+        });
+        assert!(old_node_result.is_err());
+    }
+
+    #[test]
+    fn test_rename_with_name_collision() {
+        let func_name = "test_rename_with_name_collision";
+        let ctx = KartaServiceTestContext::new(func_name);
+
+        // 1. Create two files with different names
+        ctx.create_dir_in_vault("test_dir").unwrap();
+        ctx.create_file_in_vault("test_dir/file1.txt", b"content1").unwrap();
+        ctx.create_file_in_vault("test_dir/file2.txt", b"content2").unwrap();
+
+        let file1_path = NodePath::new("vault/test_dir/file1.txt".into());
+
+        // 2. Index the files
+        ctx.with_service_mut(|s| {
+            let node1 = fs_reader::destructure_single_path(s.vault_fs_path(), &file1_path).unwrap();
+            let node2 = fs_reader::destructure_single_path(s.vault_fs_path(), &NodePath::new("vault/test_dir/file2.txt".into())).unwrap();
+            s.data_mut().insert_nodes(vec![node1, node2]);
+        });
+
+        // 3. Try to rename file1 to file2 (collision should be resolved automatically)
+        let result_path = ctx.with_service_mut(|s| {
+            s.rename_node(&file1_path, "file2.txt").unwrap()
+        });
+
+        // 4. Should have been auto-renamed to avoid collision
+        assert_ne!(result_path.name(), "file2.txt"); // Should be auto-renamed
+        assert!(result_path.name().starts_with("file2")); // Should start with desired name
+        
+        // Check filesystem - original files should exist, plus the renamed one
+        assert!(ctx.get_vault_root().join("test_dir/file2.txt").exists()); // Original file2
+        assert!(!ctx.get_vault_root().join("test_dir/file1.txt").exists()); // file1 should be gone
+        assert!(ctx.get_vault_root().join(format!("test_dir/{}", result_path.name())).exists()); // Renamed file
     }
 }
