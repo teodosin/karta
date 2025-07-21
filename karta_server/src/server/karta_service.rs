@@ -1176,4 +1176,223 @@ mod tests {
             );
         });
     }
+
+    #[test]
+    fn test_move_directory_with_nested_subdirectories() {
+        let func_name = "test_move_directory_with_nested_subdirectories";
+        let mut ctx = KartaServiceTestContext::new(func_name);
+
+        // 1. Create a nested directory structure
+        std::fs::create_dir_all(ctx.get_vault_root().join("source_dir/movable_dir/sub_dir")).unwrap();
+        std::fs::create_dir_all(ctx.get_vault_root().join("dest_dir")).unwrap();
+        std::fs::write(ctx.get_vault_root().join("source_dir/movable_dir/file.txt"), "content").unwrap();
+        std::fs::write(ctx.get_vault_root().join("source_dir/movable_dir/sub_dir/nested_file.txt"), "nested content").unwrap();
+
+        // 2. Index all nodes in the database
+        let nodes_to_index = vec![
+            NodePath::new("vault".into()),
+            NodePath::new("vault/source_dir".into()),
+            NodePath::new("vault/dest_dir".into()),
+            NodePath::new("vault/source_dir/movable_dir".into()),
+            NodePath::new("vault/source_dir/movable_dir/file.txt".into()),
+            NodePath::new("vault/source_dir/movable_dir/sub_dir".into()),
+            NodePath::new("vault/source_dir/movable_dir/sub_dir/nested_file.txt".into()),
+        ];
+
+        ctx.with_service_mut(|s| {
+            for path in nodes_to_index {
+                let node = fs_reader::destructure_single_path(s.vault_fs_path(), &path).unwrap();
+                s.data_mut().insert_nodes(vec![node]);
+            }
+        });
+
+        // 3. Execute the move operation
+        let movable_dir_path = NodePath::new("vault/source_dir/movable_dir".into());
+        let dest_dir_path = NodePath::new("vault/dest_dir".into());
+        ctx.with_service_mut(|s| {
+            s.move_node(&movable_dir_path, &dest_dir_path).unwrap();
+        });
+
+        // 4. Assert filesystem changes
+        assert!(!ctx.get_vault_root().join("source_dir/movable_dir").exists());
+        assert!(ctx.get_vault_root().join("dest_dir/movable_dir").exists());
+        assert!(ctx.get_vault_root().join("dest_dir/movable_dir/file.txt").exists());
+        assert!(ctx.get_vault_root().join("dest_dir/movable_dir/sub_dir").exists());
+        assert!(ctx.get_vault_root().join("dest_dir/movable_dir/sub_dir/nested_file.txt").exists());
+
+        // 5. Assert database path changes for all nodes
+        let moved_dir_new_path = NodePath::new("vault/dest_dir/movable_dir".into());
+        let moved_file_new_path = NodePath::new("vault/dest_dir/movable_dir/file.txt".into());
+        let moved_subdir_new_path = NodePath::new("vault/dest_dir/movable_dir/sub_dir".into());
+        let moved_nested_file_new_path = NodePath::new("vault/dest_dir/movable_dir/sub_dir/nested_file.txt".into());
+
+        ctx.with_service(|s| {
+            // Check main directory
+            let moved_dir = s.data().open_node(&NodeHandle::Path(moved_dir_new_path)).unwrap();
+            assert_eq!(moved_dir.path().alias(), "/vault/dest_dir/movable_dir");
+
+            // Check file in main directory
+            let moved_file = s.data().open_node(&NodeHandle::Path(moved_file_new_path)).unwrap();
+            assert_eq!(moved_file.path().alias(), "/vault/dest_dir/movable_dir/file.txt");
+
+            // Check subdirectory
+            let moved_subdir = s.data().open_node(&NodeHandle::Path(moved_subdir_new_path)).unwrap();
+            assert_eq!(moved_subdir.path().alias(), "/vault/dest_dir/movable_dir/sub_dir");
+
+            // Check nested file
+            let moved_nested_file = s.data().open_node(&NodeHandle::Path(moved_nested_file_new_path)).unwrap();
+            assert_eq!(moved_nested_file.path().alias(), "/vault/dest_dir/movable_dir/sub_dir/nested_file.txt");
+        });
+    }
+
+    #[test]
+    fn test_move_directory_with_virtual_nodes() {
+        let func_name = "test_move_directory_with_virtual_nodes";
+        let mut ctx = KartaServiceTestContext::new(func_name);
+
+        // 1. Create directory structure and a virtual node
+        std::fs::create_dir_all(ctx.get_vault_root().join("source_dir/movable_dir")).unwrap();
+        std::fs::create_dir_all(ctx.get_vault_root().join("dest_dir")).unwrap();
+
+        // 2. Index the directory structure
+        let nodes_to_index = vec![
+            NodePath::new("vault".into()),
+            NodePath::new("vault/source_dir".into()),
+            NodePath::new("vault/dest_dir".into()),
+            NodePath::new("vault/source_dir/movable_dir".into()),
+        ];
+
+        ctx.with_service_mut(|s| {
+            for path in nodes_to_index {
+                let node = fs_reader::destructure_single_path(s.vault_fs_path(), &path).unwrap();
+                s.data_mut().insert_nodes(vec![node]);
+            }
+        });
+
+        // 3. Create a virtual node inside the movable directory
+        let virtual_node_path = NodePath::new("vault/source_dir/movable_dir/my_virtual_node".into());
+        let virtual_node = DataNode::new(&virtual_node_path, NodeTypeId::new("core/text"));
+        
+        ctx.with_service_mut(|s| {
+            s.data_mut().insert_nodes(vec![virtual_node.clone()]);
+        });
+
+        // 4. Execute the move operation
+        let movable_dir_path = NodePath::new("vault/source_dir/movable_dir".into());
+        let dest_dir_path = NodePath::new("vault/dest_dir".into());
+        ctx.with_service_mut(|s| {
+            s.move_node(&movable_dir_path, &dest_dir_path).unwrap();
+        });
+
+        // 5. Assert filesystem changes (directory moved)
+        assert!(!ctx.get_vault_root().join("source_dir/movable_dir").exists());
+        assert!(ctx.get_vault_root().join("dest_dir/movable_dir").exists());
+
+        // 6. Assert database path changes including virtual node
+        let moved_dir_new_path = NodePath::new("vault/dest_dir/movable_dir".into());
+        let moved_virtual_node_new_path = NodePath::new("vault/dest_dir/movable_dir/my_virtual_node".into());
+
+        ctx.with_service(|s| {
+            // Check main directory
+            let moved_dir = s.data().open_node(&NodeHandle::Path(moved_dir_new_path)).unwrap();
+            assert_eq!(moved_dir.path().alias(), "/vault/dest_dir/movable_dir");
+
+            // Check virtual node path was updated
+            let moved_virtual_node = s.data().open_node(&NodeHandle::Path(moved_virtual_node_new_path)).unwrap();
+            assert_eq!(moved_virtual_node.path().alias(), "/vault/dest_dir/movable_dir/my_virtual_node");
+        });
+    }
+
+    #[test]
+    fn test_move_directory_with_mixed_content() {
+        let func_name = "test_move_directory_with_mixed_content";
+        let mut ctx = KartaServiceTestContext::new(func_name);
+
+        // 1. Create complex directory structure
+        std::fs::create_dir_all(ctx.get_vault_root().join("source_dir/complex_dir/sub_dir")).unwrap();
+        std::fs::create_dir_all(ctx.get_vault_root().join("dest_dir")).unwrap();
+        std::fs::write(ctx.get_vault_root().join("source_dir/complex_dir/physical_file.txt"), "content").unwrap();
+        std::fs::write(ctx.get_vault_root().join("source_dir/complex_dir/sub_dir/nested_file.md"), "nested content").unwrap();
+
+        // 2. Index the physical structure
+        let nodes_to_index = vec![
+            NodePath::new("vault".into()),
+            NodePath::new("vault/source_dir".into()),
+            NodePath::new("vault/dest_dir".into()),
+            NodePath::new("vault/source_dir/complex_dir".into()),
+            NodePath::new("vault/source_dir/complex_dir/physical_file.txt".into()),
+            NodePath::new("vault/source_dir/complex_dir/sub_dir".into()),
+            NodePath::new("vault/source_dir/complex_dir/sub_dir/nested_file.md".into()),
+        ];
+
+        ctx.with_service_mut(|s| {
+            for path in nodes_to_index {
+                let node = fs_reader::destructure_single_path(s.vault_fs_path(), &path).unwrap();
+                s.data_mut().insert_nodes(vec![node]);
+            }
+        });
+
+        // 3. Add virtual nodes at different levels
+        let virtual_node_root = NodePath::new("vault/source_dir/complex_dir/virtual_note".into());
+        let virtual_node_nested = NodePath::new("vault/source_dir/complex_dir/sub_dir/virtual_nested".into());
+        let virtual_root_node = DataNode::new(&virtual_node_root, NodeTypeId::new("core/text"));
+        let virtual_nested_node = DataNode::new(&virtual_node_nested, NodeTypeId::new("core/text"));
+        
+        ctx.with_service_mut(|s| {
+            s.data_mut().insert_nodes(vec![virtual_root_node.clone(), virtual_nested_node.clone()]);
+        });
+
+        // 4. Execute the move operation
+        let complex_dir_path = NodePath::new("vault/source_dir/complex_dir".into());
+        let dest_dir_path = NodePath::new("vault/dest_dir".into());
+        ctx.with_service_mut(|s| {
+            s.move_node(&complex_dir_path, &dest_dir_path).unwrap();
+        });
+
+        // 5. Assert filesystem changes
+        assert!(!ctx.get_vault_root().join("source_dir/complex_dir").exists());
+        assert!(ctx.get_vault_root().join("dest_dir/complex_dir").exists());
+        assert!(ctx.get_vault_root().join("dest_dir/complex_dir/physical_file.txt").exists());
+        assert!(ctx.get_vault_root().join("dest_dir/complex_dir/sub_dir").exists());
+        assert!(ctx.get_vault_root().join("dest_dir/complex_dir/sub_dir/nested_file.md").exists());
+
+        // 6. Assert ALL database path changes
+        ctx.with_service(|s| {
+            // Main directory
+            let moved_dir = s.data().open_node(&NodeHandle::Path(
+                NodePath::new("vault/dest_dir/complex_dir".into())
+            )).unwrap();
+            assert_eq!(moved_dir.path().alias(), "/vault/dest_dir/complex_dir");
+
+            // Physical file in root
+            let moved_file = s.data().open_node(&NodeHandle::Path(
+                NodePath::new("vault/dest_dir/complex_dir/physical_file.txt".into())
+            )).unwrap();
+            assert_eq!(moved_file.path().alias(), "/vault/dest_dir/complex_dir/physical_file.txt");
+
+            // Subdirectory
+            let moved_subdir = s.data().open_node(&NodeHandle::Path(
+                NodePath::new("vault/dest_dir/complex_dir/sub_dir".into())
+            )).unwrap();
+            assert_eq!(moved_subdir.path().alias(), "/vault/dest_dir/complex_dir/sub_dir");
+
+            // Physical file in subdirectory
+            let moved_nested_file = s.data().open_node(&NodeHandle::Path(
+                NodePath::new("vault/dest_dir/complex_dir/sub_dir/nested_file.md".into())
+            )).unwrap();
+            assert_eq!(moved_nested_file.path().alias(), "/vault/dest_dir/complex_dir/sub_dir/nested_file.md");
+
+            // Virtual node in root
+            let moved_virtual_root = s.data().open_node(&NodeHandle::Path(
+                NodePath::new("vault/dest_dir/complex_dir/virtual_note".into())
+            )).unwrap();
+            assert_eq!(moved_virtual_root.path().alias(), "/vault/dest_dir/complex_dir/virtual_note");
+
+            // Virtual node in subdirectory
+            let moved_virtual_nested = s.data().open_node(&NodeHandle::Path(
+                NodePath::new("vault/dest_dir/complex_dir/sub_dir/virtual_nested".into())
+            )).unwrap();
+            assert_eq!(moved_virtual_nested.path().alias(), "/vault/dest_dir/complex_dir/sub_dir/virtual_nested");
+        });
+    }
 }
