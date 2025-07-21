@@ -13,7 +13,8 @@
 	import {
 		nodes,
 		updateNodeAttributes,
-		updateViewNodeAttribute
+		updateViewNodeAttribute,
+		updateViewNodeAttributeImmediate
 	} from "$lib/karta/NodeStore";
 	import { contexts, currentContextId } from "$lib/karta/ContextStore"; // Import context stores
 	import { getNodeTypeDef } from "$lib/node_types/registry"; // To get property schema
@@ -101,10 +102,25 @@
 	function handleColorPickerOpen(key: string, e: MouseEvent) {
 		if (!selectedDataNode) return;
 		const initialColor = displayAttributes[key] ?? '#ffffff';
+		
 		const onUpdate = (newColor: string) => {
-			handleAttributeUpdate(key, newColor);
+			// Immediate visual update (no server save)
+			if (key.startsWith('view_') || key.startsWith('viewtype_')) {
+				if (selectedViewNode) {
+					updateViewNodeAttributeImmediate(selectedViewNode.id, key, newColor);
+				}
+			} else {
+				// For DataNode attributes, we could add a similar immediate update function
+				handleAttributeUpdate(key, newColor);
+			}
 		};
-		colorPickerStore.open(initialColor, e, onUpdate);
+		
+		const onClose = (finalColor: string) => {
+			// Final save to server
+			handleAttributeUpdate(key, finalColor);
+		};
+		
+		colorPickerStore.open(initialColor, e, onUpdate, onClose);
 	}
 
 	// --- Dragging Logic ---

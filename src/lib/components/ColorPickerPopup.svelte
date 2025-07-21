@@ -9,9 +9,9 @@
 	let popupHeight = 0;
 
 	function handleColorInput(data: { rgb: { r: number; g: number; b: number; a: number } | null }) {
-		if (data.rgb && $colorPickerStore.onUpdate) {
+		if (data.rgb) {
 			const newColor = `rgba(${data.rgb.r}, ${data.rgb.g}, ${data.rgb.b}, ${data.rgb.a})`;
-			$colorPickerStore.onUpdate(newColor);
+			colorPickerStore.updateColor(newColor);
 		}
 	}
 
@@ -51,7 +51,7 @@
 		style="left: {adjustedPosition.x}px; top: {adjustedPosition.y}px;"
 	>
 		<ColorPicker
-			rgb={colord($colorPickerStore.initialColor).toRgb()}
+			rgb={colord($colorPickerStore.currentColor).toRgb()}
 			onInput={handleColorInput}
 			isDialog={false}
 		/>

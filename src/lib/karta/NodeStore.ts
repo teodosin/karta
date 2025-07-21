@@ -668,7 +668,51 @@ export async function updateViewNodeAttribute(viewNodeId: string, attributeKey: 
             }
         }
     }
+}
 
+// --- Immediate UI Update (No Server Save) ---
+export function updateViewNodeAttributeImmediate(viewNodeId: string, attributeKey: string, attributeValue: any): void {
+    const currentCtxId = get(currentContextId);
+    if (!currentCtxId) {
+        return;
+    }
+
+    const currentContexts = get(contexts);
+    const currentContext = currentContexts.get(currentCtxId);
+    if (!currentContext) {
+        return;
+    }
+
+    const viewNode = currentContext.viewNodes.get(viewNodeId);
+    if (!viewNode) {
+        return;
+    }
+
+    // Type check
+    if (attributeKey.startsWith('type_')) {
+        return;
+    }
+
+    // Only update ViewNode in context (no server save)
+    const needsViewNodeUpdate = viewNode.attributes?.[attributeKey] !== attributeValue;
+    
+    if (needsViewNodeUpdate) {
+        contexts.update(ctxMap => {
+            const originalContext = ctxMap.get(currentCtxId);
+            if (!originalContext) return ctxMap;
+            const originalViewNode = originalContext.viewNodes.get(viewNodeId);
+            if (!originalViewNode) return ctxMap;
+
+            const newViewAttributes = { ...(originalViewNode.attributes ?? {}), [attributeKey]: attributeValue };
+            const newViewNode = { ...originalViewNode, attributes: newViewAttributes };
+            const newViewNodes = new Map(originalContext.viewNodes).set(viewNodeId, newViewNode);
+            const newContext = { ...originalContext, viewNodes: newViewNodes };
+
+            const newCtxMap = new Map(ctxMap);
+            newCtxMap.set(currentCtxId, newContext);
+            return newCtxMap;
+        });
+    }
 }
 // --- Node Search Action ---
 
