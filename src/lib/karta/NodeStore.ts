@@ -6,7 +6,7 @@ import type { DataNode, NodeId, AssetData, TweenableNodeState, ViewNode, Context
 import { v4 as uuidv4 } from 'uuid';
 import { getDefaultAttributesForType, getDefaultViewNodeStateForType } from '$lib/node_types/registry';
 import { Tween } from 'svelte/motion';
-import { currentContextId, contexts, removeViewNodeFromContext, existingContextsMap } from './ContextStore';
+import { currentContextId, contexts, removeViewNodeFromContext, existingContextsMap, activeAdapter } from './ContextStore';
 import { viewTransform, centerViewOnCanvasPoint } from './ViewportStore';
 export const nodes = writable<Map<NodeId, DataNode>>(new Map());
 
@@ -618,11 +618,11 @@ export async function updateViewNodeAttribute(viewNodeId: string, attributeKey: 
             return newCtxMap;
         });
 
-        if (localAdapter) {
+        if (activeAdapter) {
             try {
                 const updatedContext = get(contexts).get(currentCtxId);
                 if (updatedContext) {
-                    await localAdapter.saveContext(updatedContext);
+                    await activeAdapter.saveContext(updatedContext);
                 }
             } catch (error) {
                 console.error(`[updateViewNodeAttribute] Error saving context ${currentCtxId} for ViewNode update:`, error);
@@ -651,6 +651,18 @@ export async function updateViewNodeAttribute(viewNodeId: string, attributeKey: 
             newNodeMap.set(dataNodeId, updatedDataNode);
             return newNodeMap;
         });
+
+        // Persist DataNode changes to server
+        if (activeAdapter) {
+            try {
+                const updatedDataNode = get(nodes).get(dataNodeId);
+                if (updatedDataNode) {
+                    await activeAdapter.saveNode(updatedDataNode);
+                }
+            } catch (error) {
+                console.error(`[updateViewNodeAttribute] Error saving DataNode ${dataNodeId} for attribute default update:`, error);
+            }
+        }
     }
 
 }

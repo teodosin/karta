@@ -134,7 +134,10 @@ async function _loadAndProcessContext(
 
             if (existingViewNode) {
                 console.log(`[ContextStore._loadAndProcessContext] Cloning existing ViewNode ${nodeId} from old context for storable node.`);
-                finalViewNodes.set(nodeId, cloneViewNode(existingViewNode, targetState));
+                // Clone the ViewNode but use the stored context-specific attributes, not the previous context's attributes
+                const clonedViewNode = cloneViewNode(existingViewNode, targetState);
+                clonedViewNode.attributes = storableNode.attributes ? { ...storableNode.attributes } : {}; // Use context-specific attributes
+                finalViewNodes.set(nodeId, clonedViewNode);
             } else {
                 // Create new ViewNode with a new Tween, starting from target state? Or current if exists? Start from target.
                 finalViewNodes.set(nodeId, { id: nodeId, state: new Tween(targetState, NODE_TWEEN_OPTIONS), attributes: storableNode.attributes, status: storableNode.status });
