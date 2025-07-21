@@ -255,9 +255,19 @@ async function handleContainsEdgeReconnection(nodeId: NodeId, newParentId: NodeI
 				return nodeMap;
 			});
 			
-			// Update the edges to reflect the new contains relationship
-			console.log(`[ToolStore] Updating edge ${edgeId} to connect ${newParentId} -> ${nodeId}`);
-			reconnectEdge(edgeId, newParentId, undefined); // Update edge source to new parent
+			// Update the edge store to reflect the new parent-child relationship
+			edgeStore.update((edgeMap) => {
+				const edge = edgeMap.get(edgeId!);
+				if (edge) {
+					edge.source = newParentId;
+					edge.target = nodeId;
+					edgeMap.set(edgeId!, edge);
+					console.log(`[ToolStore] Updated edge ${edgeId} to connect ${newParentId} -> ${nodeId}`);
+				}
+				return edgeMap;
+			});
+			
+			console.log(`[ToolStore] Move operation completed. Updated node path and edge relationship.`);
 		} else {
 			console.error('[ToolStore] Adapter does not support moveNodes operation');
 		}
