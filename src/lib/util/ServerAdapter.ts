@@ -617,4 +617,33 @@ export class ServerAdapter implements PersistenceService {
             throw error;
         }
     }
+
+    async moveNodes(moves: Array<{ source_path: string, target_parent_path: string }>): Promise<void> {
+        const url = `${SERVER_BASE_URL}/api/nodes/move`;
+        const payload = { moves };
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+
+            if (!response.ok) {
+                const errorBody = await response.text();
+                console.error(`[ServerAdapter.moveNodes] Error moving nodes. Status: ${response.status}`, errorBody);
+                throw new Error(`Server responded with status ${response.status}`);
+            }
+
+            const result = await response.json();
+            console.log(`[ServerAdapter.moveNodes] Successfully moved ${result.moved_nodes?.length || 0} nodes.`);
+            
+            if (result.errors && result.errors.length > 0) {
+                console.warn(`[ServerAdapter.moveNodes] Some operations failed:`, result.errors);
+            }
+        } catch (error) {
+            console.error(`[ServerAdapter.moveNodes] Network error moving nodes:`, error);
+            throw error;
+        }
+    }
 }

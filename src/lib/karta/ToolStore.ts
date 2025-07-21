@@ -4,7 +4,8 @@ import { MoveTool } from '../tools/MoveTool';
 import { ConnectTool } from '../tools/ConnectTool';
 import { ContextTool } from '../tools/ContextTool';
 import { createEdges, edges as edgeStore, reconnectEdge } from './EdgeStore';
-import { currentViewNodes, currentContextId } from './ContextStore';
+import { currentViewNodes, currentContextId, activeAdapter } from './ContextStore';
+import { nodes } from './NodeStore';
 
 
 
@@ -119,6 +120,12 @@ export function startReconnectionProcess(edgeId: NodeId, endpoint: 'from' | 'to'
 		return;
 	}
 
+	// Prevent dragging contains edges from the target (child) end
+	if (edge.contains && endpoint === 'to') {
+		console.log(`[ToolStore] Contains edges cannot be reconnected from the target (child) side.`);
+		return;
+	}
+
 	isReconnecting.set(true);
 	reconnectingEdgeId.set(edgeId);
 	reconnectingEndpoint.set(endpoint);
@@ -134,13 +141,6 @@ export function finishReconnectionProcess(targetNodeId: NodeId | null) {
 	const edgeToReconnect = edgeId ? allEdges.get(edgeId) : null;
 
 	if (targetNodeId && edgeId && endpoint && edgeToReconnect) {
-		// Rule: Prevent reconnecting 'contains' edges
-		if (edgeToReconnect.contains) {
-			console.warn('[ToolStore] Reconnecting "contains" edges is not allowed.');
-			cancelReconnectionProcess();
-			return;
-		}
-
 		const currentSource = edgeToReconnect.source;
 		const currentTarget = edgeToReconnect.target;
 
@@ -169,12 +169,18 @@ export function finishReconnectionProcess(targetNodeId: NodeId | null) {
 			return;
 		}
 
-		// All checks passed, proceed with reconnection
-		console.log(`[ToolStore] Reconnect edge ${edgeId} (${endpoint}) to node ${targetNodeId}`);
-		if (endpoint === 'from') {
-			reconnectEdge(edgeId, targetNodeId, undefined);
+		// Handle contains edges differently - use move nodes API
+		if (edgeToReconnect.contains) {
+			console.log(`[ToolStore] Moving node ${currentTarget} to new parent ${newSource}`);
+			handleContainsEdgeReconnection(currentTarget, newSource);
 		} else {
-			reconnectEdge(edgeId, undefined, targetNodeId);
+			// Regular edge reconnection
+			console.log(`[ToolStore] Reconnect edge ${edgeId} (${endpoint}) to node ${targetNodeId}`);
+			if (endpoint === 'from') {
+				reconnectEdge(edgeId, targetNodeId, undefined);
+			} else {
+				reconnectEdge(edgeId, undefined, targetNodeId);
+			}
 		}
 	}
 
@@ -186,6 +192,78 @@ export function cancelReconnectionProcess() {
 	reconnectingEdgeId.set(null);
 	reconnectingEndpoint.set(null);
 	tempLineTargetPosition.set(null);
+}
+
+async function handleContainsEdgeReconnection(nodeId: NodeId, newParentId: NodeId) {
+	const dataNodes = get(nodes);
+	const edgeId = get(reconnectingEdgeId);
+	
+	if (!activeAdapter) {
+		console.error('[ToolStore] No active adapter available for moving nodes');
+		return;
+	}
+
+	if (!edgeId) {
+		console.error('[ToolStore] No edge ID available for contains edge reconnection');
+		return;
+	}
+
+	const node = dataNodes.get(nodeId);
+	const newParent = dataNodes.get(newParentId);
+
+	if (!node || !newParent) {
+		console.error('[ToolStore] Could not find DataNode or new parent for move operation');
+		return;
+	}
+
+	if (!node.path || !newParent.path) {
+		console.error('[ToolStore] Node or parent missing path information');
+		return;
+	}
+
+	// Extract node name from current path for building new path
+	const nodeName = node.path.split('/').pop();
+	if (!nodeName) {
+		console.error('[ToolStore] Could not extract node name from path:', node.path);
+		return;
+	}
+
+	// Calculate the new path: parent_path/node_name
+	const newNodePath = `${newParent.path}/${nodeName}`;
+
+	try {
+		console.log(`[ToolStore] Moving node ${nodeId} (${node.path}) to parent ${newParentId} (${newParent.path})`);
+		
+		// Cast activeAdapter to access moveNodes method
+		const serverAdapter = activeAdapter as any;
+		if (serverAdapter.moveNodes) {
+			await serverAdapter.moveNodes([{
+				source_path: node.path,
+				target_parent_path: newParent.path
+			}]);
+
+			console.log('[ToolStore] Node move completed successfully');
+			
+			// Update the node's path in the NodeStore
+			nodes.update((nodeMap) => {
+				const nodeToUpdate = nodeMap.get(nodeId);
+				if (nodeToUpdate) {
+					nodeToUpdate.path = newNodePath;
+					nodeMap.set(nodeId, nodeToUpdate);
+					console.log(`[ToolStore] Updated node ${nodeId} path to: ${newNodePath}`);
+				}
+				return nodeMap;
+			});
+			
+			// Update the edges to reflect the new contains relationship
+			console.log(`[ToolStore] Updating edge ${edgeId} to connect ${newParentId} -> ${nodeId}`);
+			reconnectEdge(edgeId, newParentId, undefined); // Update edge source to new parent
+		} else {
+			console.error('[ToolStore] Adapter does not support moveNodes operation');
+		}
+	} catch (error) {
+		console.error('[ToolStore] Failed to move node:', error);
+	}
 }
 
 
