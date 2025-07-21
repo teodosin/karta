@@ -20,14 +20,15 @@ fn get_node_type_from_path(path: &Path) -> NodeTypeId {
 
 pub fn destructure_single_path(
     vault_root_path: &PathBuf,
-    path_to_destructure: &PathBuf,
+    path_to_destructure: &NodePath,
 ) -> Result<DataNode, Box<dyn Error>> {
+    let path_to_destructure = path_to_destructure.full(vault_root_path);
     if !path_to_destructure.exists() {
         return Err(format!("Path does not exist: {:?}", path_to_destructure).into());
     }
 
-    let node_path = NodePath::from_dir_path(vault_root_path, path_to_destructure);
-    let ntype = get_node_type_from_path(path_to_destructure);
+    let node_path = NodePath::from_dir_path(vault_root_path, &path_to_destructure);
+    let ntype = get_node_type_from_path(&path_to_destructure);
     let node = DataNode::new(&node_path, ntype);
     Ok(node)
 }
