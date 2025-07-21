@@ -64,6 +64,7 @@ pub fn create_router(state: AppState) -> Router<()> {
         .route("/api/paths", get(data_endpoints::get_paths))
         .route("/api/contexts", get(data_endpoints::get_available_contexts))
         .route("/api/nodes", post(write_endpoints::create_node))
+        .route("/api/nodes/move", post(write_endpoints::move_nodes))
         .route(
             "/api/nodes/{id}",
             put(write_endpoints::update_node)

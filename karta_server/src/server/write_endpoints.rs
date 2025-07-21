@@ -31,6 +31,29 @@ pub struct UpdateNodePayload {
     attributes: Vec<Attribute>,
 }
 
+#[derive(Deserialize, serde::Serialize)]
+pub struct MoveNodesPayload {
+    moves: Vec<MoveOperation>,
+}
+
+#[derive(Deserialize, serde::Serialize)]
+pub struct MoveOperation {
+    source_path: String,
+    target_parent_path: String,
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct MoveNodesResponse {
+    moved_nodes: Vec<DataNode>,
+    errors: Vec<MoveError>,
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct MoveError {
+    source_path: String,
+    error: String,
+}
+
 pub async fn create_node(
     State(app_state): State<AppState>,
     Json(payload): Json<CreateNodePayload>,
@@ -91,6 +114,80 @@ pub async fn update_node(
     Ok(Json(node))
 }
 
+pub async fn move_nodes(
+    State(app_state): State<AppState>,
+    Json(payload): Json<MoveNodesPayload>,
+) -> Result<Json<MoveNodesResponse>, StatusCode> {
+    let mut service = app_state.service.write().unwrap();
+    let mut moved_nodes = Vec::new();
+    let mut errors = Vec::new();
+
+    for move_op in payload.moves {
+        let source_path = NodePath::from_alias(&move_op.source_path);
+        let target_parent_path = NodePath::from_alias(&move_op.target_parent_path);
+
+        // Validate both paths are within vault
+        if !source_path.alias().starts_with("/vault") || !target_parent_path.alias().starts_with("/vault") {
+            errors.push(MoveError {
+                source_path: move_op.source_path.clone(),
+                error: "Paths must be within vault".to_string(),
+            });
+            continue;
+        }
+
+        // Validate target parent exists and is a directory
+        match service.data().open_node(&NodeHandle::Path(target_parent_path.clone())) {
+            Ok(target_node) => {
+                if !target_node.is_dir() {
+                    errors.push(MoveError {
+                        source_path: move_op.source_path.clone(),
+                        error: "Target parent must be a directory".to_string(),
+                    });
+                    continue;
+                }
+            }
+            Err(_) => {
+                errors.push(MoveError {
+                    source_path: move_op.source_path.clone(),
+                    error: "Target parent path not found".to_string(),
+                });
+                continue;
+            }
+        }
+
+        // Prevent moving to self or child (circular move)
+        if target_parent_path.alias().starts_with(&source_path.alias()) {
+            errors.push(MoveError {
+                source_path: move_op.source_path.clone(),
+                error: "Cannot move node to itself or its child".to_string(),
+            });
+            continue;
+        }
+
+        // Perform the move operation
+        match service.move_node(&source_path, &target_parent_path) {
+            Ok(_) => {
+                // Get the moved node at its new location
+                let new_path = target_parent_path.join(source_path.name().as_str());
+                if let Ok(moved_node) = service.data().open_node(&NodeHandle::Path(new_path)) {
+                    moved_nodes.push(moved_node);
+                }
+            }
+            Err(e) => {
+                errors.push(MoveError {
+                    source_path: move_op.source_path.clone(),
+                    error: format!("Move operation failed: {}", e),
+                });
+            }
+        }
+    }
+
+    Ok(Json(MoveNodesResponse {
+        moved_nodes,
+        errors,
+    }))
+}
+
 pub async fn save_context(
     State(app_state): State<AppState>,
     AxumPath(id): AxumPath<Uuid>,
@@ -148,6 +245,7 @@ mod tests {
             )
             .route("/api/ctx/{id}", axum::routing::put(save_context))
             .route("/api/nodes", axum::routing::post(create_node))
+            .route("/api/nodes/move", axum::routing::post(move_nodes))
             .with_state(app_state);
         (router, test_ctx)
     }
@@ -351,5 +449,252 @@ mod tests {
             s.data().open_node(&NodeHandle::Path(created_node.path()))
         });
         assert!(node_from_db.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_move_nodes_single_file() {
+        let (router, test_ctx) = setup_test_environment("move_nodes_single_file");
+
+        // Create test directory structure
+        std::fs::create_dir_all(test_ctx.get_vault_root().join("source_dir")).unwrap();
+        std::fs::create_dir_all(test_ctx.get_vault_root().join("dest_dir")).unwrap();
+        std::fs::write(test_ctx.get_vault_root().join("source_dir/test_file.txt"), "content").unwrap();
+
+        // Index nodes in database
+        test_ctx.with_service_mut(|s| {
+            s.data_mut().insert_nodes(vec![
+                DataNode::new(&"vault".into(), NodeTypeId::dir_type()),
+                DataNode::new(&"vault/source_dir".into(), NodeTypeId::dir_type()),
+                DataNode::new(&"vault/dest_dir".into(), NodeTypeId::dir_type()),
+                DataNode::new(&"vault/source_dir/test_file.txt".into(), NodeTypeId::file_type()),
+            ]);
+        });
+
+        // Create move request
+        let move_payload = MoveNodesPayload {
+            moves: vec![MoveOperation {
+                source_path: "/vault/source_dir/test_file.txt".to_string(),
+                target_parent_path: "/vault/dest_dir".to_string(),
+            }],
+        };
+
+        let request = Request::builder()
+            .method(http::Method::POST)
+            .uri("/api/nodes/move")
+            .header(http::header::CONTENT_TYPE, "application/json")
+            .body(Body::from(serde_json::to_string(&move_payload).unwrap()))
+            .unwrap();
+
+        let response = router.oneshot(request).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+
+        // Verify response
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let move_response: MoveNodesResponse = serde_json::from_slice(&body).unwrap();
+        assert_eq!(move_response.moved_nodes.len(), 1);
+        assert_eq!(move_response.errors.len(), 0);
+        assert_eq!(move_response.moved_nodes[0].path().alias(), "/vault/dest_dir/test_file.txt");
+
+        // Verify filesystem changes
+        assert!(!test_ctx.get_vault_root().join("source_dir/test_file.txt").exists());
+        assert!(test_ctx.get_vault_root().join("dest_dir/test_file.txt").exists());
+    }
+
+    #[tokio::test]
+    async fn test_move_nodes_directory_with_children() {
+        let (router, test_ctx) = setup_test_environment("move_nodes_directory");
+
+        // Create nested directory structure
+        std::fs::create_dir_all(test_ctx.get_vault_root().join("source_dir/movable_dir")).unwrap();
+        std::fs::create_dir_all(test_ctx.get_vault_root().join("dest_dir")).unwrap();
+        std::fs::write(test_ctx.get_vault_root().join("source_dir/movable_dir/file.txt"), "content").unwrap();
+
+        // Index nodes in database
+        test_ctx.with_service_mut(|s| {
+            s.data_mut().insert_nodes(vec![
+                DataNode::new(&"vault".into(), NodeTypeId::dir_type()),
+                DataNode::new(&"vault/source_dir".into(), NodeTypeId::dir_type()),
+                DataNode::new(&"vault/dest_dir".into(), NodeTypeId::dir_type()),
+                DataNode::new(&"vault/source_dir/movable_dir".into(), NodeTypeId::dir_type()),
+                DataNode::new(&"vault/source_dir/movable_dir/file.txt".into(), NodeTypeId::file_type()),
+            ]);
+        });
+
+        // Create move request
+        let move_payload = MoveNodesPayload {
+            moves: vec![MoveOperation {
+                source_path: "/vault/source_dir/movable_dir".to_string(),
+                target_parent_path: "/vault/dest_dir".to_string(),
+            }],
+        };
+
+        let request = Request::builder()
+            .method(http::Method::POST)
+            .uri("/api/nodes/move")
+            .header(http::header::CONTENT_TYPE, "application/json")
+            .body(Body::from(serde_json::to_string(&move_payload).unwrap()))
+            .unwrap();
+
+        let response = router.oneshot(request).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let move_response: MoveNodesResponse = serde_json::from_slice(&body).unwrap();
+        assert_eq!(move_response.moved_nodes.len(), 1);
+        assert_eq!(move_response.errors.len(), 0);
+
+        // Verify both directory and child file paths were updated in database
+        test_ctx.with_service(|s| {
+            let moved_dir = s.data().open_node(&NodeHandle::Path("vault/dest_dir/movable_dir".into())).unwrap();
+            assert_eq!(moved_dir.path().alias(), "/vault/dest_dir/movable_dir");
+
+            let moved_file = s.data().open_node(&NodeHandle::Path("vault/dest_dir/movable_dir/file.txt".into())).unwrap();
+            assert_eq!(moved_file.path().alias(), "/vault/dest_dir/movable_dir/file.txt");
+        });
+
+        // Verify filesystem changes
+        assert!(!test_ctx.get_vault_root().join("source_dir/movable_dir").exists());
+        assert!(test_ctx.get_vault_root().join("dest_dir/movable_dir").exists());
+        assert!(test_ctx.get_vault_root().join("dest_dir/movable_dir/file.txt").exists());
+    }
+
+    #[tokio::test]
+    async fn test_move_nodes_batch_operations() {
+        let (router, test_ctx) = setup_test_environment("move_nodes_batch");
+
+        // Create test structure
+        std::fs::create_dir_all(test_ctx.get_vault_root().join("source_dir")).unwrap();
+        std::fs::create_dir_all(test_ctx.get_vault_root().join("dest_dir")).unwrap();
+        std::fs::write(test_ctx.get_vault_root().join("source_dir/file1.txt"), "content1").unwrap();
+        std::fs::write(test_ctx.get_vault_root().join("source_dir/file2.txt"), "content2").unwrap();
+
+        // Index nodes
+        test_ctx.with_service_mut(|s| {
+            s.data_mut().insert_nodes(vec![
+                DataNode::new(&"vault".into(), NodeTypeId::dir_type()),
+                DataNode::new(&"vault/source_dir".into(), NodeTypeId::dir_type()),
+                DataNode::new(&"vault/dest_dir".into(), NodeTypeId::dir_type()),
+                DataNode::new(&"vault/source_dir/file1.txt".into(), NodeTypeId::file_type()),
+                DataNode::new(&"vault/source_dir/file2.txt".into(), NodeTypeId::file_type()),
+            ]);
+        });
+
+        // Create batch move request
+        let move_payload = MoveNodesPayload {
+            moves: vec![
+                MoveOperation {
+                    source_path: "/vault/source_dir/file1.txt".to_string(),
+                    target_parent_path: "/vault/dest_dir".to_string(),
+                },
+                MoveOperation {
+                    source_path: "/vault/source_dir/file2.txt".to_string(),
+                    target_parent_path: "/vault/dest_dir".to_string(),
+                },
+            ],
+        };
+
+        let request = Request::builder()
+            .method(http::Method::POST)
+            .uri("/api/nodes/move")
+            .header(http::header::CONTENT_TYPE, "application/json")
+            .body(Body::from(serde_json::to_string(&move_payload).unwrap()))
+            .unwrap();
+
+        let response = router.oneshot(request).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let move_response: MoveNodesResponse = serde_json::from_slice(&body).unwrap();
+        assert_eq!(move_response.moved_nodes.len(), 2);
+        assert_eq!(move_response.errors.len(), 0);
+
+        // Verify both files were moved
+        assert!(test_ctx.get_vault_root().join("dest_dir/file1.txt").exists());
+        assert!(test_ctx.get_vault_root().join("dest_dir/file2.txt").exists());
+        assert!(!test_ctx.get_vault_root().join("source_dir/file1.txt").exists());
+        assert!(!test_ctx.get_vault_root().join("source_dir/file2.txt").exists());
+    }
+
+    #[tokio::test]
+    async fn test_move_nodes_error_handling() {
+        let (router, test_ctx) = setup_test_environment("move_nodes_errors");
+
+        // Create test structure (missing dest_dir to trigger error)
+        std::fs::create_dir_all(test_ctx.get_vault_root().join("source_dir")).unwrap();
+        std::fs::write(test_ctx.get_vault_root().join("source_dir/file.txt"), "content").unwrap();
+
+        // Index source nodes only (dest_dir not indexed)
+        test_ctx.with_service_mut(|s| {
+            s.data_mut().insert_nodes(vec![
+                DataNode::new(&"vault".into(), NodeTypeId::dir_type()),
+                DataNode::new(&"vault/source_dir".into(), NodeTypeId::dir_type()),
+                DataNode::new(&"vault/source_dir/file.txt".into(), NodeTypeId::file_type()),
+            ]);
+        });
+
+        // Create move request with invalid target
+        let move_payload = MoveNodesPayload {
+            moves: vec![MoveOperation {
+                source_path: "/vault/source_dir/file.txt".to_string(),
+                target_parent_path: "/vault/nonexistent_dir".to_string(),
+            }],
+        };
+
+        let request = Request::builder()
+            .method(http::Method::POST)
+            .uri("/api/nodes/move")
+            .header(http::header::CONTENT_TYPE, "application/json")
+            .body(Body::from(serde_json::to_string(&move_payload).unwrap()))
+            .unwrap();
+
+        let response = router.oneshot(request).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK); // Should still return 200 with errors in body
+
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let move_response: MoveNodesResponse = serde_json::from_slice(&body).unwrap();
+        assert_eq!(move_response.moved_nodes.len(), 0);
+        assert_eq!(move_response.errors.len(), 1);
+        assert!(move_response.errors[0].error.contains("Target parent path not found"));
+    }
+
+    #[tokio::test]
+    async fn test_move_nodes_prevents_circular_moves() {
+        let (router, test_ctx) = setup_test_environment("move_nodes_circular");
+
+        // Create directory structure
+        std::fs::create_dir_all(test_ctx.get_vault_root().join("parent_dir/child_dir")).unwrap();
+
+        // Index nodes
+        test_ctx.with_service_mut(|s| {
+            s.data_mut().insert_nodes(vec![
+                DataNode::new(&"vault".into(), NodeTypeId::dir_type()),
+                DataNode::new(&"vault/parent_dir".into(), NodeTypeId::dir_type()),
+                DataNode::new(&"vault/parent_dir/child_dir".into(), NodeTypeId::dir_type()),
+            ]);
+        });
+
+        // Attempt to move parent into its own child (circular move)
+        let move_payload = MoveNodesPayload {
+            moves: vec![MoveOperation {
+                source_path: "/vault/parent_dir".to_string(),
+                target_parent_path: "/vault/parent_dir/child_dir".to_string(),
+            }],
+        };
+
+        let request = Request::builder()
+            .method(http::Method::POST)
+            .uri("/api/nodes/move")
+            .header(http::header::CONTENT_TYPE, "application/json")
+            .body(Body::from(serde_json::to_string(&move_payload).unwrap()))
+            .unwrap();
+
+        let response = router.oneshot(request).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let move_response: MoveNodesResponse = serde_json::from_slice(&body).unwrap();
+        assert_eq!(move_response.moved_nodes.len(), 0);
+        assert_eq!(move_response.errors.len(), 1);
+        assert!(move_response.errors[0].error.contains("Cannot move node to itself or its child"));
     }
 }
