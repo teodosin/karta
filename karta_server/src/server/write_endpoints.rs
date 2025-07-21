@@ -498,6 +498,20 @@ mod tests {
         // Verify filesystem changes
         assert!(!test_ctx.get_vault_root().join("source_dir/test_file.txt").exists());
         assert!(test_ctx.get_vault_root().join("dest_dir/test_file.txt").exists());
+
+        // Verify context changes - moved file should no longer be in source context
+        let (source_nodes, _, _) = test_ctx.with_service(|s| {
+            s.open_context_from_path("vault/source_dir".into()).unwrap()
+        });
+        assert!(!source_nodes.iter().any(|n| n.path().name() == "test_file.txt"), 
+                "File should no longer be in source directory context");
+
+        // Verify moved file is now in destination context  
+        let (dest_nodes, _, _) = test_ctx.with_service(|s| {
+            s.open_context_from_path("vault/dest_dir".into()).unwrap()
+        });
+        assert!(dest_nodes.iter().any(|n| n.path().name() == "test_file.txt"), 
+                "File should now be in destination directory context");
     }
 
     #[tokio::test]
@@ -556,6 +570,20 @@ mod tests {
         assert!(!test_ctx.get_vault_root().join("source_dir/movable_dir").exists());
         assert!(test_ctx.get_vault_root().join("dest_dir/movable_dir").exists());
         assert!(test_ctx.get_vault_root().join("dest_dir/movable_dir/file.txt").exists());
+
+        // Verify context changes - moved directory should no longer be in source context
+        let (source_nodes, _, _) = test_ctx.with_service(|s| {
+            s.open_context_from_path("vault/source_dir".into()).unwrap()
+        });
+        assert!(!source_nodes.iter().any(|n| n.path().name() == "movable_dir"), 
+                "Directory should no longer be in source context");
+
+        // Verify moved directory is now in destination context
+        let (dest_nodes, _, _) = test_ctx.with_service(|s| {
+            s.open_context_from_path("vault/dest_dir".into()).unwrap()
+        });
+        assert!(dest_nodes.iter().any(|n| n.path().name() == "movable_dir"), 
+                "Directory should now be in destination context");
     }
 
     #[tokio::test]
@@ -613,6 +641,24 @@ mod tests {
         assert!(test_ctx.get_vault_root().join("dest_dir/file2.txt").exists());
         assert!(!test_ctx.get_vault_root().join("source_dir/file1.txt").exists());
         assert!(!test_ctx.get_vault_root().join("source_dir/file2.txt").exists());
+
+        // Verify context changes - both files should no longer be in source context
+        let (source_nodes, _, _) = test_ctx.with_service(|s| {
+            s.open_context_from_path("vault/source_dir".into()).unwrap()
+        });
+        assert!(!source_nodes.iter().any(|n| n.path().name() == "file1.txt"), 
+                "file1.txt should no longer be in source context");
+        assert!(!source_nodes.iter().any(|n| n.path().name() == "file2.txt"), 
+                "file2.txt should no longer be in source context");
+
+        // Verify both files are now in destination context
+        let (dest_nodes, _, _) = test_ctx.with_service(|s| {
+            s.open_context_from_path("vault/dest_dir".into()).unwrap()
+        });
+        assert!(dest_nodes.iter().any(|n| n.path().name() == "file1.txt"), 
+                "file1.txt should now be in destination context");
+        assert!(dest_nodes.iter().any(|n| n.path().name() == "file2.txt"), 
+                "file2.txt should now be in destination context");
     }
 
     #[tokio::test]
