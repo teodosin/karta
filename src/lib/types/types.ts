@@ -218,3 +218,24 @@ export interface Tool {
 // --- Available Fonts ---
 export const AVAILABLE_FONTS = ['Nunito', 'Lustria', 'Bodoni Moda', 'Georgia'] as const;
 export type AvailableFont = typeof AVAILABLE_FONTS[number];
+
+// --- Move Node Types ---
+export interface MovedNodeInfo {
+	uuid: NodeId;
+	path: string;
+}
+
+export interface MoveError {
+	source_path: string;
+	error: string;
+}
+
+export interface MoveNodesResponse {
+	moved_nodes: MovedNodeInfo[];
+	errors: MoveError[];
+}
+
+export interface MoveOperation {
+	source_path: string;
+	target_parent_path: string;
+}

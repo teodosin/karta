@@ -1,5 +1,5 @@
 import { writable, get } from 'svelte/store';
-import type { KartaEdge, NodeId, Tool } from '../types/types';
+import type { KartaEdge, NodeId, Tool, MoveOperation, MoveNodesResponse, MovedNodeInfo } from '../types/types';
 import { MoveTool } from '../tools/MoveTool';
 import { ConnectTool } from '../tools/ConnectTool';
 import { ContextTool } from '../tools/ContextTool';
@@ -221,37 +221,39 @@ async function handleContainsEdgeReconnection(nodeId: NodeId, newParentId: NodeI
 		return;
 	}
 
-	// Extract node name from current path for building new path
-	const nodeName = node.path.split('/').pop();
-	if (!nodeName) {
-		console.error('[ToolStore] Could not extract node name from path:', node.path);
-		return;
-	}
-
-	// Calculate the new path: parent_path/node_name
-	const newNodePath = `${newParent.path}/${nodeName}`;
-
 	try {
 		console.log(`[ToolStore] Moving node ${nodeId} (${node.path}) to parent ${newParentId} (${newParent.path})`);
 		
 		// Cast activeAdapter to access moveNodes method
 		const serverAdapter = activeAdapter as any;
 		if (serverAdapter.moveNodes) {
-			await serverAdapter.moveNodes([{
+			const moveOperation: MoveOperation = {
 				source_path: node.path,
 				target_parent_path: newParent.path
-			}]);
-
-			console.log('[ToolStore] Node move completed successfully');
+			};
 			
-			// Update the node's path in the NodeStore
+			const response: MoveNodesResponse = await serverAdapter.moveNodes([moveOperation]);
+
+			if (response.errors && response.errors.length > 0) {
+				console.error('[ToolStore] Move operation had errors:', response.errors);
+				return;
+			}
+
+			console.log(`[ToolStore] Move completed successfully. ${response.moved_nodes.length} nodes affected.`);
+			
+			// Update all affected nodes' paths in the NodeStore
 			nodes.update((nodeMap) => {
-				const nodeToUpdate = nodeMap.get(nodeId);
-				if (nodeToUpdate) {
-					nodeToUpdate.path = newNodePath;
-					nodeMap.set(nodeId, nodeToUpdate);
-					console.log(`[ToolStore] Updated node ${nodeId} path to: ${newNodePath}`);
-				}
+				response.moved_nodes.forEach((movedNode: MovedNodeInfo) => {
+					const nodeToUpdate = nodeMap.get(movedNode.uuid);
+					if (nodeToUpdate) {
+						const oldPath = nodeToUpdate.path;
+						nodeToUpdate.path = movedNode.path;
+						nodeMap.set(movedNode.uuid, nodeToUpdate);
+						console.log(`[ToolStore] Updated node ${movedNode.uuid} path: ${oldPath} -> ${movedNode.path}`);
+					} else {
+						console.warn(`[ToolStore] Node ${movedNode.uuid} not found in NodeStore for path update`);
+					}
+				});
 				return nodeMap;
 			});
 			
@@ -267,7 +269,7 @@ async function handleContainsEdgeReconnection(nodeId: NodeId, newParentId: NodeI
 				return edgeMap;
 			});
 			
-			console.log(`[ToolStore] Move operation completed. Updated node path and edge relationship.`);
+			console.log(`[ToolStore] Bulk node path update completed. Updated ${response.moved_nodes.length} nodes.`);
 		} else {
 			console.error('[ToolStore] Adapter does not support moveNodes operation');
 		}

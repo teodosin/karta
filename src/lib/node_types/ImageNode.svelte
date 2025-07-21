@@ -107,12 +107,22 @@
 	$: {
 		if (dataNode.path) {
 			// Filesystem node: construct the URL directly to the asset endpoint.
-			// The path from the dataNode might include the "vault/" prefix, which needs to be stripped
+			// The path from the dataNode might include the "vault/" or "/vault/" prefix, which needs to be stripped
 			// as the backend will join it with its own vault root path.
 			let relativePath = dataNode.path;
-			if (relativePath.startsWith('vault/')) {
+			
+			// Handle both "vault/" and "/vault/" prefixes
+			if (relativePath.startsWith('/vault/')) {
+				relativePath = relativePath.substring('/vault/'.length);
+			} else if (relativePath.startsWith('vault/')) {
 				relativePath = relativePath.substring('vault/'.length);
 			}
+			
+			// Ensure no leading slash remains
+			if (relativePath.startsWith('/')) {
+				relativePath = relativePath.substring(1);
+			}
+			
 			const newUrl = `/api/asset/${encodeURI(relativePath)}`;
 			if (imageUrl !== newUrl) {
 				imageUrl = newUrl;
