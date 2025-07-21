@@ -68,8 +68,14 @@ pub struct MoveOperation {
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
+pub struct MovedNodeInfo {
+    uuid: Uuid,
+    path: String,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct MoveNodesResponse {
-    moved_nodes: Vec<DataNode>,
+    moved_nodes: Vec<MovedNodeInfo>,
     errors: Vec<MoveError>,
 }
 
@@ -136,6 +142,70 @@ pub async fn update_node(
     service.data_mut().insert_nodes(vec![node.clone()]);
 
     Ok(Json(node))
+}
+
+/// Recursively collect all nodes that will be affected by a move operation
+/// This is called BEFORE the move to capture the full tree of descendants
+fn collect_nodes_before_move(
+    service: &crate::server::karta_service::KartaService,
+    source_path: &NodePath,
+    target_path: &NodePath,
+) -> Vec<(uuid::Uuid, String)> {
+    let mut affected_nodes = Vec::new();
+    
+    // First, try to get the node being moved
+    if let Ok(source_node) = service.data().open_node(&NodeHandle::Path(source_path.clone())) {
+        // Add the main node
+        affected_nodes.push((source_node.uuid(), target_path.alias()));
+        
+        // If this is a directory, recursively collect all its children
+        if source_node.is_dir() {
+            // Use connections to find children
+            let connections = service.data().open_node_connections(source_path);
+            
+            // Find children (connections whose paths start with our path + "/")
+            let parent_prefix = format!("{}/", source_path.alias());
+            let children: Vec<&DataNode> = connections.iter()
+                .map(|(node, _edge)| node)
+                .filter(|node| node.path().alias().starts_with(&parent_prefix))
+                .collect();
+            
+            // Collect all descendants recursively
+            let mut stack = children.into_iter().cloned().collect::<Vec<DataNode>>();
+            let mut visited = std::collections::HashSet::new();
+            visited.insert(source_node.uuid());
+            
+            while let Some(child_node) = stack.pop() {
+                if visited.insert(child_node.uuid()) {
+                    // Calculate the child's new path after the move
+                    let old_path = child_node.path().alias();
+                    let source_prefix = source_path.alias();
+                    
+                    if old_path.starts_with(&source_prefix) {
+                        // Remove the source prefix and replace with target prefix
+                        let relative_suffix = &old_path[source_prefix.len()..];
+                        let new_path = format!("{}{}", target_path.alias(), relative_suffix);
+                        
+                        affected_nodes.push((child_node.uuid(), new_path.clone()));
+                        
+                        // If this child is also a directory, get its children too
+                        if child_node.is_dir() {
+                            let child_connections = service.data().open_node_connections(&child_node.path());
+                            let child_prefix = format!("{}/", child_node.path().alias());
+                            let grandchildren: Vec<DataNode> = child_connections.iter()
+                                .map(|(node, _edge)| node)
+                                .filter(|node| node.path().alias().starts_with(&child_prefix))
+                                .cloned()
+                                .collect();
+                            stack.extend(grandchildren);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    affected_nodes
 }
 
 pub async fn move_nodes(
@@ -216,13 +286,23 @@ pub async fn move_nodes(
             None
         };
 
+        // Before the move, collect all nodes that will be affected
+        let affected_before_move = collect_nodes_before_move(&service, &source_path, &target_node_path);
+        
         match service.move_node_with_rename(&source_path, &target_parent_path, final_name) {
             Ok(final_path) => {
                 println!("[MOVE_NODES] Move successful: {}", final_path.alias());
-                // Get the moved node at its new location
-                if let Ok(moved_node) = service.data().open_node(&NodeHandle::Path(final_path)) {
-                    moved_nodes.push(moved_node);
-                }
+                
+                // Convert to our response format, mapping the pre-calculated new paths
+                let affected_nodes: Vec<MovedNodeInfo> = affected_before_move
+                    .into_iter()
+                    .map(|(uuid, path)| MovedNodeInfo { uuid, path })
+                    .collect();
+                
+                println!("[MOVE_NODES] Total affected nodes: {}", affected_nodes.len());
+                
+                // Add all affected nodes to the response
+                moved_nodes.extend(affected_nodes);
             }
             Err(e) => {
                 println!("[MOVE_NODES] Move failed: {}", e);
@@ -541,7 +621,7 @@ mod tests {
         let move_response: MoveNodesResponse = serde_json::from_slice(&body).unwrap();
         assert_eq!(move_response.moved_nodes.len(), 1);
         assert_eq!(move_response.errors.len(), 0);
-        assert_eq!(move_response.moved_nodes[0].path().alias(), "/vault/dest_dir/test_file.txt");
+        assert_eq!(move_response.moved_nodes[0].path, "/vault/dest_dir/test_file.txt");
 
         // Verify filesystem changes
         assert!(!test_ctx.get_vault_root().join("source_dir/test_file.txt").exists());
@@ -602,7 +682,7 @@ mod tests {
 
         let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let move_response: MoveNodesResponse = serde_json::from_slice(&body).unwrap();
-        assert_eq!(move_response.moved_nodes.len(), 1);
+        assert_eq!(move_response.moved_nodes.len(), 2); // Directory + file inside it
         assert_eq!(move_response.errors.len(), 0);
 
         // Verify both directory and child file paths were updated in database
@@ -632,6 +712,67 @@ mod tests {
         });
         assert!(dest_nodes.iter().any(|n| n.path().name() == "movable_dir"), 
                 "Directory should now be in destination context");
+    }
+
+    #[tokio::test]
+    async fn test_move_nodes_directory_returns_all_affected_nodes() {
+        let (router, test_ctx) = setup_test_environment("move_nodes_all_affected");
+
+        // Create nested directory structure with multiple levels
+        std::fs::create_dir_all(test_ctx.get_vault_root().join("source_dir/movable_dir/subdir")).unwrap();
+        std::fs::create_dir_all(test_ctx.get_vault_root().join("dest_dir")).unwrap();
+        std::fs::write(test_ctx.get_vault_root().join("source_dir/movable_dir/file1.txt"), "content1").unwrap();
+        std::fs::write(test_ctx.get_vault_root().join("source_dir/movable_dir/subdir/file2.txt"), "content2").unwrap();
+
+        // Index nodes in database
+        test_ctx.with_service_mut(|s| {
+            s.data_mut().insert_nodes(vec![
+                DataNode::new(&"vault".into(), NodeTypeId::dir_type()),
+                DataNode::new(&"vault/source_dir".into(), NodeTypeId::dir_type()),
+                DataNode::new(&"vault/dest_dir".into(), NodeTypeId::dir_type()),
+                DataNode::new(&"vault/source_dir/movable_dir".into(), NodeTypeId::dir_type()),
+                DataNode::new(&"vault/source_dir/movable_dir/file1.txt".into(), NodeTypeId::file_type()),
+                DataNode::new(&"vault/source_dir/movable_dir/subdir".into(), NodeTypeId::dir_type()),
+                DataNode::new(&"vault/source_dir/movable_dir/subdir/file2.txt".into(), NodeTypeId::file_type()),
+            ]);
+        });
+
+        // Create move request
+        let move_payload = MoveNodesPayload {
+            moves: vec![MoveOperation {
+                source_path: "/vault/source_dir/movable_dir".to_string(),
+                target_parent_path: "/vault/dest_dir".to_string(),
+            }],
+        };
+
+        let request = Request::builder()
+            .method(http::Method::POST)
+            .uri("/api/nodes/move")
+            .header(http::header::CONTENT_TYPE, "application/json")
+            .body(Body::from(serde_json::to_string(&move_payload).unwrap()))
+            .unwrap();
+
+        let response = router.oneshot(request).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let move_response: MoveNodesResponse = serde_json::from_slice(&body).unwrap();
+        
+        // Should include directory + file1.txt + subdir + file2.txt = 4 nodes
+        println!("Moved nodes returned: {}", move_response.moved_nodes.len());
+        for (i, node) in move_response.moved_nodes.iter().enumerate() {
+            println!("  {}: {} ({})", i+1, node.path, node.uuid);
+        }
+        
+        assert_eq!(move_response.errors.len(), 0);
+        assert_eq!(move_response.moved_nodes.len(), 4, "Should return all affected nodes: directory + 2 files + 1 subdirectory");
+
+        // Verify all nodes have correct new paths
+        let paths: Vec<_> = move_response.moved_nodes.iter().map(|n| &n.path).collect();
+        assert!(paths.contains(&&"/vault/dest_dir/movable_dir".to_string()));
+        assert!(paths.contains(&&"/vault/dest_dir/movable_dir/file1.txt".to_string()));
+        assert!(paths.contains(&&"/vault/dest_dir/movable_dir/subdir".to_string()));
+        assert!(paths.contains(&&"/vault/dest_dir/movable_dir/subdir/file2.txt".to_string()));
     }
 
     #[tokio::test]
@@ -935,7 +1076,7 @@ mod tests {
 
         // Verify the moved node has the correct path
         assert_eq!(
-            move_response.moved_nodes[0].path().alias(),
+            move_response.moved_nodes[0].path,
             "/vault/unindexed_folder/test_file.txt"
         );
     }
@@ -1066,7 +1207,7 @@ mod tests {
 
 
 
-    
+
     #[tokio::test]
     async fn test_move_nodes_preserves_uuid_no_duplicates() {
         let (router, test_ctx) = setup_test_environment("move_nodes_uuid_preservation");
@@ -1115,11 +1256,11 @@ mod tests {
         assert_eq!(move_response.errors.len(), 0);
 
         let moved_node = &move_response.moved_nodes[0];
-        println!("[TEST] Moved node UUID: {}", moved_node.uuid());
-        println!("[TEST] Moved node path: {}", moved_node.path().alias());
+        println!("[TEST] Moved node UUID: {}", moved_node.uuid);
+        println!("[TEST] Moved node path: {}", moved_node.path);
 
         // CRITICAL TEST 1: UUID should be preserved during move
-        assert_eq!(moved_node.uuid(), original_file_uuid, 
+        assert_eq!(moved_node.uuid, original_file_uuid, 
                 "Move operation must preserve the original UUID");
 
         // CRITICAL TEST 2: Opening the destination context should show exactly ONE file with the original UUID
