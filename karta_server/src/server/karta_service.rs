@@ -207,15 +207,16 @@ impl KartaService {
                 let db_node_result = self.data().open_node(&NodeHandle::Path(path.clone()));
 
                 if fs_exists {
-                    // Filesystem takes precedence. Create a provisional node from FS info.
-                    let mut node = fs_reader::destructure_single_path(self.vault_fs_path(), &path)?;
-
-                    // If it was also in the DB, augment the FS node with DB data (UUID, attributes).
+                    // Filesystem takes precedence for path/type/existence, but preserve UUID from DB if it exists.
                     if let Ok(db_node) = db_node_result {
-                        // This logic can be expanded to merge attributes if needed.
-                        // node.set_attributes(db_node.attributes().clone());
+                        // Node exists in both FS and DB - prefer DB node which has the correct UUID
+                        // The database should already have the correct path/type from previous indexing
+                        Ok(db_node)
+                    } else {
+                        // Node exists only on FS - create new node with new UUID
+                        let node = fs_reader::destructure_single_path(self.vault_fs_path(), &path)?;
+                        Ok(node)
                     }
-                    Ok(node)
                 } else {
                     // If it doesn't exist on the filesystem, it must exist in the DB.
                     db_node_result
@@ -350,11 +351,33 @@ impl KartaService {
 
         // Add/update nodes from the filesystem if it's a directory.
         if absolute_path.is_dir() {
-            let fs_children =
-                fs_reader::destructure_file_path(self.vault_fs_path(), &absolute_path, true)?;
-            for child in fs_children {
-                direct_edges.push(Edge::new_cont(focal_node.uuid(), child.uuid()));
-                nodes.entry(child.uuid()).or_insert(child);
+            // Instead of using fs_reader::destructure_file_path which creates new nodes with new UUIDs,
+            // we need to read the directory and use open_node for each child to preserve existing UUIDs
+            if let Ok(dir_entries) = std::fs::read_dir(&absolute_path) {
+                for entry in dir_entries {
+                    if let Ok(entry) = entry {
+                        let entry_path = entry.path();
+                        
+                        // Skip .karta directory
+                        if entry_path.file_name().map_or(false, |name| name == ".karta") {
+                            continue;
+                        }
+                        
+                        // Create NodePath for this child
+                        let child_node_path = NodePath::from_dir_path(self.vault_fs_path(), &entry_path);
+                        
+                        // Use open_node to get the child, which will preserve UUIDs if they exist
+                        match self.open_node(&NodeHandle::Path(child_node_path)) {
+                            Ok(child_node) => {
+                                direct_edges.push(Edge::new_cont(focal_node.uuid(), child_node.uuid()));
+                                nodes.entry(child_node.uuid()).or_insert(child_node);
+                            }
+                            Err(e) => {
+                                println!("Failed to open child node {}: {}", entry_path.display(), e);
+                            }
+                        }
+                    }
+                }
             }
         }
 
