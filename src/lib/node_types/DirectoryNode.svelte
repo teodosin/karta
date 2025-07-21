@@ -36,13 +36,16 @@
 <script lang="ts">
 	// INSTANCE SCRIPT
 	import type { DataNode, ViewNode } from '$lib/types/types';
-	import { currentContextId, existingContextsMap } from '$lib/karta/ContextStore';
+	import { currentContextId, existingContextsMap, switchContext } from '$lib/karta/ContextStore';
 
 	export let dataNode: DataNode;
 	export let viewNode: ViewNode;
 	$: hasContext = $existingContextsMap.has(viewNode.id);
 
-	// Instance logic...
+	// Handle double-click to travel to directory's context
+	function handleDoubleClick() {
+		switchContext({ type: 'uuid', value: dataNode.id });
+	}
 
 	$: ringClasses = dataNode.id === $currentContextId
 		? 'ring-4 ring-offset-2 ring-offset-gray-900 ring-[var(--color-focal-hl)]' // Focal highlight
@@ -51,12 +54,14 @@
 			: ''; // No border/ring
 </script>
 <!-- Directory Node Appearance: Simple Rounded Rectangle - Apply focus ring here -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
 	class={`
 		w-full h-full rounded-md bg-panel-bg
 		shadow-inner flex items-center justify-center pointer-events-auto
 		${ringClasses}
 	`}
+	on:dblclick={handleDoubleClick}
 >
 	<!-- Optional: Could add a subtle icon or pattern, e.g., a folder icon -->
 	<!-- <span class="text-white opacity-50 text-xs">D</span> -->
