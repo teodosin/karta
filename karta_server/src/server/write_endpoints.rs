@@ -43,6 +43,39 @@ fn generate_unique_name(service: &crate::server::karta_service::KartaService, pa
     name
 }
 
+/// Recursively collect all descendants of a given path
+fn collect_all_descendants(service: &crate::server::karta_service::KartaService, path: &NodePath) -> Vec<DataNode> {
+    let mut descendants = Vec::new();
+    
+    // Get all connections from this path
+    let connections = service.data().open_node_connections(path);
+    
+    // Get the parent node to verify edge relationships
+    if let Ok(parent_node) = service.data().open_node(&NodeHandle::Path(path.clone())) {
+        println!("[collect_all_descendants] Collecting descendants for: '{}'", path.alias());
+        
+        for (connected_node, edge) in connections {
+            // Check if this is a child (contains edge where we are the source)
+            if edge.is_contains() && *edge.source() == parent_node.uuid() {
+                println!("[collect_all_descendants] Found child: '{}'", connected_node.path().alias());
+                descendants.push(connected_node.clone());
+                
+                // If this child is a directory, recursively collect its descendants
+                if connected_node.is_dir() {
+                    let mut child_descendants = collect_all_descendants(service, &connected_node.path());
+                    descendants.append(&mut child_descendants);
+                }
+            }
+        }
+        
+        println!("[collect_all_descendants] Total descendants found: {}", descendants.len());
+    } else {
+        println!("[collect_all_descendants] WARNING: Could not find parent node for path '{}'", path.alias());
+    }
+    
+    descendants
+}
+
 #[derive(Deserialize, serde::Serialize)]
 pub struct CreateNodePayload {
     name: String,
@@ -51,9 +84,15 @@ pub struct CreateNodePayload {
     attributes: Vec<Attribute>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, serde::Serialize)]
 pub struct UpdateNodePayload {
     attributes: Vec<Attribute>,
+}
+
+#[derive(Deserialize, serde::Serialize)]
+pub struct RenameNodeByPathPayload {
+    path: String,
+    new_name: String,
 }
 
 #[derive(Deserialize, serde::Serialize)]
@@ -85,6 +124,12 @@ pub struct MoveError {
     error: String,
 }
 
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+pub struct UpdateNodeResponse {
+    updated_node: DataNode,
+    affected_nodes: Vec<DataNode>, // For rename operations that affect descendants
+}
+
 pub async fn create_node(
     State(app_state): State<AppState>,
     Json(payload): Json<CreateNodePayload>,
@@ -108,16 +153,8 @@ pub async fn create_node(
 
     let mut new_node = DataNode::new(&final_path, payload.ntype);
     
-    // Update the name attribute if it was changed
-    let mut attributes = payload.attributes;
-    if let Some(attr) = attributes.iter_mut().find(|a| a.name == "name") {
-        attr.value = AttrValue::String(name.clone());
-    } else {
-        attributes.push(Attribute::new_string("name".to_string(), name));
-    }
-
-    new_node.set_attributes(attributes);
-    new_node.set_name(&new_node.path().name());
+    // Set attributes from payload
+    new_node.set_attributes(payload.attributes);
 
     service.data_mut().insert_nodes(vec![new_node.clone()]);
 
@@ -128,17 +165,40 @@ pub async fn update_node(
     State(app_state): State<AppState>,
     AxumPath(id): AxumPath<Uuid>,
     Json(payload): Json<UpdateNodePayload>,
-) -> Result<Json<DataNode>, StatusCode> {
+) -> Result<Json<UpdateNodeResponse>, StatusCode> {
+    println!("[update_node] Starting update for node ID: {}", id);
+    println!("[update_node] Payload attributes: {:?}", payload.attributes);
+    
     let mut service = app_state.service.write().unwrap();
 
     let mut node = match service.data().open_node(&NodeHandle::Uuid(id)) {
-        Ok(node) => node,
-        Err(_) => return Err(StatusCode::NOT_FOUND),
+        Ok(node) => {
+            println!("[update_node] Found node: '{}' at path '{}'", node.name(), node.path().alias());
+            node
+        },
+        Err(e) => {
+            println!("[update_node] Node not found by UUID: {}", e);
+            
+            // For unindexed physical files, we need to check if this is a rename operation
+            // and handle it differently by using path-based lookup
+            let is_rename_attempt = payload.attributes.iter()
+                .any(|attr| attr.name == "name");
+            
+            if is_rename_attempt {
+                println!("[update_node] This appears to be a rename operation for an unindexed node");
+                println!("[update_node] Unindexed nodes should be renamed via direct filesystem operations");
+                println!("[update_node] The frontend should handle this case differently");
+            }
+            
+            return Err(StatusCode::NOT_FOUND);
+        },
     };
 
     // Check if this is a rename operation (name attribute change)
     let is_rename = payload.attributes.iter()
         .any(|attr| attr.name == "name" && attr.value != AttrValue::String(node.name().to_string()));
+    
+    println!("[update_node] Is rename operation: {}", is_rename);
 
     if is_rename {
         // Extract the new name from attributes
@@ -150,46 +210,97 @@ pub async fn update_node(
             })
             .ok_or(StatusCode::BAD_REQUEST)?;
 
+        println!("[update_node] New name for rename: '{}'", new_name);
+
         // Validate the new name
         if new_name.trim().is_empty() {
+            println!("[update_node] ERROR: Empty name provided");
             return Err(StatusCode::BAD_REQUEST);
         }
 
-        // Perform the rename using the rename_node function
-        match service.rename_node(&node.path(), new_name.trim()) {
+        // Prevent renaming system nodes (root, vault)
+        if node.path() == NodePath::root() {
+            println!("[update_node] ERROR: Cannot rename root node: it is a system node");
+            return Err(StatusCode::BAD_REQUEST);
+        }
+        
+        if node.path() == NodePath::vault() {
+            println!("[update_node] ERROR: Cannot rename vault node: it is a system node");
+            return Err(StatusCode::BAD_REQUEST);
+        }
+
+        // COLLECT ALL DESCENDANTS BEFORE RENAME (if this is a directory)
+        let affected_descendants: Vec<DataNode> = if node.is_dir() {
+            println!("[update_node] Collecting descendants before rename (directory)");
+            collect_all_descendants(&service, &node.path())
+        } else {
+            println!("[update_node] No descendants to collect (not a directory)");
+            Vec::new()
+        };
+
+        // Perform the rename using move_node_with_rename
+        println!("[update_node] Calling move_node_with_rename for in-place rename");
+        let parent_path = node.path().parent().ok_or(StatusCode::BAD_REQUEST)?;
+        let unique_name = generate_unique_name(&service, &parent_path, new_name.trim());
+        match service.move_node_with_rename(&node.path(), &parent_path, Some(&unique_name)) {
             Ok(new_path) => {
+                println!("[update_node] Rename successful, new path: '{}'", new_path.alias());
                 // Reload the node from the new path to get the updated state
                 match service.data().open_node(&NodeHandle::Path(new_path)) {
                     Ok(updated_node) => {
+                        println!("[update_node] Reloaded node successfully");
                         // Update any other attributes besides name
                         let mut other_attributes: Vec<Attribute> = payload.attributes.into_iter()
                             .filter(|attr| attr.name != "name")
                             .collect();
 
-                        if !other_attributes.is_empty() {
-                            let mut final_node = updated_node;
-                            final_node.set_attributes(other_attributes);
-                            final_node.update_modified_time();
-                            service.data_mut().insert_nodes(vec![final_node.clone()]);
-                            return Ok(Json(final_node));
-                        }
+                        let final_node = if !other_attributes.is_empty() {
+                            println!("[update_node] Applying additional attributes");
+                            let mut node_with_attrs = updated_node;
+                            node_with_attrs.set_attributes(other_attributes);
+                            node_with_attrs.update_modified_time();
+                            service.data_mut().insert_nodes(vec![node_with_attrs.clone()]);
+                            node_with_attrs
+                        } else {
+                            updated_node
+                        };
 
-                        return Ok(Json(updated_node));
+                        // COLLECT ALL UPDATED DESCENDANTS AFTER RENAME
+                        let updated_descendants: Vec<DataNode> = if final_node.is_dir() {
+                            println!("[update_node] Collecting descendants after rename");
+                            collect_all_descendants(&service, &final_node.path())
+                        } else {
+                            Vec::new()
+                        };
+
+                        println!("[update_node] SUCCESS: Returning response with {} affected nodes", updated_descendants.len());
+                        return Ok(Json(UpdateNodeResponse {
+                            updated_node: final_node,
+                            affected_nodes: updated_descendants,
+                        }));
                     }
-                    Err(_) => return Err(StatusCode::INTERNAL_SERVER_ERROR),
+                    Err(e) => {
+                        println!("[update_node] ERROR: Failed to reload node after rename: {}", e);
+                        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+                    }
                 }
             }
             Err(e) => {
-                eprintln!("Failed to rename node: {}", e);
+                println!("[update_node] ERROR: Failed to rename node: {}", e);
                 return Err(StatusCode::INTERNAL_SERVER_ERROR);
             }
         }
     } else {
         // No rename, just update attributes normally
+        println!("[update_node] Non-rename update, applying attributes");
         node.set_attributes(payload.attributes);
         node.update_modified_time();
         service.data_mut().insert_nodes(vec![node.clone()]);
-        return Ok(Json(node));
+        println!("[update_node] SUCCESS: Non-rename update completed");
+        return Ok(Json(UpdateNodeResponse {
+            updated_node: node,
+            affected_nodes: Vec::new(), // No affected nodes for non-rename updates
+        }));
     }
 }
 
@@ -391,6 +502,82 @@ pub async fn save_context(
     }
 }
 
+pub async fn rename_node_by_path(
+    State(app_state): State<AppState>,
+    Json(payload): Json<RenameNodeByPathPayload>,
+) -> Result<Json<UpdateNodeResponse>, StatusCode> {
+    println!("[rename_node_by_path] Starting rename for path: '{}' to name: '{}'", payload.path, payload.new_name);
+    
+    let mut service = app_state.service.write().unwrap();
+    let node_path = NodePath::from_alias(&payload.path);
+    
+    // Validate the new name
+    if payload.new_name.trim().is_empty() {
+        println!("[rename_node_by_path] ERROR: Empty name provided");
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    // Prevent renaming system nodes (root, vault)
+    if node_path == NodePath::root() {
+        println!("[rename_node_by_path] ERROR: Cannot rename root node: it is a system node");
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    
+    if node_path == NodePath::vault() {
+        println!("[rename_node_by_path] ERROR: Cannot rename vault node: it is a system node");
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    // COLLECT ALL DESCENDANTS BEFORE RENAME (if this is a directory)
+    let affected_descendants: Vec<DataNode> = if node_path.full(service.vault_fs_path()).is_dir() {
+        println!("[rename_node_by_path] Collecting descendants before rename (directory)");
+        collect_all_descendants(&service, &node_path)
+    } else {
+        println!("[rename_node_by_path] No descendants to collect (not a directory)");
+        Vec::new()
+    };
+
+    // Perform the rename using move_node_with_rename
+    println!("[rename_node_by_path] Calling move_node_with_rename for in-place rename");
+    let parent_path = node_path.parent().ok_or(StatusCode::BAD_REQUEST)?;
+    let unique_name = generate_unique_name(&service, &parent_path, payload.new_name.trim());
+    match service.move_node_with_rename(&node_path, &parent_path, Some(&unique_name)) {
+        Ok(new_path) => {
+            println!("[rename_node_by_path] Rename successful, new path: '{}'", new_path.alias());
+            
+            // Get the renamed node (either from DB if indexed, or create from filesystem)
+            let updated_node = match service.open_node(&NodeHandle::Path(new_path.clone())) {
+                Ok(node) => {
+                    println!("[rename_node_by_path] Retrieved updated node from database/filesystem");
+                    node
+                }
+                Err(e) => {
+                    println!("[rename_node_by_path] ERROR: Failed to retrieve renamed node: {}", e);
+                    return Err(StatusCode::INTERNAL_SERVER_ERROR);
+                }
+            };
+
+            // COLLECT ALL UPDATED DESCENDANTS AFTER RENAME
+            let updated_descendants: Vec<DataNode> = if updated_node.is_dir() {
+                println!("[rename_node_by_path] Collecting descendants after rename");
+                collect_all_descendants(&service, &updated_node.path())
+            } else {
+                Vec::new()
+            };
+
+            println!("[rename_node_by_path] SUCCESS: Returning response with {} affected nodes", updated_descendants.len());
+            Ok(Json(UpdateNodeResponse {
+                updated_node,
+                affected_nodes: updated_descendants,
+            }))
+        }
+        Err(e) => {
+            println!("[rename_node_by_path] ERROR: Failed to rename node: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -422,6 +609,7 @@ mod tests {
             )
             .route("/api/ctx/{id}", axum::routing::put(save_context))
             .route("/api/nodes", axum::routing::post(create_node))
+            .route("/api/nodes/{id}", axum::routing::put(update_node))
             .route("/api/nodes/move", axum::routing::post(move_nodes))
             .with_state(app_state);
         (router, test_ctx)
@@ -1368,5 +1556,263 @@ mod tests {
                 "File should no longer exist at old filesystem location");
         assert!(test_ctx.get_vault_root().join("dest_dir/test_file.txt").exists(),
                 "File should exist at new filesystem location");
+    }
+
+    #[tokio::test]
+    async fn test_update_node_rename_via_name_attribute() {
+        let (router, test_ctx) = setup_test_environment("update_node_rename");
+
+        // 1. Create and index a file
+        test_ctx.create_dir_in_vault("test_dir").unwrap();
+        test_ctx.create_file_in_vault("test_dir/original_name.txt", b"content").unwrap();
+
+        let original_path = NodePath::new("vault/test_dir/original_name.txt".into());
+        let node_uuid = test_ctx.with_service_mut(|s| {
+            let node = crate::fs_reader::destructure_single_path(s.vault_fs_path(), &original_path).unwrap();
+            let uuid = node.uuid();
+            s.data_mut().insert_nodes(vec![node]);
+            uuid
+        });
+
+        // 2. Update the node via the endpoint with a new name
+        let update_payload = UpdateNodePayload {
+            attributes: vec![
+                Attribute::new_string("name".to_string(), "new_name.txt".to_string()),
+            ],
+        };
+
+        let payload_json = serde_json::to_string(&update_payload).unwrap();
+        let response = router
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::PUT)
+                    .uri(format!("/api/nodes/{}", node_uuid))
+                    .header(http::header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(payload_json))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let response_body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let response_data: UpdateNodeResponse = serde_json::from_slice(&response_body).unwrap();
+        let response_node = response_data.updated_node;
+        assert_eq!(response_node.name(), "new_name.txt");
+        assert_eq!(response_node.path().alias(), "/vault/test_dir/new_name.txt");
+        assert_eq!(response_node.uuid(), node_uuid);
+
+        // 3. Verify filesystem was updated
+        assert!(!test_ctx.get_vault_root().join("test_dir/original_name.txt").exists());
+        assert!(test_ctx.get_vault_root().join("test_dir/new_name.txt").exists());
+
+        // 4. Verify database was updated
+        let new_path = NodePath::new("vault/test_dir/new_name.txt".into());
+        test_ctx.with_service(|s| {
+            let node = s.data().open_node(&NodeHandle::Path(new_path)).unwrap();
+            assert_eq!(node.uuid(), node_uuid);
+            assert_eq!(node.name(), "new_name.txt");
+            assert_eq!(node.path().alias(), "/vault/test_dir/new_name.txt");
+        });
+    }
+
+    #[tokio::test]
+    async fn test_update_node_rename_with_collision_resolution() {
+        let (router, test_ctx) = setup_test_environment("update_node_rename_collision");
+
+        // 1. Create two files with different names
+        test_ctx.create_dir_in_vault("test_dir").unwrap();
+        test_ctx.create_file_in_vault("test_dir/file1.txt", b"content1").unwrap();
+        test_ctx.create_file_in_vault("test_dir/file2.txt", b"content2").unwrap();
+
+        let file1_path = NodePath::new("vault/test_dir/file1.txt".into());
+        let node_uuid = test_ctx.with_service_mut(|s| {
+            let node1 = crate::fs_reader::destructure_single_path(s.vault_fs_path(), &file1_path).unwrap();
+            let node2 = crate::fs_reader::destructure_single_path(s.vault_fs_path(), &NodePath::new("vault/test_dir/file2.txt".into())).unwrap();
+            let uuid = node1.uuid();
+            s.data_mut().insert_nodes(vec![node1, node2]);
+            uuid
+        });
+
+        // 2. Try to rename file1 to file2 (collision should be auto-resolved)
+        let update_payload = UpdateNodePayload {
+            attributes: vec![
+                Attribute::new_string("name".to_string(), "file2.txt".to_string()),
+            ],
+        };
+
+        let payload_json = serde_json::to_string(&update_payload).unwrap();
+        let response = router
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::PUT)
+                    .uri(format!("/api/nodes/{}", node_uuid))
+                    .header(http::header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(payload_json))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let response_body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let response_data: UpdateNodeResponse = serde_json::from_slice(&response_body).unwrap();
+        let response_node = response_data.updated_node;
+        
+        // Should be auto-renamed to avoid collision
+        assert_ne!(response_node.name(), "file2.txt");
+        assert!(response_node.name().starts_with("file2"));
+        assert!(response_node.name().contains("_"));
+        assert_eq!(response_node.uuid(), node_uuid);
+
+        // 3. Verify filesystem - original files should exist, plus the renamed one
+        assert!(test_ctx.get_vault_root().join("test_dir/file2.txt").exists()); // Original file2
+        assert!(!test_ctx.get_vault_root().join("test_dir/file1.txt").exists()); // file1 should be gone
+        assert!(test_ctx.get_vault_root().join(format!("test_dir/{}", response_node.name())).exists()); // Renamed file
+    }
+
+    #[tokio::test]
+    async fn test_update_virtual_node_rename_via_name_attribute() {
+        let (router, test_ctx) = setup_test_environment("update_virtual_node_rename");
+
+        // 1. Create a virtual node (no corresponding filesystem entry)
+        let virtual_node_path = NodePath::new("vault/test_virtual_node".into());
+        let node_uuid = test_ctx.with_service_mut(|s| {
+            let virtual_node = DataNode::new(&virtual_node_path, NodeTypeId::file_type());
+            let uuid = virtual_node.uuid();
+            s.data_mut().insert_nodes(vec![virtual_node]);
+            uuid
+        });
+
+        // 2. Update the virtual node via the endpoint with a new name
+        let update_payload = UpdateNodePayload {
+            attributes: vec![
+                Attribute::new_string("name".to_string(), "renamed_virtual_node".to_string()),
+            ],
+        };
+
+        let payload_json = serde_json::to_string(&update_payload).unwrap();
+        let response = router
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::PUT)
+                    .uri(format!("/api/nodes/{}", node_uuid))
+                    .header(http::header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(payload_json))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let response_body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let response_data: UpdateNodeResponse = serde_json::from_slice(&response_body).unwrap();
+        let response_node = response_data.updated_node;
+        assert_eq!(response_node.name(), "renamed_virtual_node");
+        assert_eq!(response_node.path().alias(), "/vault/renamed_virtual_node");
+        assert_eq!(response_node.uuid(), node_uuid);
+
+        // 3. Verify no filesystem entries were created (since it's virtual)
+        assert!(!test_ctx.get_vault_root().join("test_virtual_node").exists());
+        assert!(!test_ctx.get_vault_root().join("renamed_virtual_node").exists());
+
+        // 4. Verify database was updated
+        let new_path = NodePath::new("vault/renamed_virtual_node".into());
+        test_ctx.with_service(|s| {
+            let node = s.data().open_node(&NodeHandle::Path(new_path)).unwrap();
+            assert_eq!(node.uuid(), node_uuid);
+            assert_eq!(node.name(), "renamed_virtual_node");
+            assert_eq!(node.path().alias(), "/vault/renamed_virtual_node");
+
+            // Verify old path no longer exists
+            assert!(s.data().open_node(&NodeHandle::Path(virtual_node_path)).is_err());
+        });
+    }
+
+    #[tokio::test]
+    async fn test_update_directory_rename_returns_affected_descendants() {
+        let (router, test_ctx) = setup_test_environment("update_directory_rename_descendants");
+
+        // 1. Create a directory with children
+        test_ctx.create_dir_in_vault("parent_dir").unwrap();
+        test_ctx.create_dir_in_vault("parent_dir/old_dir_name").unwrap();
+        test_ctx.create_file_in_vault("parent_dir/old_dir_name/child_file.txt", b"content").unwrap();
+        test_ctx.create_dir_in_vault("parent_dir/old_dir_name/child_dir").unwrap();
+        test_ctx.create_file_in_vault("parent_dir/old_dir_name/child_dir/nested_file.txt", b"nested").unwrap();
+
+        // 2. Index all nodes
+        let paths_to_index = vec![
+            NodePath::new("vault/parent_dir".into()),
+            NodePath::new("vault/parent_dir/old_dir_name".into()),
+            NodePath::new("vault/parent_dir/old_dir_name/child_file.txt".into()),
+            NodePath::new("vault/parent_dir/old_dir_name/child_dir".into()),
+            NodePath::new("vault/parent_dir/old_dir_name/child_dir/nested_file.txt".into()),
+        ];
+
+        let dir_uuid = test_ctx.with_service_mut(|s| {
+            for path in paths_to_index {
+                let node = crate::fs_reader::destructure_single_path(s.vault_fs_path(), &path).unwrap();
+                s.data_mut().insert_nodes(vec![node]);
+            }
+            s.data().open_node(&NodeHandle::Path(NodePath::new("vault/parent_dir/old_dir_name".into()))).unwrap().uuid()
+        });
+
+        // 3. Rename the directory
+        let update_payload = UpdateNodePayload {
+            attributes: vec![
+                Attribute::new_string("name".to_string(), "new_dir_name".to_string()),
+            ],
+        };
+
+        let payload_json = serde_json::to_string(&update_payload).unwrap();
+        let response = router
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::PUT)
+                    .uri(format!("/api/nodes/{}", dir_uuid))
+                    .header(http::header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(payload_json))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let response_body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let response_data: UpdateNodeResponse = serde_json::from_slice(&response_body).unwrap();
+        
+        // 4. Verify the main directory was renamed
+        let updated_dir = response_data.updated_node;
+        assert_eq!(updated_dir.name(), "new_dir_name");
+        assert_eq!(updated_dir.path().alias(), "/vault/parent_dir/new_dir_name");
+        assert_eq!(updated_dir.uuid(), dir_uuid);
+        
+        // 5. Verify affected descendants were returned
+        let affected_nodes = response_data.affected_nodes;
+        assert!(affected_nodes.len() >= 3, "Should have at least 3 descendants"); // child_file.txt, child_dir, nested_file.txt
+        
+        // Check that all descendants have updated paths
+        let file_node = affected_nodes.iter().find(|n| n.name() == "child_file.txt").expect("child_file.txt should be in affected nodes");
+        assert_eq!(file_node.path().alias(), "/vault/parent_dir/new_dir_name/child_file.txt");
+        
+        let child_dir_node = affected_nodes.iter().find(|n| n.name() == "child_dir").expect("child_dir should be in affected nodes");
+        assert_eq!(child_dir_node.path().alias(), "/vault/parent_dir/new_dir_name/child_dir");
+        
+        let nested_file_node = affected_nodes.iter().find(|n| n.name() == "nested_file.txt").expect("nested_file.txt should be in affected nodes");
+        assert_eq!(nested_file_node.path().alias(), "/vault/parent_dir/new_dir_name/child_dir/nested_file.txt");
+
+        // 6. Verify filesystem changes
+        assert!(!test_ctx.get_vault_root().join("parent_dir/old_dir_name").exists());
+        assert!(test_ctx.get_vault_root().join("parent_dir/new_dir_name").exists());
+        assert!(test_ctx.get_vault_root().join("parent_dir/new_dir_name/child_file.txt").exists());
+        assert!(test_ctx.get_vault_root().join("parent_dir/new_dir_name/child_dir/nested_file.txt").exists());
     }
 }
