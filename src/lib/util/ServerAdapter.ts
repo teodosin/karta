@@ -155,7 +155,10 @@ export class ServerAdapter implements PersistenceService {
 
             const serverNode: ServerDataNode = await response.json();
             const attributes = transformServerAttributesToRecord(serverNode.attributes);
-            attributes['name'] = serverNode.name;
+            // Extract name from path since backend no longer has name field
+            const pathSegments = serverNode.path.split('/');
+            const name = pathSegments[pathSegments.length - 1] || 'root';
+            attributes['name'] = name;
 
             return {
                 id: serverNode.uuid,
@@ -192,11 +195,28 @@ export class ServerAdapter implements PersistenceService {
                 throw new Error(`Server responded with status ${response.status}`);
             }
             
-            const serverNode: ServerDataNode = await response.json();
+            const updateResponse = await response.json();
+            
+            // Handle both old and new response formats for compatibility
+            let serverNode: ServerDataNode;
+            let affectedNodes: ServerDataNode[] = [];
+            
+            if (updateResponse.updated_node) {
+                // New format with UpdateNodeResponse
+                serverNode = updateResponse.updated_node;
+                affectedNodes = updateResponse.affected_nodes || [];
+            } else {
+                // Old format with direct DataNode
+                serverNode = updateResponse;
+            }
+            
             const attributes = transformServerAttributesToRecord(serverNode.attributes);
-            attributes['name'] = serverNode.name;
+            // Extract name from path since backend no longer has name field
+            const pathSegments = serverNode.path.split('/');
+            const name = pathSegments[pathSegments.length - 1] || 'root';
+            attributes['name'] = name;
 
-            return {
+            const updatedNode: DataNode = {
                 id: serverNode.uuid,
                 ntype: serverNode.ntype.type_path,
                 createdAt: (serverNode.created_time?.secs_since_epoch ?? 0) * 1000,
@@ -205,6 +225,38 @@ export class ServerAdapter implements PersistenceService {
                 attributes: attributes,
                 isSearchable: attributes['isSearchable'] ?? true,
             };
+
+            // If there are affected nodes (descendants), update them in the store too
+            if (affectedNodes.length > 0) {
+                const { nodes } = await import('$lib/karta/NodeStore');
+                const affectedDataNodes: DataNode[] = affectedNodes.map(sNode => {
+                    const attrs = transformServerAttributesToRecord(sNode.attributes);
+                    // Extract name from the path
+                    const nameFromPath = sNode.path.split('/').pop() || (sNode.path === '' ? 'root' : '');
+                    attrs['name'] = nameFromPath;
+                    return {
+                        id: sNode.uuid,
+                        ntype: sNode.ntype.type_path,
+                        createdAt: (sNode.created_time?.secs_since_epoch ?? 0) * 1000,
+                        modifiedAt: (sNode.modified_time?.secs_since_epoch ?? 0) * 1000,
+                        path: sNode.path,
+                        attributes: attrs,
+                        isSearchable: attrs['isSearchable'] ?? true,
+                    };
+                });
+                
+                // Update all affected nodes in the store
+                nodes.update(nodeMap => {
+                    affectedDataNodes.forEach(affectedNode => {
+                        nodeMap.set(affectedNode.id, affectedNode);
+                    });
+                    return nodeMap;
+                });
+                
+                console.log(`[ServerAdapter.updateNode] Updated ${affectedNodes.length} affected descendant nodes in store`);
+            }
+
+            return updatedNode;
 
         } catch (error) {
             console.error(`[ServerAdapter.updateNode] Network error updating node ${node.id}:`, error);
@@ -235,7 +287,9 @@ export class ServerAdapter implements PersistenceService {
 
                 const clientDataNodes: DataNode[] = serverDataNodes.map(sNode => {
                     const attributes = transformServerAttributesToRecord(sNode.attributes);
-                    attributes['name'] = sNode.name;
+                    // Extract name from the path
+                    const nameFromPath = sNode.path.split('/').pop() || (sNode.path === '' ? 'root' : '');
+                    attributes['name'] = nameFromPath;
                     
                     const createdTime = typeof sNode.created_time === 'number'
                                         ? sNode.created_time
@@ -419,7 +473,9 @@ export class ServerAdapter implements PersistenceService {
             }
             const serverNode: ServerDataNode = await response.json();
             const attributes = transformServerAttributesToRecord(serverNode.attributes);
-            attributes['name'] = serverNode.name;
+            // Extract name from the path
+            const nameFromPath = serverNode.path.split('/').pop() || (serverNode.path === '' ? 'root' : '');
+            attributes['name'] = nameFromPath;
 
             return {
                 id: serverNode.uuid,
@@ -436,6 +492,110 @@ export class ServerAdapter implements PersistenceService {
         }
     }
 
+    /**
+     * Rename a node by its path using the dedicated rename endpoint.
+     * This is useful for unindexed files that don't have UUIDs yet.
+     */
+    async renameNode(path: string, newName: string): Promise<DataNode | undefined> {
+        const url = `${SERVER_BASE_URL}/api/nodes/rename`;
+        console.log(`[ServerAdapter.renameNode] Renaming node at path "${path}" to "${newName}"`);
+        
+        const payload = {
+            path: path,
+            new_name: newName
+        };
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+
+            if (!response.ok) {
+                const errorBody = await response.text();
+                console.error(`[ServerAdapter.renameNode] Error renaming node at path "${path}". Status: ${response.status}`, errorBody);
+                throw new Error(`Server responded with status ${response.status}`);
+            }
+            
+            const renameResponse = await response.json();
+            const renamedNodes = renameResponse.renamed_nodes;
+            
+            if (!renamedNodes || renamedNodes.length === 0) {
+                console.error(`[ServerAdapter.renameNode] No renamed nodes returned from server`);
+                return undefined;
+            }
+            
+            // Find the main renamed node (the one that was originally requested)
+            const mainRenamedNode = renamedNodes.find((node: any) => 
+                // The main node should be the one whose old path matches our request
+                // Since we don't have the old path in the response, we'll take the first one
+                // that has the new name we requested
+                node.path.endsWith(`/${newName}`) || node.path === newName
+            ) || renamedNodes[0];
+            
+            console.log(`[ServerAdapter.renameNode] Found main renamed node: ${mainRenamedNode.path}`);
+            
+            // Fetch the updated node data from the server
+            const updatedNode = await this.getDataNodeByPath(mainRenamedNode.path);
+            if (!updatedNode) {
+                console.error(`[ServerAdapter.renameNode] Failed to fetch updated node data for path "${mainRenamedNode.path}"`);
+                return undefined;
+            }
+
+            // Update all affected nodes in the store
+            const { nodes } = await import('$lib/karta/NodeStore');
+            nodes.update(nodeMap => {
+                renamedNodes.forEach((renamedNodeInfo: any) => {
+                    const nodeId = renamedNodeInfo.uuid;
+                    const newPath = renamedNodeInfo.path;
+                    const existingNode = nodeMap.get(nodeId);
+                    
+                    if (existingNode) {
+                        const updatedNode = {
+                            ...existingNode,
+                            path: newPath,
+                            attributes: {
+                                ...existingNode.attributes,
+                                name: newPath.split('/').pop() || 'root'
+                            }
+                        };
+                        nodeMap.set(nodeId, updatedNode);
+                    }
+                });
+                return nodeMap;
+            });
+            
+            console.log(`[ServerAdapter.renameNode] Updated ${renamedNodes.length} affected nodes in store`);
+
+            console.log(`[ServerAdapter.renameNode] Successfully renamed node to path "${updatedNode.path}"`);
+            
+            // Check if the renamed node is the current context's focal node
+            // If so, update the lastViewedContextPath setting
+            const { currentContextId } = await import('$lib/karta/ContextStore');
+            const { settings, updateSettings } = await import('$lib/karta/SettingsStore');
+            const { get } = await import('svelte/store');
+            
+            const contextId = get(currentContextId);
+            if (updatedNode.id === contextId) {
+                console.log(`[ServerAdapter.renameNode] Renamed node is the current context focal node, updating lastViewedContextPath`);
+                try {
+                    const currentSettings = get(settings);
+                    if (currentSettings.savelastViewedContextPath) {
+                        await updateSettings({ lastViewedContextPath: updatedNode.path });
+                        console.log(`[ServerAdapter.renameNode] Updated lastViewedContextPath to: ${updatedNode.path}`);
+                    }
+                } catch (error) {
+                    console.error('[ServerAdapter.renameNode] Error updating lastViewedContextPath:', error);
+                }
+            }
+            
+            return updatedNode;
+        } catch (error) {
+            console.error(`[ServerAdapter.renameNode] Network error renaming node at path "${path}":`, error);
+            throw error;
+        }
+    }
 
     async deleteNode(nodeId: string): Promise<void> { console.warn(`[ServerAdapter.deleteNode] Not implemented for ID: ${nodeId}`); }
     async getNodes(): Promise<DataNode[]> { console.warn('[ServerAdapter.getNodes] Not implemented'); return []; }
@@ -456,7 +616,9 @@ export class ServerAdapter implements PersistenceService {
             }
             const serverNode: ServerDataNode = await response.json();
             const attributes = transformServerAttributesToRecord(serverNode.attributes);
-            attributes['name'] = serverNode.name;
+            // Extract name from the path
+            const nameFromPath = serverNode.path.split('/').pop() || (serverNode.path === '' ? 'root' : '');
+            attributes['name'] = nameFromPath;
 
             return {
                 id: serverNode.uuid,
@@ -639,6 +801,33 @@ export class ServerAdapter implements PersistenceService {
 
             const result: MoveNodesResponse = await response.json();
             console.log(`[ServerAdapter.moveNodes] Successfully moved ${result.moved_nodes?.length || 0} nodes.`);
+            
+            // Update all affected nodes in the store
+            if (result.moved_nodes && result.moved_nodes.length > 0) {
+                const { nodes } = await import('$lib/karta/NodeStore');
+                nodes.update(nodeMap => {
+                    result.moved_nodes.forEach((movedNodeInfo: any) => {
+                        const nodeId = movedNodeInfo.uuid;
+                        const newPath = movedNodeInfo.path;
+                        const existingNode = nodeMap.get(nodeId);
+                        
+                        if (existingNode) {
+                            const updatedNode = {
+                                ...existingNode,
+                                path: newPath,
+                                attributes: {
+                                    ...existingNode.attributes,
+                                    name: newPath.split('/').pop() || 'root'
+                                }
+                            };
+                            nodeMap.set(nodeId, updatedNode);
+                        }
+                    });
+                    return nodeMap;
+                });
+                
+                console.log(`[ServerAdapter.moveNodes] Updated ${result.moved_nodes.length} affected nodes in store`);
+            }
             
             if (result.errors && result.errors.length > 0) {
                 console.warn(`[ServerAdapter.moveNodes] Some operations failed:`, result.errors);

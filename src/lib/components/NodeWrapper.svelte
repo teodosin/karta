@@ -26,13 +26,20 @@
 
 	// Dynamically get the component based on ntype - only if dataNode exists
 	$: NodeComponent = dataNode ? getNodeComponent(dataNode.ntype) : null;
+	
+	// Helper function to extract name from path
+	function getNameFromPath(path: string): string {
+		if (!path) return 'root';
+		const segments = path.split('/');
+		return segments[segments.length - 1] || '';
+	}
+	
 	// Use viewNode.id for fallback if dataNode is missing (ghost node)
-	$: nodeName =
-		dataNode?.attributes?.name?.replace(/^vault/, $vaultName || 'vault') ??
-		dataNode?.ntype ??
+	$: nodeName = dataNode?.attributes?.name?.replace(/^vault/, $vaultName || 'vault') ??
+		(dataNode?.path ? getNameFromPath(dataNode.path) : '') ??
 		`Deleted Node (${viewNode.id.substring(0, 8)})`;
 
-		$: isSelected = dataNode ? $selectedNodeIds.has(dataNode.id) : false;
+	$: isSelected = dataNode ? $selectedNodeIds.has(dataNode.id) : false;
 	$: isRenamable = dataNode ? !dataNode.attributes?.isSystemNode : false; // Ghost nodes are not renamable
 	$: isGhost = !$nodes.has(viewNode.id);
 

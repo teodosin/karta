@@ -418,7 +418,8 @@
 					id="properties-panel-title"
 					on:pointerdown={handleDragStart}
 				>
-					{selectedDataNode.attributes.name ?? selectedDataNode.id} ({selectedDataNode.ntype})
+					{selectedDataNode.attributes.name ?? 
+					 (selectedDataNode.path ? (selectedDataNode.path.split('/').pop() || 'root') : selectedDataNode.id)} ({selectedDataNode.ntype})
 				</span>
 				<div class="flex items-center gap-1">
 					<button

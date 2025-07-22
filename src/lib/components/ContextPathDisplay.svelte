@@ -6,6 +6,7 @@
 		existingContextsMap,
 	} from "$lib/karta/ContextStore";
 	import { vaultName } from "$lib/karta/VaultStore";
+	import { selectedNodeIds } from "$lib/karta/SelectionStore";
 	import { get } from "svelte/store";
 	import {
 		historyStack,
@@ -23,6 +24,16 @@
 	let showContextList = false;
 	let availableContexts: { id: NodeId; path: string }[] = [];
 	let componentElement: HTMLElement;
+
+	// Reactive debug info for selected node
+	$: debugSelectedPath = (() => {
+		if ($selectedNodeIds.size === 1) {
+			const selectedId = Array.from($selectedNodeIds)[0];
+			const selectedNode = $nodes.get(selectedId);
+			return selectedNode?.path || "Unknown path";
+		}
+		return null;
+	})();
 
 	// Reactively determine the path to display
 	$: {
@@ -154,6 +165,13 @@
 		{/if}
 	</div>
 </div>
+
+<!-- Debug span to show selected node path -->
+{#if debugSelectedPath}
+	<div class="absolute bottom-2 left-80 px-2 py-1 text-xs rounded backdrop-blur-sm shadow bg-yellow-500/20 text-yellow-200 z-20">
+		Selected: {debugSelectedPath}
+	</div>
+{/if}
 
 <style>
 	/* Custom Scrollbar for Context List Dropdown */

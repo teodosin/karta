@@ -329,7 +329,7 @@ export async function updateNodeAttributes(nodeId: NodeId, newAttributes: Record
         id: dataNode.id,
         ntype: dataNode.ntype,
         createdAt: dataNode.createdAt,
-        path: `/${attributesToSave.name}`, // Update the path based on the new name
+        path: dataNode.path, // Keep the original path - server will return the correct updated path
         attributes: attributesToSave, // Use the final attributes map (name might have been incremented)
         modifiedAt: Date.now(),
     };
@@ -343,7 +343,26 @@ export async function updateNodeAttributes(nodeId: NodeId, newAttributes: Record
         // Persist changes
         if (persistenceService) {
             try {
-                const persistedNode = await (persistenceService as ServerAdapter).updateNode(updatedNodeData);
+                let persistedNode: DataNode | undefined;
+                
+                // Check if this is a rename operation and if the node has a path but might be unindexed
+                const isRenameOperation = newAttributes.name !== undefined && newAttributes.name !== oldName;
+                
+                if (isRenameOperation && dataNode.path && (persistenceService as any).renameNode) {
+                    // Try the path-based rename endpoint first for rename operations
+                    console.log(`[updateNodeAttributes] Using path-based rename for node at path "${dataNode.path}"`);
+                    try {
+                        persistedNode = await (persistenceService as any).renameNode(dataNode.path, newAttributes.name);
+                    } catch (renameError) {
+                        console.log(`[updateNodeAttributes] Path-based rename failed, falling back to updateNode:`, renameError);
+                        // Fall back to the regular updateNode method
+                        persistedNode = await (persistenceService as ServerAdapter).updateNode(updatedNodeData);
+                    }
+                } else {
+                    // Use the regular updateNode method for non-rename operations
+                    persistedNode = await (persistenceService as ServerAdapter).updateNode(updatedNodeData);
+                }
+                
                 if (persistedNode) {
                     // Re-update the store with the authoritative data from the server
                     nodes.update(n => n.set(nodeId, persistedNode));
