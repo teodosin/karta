@@ -27,7 +27,6 @@ pub struct DataNode {
     /// The path is stored as a string in the database, but is converted to a PathBuf when
     /// the node is loaded.
     path: NodePath,
-    name: String,
 
     ntype: NodeTypeId,
     alive: bool,
@@ -52,7 +51,6 @@ impl DbUserValue for DataNode {
         keys.push(DbValue::from("modified_time"));
 
         keys.push(DbValue::from("path"));
-        keys.push(DbValue::from("name"));
         keys.push(DbValue::from("ntype"));
         keys.push(DbValue::from("alive"));
 
@@ -85,7 +83,6 @@ impl DbUserValue for DataNode {
         )));
 
         values.push(DbKeyValue::from(("path", self.path.clone())));
-        values.push(DbKeyValue::from(("name", self.name.clone())));
         values.push(DbKeyValue::from(("ntype", self.ntype.clone())));
         values.push(DbKeyValue::from(("alive", self.alive)));
 
@@ -122,7 +119,6 @@ impl DataNode {
             modified_time: now,
 
             path: path.clone(),
-            name: path.name(),
             ntype,
             alive: true,
 
@@ -145,10 +141,7 @@ impl DataNode {
     }
 
     pub fn name(&self) -> String {
-        self.name.clone()
-    }
-    pub fn set_name(&mut self, name: &str) {
-        self.name = name.to_owned();
+        self.path.name()
     }
 
     pub fn path(&self) -> NodePath {
@@ -187,7 +180,6 @@ impl TryFrom<DbElement> for DataNode {
         let mut created_time = None;
         let mut modified_time = None;
         let mut path = None;
-        let mut name = None;
         let mut ntype = None;
         let mut alive = None;
         let mut attributes = Vec::new();
@@ -199,7 +191,6 @@ impl TryFrom<DbElement> for DataNode {
                     "created_time" => created_time = SysTime::try_from(kv.value).ok(),
                     "modified_time" => modified_time = SysTime::try_from(kv.value).ok(),
                     "path" => path = NodePath::try_from(kv.value).ok(),
-                    "name" => name = kv.value.string().ok().map(String::from),
                     "ntype" => ntype = NodeTypeId::try_from(kv.value).ok(),
                     "alive" => alive = kv.value.to_bool().ok(),
                     _ => {
@@ -211,8 +202,8 @@ impl TryFrom<DbElement> for DataNode {
             }
         }
 
-        if let (Some(uuid), Some(created_time), Some(modified_time), Some(path), Some(name), Some(ntype), Some(alive)) =
-            (uuid, created_time, modified_time, path, name, ntype, alive)
+        if let (Some(uuid), Some(created_time), Some(modified_time), Some(path), Some(ntype), Some(alive)) =
+            (uuid, created_time, modified_time, path, ntype, alive)
         {
             Ok(DataNode {
                 db_id: Some(value.id),
@@ -220,7 +211,6 @@ impl TryFrom<DbElement> for DataNode {
                 created_time,
                 modified_time,
                 path,
-                name,
                 ntype,
                 alive,
                 attributes,
