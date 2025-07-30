@@ -237,19 +237,30 @@ impl GraphNodes for GraphAgdb {
 
         while let Some(current_node) = stack.pop() {
             let search_query = QueryBuilder::search()
-                .from(current_node.db_id().unwrap())
+                .from(current_node.uuid().to_string())
                 .query();
 
             if let Ok(search_result) = self.db.exec(&search_query) {
+                // Collect edge IDs first
+                let mut edge_ids = Vec::new();
                 for element in search_result.elements {
                     if element.id.0 < 0 { // Is an edge
-                        if let Ok(edge) = Edge::try_from(element) {
-                            if edge.is_contains() {
-                                if let Ok(child_node) = self.open_node(&NodeHandle::Uuid(*edge.target())) {
-                                    if visited.insert(child_node.uuid()) {
-                                        stack.push(child_node.clone());
-                                        descendants.push(child_node);
-                                    }
+                        edge_ids.push(element.id);
+                    }
+                }
+                
+                // Now get full edge data
+                if !edge_ids.is_empty() {
+                    let full_edges_result = self.db.exec(&QueryBuilder::select().ids(edge_ids).query());
+                    let full_edges = full_edges_result.map_or(vec![], |r| r.elements);
+                    
+                    for db_edge in &full_edges {
+                        if let Ok(edge) = Edge::try_from(db_edge.clone()) {
+                            // For deletion, consider all edges as potential parent-child relationships
+                            if let Ok(child_node) = self.open_node(&NodeHandle::Uuid(*edge.target())) {
+                                if visited.insert(child_node.uuid()) {
+                                    stack.push(child_node.clone());
+                                    descendants.push(child_node);
                                 }
                             }
                         }
@@ -259,5 +270,42 @@ impl GraphNodes for GraphAgdb {
         }
 
         Ok(descendants)
+    }
+
+    fn delete_node_and_edges(&mut self, node_id: &Uuid) -> Result<(), Box<dyn Error>> {
+        // First, get all edges involving this node using search
+        let from_edges_query = QueryBuilder::search()
+            .from(node_id.to_string())
+            .query();
+        let to_edges_query = QueryBuilder::search()
+            .to(node_id.to_string())
+            .query();
+        
+        let from_result = self.db.exec(&from_edges_query)?;
+        let to_result = self.db.exec(&to_edges_query)?;
+        
+        // Collect edge IDs to delete
+        let mut edge_ids = Vec::new();
+        for element in from_result.elements.iter().chain(to_result.elements.iter()) {
+            if element.id.0 < 0 { // Negative IDs are edges in agdb
+                edge_ids.push(element.id);
+            }
+        }
+        
+        // Delete all edges first
+        if !edge_ids.is_empty() {
+            let delete_edges_query = QueryBuilder::remove()
+                .ids(edge_ids.clone())
+                .query();
+            self.db.exec_mut(&delete_edges_query)?;
+        }
+        
+        // Delete the node itself
+        let delete_node_query = QueryBuilder::remove()
+            .ids(node_id.to_string())
+            .query();
+        self.db.exec_mut(&delete_node_query)?;
+        
+        Ok(())
     }
 }

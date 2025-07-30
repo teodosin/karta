@@ -40,6 +40,8 @@ pub trait GraphNodes {
     fn get_all_indexed_paths(&self) -> Result<Vec<String>, Box<dyn Error>>;
     /// Retrieves all descendant nodes of a given path by traversing 'contains' edges.
     fn get_all_descendants(&self, path: &NodePath) -> Result<Vec<DataNode>, Box<dyn Error>>;
+    /// Deletes a node and all its edges from the database.
+    fn delete_node_and_edges(&mut self, node_id: &Uuid) -> Result<(), Box<dyn Error>>;
 }
 
 // --------------------------------------------------------------------

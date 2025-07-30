@@ -148,10 +148,6 @@ impl DataNode {
         self.path.clone()
     }
 
-    pub fn ntype_name(&self) -> NodeTypeId {
-        self.ntype.clone()
-    }
-
     pub fn created_time(&self) -> SysTime {
         self.created_time.clone()
     }
@@ -169,6 +165,14 @@ impl DataNode {
     }
     pub fn is_dir(&self) -> bool {
         self.ntype == NodeTypeId::dir_type()
+    }
+
+    pub fn is_physical(&self) -> bool {
+        self.ntype == NodeTypeId::dir_type() || self.ntype == NodeTypeId::file_type()
+    }
+
+    pub fn ntype(&self) -> NodeTypeId {
+        self.ntype.clone()
     }
 }
 
