@@ -138,7 +138,7 @@ pub struct UpdateNodeResponse {
 
 #[derive(Deserialize, serde::Serialize, Debug)]
 pub struct DeleteNodesPayload {
-    pub node_ids: Vec<String>, // UUIDs
+    pub node_handles: Vec<String>, // Can be either UUID strings or path strings
     pub context_id: Option<String>, // Context where deletion is happening
 }
 

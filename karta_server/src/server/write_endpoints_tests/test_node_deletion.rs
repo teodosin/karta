@@ -14,7 +14,7 @@ async fn test_delete_single_virtual_node() {
 
     // Delete the node
     let delete_payload = DeleteNodesPayload {
-        node_ids: vec![node_uuid.to_string()],
+        node_handles: vec![node_uuid.to_string()],
         context_id: None,
     };
     let payload_json = serde_json::to_string(&delete_payload).unwrap();
@@ -58,7 +58,7 @@ async fn test_delete_single_physical_file() {
 
     // Delete the node
     let delete_payload = DeleteNodesPayload {
-        node_ids: vec![node_uuid.to_string()],
+        node_handles: vec![node_uuid.to_string()],
         context_id: None,
     };
     let payload_json = serde_json::to_string(&delete_payload).unwrap();
@@ -81,6 +81,53 @@ async fn test_delete_single_physical_file() {
 
     // Verify file was moved to trash (should not exist in original location)
     assert!(!file_path.exists());
+}
+
+#[tokio::test]
+async fn test_delete_unindexed_file_by_path() {
+    let (router, test_ctx) = setup_test_environment("delete_unindexed_file");
+
+    // Create a physical file but DO NOT index it
+    let file_path = test_ctx.get_vault_root().join("unindexed_file.txt");
+    std::fs::write(&file_path, "unindexed content").expect("Failed to create test file");
+
+    // Verify file exists on filesystem
+    assert!(file_path.exists());
+
+    // Verify file is NOT in the graph database
+    test_ctx.with_service(|s| {
+        let node_path = NodePath::new("vault/unindexed_file.txt".into());
+        assert!(s.data().open_node(&NodeHandle::Path(node_path)).is_err());
+    });
+
+    // Delete the file by path (not UUID, since it's not indexed)
+    let delete_payload = DeleteNodesPayload {
+        node_handles: vec!["vault/unindexed_file.txt".to_string()], // Path, not UUID
+        context_id: None,
+    };
+    let payload_json = serde_json::to_string(&delete_payload).unwrap();
+
+    let response = execute_delete_request(router, "/api/nodes", payload_json).await;
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let response_body: DeleteNodesResponse = serde_json::from_slice(&body_bytes).unwrap();
+
+    // Verify response
+    assert_eq!(response_body.deleted_nodes.len(), 1);
+    assert_eq!(response_body.failed_deletions.len(), 0);
+    assert_eq!(response_body.deleted_nodes[0].node_path, "/vault/unindexed_file.txt"); // Note: path includes leading slash
+    assert_eq!(response_body.deleted_nodes[0].was_physical, true);
+    assert_eq!(response_body.deleted_nodes[0].descendants_deleted.len(), 0);
+
+    // Verify file was moved to trash (should not exist in original location)
+    assert!(!file_path.exists());
+
+    // Verify file is still not in graph database (it was never indexed)
+    test_ctx.with_service(|s| {
+        let node_path = NodePath::new("vault/unindexed_file.txt".into());
+        assert!(s.data().open_node(&NodeHandle::Path(node_path)).is_err());
+    });
 }
 
 #[tokio::test]
@@ -110,7 +157,7 @@ async fn test_delete_directory_with_descendants() {
 
     // Delete the parent directory
     let delete_payload = DeleteNodesPayload {
-        node_ids: vec![parent_uuid.to_string()],
+        node_handles: vec![parent_uuid.to_string()],
         context_id: None,
     };
     let payload_json = serde_json::to_string(&delete_payload).unwrap();
@@ -164,7 +211,7 @@ async fn test_delete_mixed_batch() {
 
     // Delete both nodes in batch
     let delete_payload = DeleteNodesPayload {
-        node_ids: vec![virtual_uuid.to_string(), file_uuid.to_string()],
+        node_handles: vec![virtual_uuid.to_string(), file_uuid.to_string()],
         context_id: None,
     };
     let payload_json = serde_json::to_string(&delete_payload).unwrap();
@@ -209,7 +256,7 @@ async fn test_delete_partial_failure() {
 
     // Try to delete valid node + non-existent node
     let delete_payload = DeleteNodesPayload {
-        node_ids: vec![
+        node_handles: vec![
             valid_uuid.to_string(),
             "99999999-9999-9999-9999-999999999999".to_string() // Actually non-existent UUID
         ],
@@ -263,7 +310,7 @@ async fn test_delete_with_edges() {
 
     // Delete node1 (which has an edge)
     let delete_payload = DeleteNodesPayload {
-        node_ids: vec![node1_uuid.to_string()],
+        node_handles: vec![node1_uuid.to_string()],
         context_id: None,
     };
     let payload_json = serde_json::to_string(&delete_payload).unwrap();
@@ -306,7 +353,7 @@ async fn test_trash_metadata_persistence() {
 
     // Delete the node
     let delete_payload = DeleteNodesPayload {
-        node_ids: vec![node_uuid.to_string()],
+        node_handles: vec![node_uuid.to_string()],
         context_id: None,
     };
     let payload_json = serde_json::to_string(&delete_payload).unwrap();
