@@ -72,6 +72,12 @@ impl NodeTypeId {
             version: KARTA_VERSION.to_string(),
         }
     }
+
+    /// Check if this is the root node specifically
+    pub fn is_root_node(&self) -> bool {
+        self.type_path == "core/root"
+    }
+
 }
 
 impl TryFrom<DbValue> for NodeTypeId {

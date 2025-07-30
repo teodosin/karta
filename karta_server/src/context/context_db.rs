@@ -62,10 +62,10 @@ impl ContextDb {
 
         // --- Sorting for Deterministic Layout ---
         children_nodes.sort_by(|a, b| {
-            let a_is_dir = a.ntype_name() == NodeTypeId::dir_type();
-            let b_is_dir = b.ntype_name() == NodeTypeId::dir_type();
-            let a_is_file = a.ntype_name() == NodeTypeId::file_type();
-            let b_is_file = b.ntype_name() == NodeTypeId::file_type();
+            let a_is_dir = a.ntype() == NodeTypeId::dir_type();
+            let b_is_dir = b.ntype() == NodeTypeId::dir_type();
+            let a_is_file = a.ntype() == NodeTypeId::file_type();
+            let b_is_file = b.ntype() == NodeTypeId::file_type();
 
             match (a_is_dir, b_is_dir, a_is_file, b_is_file) {
                 // Both are directories or both are files, or both are neither

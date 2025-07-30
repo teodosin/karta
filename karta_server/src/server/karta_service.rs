@@ -1,6 +1,7 @@
 use std::{
     collections::{HashMap, HashSet},
     error::Error,
+    io::Write,
     path::PathBuf,
     str::FromStr,
     sync::Arc,
@@ -136,7 +137,6 @@ impl KartaService {
             created_edges_payload.push(edge_payload);
         }
 
-        dbg!(&edges_to_insert);
         self.data.insert_edges(edges_to_insert);
 
         Ok(created_edges_payload)
@@ -146,6 +146,220 @@ impl KartaService {
         let edges_to_delete: Vec<(Uuid, Uuid)> =
             payload.into_iter().map(|p| (p.source, p.target)).collect();
         self.data.delete_edges(&edges_to_delete)
+    }
+
+    pub fn delete_nodes(&mut self, payload: crate::server::write_endpoints::DeleteNodesPayload) -> Result<crate::server::write_endpoints::DeleteNodesResponse, Box<dyn Error>> {
+        let operation_id = Uuid::new_v4().to_string();
+        let mut deleted_nodes = Vec::new();
+        let mut failed_deletions = Vec::new();
+        let mut warnings = Vec::new();
+        
+        // Phase 1: Validation & Planning
+        for node_id in &payload.node_ids {
+            if let Ok(uuid) = Uuid::parse_str(node_id) {
+                if let Ok(node) = self.data().open_node(&NodeHandle::Uuid(uuid)) {
+                    // If directory, warn about recursive deletion
+                    if node.is_dir() {
+                        if let Ok(descendants) = self.data().get_all_descendants(&node.path()) {
+                            warnings.push(format!("Deleting directory '{}' will also delete {} descendants", 
+                                                node.path().alias(), descendants.len()));
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Phase 2: Execute deletions
+        for node_id in payload.node_ids {
+            match self.delete_single_node(&node_id, &payload.context_id) {
+                Ok(deleted_info) => deleted_nodes.push(deleted_info),
+                Err(e) => failed_deletions.push(crate::server::write_endpoints::FailedDeletion { 
+                    node_id, 
+                    error: e.to_string() 
+                }),
+            }
+        }
+        
+        // Phase 3: Write to trash log
+        if !deleted_nodes.is_empty() {
+            self.write_to_trash_log(crate::server::write_endpoints::TrashEntry {
+                operation_id: operation_id.clone(),
+                timestamp: std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs() as i64,
+                deleted_nodes: deleted_nodes.clone(),
+            })?;
+        }
+        
+        Ok(crate::server::write_endpoints::DeleteNodesResponse {
+            deleted_nodes,
+            failed_deletions,
+            operation_id,
+            warnings,
+        })
+    }
+
+    fn delete_single_node(&mut self, node_id: &str, _context_id: &Option<String>) -> Result<crate::server::write_endpoints::DeletedNodeInfo, Box<dyn Error>> {
+        let uuid = Uuid::parse_str(node_id)?;
+        
+        // Get the node first to check if it exists
+        let node = self.data.open_node(&crate::elements::node_path::NodeHandle::Uuid(uuid))?;
+        
+        // Check if this is a system node that cannot be deleted
+        // Only nodes under "vault/" can be deleted, plus the vault itself
+        let path_str = node.path().alias();
+        let is_deletable = path_str == "/vault" || path_str.starts_with("/vault/");
+        
+        if !is_deletable {
+            return Err(format!("Cannot delete system node: {} (path: {})", node_id, path_str).into());
+        }
+        
+        // Collect descendants if it's a directory (using get_all_descendants)
+        let descendants_deleted = if node.is_dir() {
+            let descendants = self.data.get_all_descendants(&node.path())?;
+            let descendant_ids: Vec<String> = descendants.iter().map(|n| n.uuid().to_string()).collect();
+            
+            // For physical nodes, only delete from database - don't move individual descendants
+            // to trash since moving the parent directory will move all descendants automatically
+            for desc_node in &descendants {
+                self.delete_node_and_edges(&desc_node.uuid())?;
+            }
+            
+            descendant_ids
+        } else {
+            Vec::new()
+        };
+
+        // Move to trash if physical (this will move the entire directory including descendants)
+        if node.is_physical() {
+            self.move_to_trash(&node)?;
+        }        // Collect edges before deletion (for undo support)
+        let edge_snapshots = self.collect_node_edges(&uuid)?;
+        
+        // Remove from all contexts (tracked for undo)
+        let context_removals = self.remove_node_from_all_contexts(&uuid)?;
+        
+        // Remove from graph database (including all edges)
+        self.delete_node_and_edges(&uuid)?;
+        
+        // Write to trash log
+        let deleted_info = crate::server::write_endpoints::DeletedNodeInfo {
+            node_id: node_id.to_string(),
+            node_path: node.path().alias(),
+            node_type: node.ntype(),
+            was_physical: node.is_physical(),
+            descendants_deleted: descendants_deleted.clone(),
+            node_snapshot: node.clone(),
+            edge_snapshots: edge_snapshots.clone(),
+            context_removals: context_removals.clone(),
+        };
+        
+        let trash_entry = crate::server::write_endpoints::TrashEntry {
+            operation_id: uuid::Uuid::new_v4().to_string(),
+            timestamp: chrono::Utc::now().timestamp(),
+            deleted_nodes: vec![deleted_info.clone()],
+        };
+        self.write_to_trash_log(trash_entry)?;
+        
+        Ok(deleted_info)
+    }
+
+    fn move_to_trash(&self, node: &DataNode) -> Result<(), Box<dyn Error>> {
+        let fs_path = node.path().full(self.vault_fs_path());
+        
+        // Use system trash for actual file/directory
+        trash::delete(&fs_path)?;
+        
+        Ok(())
+    }
+    
+    fn write_to_trash_log(&self, entry: crate::server::write_endpoints::TrashEntry) -> Result<(), Box<dyn Error>> {
+        let trash_log_path = self.storage_path().join("trash").join("trash_log.ron");
+        
+        // Ensure trash directory exists
+        if let Some(parent) = trash_log_path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        
+        // Append to trash log
+        let serialized = ron::to_string(&entry)?;
+        let mut file = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(trash_log_path)?;
+        writeln!(file, "{}", serialized)?;
+        
+        Ok(())
+    }
+
+    fn collect_node_edges(&self, node_uuid: &Uuid) -> Result<Vec<crate::elements::edge::Edge>, Box<dyn Error>> {
+        // For undo/logging: collect all edges connected to this node using agdb search queries
+        let node_uuid_str = node_uuid.to_string();
+        let mut edge_ids: Vec<agdb::DbId> = Vec::new();
+
+        // Search for edges FROM this node (where this node is the source)
+        let from_query = agdb::QueryBuilder::search()
+            .from(node_uuid_str.clone())
+            .where_()
+            .distance(agdb::CountComparison::LessThan(2))
+            .query();
+
+        if let Ok(search_result) = self.data.db().exec(&from_query) {
+            for elem in search_result.elements.iter() {
+                if elem.id.0 < 0 { // Is an edge
+                    edge_ids.push(elem.id);
+                }
+            }
+        }
+
+        // Search for edges TO this node (where this node is the target)
+        let to_query = agdb::QueryBuilder::search()
+            .to(node_uuid_str)
+            .where_()
+            .distance(agdb::CountComparison::LessThan(2))
+            .query();
+
+        if let Ok(search_result) = self.data.db().exec(&to_query) {
+            for elem in search_result.elements.iter() {
+                if elem.id.0 < 0 { // Is an edge
+                    edge_ids.push(elem.id);
+                }
+            }
+        }
+
+        // Remove duplicates (edges might be found in both queries)
+        edge_ids.sort();
+        edge_ids.dedup();
+
+        // Get full edge data
+        if edge_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let full_edges_result = self.data.db().exec(&agdb::QueryBuilder::select().ids(edge_ids).query());
+        let full_edges = full_edges_result.map_or(vec![], |r| r.elements);
+
+        let mut edges = Vec::new();
+        for db_edge in &full_edges {
+            if let Ok(edge) = crate::elements::edge::Edge::try_from(db_edge.clone()) {
+                edges.push(edge);
+            }
+        }
+
+        Ok(edges)
+    }
+
+    fn remove_node_from_all_contexts(&mut self, _node_uuid: &Uuid) -> Result<Vec<String>, Box<dyn Error>> {
+        // This will need to be implemented to track context removals for undo
+        // For now, return empty vector
+        Ok(Vec::new())
+    }
+
+    fn delete_node_and_edges(&mut self, node_uuid: &Uuid) -> Result<(), Box<dyn Error>> {
+        // agdb automatically removes all edges when removing a node
+        // So we just need to remove the node itself
+        self.data.delete_node_and_edges(node_uuid)
     }
 
     pub fn reconnect_edge(
@@ -537,12 +751,8 @@ impl KartaService {
         target_parent_path: &NodePath,
         new_name: Option<&str>,
     ) -> Result<NodePath, Box<dyn Error>> {
-        println!("[move_node_with_rename] Moving '{}' to parent '{}' with new_name: {:?}", 
-                 node_path.alias(), target_parent_path.alias(), new_name);
-                 
         let source_fs_path = node_path.full(self.vault_fs_path());
         let is_physical_node = source_fs_path.exists();
-        println!("[move_node_with_rename] Source is physical: {}", is_physical_node);
 
         // Determine the final name (either provided or original), checking for collisions
         let original_name = node_path.name();
