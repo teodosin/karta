@@ -148,6 +148,18 @@ impl KartaService {
         self.data.delete_edges(&edges_to_delete)
     }
 
+    /// Parse a string as either a UUID or a path and return the appropriate NodeHandle
+    fn parse_node_handle(&self, handle_str: &str) -> Result<crate::elements::node_path::NodeHandle, Box<dyn Error>> {
+        // First try to parse as UUID
+        if let Ok(uuid) = Uuid::parse_str(handle_str) {
+            return Ok(crate::elements::node_path::NodeHandle::Uuid(uuid));
+        }
+        
+        // If not a UUID, treat as path
+        let node_path = crate::elements::node_path::NodePath::from_alias(handle_str);
+        Ok(crate::elements::node_path::NodeHandle::Path(node_path))
+    }
+
     pub fn delete_nodes(&mut self, payload: crate::server::write_endpoints::DeleteNodesPayload) -> Result<crate::server::write_endpoints::DeleteNodesResponse, Box<dyn Error>> {
         let operation_id = Uuid::new_v4().to_string();
         let mut deleted_nodes = Vec::new();
@@ -155,9 +167,10 @@ impl KartaService {
         let mut warnings = Vec::new();
         
         // Phase 1: Validation & Planning
-        for node_id in &payload.node_ids {
-            if let Ok(uuid) = Uuid::parse_str(node_id) {
-                if let Ok(node) = self.data().open_node(&NodeHandle::Uuid(uuid)) {
+        for node_handle_str in &payload.node_handles {
+            // Try to parse as NodeHandle (either UUID or path)
+            if let Ok(handle) = self.parse_node_handle(node_handle_str) {
+                if let Ok(node) = self.data().open_node(&handle) {
                     // If directory, warn about recursive deletion
                     if node.is_dir() {
                         if let Ok(descendants) = self.data().get_all_descendants(&node.path()) {
@@ -170,11 +183,11 @@ impl KartaService {
         }
         
         // Phase 2: Execute deletions
-        for node_id in payload.node_ids {
-            match self.delete_single_node(&node_id, &payload.context_id) {
+        for node_handle_str in payload.node_handles {
+            match self.delete_single_node(&node_handle_str, &payload.context_id) {
                 Ok(deleted_info) => deleted_nodes.push(deleted_info),
                 Err(e) => failed_deletions.push(crate::server::write_endpoints::FailedDeletion { 
-                    node_id, 
+                    node_id: node_handle_str, 
                     error: e.to_string() 
                 }),
             }
@@ -200,11 +213,13 @@ impl KartaService {
         })
     }
 
-    fn delete_single_node(&mut self, node_id: &str, _context_id: &Option<String>) -> Result<crate::server::write_endpoints::DeletedNodeInfo, Box<dyn Error>> {
-        let uuid = Uuid::parse_str(node_id)?;
+    fn delete_single_node(&mut self, node_handle_str: &str, _context_id: &Option<String>) -> Result<crate::server::write_endpoints::DeletedNodeInfo, Box<dyn Error>> {
+        // Parse the handle string as either UUID or path
+        let handle = self.parse_node_handle(node_handle_str)?;
         
-        // Get the node first to check if it exists
-        let node = self.data.open_node(&crate::elements::node_path::NodeHandle::Uuid(uuid))?;
+        // Get the node first to check if it exists (this will handle unindexed files too)
+        let node = self.open_node(&handle)?;
+        let node_uuid = node.uuid(); // Get the UUID for later operations
         
         // Check if this is a system node that cannot be deleted
         // Only nodes under "vault/" can be deleted, plus the vault itself
@@ -212,21 +227,29 @@ impl KartaService {
         let is_deletable = path_str == "/vault" || path_str.starts_with("/vault/");
         
         if !is_deletable {
-            return Err(format!("Cannot delete system node: {} (path: {})", node_id, path_str).into());
+            return Err(format!("Cannot delete system node: {} (path: {})", node_handle_str, path_str).into());
         }
         
-        // Collect descendants if it's a directory (using get_all_descendants)
+        // Check if the node is actually indexed in the database
+        let is_indexed = self.data.open_node(&NodeHandle::Uuid(node_uuid)).is_ok();
+        
         let descendants_deleted = if node.is_dir() {
-            let descendants = self.data.get_all_descendants(&node.path())?;
-            let descendant_ids: Vec<String> = descendants.iter().map(|n| n.uuid().to_string()).collect();
-            
-            // For physical nodes, only delete from database - don't move individual descendants
-            // to trash since moving the parent directory will move all descendants automatically
-            for desc_node in &descendants {
-                self.delete_node_and_edges(&desc_node.uuid())?;
+            if is_indexed {
+                // For indexed directories, collect and delete descendants from database
+                let descendants = self.data.get_all_descendants(&node.path())?;
+                let descendant_ids: Vec<String> = descendants.iter().map(|n| n.uuid().to_string()).collect();
+                
+                // For physical nodes, only delete from database - don't move individual descendants
+                // to trash since moving the parent directory will move all descendants automatically
+                for desc_node in &descendants {
+                    self.delete_node_and_edges(&desc_node.uuid())?;
+                }
+                
+                descendant_ids
+            } else {
+                // For unindexed directories, we don't have database entries to clean up
+                Vec::new()
             }
-            
-            descendant_ids
         } else {
             Vec::new()
         };
@@ -234,18 +257,28 @@ impl KartaService {
         // Move to trash if physical (this will move the entire directory including descendants)
         if node.is_physical() {
             self.move_to_trash(&node)?;
-        }        // Collect edges before deletion (for undo support)
-        let edge_snapshots = self.collect_node_edges(&uuid)?;
+        }
         
-        // Remove from all contexts (tracked for undo)
-        let context_removals = self.remove_node_from_all_contexts(&uuid)?;
-        
-        // Remove from graph database (including all edges)
-        self.delete_node_and_edges(&uuid)?;
+        // Only perform database operations if the node is actually indexed
+        let (edge_snapshots, context_removals) = if is_indexed {
+            // Collect edges before deletion (for undo support)
+            let edge_snapshots = self.collect_node_edges(&node_uuid)?;
+            
+            // Remove from all contexts (tracked for undo)
+            let context_removals = self.remove_node_from_all_contexts(&node_uuid)?;
+            
+            // Remove from graph database (including all edges)
+            self.delete_node_and_edges(&node_uuid)?;
+            
+            (edge_snapshots, context_removals)
+        } else {
+            // For unindexed nodes, no database cleanup needed
+            (Vec::new(), Vec::new())
+        };
         
         // Write to trash log
         let deleted_info = crate::server::write_endpoints::DeletedNodeInfo {
-            node_id: node_id.to_string(),
+            node_id: node_uuid.to_string(), // Use the actual UUID, not the input string
             node_path: node.path().alias(),
             node_type: node.ntype(),
             was_physical: node.is_physical(),
