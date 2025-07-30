@@ -204,29 +204,21 @@
 		let newScale = currentTransform.scale;
 		let newPosX = currentTransform.posX;
 		let newPosY = currentTransform.posY;
-		const panSensitivityFactor = 1.0;
+		const panSensitivityFactor = 1.2; // Adjust this for faster/slower panning
 
 		if (e.ctrlKey) {
-			// Pinch-to-zoom (Ctrl key pressed) - Preserves the original smooth zoom for touchpads
-			const zoomSensitivityFactor = 1.8;
-			const pinchZoomSensitivity = 0.09;
-			const pinchFactor =
-				1 + pinchZoomSensitivity * zoomSensitivityFactor;
+			// Pinch-to-zoom (Ctrl key pressed)
+			const zoomSensitivityFactor = 0.015;
+			const zoomAmount = e.deltaY * -zoomSensitivityFactor;
+			newScale = currentTransform.scale * (1 + zoomAmount);
 
-			newScale =
-				currentTransform.scale *
-				(e.deltaY < 0 ? pinchFactor : 1 / pinchFactor);
+			// Clamp the scale
+			newScale = Math.max(0.1, Math.min(newScale, 5));
 
 			// If we zoomed, recalculate position to keep the canvas point under the mouse
 			if (newScale !== currentTransform.scale) {
-				const canvasPointX =
-					(mouseX - currentTransform.posX - w / 2) /
-					currentTransform.scale;
-				const canvasPointY =
-					(mouseY - currentTransform.posY - h / 2) /
-					currentTransform.scale;
-
-				newScale = Math.max(0.1, Math.min(newScale, 5));
+				const canvasPointX = (mouseX - currentTransform.posX - w / 2) / currentTransform.scale;
+				const canvasPointY = (mouseY - currentTransform.posY - h / 2) / currentTransform.scale;
 
 				newPosX = mouseX - canvasPointX * newScale - w / 2;
 				newPosY = mouseY - canvasPointY * newScale - h / 2;
@@ -248,14 +240,16 @@
 			closeContextMenu();
 			closeCreateNodeMenu();
 		}
+
+		// Directly set the new transform without tweening for immediate response
 		const newTransformWheel = {
 			scale: newScale,
 			posX: newPosX,
 			posY: newPosY,
 		};
-		viewTransform.set(newTransformWheel, { duration: 140 });
+		viewTransform.set(newTransformWheel, { duration: 0 });
 
-		// Call tool's wheel handler
+		// Call tool's wheel handler if it exists
 		get(currentTool)?.onWheel?.(e);
 	}
 
