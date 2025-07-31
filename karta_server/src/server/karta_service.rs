@@ -677,14 +677,33 @@ impl KartaService {
                     "[_finalize_context] -> Fetching {} missing nodes from DB.",
                     saved_node_uuids.len()
                 );
-                let missing_nodes = self.data().open_nodes_by_uuid(saved_node_uuids)?;
-                for node in missing_nodes {
-                    println!(
-                        "[_finalize_context] -> Adding node from saved context: '{}' ({})",
-                        node.path().alias(),
-                        node.uuid()
-                    );
-                    nodes.entry(node.uuid()).or_insert(node);
+                println!(
+                    "[_finalize_context] -> Missing node UUIDs: {:?}",
+                    saved_node_uuids
+                );
+                
+                match self.data().open_nodes_by_uuid(saved_node_uuids) {
+                    Ok(missing_nodes) => {
+                        println!(
+                            "[_finalize_context] -> Successfully fetched {} nodes from DB.",
+                            missing_nodes.len()
+                        );
+                        for node in missing_nodes {
+                            println!(
+                                "[_finalize_context] -> Adding node from saved context: '{}' ({})",
+                                node.path().alias(),
+                                node.uuid()
+                            );
+                            nodes.entry(node.uuid()).or_insert(node);
+                        }
+                    }
+                    Err(e) => {
+                        println!(
+                            "[_finalize_context] -> ERROR fetching missing nodes: {:?}",
+                            e
+                        );
+                        return Err(e);
+                    }
                 }
             }
         }
