@@ -1207,8 +1207,14 @@
 					action: () => {
 						// Ensure targetNodeId is not null or undefined before proceeding
 						if (targetNodeId) {
+							// Check if it's a directory to show appropriate warning
+							const isDirectory = targetDataNode?.ntype === 'core/fs/dir';
+							const confirmationMessage = isDirectory 
+								? "Are you sure you want to permanently delete this folder? This will also delete all files and subfolders inside it. This action cannot be undone."
+								: "Are you sure you want to permanently delete this item? This action cannot be undone.";
+								
 							openConfirmationDialog(
-								"Are you sure you want to permanently delete this node? This action cannot be undone.",
+								confirmationMessage,
 								// The callback now receives the ID
 								async (idToDelete) => {
 									console.log(`[Viewport.ContextMenu] INITIATING PERMANENT DELETION for node: ${idToDelete}`);

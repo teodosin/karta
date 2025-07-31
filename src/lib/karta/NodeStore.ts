@@ -548,14 +548,15 @@ export async function deleteDataNodePermanently(nodeId: NodeId): Promise<void> {
             console.log(`[deleteDataNodePermanently] Removed ${edgesToDelete.length} edges from store for deleted nodes`);
         }
 
-        // 7. Remove ViewNode from current context only
+        // 7. Remove ViewNodes from current context for all deleted nodes (including descendants)
         const currentCtxId = get(currentContextId);
         console.log(`[deleteDataNodePermanently] Current context ID: ${currentCtxId}`);
         if (currentCtxId) {
-            // Use the first deleted node ID (which should be our target node or its new UUID)
-            const targetNodeId = deleteResponse.deleted_nodes[0]?.node_id || nodeId;
-            console.log(`[deleteDataNodePermanently] Removing ViewNode ${targetNodeId} from current context ${currentCtxId}`);
-            await removeViewNodeFromContext(currentCtxId, targetNodeId);
+            console.log(`[deleteDataNodePermanently] Removing ViewNodes for ${deletedNodeIds.size} deleted nodes from current context ${currentCtxId}`);
+            for (const deletedId of deletedNodeIds) {
+                console.log(`[deleteDataNodePermanently] Removing ViewNode ${deletedId} from current context ${currentCtxId}`);
+                await removeViewNodeFromContext(currentCtxId, deletedId);
+            }
         }
 
         // 8. Delete contexts for deleted nodes and update the existingContextsMap
