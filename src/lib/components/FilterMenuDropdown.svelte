@@ -63,7 +63,7 @@
 		<!-- Contains Edges Section -->
 		<div class="space-y-2">
 			<div class="text-xs font-medium text-gray-300 uppercase tracking-wide">
-				Contains Edges
+				Folder Connections
 			</div>
 			<div class="space-y-1">
 				{#each visibilityOptions as option}
