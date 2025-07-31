@@ -10,15 +10,10 @@ use super::AppState;
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ColorTheme {
-    #[serde(rename = "viewport-bg")]
     pub viewport_bg: String,
-    #[serde(rename = "panel-bg")]
     pub panel_bg: String,
-    #[serde(rename = "focal-hl")]
     pub focal_hl: String,
-    #[serde(rename = "panel-hl")]
     pub panel_hl: String,
-    #[serde(rename = "text-color")]
     pub text_color: String,
 }
 
@@ -36,12 +31,29 @@ impl Default for ColorTheme {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
+pub struct EdgeFilterSettings {
+    pub contains_edges: String,
+    pub normal_edges: String,
+}
+
+impl Default for EdgeFilterSettings {
+    fn default() -> Self {
+        EdgeFilterSettings {
+            contains_edges: "always".to_string(),
+            normal_edges: "always".to_string(),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct KartaSettings {
     pub version: f32,
     pub save_last_viewed_context: bool,
     pub last_viewed_context_path: Option<NodePath>,
     pub vault_path: Option<String>,
     pub color_theme: ColorTheme,
+    pub edge_filters: EdgeFilterSettings,
 }
 
 impl Default for KartaSettings {
@@ -52,6 +64,7 @@ impl Default for KartaSettings {
             last_viewed_context_path: None,
             vault_path: None,
             color_theme: ColorTheme::default(),
+            edge_filters: EdgeFilterSettings::default(),
         }
     }
 }
