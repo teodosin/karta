@@ -1,25 +1,75 @@
 <script lang="ts">
-	import type { ContextMenuContextType } from '$lib/karta/UIStateStore'; // Import the type if needed for items later
-	import { closeContextMenu } from '$lib/karta/UIStateStore'; // Import close action
+	import { onMount } from 'svelte';
+	import type { ContextMenuContextType } from '$lib/karta/UIStateStore';
+	import { closeContextMenu } from '$lib/karta/UIStateStore';
 
 	// Props
 	export let position: { x: number; y: number } | null = null; // Expects screen coordinates
 	export let items: { label: string; action: () => void; disabled?: boolean }[] = [];
 
-	// TODO: Implement click outside logic later
+	let menuElement: HTMLDivElement | null = null;
+	let adjustedPosition = { x: 0, y: 0 };
 
 	function handleItemClick(item: { label: string; action: () => void; disabled?: boolean }) {
 		if (!item.disabled) {
 			item.action();
-			closeContextMenu(); // Close menu after action
+			closeContextMenu();
 		}
 	}
+
+	function calculateBoundsAwarePosition() {
+		if (!position || !menuElement) return;
+
+		const rect = menuElement.getBoundingClientRect();
+		const viewportWidth = window.innerWidth;
+		const viewportHeight = window.innerHeight;
+		
+		let x = position.x;
+		let y = position.y;
+
+		// Minimum offset from click point to avoid covering it
+		const minOffset = 10;
+
+		// Check right boundary
+		if (x + rect.width > viewportWidth) {
+			x = position.x - rect.width - minOffset; // Position to the left of click
+		} else {
+			x = position.x + minOffset; // Default: slightly right of click
+		}
+
+		// Check bottom boundary
+		if (y + rect.height > viewportHeight) {
+			y = position.y - rect.height - minOffset; // Position above click
+		} else {
+			y = position.y + minOffset; // Default: slightly below click
+		}
+
+		// Ensure we don't go off the left edge
+		x = Math.max(5, x);
+		
+		// Ensure we don't go off the top edge
+		y = Math.max(5, y);
+
+		adjustedPosition = { x, y };
+	}
+
+	// Recalculate position when menu mounts or position changes
+	$: if (position && menuElement) {
+		calculateBoundsAwarePosition();
+	}
+
+	onMount(() => {
+		if (position && menuElement) {
+			calculateBoundsAwarePosition();
+		}
+	});
 </script>
 
 {#if position}
 	<div
+		bind:this={menuElement}
 		class="context-menu absolute bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded shadow-lg py-1 z-50"
-		style="left: {position.x}px; top: {position.y}px;"
+		style="left: {adjustedPosition.x}px; top: {adjustedPosition.y}px;"
 		role="menu"
 		aria-orientation="vertical"
 		aria-labelledby="options-menu"

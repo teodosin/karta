@@ -39,15 +39,9 @@
 		createNodeMenuPosition,
 		openCreateNodeMenu,
 		closeCreateNodeMenu,
-		isContextMenuOpen,
-		contextMenuPosition,
-		contextMenuContext,
 		openContextMenu,
 		closeContextMenu,
 		type ContextMenuContextType,
-		requestNodeRename,
-		openConfirmationDialog,
-		openNodeSearch,
 	} from "$lib/karta/UIStateStore";
 	import {
 		selectedNodeIds,
@@ -65,7 +59,6 @@
 		nodes,
 		createTextNodeFromPaste,
 		createImageNodeWithAsset,
-		deleteDataNodePermanently,
 		findPhysicalParentPath,
 	} from "$lib/karta/NodeStore";
 	import { notifications } from '$lib/karta/NotificationStore';
@@ -73,7 +66,7 @@
 	import NodeWrapper from "./NodeWrapper.svelte";
 	import EdgeLayer from "./EdgeLayer.svelte";
 	import CreateNodeMenu from "./CreateNodeMenu.svelte";
-	import ContextMenu from "./ContextMenu.svelte";
+	import ContextMenuManager from "./ContextMenuManager.svelte";
 	import SelectionBox from "./SelectionBox.svelte";
 	import ConfirmationDialog from "./ConfirmationDialog.svelte";
 	import {
@@ -116,8 +109,6 @@
 	let marqueeEndCoords: { canvasX: number; canvasY: number } | null = null;
 	let initialSelection: Set<string> | null = null;
 	let marqueeRectElement: HTMLDivElement | null = null;
-
-	let contextMenuElement: HTMLElement | null = null;
 
 	// --- Constants for Scale Invariance ---
 	const desiredScreenOutlineWidth = 1; // Target outline width in screen pixels
@@ -821,37 +812,12 @@
 		openContextMenu({ x: e.clientX, y: e.clientY }, context);
 	}
 
-	/** Closes the context menu if a click occurs outside of it. */
-	function handleClickOutsideContextMenu(event: PointerEvent) {
-		if (
-			$isContextMenuOpen &&
-			contextMenuElement &&
-			!contextMenuElement.contains(event.target as Node)
-		) {
-			// Check if the click target is the menu itself or one of its descendants
-			// Also check if the click target is the element that *opened* the menu (prevent immediate close)
-			// For now, a simple check is sufficient. Refine if needed.
-			closeContextMenu();
-		}
-	}
-
 	// Removed handleDoubleClick
 
 	onMount(() => {
 		// Focus the viewport container when the component mounts
 		// This helps ensure keyboard events are captured correctly.
 		canvasContainer?.focus();
-
-		// Global listener for closing context menu on outside click
-		window.addEventListener("pointerdown", handleClickOutsideContextMenu);
-
-		// Cleanup listener on component destroy
-		return () => {
-			window.removeEventListener(
-				"pointerdown",
-				handleClickOutsideContextMenu,
-			);
-		};
 	});
 
 	// --- Lifecycle & Effects ---
@@ -1106,218 +1072,11 @@
 	<!-- Create Node Menu elements remain outside the transformed canvas, positioned relative to viewport -->
 </div>
 
-<!-- Context Menu (conditionally rendered) -->
-{#if $isContextMenuOpen && $contextMenuPosition}
-	{@const contextType = $contextMenuContext?.type}
-	{@const targetNodeId = $contextMenuContext?.id}
-	{@const currentNodesMap = $nodes}
-	{@const currentViewNodesMap = $currentViewNodes}
+<ContextMenuManager 
+	{canvasContainer} 
+	{screenToCanvasCoordinates} 
+	{centerViewOnCanvasPoint} 
+/>
 
-	<!-- Dynamically generate menu items based on context -->
-	{@const menuItems = (() => {
-		let items: { label: string; action: () => void; disabled?: boolean }[] =
-			[];
-		const targetDataNode = targetNodeId
-			? currentNodesMap.get(targetNodeId)
-			: null;
-		const targetViewNode = targetNodeId
-			? currentViewNodesMap.get(targetNodeId)
-			: null;
-		const screenPos = $contextMenuPosition; // Has screenX/Y
-
-		// Helper to get canvas coords from stored screen coords
-		const getCanvasCoords = () => {
-			if (!screenPos || !canvasContainer) return { x: 0, y: 0 };
-			const rect = canvasContainer.getBoundingClientRect();
-			// Use screenPos.x and screenPos.y which are the correct screen coordinates
-			return screenToCanvasCoordinates(screenPos.x, screenPos.y, rect);
-		};
-
-		if (contextType === "node" && targetNodeId) {
-			const nodeState = targetViewNode?.state.current;
-			items = [
-				{
-					label: "Enter Context",
-					action: () => {
-						if (targetNodeId)
-							switchContext({ type: "uuid", value: targetNodeId });
-					},
-					disabled:
-						!targetNodeId || targetNodeId === $currentContextId,
-				},
-			];
-
-			// Conditionally add "Remove from Context"
-			const allEdges = get(edges);
-			const focalNodeId = get(currentContextId);
-			const isConnectedToFocal = [...allEdges.values()].some(edge =>
-				(edge.source === targetNodeId && edge.target === focalNodeId) ||
-				(edge.source === focalNodeId && edge.target === targetNodeId)
-			);
-
-			if (!isConnectedToFocal) {
-				items.push({
-					label: "Remove from Context",
-					action: () => {
-						const selected = get(selectedNodeIds);
-						const currentCtxId = get(currentContextId);
-						if (currentCtx) {
-							// Iterate through selected nodes and remove from context, skipping the focal node
-							selected.forEach((nodeId) => {
-								if (nodeId !== currentCtxId) {
-									removeViewNodeFromContext(
-										currentCtxId,
-										nodeId,
-									);
-								}
-							});
-							clearSelection(); // Clear selection after removing
-						}
-					},
-					// Disable if it's the focal node
-					disabled:
-						!targetNodeId || targetNodeId === $currentContextId,
-				});
-			}
-
-			items.push(
-				{
-					label: "Center View",
-					action: () => {
-						if (nodeState) {
-							centerViewOnCanvasPoint(
-								nodeState.x + nodeState.width / 2,
-								nodeState.y + nodeState.height / 2,
-							);
-						}
-					},
-					disabled: !nodeState,
-				},
-				{
-					label: "Rename",
-					action: () => {
-						if (targetNodeId) requestNodeRename(targetNodeId);
-					},
-					disabled:
-						!targetDataNode ||
-						targetDataNode.attributes?.isSystemNode,
-				},
-				{
-					label: "Delete Permanently",
-					action: () => {
-						// Ensure targetNodeId is not null or undefined before proceeding
-						if (targetNodeId) {
-							// Check if it's a directory to show appropriate warning
-							const isDirectory = targetDataNode?.ntype === 'core/fs/dir';
-							const confirmationMessage = isDirectory 
-								? "Are you sure you want to permanently delete this folder? This will also delete all files and subfolders inside it. This action cannot be undone."
-								: "Are you sure you want to permanently delete this item? This action cannot be undone.";
-								
-							openConfirmationDialog(
-								confirmationMessage,
-								// The callback now receives the ID
-								async (idToDelete) => {
-									console.log(`[Viewport.ContextMenu] INITIATING PERMANENT DELETION for node: ${idToDelete}`);
-									console.log(`[Viewport.ContextMenu] Current context: ${$currentContextId}`);
-									console.log(`[Viewport.ContextMenu] Target node was:`, targetDataNode);
-									// Call the actual permanent deletion function with the received ID
-									await deleteDataNodePermanently(idToDelete);
-								},
-								targetNodeId, // Pass the targetNodeId here
-							);
-						} else {
-						}
-					},
-					disabled:
-						!targetNodeId || targetNodeId === $currentContextId, // Disable if it's the focal node
-				}
-			);
-		} else if (contextType === "edge") {
-			const selectedEdgesSet = get(selectedEdgeIds);
-			const allKartaEdges = get(edges);
-
-			const selectedEdges = Array.from(selectedEdgesSet)
-				.map(id => allKartaEdges.get(id))
-				.filter((edge): edge is KartaEdge => !!edge);
-
-			const deletableEdges = selectedEdges.filter(edge => !edge.contains);
-
-			items = [
-				{
-					label: `Delete ${deletableEdges.length} Edge(s)`,
-					action: () => {
-						if (deletableEdges.length === 0) return;
-
-						const payloads = deletableEdges.map(edge => ({ source: edge.source, target: edge.target }));
-
-						if (payloads.length > 0) {
-							deleteEdges(payloads);
-							clearEdgeSelection();
-						}
-						closeContextMenu();
-					},
-					disabled: deletableEdges.length === 0,
-				},
-			];
-		} else if (contextType === "background") {
-			let canCreateNodes = false;
-			try {
-				const parentPath = findPhysicalParentPath(get(currentContextId));
-				console.log(`[Viewport.ContextMenu] findPhysicalParentPath result: ${parentPath}`);
-				if (parentPath.startsWith('vault')) {
-					canCreateNodes = true;
-				}
-			} catch (error: any) {
-				console.error(`[Viewport.ContextMenu] findPhysicalParentPath error:`, JSON.stringify(error, null, 2));
-				// Do nothing, canCreateNodes remains false
-			}
-
-			items = [
-				{
-					label: "Center Focal Node",
-					action: () => centerOnFocalNode(),
-					disabled: !$currentContextId,
-				},
-				{
-					label: "Frame Context",
-					action: () => frameContext(),
-					disabled: !$currentContextId,
-				},
-				{
-					label: canCreateNodes ? "Create Node Here" : "Can't create node here",
-					action: () => {
-						const { x: canvasX, y: canvasY } = getCanvasCoords();
-						openCreateNodeMenu(
-							screenPos!.x,
-							screenPos!.y,
-							canvasX,
-							canvasY,
-						);
-					},
-					disabled: !screenPos || !canCreateNodes,
-				},
-				{
-					label: canCreateNodes ? "Search nodes..." : "Can't search nodes here",
-					action: () => {
-						const { x: canvasX, y: canvasY } = getCanvasCoords();
-						openNodeSearch(
-							screenPos!.x,
-							screenPos!.y,
-							canvasX,
-							canvasY,
-						);
-					},
-					disabled: !screenPos || !canCreateNodes,
-				},
-			];
-		}
-		return items;
-	})()}
-
-	<div bind:this={contextMenuElement}>
-		<!-- Pass only screen coordinates for positioning -->
-		<ContextMenu position={$contextMenuPosition} items={menuItems} />
-	</div>
-{/if}
 <ConfirmationDialog />
 
