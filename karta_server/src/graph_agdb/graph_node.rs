@@ -41,19 +41,30 @@ impl GraphNodes for GraphAgdb {
             return Ok(Vec::new());
         }
 
-        let ids_as_strings: Vec<String> = uuids.into_iter().map(|id| id.to_string()).collect();
+        let mut datanodes = Vec::new();
         
-        let query_result = self.db.exec(
-            &QueryBuilder::select()
-                .ids(ids_as_strings)
-                .query(),
-        )?;
-
-        let datanodes = query_result
-            .elements
-            .into_iter()
-            .map(DataNode::try_from)
-            .collect::<Result<Vec<DataNode>, _>>()?;
+        // Query each UUID individually to handle missing nodes gracefully
+        for uuid in uuids {
+            let uuid_string = uuid.to_string();
+            match self.db.exec(
+                &QueryBuilder::select()
+                    .ids(uuid_string)
+                    .query(),
+            ) {
+                Ok(query_result) => {
+                    // Try to convert each element that exists
+                    for element in query_result.elements {
+                        if let Ok(datanode) = DataNode::try_from(element) {
+                            datanodes.push(datanode);
+                        }
+                    }
+                }
+                Err(_) => {
+                    // Node doesn't exist, skip it
+                    continue;
+                }
+            }
+        }
 
         Ok(datanodes)
     }
@@ -274,34 +285,7 @@ impl GraphNodes for GraphAgdb {
     }
 
     fn delete_node_and_edges(&mut self, node_id: &Uuid) -> Result<(), Box<dyn Error>> {
-        // First, get all edges involving this node using search
-        let from_edges_query = QueryBuilder::search()
-            .from(node_id.to_string())
-            .query();
-        let to_edges_query = QueryBuilder::search()
-            .to(node_id.to_string())
-            .query();
-        
-        let from_result = self.db.exec(&from_edges_query)?;
-        let to_result = self.db.exec(&to_edges_query)?;
-        
-        // Collect edge IDs to delete
-        let mut edge_ids = Vec::new();
-        for element in from_result.elements.iter().chain(to_result.elements.iter()) {
-            if element.id.0 < 0 { // Negative IDs are edges in agdb
-                edge_ids.push(element.id);
-            }
-        }
-        
-        // Delete all edges first
-        if !edge_ids.is_empty() {
-            let delete_edges_query = QueryBuilder::remove()
-                .ids(edge_ids.clone())
-                .query();
-            self.db.exec_mut(&delete_edges_query)?;
-        }
-        
-        // Delete the node itself
+        // agdb automatically deletes all edges (incoming and outgoing) when a node is deleted
         let delete_node_query = QueryBuilder::remove()
             .ids(node_id.to_string())
             .query();
