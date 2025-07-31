@@ -167,11 +167,20 @@ export interface ColorTheme {
   // Add other theme properties here
 }
 
+// Edge filter settings
+export type EdgeVisibilityMode = 'always' | 'all-selected' | 'single-selected' | 'never';
+
+export interface EdgeFilterSettings {
+  containsEdges: EdgeVisibilityMode;
+  normalEdges: EdgeVisibilityMode;
+}
+
 export interface KartaSettings {
   version: number;
   savelastViewedContextPath: boolean;
   lastViewedContextPath: string | null;
   colorTheme: ColorTheme;
+  edgeFilters: EdgeFilterSettings;
 }
 
 // Represents connections between DataNodes (context-independent)

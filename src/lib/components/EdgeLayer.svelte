@@ -19,6 +19,9 @@
 		updateTempLinePosition
 	} from '$lib/karta/ToolStore';
 	import { selectedEdgeIds } from '$lib/karta/EdgeSelectionStore';
+	import { selectedNodeIds } from '$lib/karta/SelectionStore';
+	import { settings } from '$lib/karta/SettingsStore';
+	import { shouldShowEdge } from '$lib/util/edgeVisibility';
 	import type { NodeId } from '$lib/types/types';
 
 	export let inverseScale: number;
@@ -36,8 +39,10 @@
 	{#each [...$edges.values()] as edge (edge.id)}
 		{@const sourceViewNode = currentCtx?.viewNodes.get(edge.source)}
 		{@const targetViewNode = currentCtx?.viewNodes.get(edge.target)}
+		{@const visibilityMode = edge.contains ? $settings.edgeFilters.containsEdges : $settings.edgeFilters.normalEdges}
+		{@const isVisible = shouldShowEdge(edge, visibilityMode, $selectedNodeIds)}
 
-		{#if sourceViewNode && targetViewNode}
+		{#if sourceViewNode && targetViewNode && isVisible}
 			{@const sourceState = sourceViewNode.state.current}
 			{@const targetState = targetViewNode.state.current}
 			{@const sourceX = sourceState.x}

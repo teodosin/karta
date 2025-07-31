@@ -15,6 +15,10 @@ const defaultSettings: KartaSettings = {
 		'focal-hl': '#f4902dff',
 		'panel-hl': '#741f2fff',
 		'text-color': '#f0f0f0'
+	},
+	edgeFilters: {
+		containsEdges: 'always',
+		normalEdges: 'always'
 	}
 };
 
@@ -26,8 +30,13 @@ async function loadSettings() {
 	try {
 		const serverSettings = await adapter.getSettings();
 		if (serverSettings) {
-			// Merge loaded settings with defaults to ensure all keys exist
-			const mergedSettings = { ...defaultSettings, ...serverSettings };
+			// Deep merge loaded settings with defaults to ensure all keys exist
+			const mergedSettings = {
+				...defaultSettings,
+				...serverSettings,
+				colorTheme: { ...defaultSettings.colorTheme, ...serverSettings.colorTheme },
+				edgeFilters: { ...defaultSettings.edgeFilters, ...serverSettings.edgeFilters }
+			};
 			set(mergedSettings);
 		} else {
 			// No settings found on server, save the defaults

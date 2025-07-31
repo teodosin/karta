@@ -95,6 +95,10 @@ export function closeConfirmationDialog() {
 export const isNodeSearchOpen = writable<boolean>(false);
 export const nodeSearchPosition = writable<{ screenX: number; screenY: number; canvasX: number; canvasY: number } | null>(null);
 
+// Filter Menu Stores
+export const isFilterMenuOpen = writable<boolean>(false);
+export const filterMenuPosition = writable<{ screenX: number; screenY: number } | null>(null);
+
 // Node Search Modal Actions
 export function openNodeSearch(screenX: number, screenY: number, canvasX: number, canvasY: number) {
     nodeSearchPosition.set({ screenX, screenY, canvasX, canvasY });
@@ -106,6 +110,16 @@ export function closeNodeSearch() {
     nodeSearchPosition.set(null);
 }
 
+// Filter Menu Actions
+export function openFilterMenu(screenX: number, screenY: number) {
+    filterMenuPosition.set({ screenX, screenY });
+    isFilterMenuOpen.set(true);
+}
+
+export function closeFilterMenu() {
+    isFilterMenuOpen.set(false);
+    filterMenuPosition.set(null);
+}
 
 // Properties Panel Actions
 export function setPropertiesPanelVisibility(visible: boolean) {

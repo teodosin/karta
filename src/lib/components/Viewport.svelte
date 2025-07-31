@@ -39,6 +39,9 @@
 		createNodeMenuPosition,
 		openCreateNodeMenu,
 		closeCreateNodeMenu,
+		isFilterMenuOpen,
+		filterMenuPosition,
+		closeFilterMenu,
 		openContextMenu,
 		closeContextMenu,
 		type ContextMenuContextType,
@@ -66,6 +69,7 @@
 	import NodeWrapper from "./NodeWrapper.svelte";
 	import EdgeLayer from "./EdgeLayer.svelte";
 	import CreateNodeMenu from "./CreateNodeMenu.svelte";
+	import FilterMenuDropdown from "./FilterMenuDropdown.svelte";
 	import ContextMenuManager from "./ContextMenuManager.svelte";
 	import SelectionBox from "./SelectionBox.svelte";
 	import ConfirmationDialog from "./ConfirmationDialog.svelte";
@@ -759,6 +763,7 @@
 		if (e.key === "Escape") {
 			cancelConnectionProcess();
 			closeCreateNodeMenu(); // Also close create menu on Escape
+			closeFilterMenu(); // Also close filter menu on Escape
 			closeContextMenu(); // Also close context menu on Escape
 		}
 	}
@@ -1071,6 +1076,14 @@
 
 	<!-- Create Node Menu elements remain outside the transformed canvas, positioned relative to viewport -->
 </div>
+
+<!-- Filter Menu (conditionally rendered) -->
+{#if $isFilterMenuOpen && $filterMenuPosition}
+	<FilterMenuDropdown
+		x={$filterMenuPosition.screenX}
+		y={$filterMenuPosition.screenY}
+	/>
+{/if}
 
 <ContextMenuManager 
 	{canvasContainer} 

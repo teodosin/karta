@@ -8,8 +8,14 @@
     import { ContextTool } from '$lib/tools/ContextTool';
     // Import Lucide icons
     import { MousePointer2, Workflow, Focus, Save, type Icon as LucideIcon } from 'lucide-svelte';
+    import FilterMenu from './FilterMenu.svelte';
+    import { onMount } from 'svelte';
 
     // No local setMode function needed anymore
+    
+    onMount(() => {
+        console.log('Toolbar mounted with FilterMenu');
+    });
 </script>
 
 <!-- Position left, vertical layout, dark theme styles -->
@@ -43,6 +49,12 @@
         </div> <!-- End of the div.relative.group -->
         {/if} <!-- End of the if block -->
     {/each}
+
+    <!-- Divider -->
+    <div class="h-px bg-gray-600/50 w-full my-1"></div>
+
+    <!-- Filter Menu -->
+    <FilterMenu />
 
     <!-- Divider -->
     <div class="h-px bg-gray-600/50 w-full my-1"></div>
