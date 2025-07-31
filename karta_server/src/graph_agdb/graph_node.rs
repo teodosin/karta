@@ -232,41 +232,42 @@ impl GraphNodes for GraphAgdb {
         let mut visited = std::collections::HashSet::new();
 
         let start_node = self.open_node(&NodeHandle::Path(path.clone()))?;
+        println!("[DEBUG] get_all_descendants: Starting with node '{}' (UUID: {})", start_node.path().alias(), start_node.uuid());
         stack.push(start_node.clone());
         visited.insert(start_node.uuid());
 
         while let Some(current_node) = stack.pop() {
-            let search_query = QueryBuilder::search()
-                .from(current_node.uuid().to_string())
-                .query();
-
-            if let Ok(search_result) = self.db.exec(&search_query) {
-                // Collect edge IDs first
-                let mut edge_ids = Vec::new();
-                for element in search_result.elements {
-                    if element.id.0 < 0 { // Is an edge
-                        edge_ids.push(element.id);
-                    }
-                }
+            println!("[DEBUG] get_all_descendants: Processing node '{}' (UUID: {})", current_node.path().alias(), current_node.uuid());
+            
+            // Use open_node_connections which properly filters edges from this node
+            let connections = self.open_node_connections(&current_node.path());
+            println!("[DEBUG] get_all_descendants: Found {} connections from '{}'", connections.len(), current_node.path().alias());
+            
+            for (connected_node, edge) in connections {
+                println!("[DEBUG] get_all_descendants: Examining edge {} -> {} (contains: {})", 
+                    edge.source(), edge.target(), edge.is_contains());
                 
-                // Now get full edge data
-                if !edge_ids.is_empty() {
-                    let full_edges_result = self.db.exec(&QueryBuilder::select().ids(edge_ids).query());
-                    let full_edges = full_edges_result.map_or(vec![], |r| r.elements);
-                    
-                    for db_edge in &full_edges {
-                        if let Ok(edge) = Edge::try_from(db_edge.clone()) {
-                            // For deletion, consider all edges as potential parent-child relationships
-                            if let Ok(child_node) = self.open_node(&NodeHandle::Uuid(*edge.target())) {
-                                if visited.insert(child_node.uuid()) {
-                                    stack.push(child_node.clone());
-                                    descendants.push(child_node);
-                                }
-                            }
-                        }
+                // Only follow contains edges where current_node is the source (parent)
+                if edge.is_contains() && *edge.source() == current_node.uuid() {
+                    println!("[DEBUG] get_all_descendants: Following contains edge to child '{}' (UUID: {})", 
+                        connected_node.path().alias(), connected_node.uuid());
+                    if visited.insert(connected_node.uuid()) {
+                        stack.push(connected_node.clone());
+                        descendants.push(connected_node);
+                    } else {
+                        println!("[DEBUG] get_all_descendants: Child already visited, skipping");
                     }
+                } else if edge.is_contains() {
+                    println!("[DEBUG] get_all_descendants: Skipping contains edge where this node is the child");
+                } else {
+                    println!("[DEBUG] get_all_descendants: Skipping non-contains edge");
                 }
             }
+        }
+
+        println!("[DEBUG] get_all_descendants: Found {} total descendants of '{}'", descendants.len(), path.alias());
+        for (i, desc) in descendants.iter().enumerate() {
+            println!("[DEBUG] get_all_descendants:   {}: '{}' (UUID: {})", i, desc.path().alias(), desc.uuid());
         }
 
         Ok(descendants)
