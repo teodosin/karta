@@ -147,12 +147,29 @@ async fn test_delete_directory_with_descendants() {
         NodePath::new("vault/parent_dir/child_dir/file2.txt".into()),
     ];
 
-    let parent_uuid = test_ctx.with_service_mut(|s| {
+    let (parent_uuid, sibling_uuid1, sibling_uuid2) = test_ctx.with_service_mut(|s| {
+        // Index physical nodes
         for path in paths_to_index {
             let node = crate::fs_reader::destructure_single_path(s.vault_fs_path(), &path).unwrap();
             s.data_mut().insert_nodes(vec![node]);
         }
-        s.data().open_node(&NodeHandle::Path(NodePath::new("vault/parent_dir".into()))).unwrap().uuid()
+
+        // Add virtual nodes as children of parent_dir
+        let virtual_node1 = DataNode::new(&"vault/parent_dir/virtual_note1".into(), NodeTypeId::virtual_generic());
+        let virtual_node2 = DataNode::new(&"vault/parent_dir/virtual_note2".into(), NodeTypeId::virtual_generic());
+        s.data_mut().insert_nodes(vec![virtual_node1, virtual_node2]);
+
+        // Add sibling virtual nodes (at vault level, not children of parent_dir)
+        let sibling_node1 = DataNode::new(&"vault/sibling_note1".into(), NodeTypeId::virtual_generic());
+        let sibling_node2 = DataNode::new(&"vault/sibling_note2".into(), NodeTypeId::virtual_generic());
+        let sibling_uuid1 = sibling_node1.uuid();
+        let sibling_uuid2 = sibling_node2.uuid();
+        s.data_mut().insert_nodes(vec![sibling_node1, sibling_node2]);
+
+        // Get the parent directory UUID
+        let parent_uuid = s.data().open_node(&NodeHandle::Path(NodePath::new("vault/parent_dir".into()))).unwrap().uuid();
+        
+        (parent_uuid, sibling_uuid1, sibling_uuid2)
     });
 
     // Delete the parent directory
@@ -172,14 +189,20 @@ async fn test_delete_directory_with_descendants() {
     assert_eq!(response_body.deleted_nodes.len(), 1);
     assert_eq!(response_body.failed_deletions.len(), 0);
     assert_eq!(response_body.deleted_nodes[0].was_physical, true);
-    // Should have deleted 3 descendants (file1.txt, child_dir, file2.txt)
-    assert_eq!(response_body.deleted_nodes[0].descendants_deleted.len(), 3);
+    // Should have deleted 5 descendants (file1.txt, child_dir, file2.txt, virtual_note1, virtual_note2)
+    assert_eq!(response_body.deleted_nodes[0].descendants_deleted.len(), 5);
     assert!(response_body.warnings.len() > 0); // Should warn about descendants
 
     // Verify all nodes are removed from graph
     test_ctx.with_service(|s| {
         assert!(s.data().open_node(&NodeHandle::Uuid(parent_uuid)).is_err());
         // Check that descendants are also removed (they should be auto-removed when parent is deleted)
+        
+        // CRITICAL: Verify that sibling nodes are NOT deleted (they should remain intact)
+        assert!(s.data().open_node(&NodeHandle::Uuid(sibling_uuid1)).is_ok(), 
+                "Sibling node 1 should NOT be deleted when deleting parent_dir");
+        assert!(s.data().open_node(&NodeHandle::Uuid(sibling_uuid2)).is_ok(), 
+                "Sibling node 2 should NOT be deleted when deleting parent_dir");
     });
 
     // Verify directory was moved to trash
@@ -374,4 +397,149 @@ async fn test_trash_metadata_persistence() {
     let log_content = std::fs::read_to_string(&trash_log_path).unwrap();
     assert!(log_content.contains(&response_body.operation_id));
     assert!(log_content.contains(&node_uuid.to_string()));
+}
+
+#[tokio::test]
+async fn test_delete_directory_with_virtual_nodes_in_context_bug_scenario() {
+    // This test reproduces the specific bug scenario reported where:
+    // 1. Created folder vault/A/B, then vault/A/B/C
+    // 2. Connected vault/A and vault/A/B/C with an edge (making vault/A/B/C appear in vault/A context)
+    // 3. Created 5 virtual nodes in vault/A context
+    // 4. Deleted directory B
+    // 5. BUG: All virtual nodes got deleted, contexts became corrupted
+    
+    let (router, test_ctx) = setup_test_environment("delete_directory_context_bug");
+
+    // Create directory structure: vault/A/B and vault/A/B/C
+    std::fs::create_dir_all(test_ctx.get_vault_root().join("A/B/C")).unwrap();
+
+    // Index the directory nodes
+    let paths_to_index = vec![
+        NodePath::new("vault/A".into()),
+        NodePath::new("vault/A/B".into()),
+        NodePath::new("vault/A/B/C".into()),
+    ];
+
+    let (a_uuid, b_uuid, c_uuid) = test_ctx.with_service_mut(|s| {
+        // Index physical directory nodes
+        for path in &paths_to_index {
+            let node = crate::fs_reader::destructure_single_path(s.vault_fs_path(), path).unwrap();
+            s.data_mut().insert_nodes(vec![node]);
+        }
+
+        // Get the UUIDs
+        let a_uuid = s.data().open_node(&NodeHandle::Path(NodePath::new("vault/A".into()))).unwrap().uuid();
+        let b_uuid = s.data().open_node(&NodeHandle::Path(NodePath::new("vault/A/B".into()))).unwrap().uuid();
+        let c_uuid = s.data().open_node(&NodeHandle::Path(NodePath::new("vault/A/B/C".into()))).unwrap().uuid();
+
+        (a_uuid, b_uuid, c_uuid)
+    });
+
+    // Create virtual nodes in vault/A context (not children of B)
+    let (virtual_text_uuid, virtual_image_uuid, virtual_fold_uuid, virtual_generic_uuid, virtual_note_uuid) = test_ctx.with_service_mut(|s| {
+        let virtual_text = DataNode::new(&"vault/GLORPSALITY/Text_2".into(), NodeTypeId::virtual_generic());
+        let virtual_image = DataNode::new(&"vault/GLORPSALITY/Image".into(), NodeTypeId::virtual_generic());
+        let virtual_fold = DataNode::new(&"vault/GLORPSALITY/fold".into(), NodeTypeId::virtual_generic());
+        let virtual_generic = DataNode::new(&"vault/GLORPSALITY/Glorps/glorpssss".into(), NodeTypeId::virtual_generic());
+        let virtual_note = DataNode::new(&"vault/GLORPSALITY/Note_1".into(), NodeTypeId::virtual_generic());
+
+        let virtual_text_uuid = virtual_text.uuid();
+        let virtual_image_uuid = virtual_image.uuid();
+        let virtual_fold_uuid = virtual_fold.uuid();
+        let virtual_generic_uuid = virtual_generic.uuid();
+        let virtual_note_uuid = virtual_note.uuid();
+
+        s.data_mut().insert_nodes(vec![
+            virtual_text,
+            virtual_image, 
+            virtual_fold,
+            virtual_generic,
+            virtual_note,
+        ]);
+
+        (virtual_text_uuid, virtual_image_uuid, virtual_fold_uuid, virtual_generic_uuid, virtual_note_uuid)
+    });
+
+    println!("Test setup complete:");
+    println!("  A UUID: {}", a_uuid);
+    println!("  B UUID: {} (will be deleted)", b_uuid);
+    println!("  C UUID: {} (child of B, should be deleted)", c_uuid);
+    println!("  Virtual nodes (should NOT be deleted):");
+    println!("    Text: {}", virtual_text_uuid);
+    println!("    Image: {}", virtual_image_uuid);
+    println!("    Fold: {}", virtual_fold_uuid);
+    println!("    Generic: {}", virtual_generic_uuid);
+    println!("    Note: {}", virtual_note_uuid);
+
+    // Verify all nodes exist before deletion
+    test_ctx.with_service(|s| {
+        assert!(s.data().open_node(&NodeHandle::Uuid(a_uuid)).is_ok());
+        assert!(s.data().open_node(&NodeHandle::Uuid(b_uuid)).is_ok());
+        assert!(s.data().open_node(&NodeHandle::Uuid(c_uuid)).is_ok());
+        assert!(s.data().open_node(&NodeHandle::Uuid(virtual_text_uuid)).is_ok());
+        assert!(s.data().open_node(&NodeHandle::Uuid(virtual_image_uuid)).is_ok());
+        assert!(s.data().open_node(&NodeHandle::Uuid(virtual_fold_uuid)).is_ok());
+        assert!(s.data().open_node(&NodeHandle::Uuid(virtual_generic_uuid)).is_ok());
+        assert!(s.data().open_node(&NodeHandle::Uuid(virtual_note_uuid)).is_ok());
+    });
+
+    // Delete directory B (this should only delete B and its child C, NOT the virtual nodes)
+    let delete_payload = DeleteNodesPayload {
+        node_handles: vec!["vault/A/B".to_string()], // Use path instead of UUID
+        context_id: None,
+    };
+    let payload_json = serde_json::to_string(&delete_payload).unwrap();
+
+    println!("Deleting vault/A/B with payload: {}", payload_json);
+
+    let response = execute_delete_request(router, "/api/nodes", payload_json).await;
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let response_body: DeleteNodesResponse = serde_json::from_slice(&body_bytes).unwrap();
+
+    println!("Delete response: {:#?}", response_body);
+
+    // Verify response structure
+    assert_eq!(response_body.deleted_nodes.len(), 1, "Should have deleted exactly 1 node (B)");
+    assert_eq!(response_body.failed_deletions.len(), 0, "Should have no failed deletions");
+    
+    let deleted_node_info = &response_body.deleted_nodes[0];
+    assert_eq!(deleted_node_info.was_physical, true, "B should be a physical directory");
+    assert_eq!(deleted_node_info.descendants_deleted.len(), 1, "Should have deleted exactly 1 descendant (C)");
+    
+    // Verify that only C is in the descendants list
+    assert!(deleted_node_info.descendants_deleted.contains(&c_uuid.to_string()), 
+            "C should be in descendants_deleted list");
+
+    // CRITICAL BUG CHECK: Verify virtual nodes are NOT deleted
+    test_ctx.with_service(|s| {
+        // A should still exist
+        assert!(s.data().open_node(&NodeHandle::Uuid(a_uuid)).is_ok(), 
+                "Directory A should still exist after deleting B");
+
+        // B and C should be deleted
+        assert!(s.data().open_node(&NodeHandle::Uuid(b_uuid)).is_err(), 
+                "Directory B should be deleted");
+        assert!(s.data().open_node(&NodeHandle::Uuid(c_uuid)).is_err(), 
+                "Directory C should be deleted as descendant of B");
+
+        // CRITICAL: All virtual nodes should still exist (this is where the bug would manifest)
+        assert!(s.data().open_node(&NodeHandle::Uuid(virtual_text_uuid)).is_ok(), 
+                "BUG: Virtual text node should NOT be deleted when deleting directory B");
+        assert!(s.data().open_node(&NodeHandle::Uuid(virtual_image_uuid)).is_ok(), 
+                "BUG: Virtual image node should NOT be deleted when deleting directory B");
+        assert!(s.data().open_node(&NodeHandle::Uuid(virtual_fold_uuid)).is_ok(), 
+                "BUG: Virtual fold node should NOT be deleted when deleting directory B");
+        assert!(s.data().open_node(&NodeHandle::Uuid(virtual_generic_uuid)).is_ok(), 
+                "BUG: Virtual generic node should NOT be deleted when deleting directory B");
+        assert!(s.data().open_node(&NodeHandle::Uuid(virtual_note_uuid)).is_ok(), 
+                "BUG: Virtual note node should NOT be deleted when deleting directory B");
+    });
+
+    // Verify physical directory was removed
+    assert!(!test_ctx.get_vault_root().join("A/B").exists(), 
+            "Physical directory A/B should be removed from filesystem");
+
+    println!("Test completed successfully - no virtual nodes were incorrectly deleted");
 }

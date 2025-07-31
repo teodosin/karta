@@ -1,4 +1,4 @@
-use std::{str::FromStr, time::SystemTime};
+use std::{path::PathBuf, str::FromStr, time::SystemTime};
 
 use agdb::{DbElement, DbError, DbId, DbKeyValue, DbUserValue, DbValue, QueryId};
 use uuid::Uuid;
@@ -167,8 +167,9 @@ impl DataNode {
         self.ntype == NodeTypeId::dir_type()
     }
 
-    pub fn is_physical(&self) -> bool {
-        self.ntype == NodeTypeId::dir_type() || self.ntype == NodeTypeId::file_type()
+    pub fn is_physical(&self, vault_root: &PathBuf) -> bool {
+        let absolute_path = self.path.full(vault_root);
+        absolute_path.exists()
     }
 
     pub fn ntype(&self) -> NodeTypeId {

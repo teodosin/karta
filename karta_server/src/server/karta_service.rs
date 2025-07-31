@@ -237,11 +237,17 @@ impl KartaService {
             if is_indexed {
                 // For indexed directories, collect and delete descendants from database
                 let descendants = self.data.get_all_descendants(&node.path())?;
+                println!("[DEBUG] get_all_descendants for '{}' returned {} nodes:", node.path().alias(), descendants.len());
+                for (i, desc) in descendants.iter().enumerate() {
+                    println!("[DEBUG]   {}: '{}' (UUID: {}, Type: {:?})", i, desc.path().alias(), desc.uuid(), desc.ntype());
+                }
+                
                 let descendant_ids: Vec<String> = descendants.iter().map(|n| n.uuid().to_string()).collect();
                 
                 // For physical nodes, only delete from database - don't move individual descendants
                 // to trash since moving the parent directory will move all descendants automatically
                 for desc_node in &descendants {
+                    println!("[DEBUG] Deleting descendant from database: '{}' (UUID: {})", desc_node.path().alias(), desc_node.uuid());
                     self.delete_node_and_edges(&desc_node.uuid())?;
                 }
                 
@@ -254,8 +260,11 @@ impl KartaService {
             Vec::new()
         };
 
-        // Move to trash if physical (this will move the entire directory including descendants)
-        if node.is_physical() {
+        // Move to trash if physical (check filesystem existence instead of just node type)
+        let fs_path = node.path().full(self.vault_fs_path());
+        let is_physical_file = fs_path.exists();
+        
+        if is_physical_file {
             self.move_to_trash(&node)?;
         }
         
@@ -281,7 +290,7 @@ impl KartaService {
             node_id: node_uuid.to_string(), // Use the actual UUID, not the input string
             node_path: node.path().alias(),
             node_type: node.ntype(),
-            was_physical: node.is_physical(),
+            was_physical: is_physical_file, // Use the actual filesystem check
             descendants_deleted: descendants_deleted.clone(),
             node_snapshot: node.clone(),
             edge_snapshots: edge_snapshots.clone(),
