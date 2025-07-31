@@ -1,10 +1,10 @@
-import type { AssetData, Context, ContextBundle, DataNode, EdgeDeletionPayload, KartaEdge, KartaEdgeCreationPayload, NodeId, StorableContext } from "$lib/types/types";
+import type { AssetData, Context, ContextBundle, DataNode, EdgeDeletionPayload, KartaEdge, KartaEdgeCreationPayload, NodeId, StorableContext, DeleteNodesResponse } from "$lib/types/types";
 
 export interface PersistenceService {
     // Node methods
     saveNode(node: DataNode): Promise<void>;
     getNode(nodeId: string): Promise<DataNode | undefined>;
-    deleteNode(nodeId: string): Promise<void>;
+    deleteNodes(nodeHandles: string[]): Promise<DeleteNodesResponse>; // Can be paths or UUIDs
     getNodes(): Promise<DataNode[]>;
     checkNameExists(name: string): Promise<boolean>;
     getDataNodesByIds(nodeIds: NodeId[]): Promise<Map<NodeId, DataNode>>;

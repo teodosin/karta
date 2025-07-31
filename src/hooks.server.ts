@@ -9,7 +9,6 @@ import type { Handle } from '@sveltejs/kit';
 export const handle: Handle = async ({ event, resolve }) => {
 	if (event.url.pathname.startsWith('/api')) {
 		const targetUrl = new URL(event.url.pathname + event.url.search, 'http://localhost:7370');
-		console.log(`[API Proxy] Intercepted request for: ${event.url.pathname}. Forwarding to: ${targetUrl}`);
 
 		const headers = new Headers(event.request.headers);
 		headers.delete('host');
@@ -24,8 +23,6 @@ export const handle: Handle = async ({ event, resolve }) => {
 				// The 'duplex' property is only required for streaming request bodies.
 				...(isGetOrHead ? {} : { duplex: 'half' })
 			});
-
-			console.log(`[API Proxy] Backend responded to ${event.url.pathname} with status: ${response.status}`);
 
 			return response;
 		} catch (error) {

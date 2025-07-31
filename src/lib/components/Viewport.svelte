@@ -1211,6 +1211,9 @@
 								"Are you sure you want to permanently delete this node? This action cannot be undone.",
 								// The callback now receives the ID
 								async (idToDelete) => {
+									console.log(`[Viewport.ContextMenu] INITIATING PERMANENT DELETION for node: ${idToDelete}`);
+									console.log(`[Viewport.ContextMenu] Current context: ${$currentContextId}`);
+									console.log(`[Viewport.ContextMenu] Target node was:`, targetDataNode);
 									// Call the actual permanent deletion function with the received ID
 									await deleteDataNodePermanently(idToDelete);
 								},

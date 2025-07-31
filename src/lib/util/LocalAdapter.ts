@@ -90,6 +90,54 @@ export class LocalAdapter implements PersistenceService { // Added export here
 		await tx.done;
 	}
 
+	async deleteNodes(nodeHandles: string[]): Promise<any> {
+		// For LocalAdapter, nodeHandles are treated as nodeIds
+		const db = await this.dbPromise;
+		const tx = db.transaction('nodes', 'readwrite');
+		const store = tx.objectStore('nodes');
+		
+		const deletedNodes = [];
+		const failedDeletions = [];
+		
+		for (const handle of nodeHandles) {
+			try {
+				const node = await store.get(handle);
+				if (node) {
+					await store.delete(handle);
+					deletedNodes.push({
+						node_id: handle,
+						node_path: node.path || `/${node.attributes?.name || handle}`,
+						node_type: node.ntype,
+						was_physical: false, // LocalAdapter nodes are virtual
+						descendants_deleted: [],
+						node_snapshot: node,
+						edge_snapshots: [],
+						context_removals: []
+					});
+				} else {
+					failedDeletions.push({
+						node_id: handle,
+						error: "Node not found"
+					});
+				}
+			} catch (error: any) {
+				failedDeletions.push({
+					node_id: handle,
+					error: error?.message || "Unknown error"
+				});
+			}
+		}
+		
+		await tx.done;
+		
+		return {
+			deleted_nodes: deletedNodes,
+			failed_deletions: failedDeletions,
+			operation_id: `local-${Date.now()}`,
+			warnings: []
+		};
+	}
+
 	async getNodes(): Promise<DataNode[]> {
 		const db = await this.dbPromise;
 		// Return nodes directly without generating Object URLs here

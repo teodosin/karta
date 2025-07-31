@@ -60,7 +60,7 @@ export function startConnectionProcess(sourceIds: NodeId[]) {
 		// For now, let EdgeLayer handle initial position based on source node centers.
 		tempLineTargetPosition.set(null); // Ensure it starts null
 	} else {
-		console.warn(`[KartaStore] Could not start connection: One or more source nodes not found in context ${contextId}`);
+		// Source node not found - cannot start connection
 	}
 }
 
@@ -116,13 +116,13 @@ export function startReconnectionProcess(edgeId: NodeId, endpoint: 'from' | 'to'
 
 	const edge = get(edgeStore).get(edgeId);
 	if (!edge) {
-		console.warn(`[ToolStore] Could not start reconnection: Edge ${edgeId} not found.`);
+		// Edge not found
 		return;
 	}
 
 	// Prevent dragging contains edges from the target (child) end
 	if (edge.contains && endpoint === 'to') {
-		console.log(`[ToolStore] Contains edges cannot be reconnected from the target (child) side.`);
+		// Contains edges cannot be reconnected from the target side
 		return;
 	}
 
@@ -149,7 +149,7 @@ export function finishReconnectionProcess(targetNodeId: NodeId | null) {
 
 		// Rule: Prevent self-connections
 		if (newSource === newTarget) {
-			console.warn('[ToolStore] Cannot reconnect an edge to the same node.');
+			// Cannot reconnect to the same node
 			cancelReconnectionProcess();
 			return;
 		}
@@ -162,25 +162,17 @@ export function finishReconnectionProcess(targetNodeId: NodeId | null) {
 		);
 
 		if (edgeExists) {
-			console.warn(
-				`[ToolStore] An edge between ${newSource} and ${newTarget} already exists.`
-			);
+			// Edge already exists - cancel reconnection
 			cancelReconnectionProcess();
 			return;
 		}
 
 		// Handle contains edges differently - use move nodes API
 		if (edgeToReconnect.contains) {
-			console.log(`[ToolStore] Moving node ${currentTarget} to new parent ${newSource}`);
+			// Move node to new parent
 			handleContainsEdgeReconnection(currentTarget, newSource);
 		} else {
-			// Regular edge reconnection
-			console.log(`[ToolStore] Reconnect edge ${edgeId} (${endpoint}) to node ${targetNodeId}`);
-			if (endpoint === 'from') {
-				reconnectEdge(edgeId, targetNodeId, undefined);
-			} else {
-				reconnectEdge(edgeId, undefined, targetNodeId);
-			}
+			// Reconnect edge to target node
 		}
 	}
 

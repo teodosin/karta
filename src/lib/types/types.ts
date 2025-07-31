@@ -239,3 +239,22 @@ export interface MoveOperation {
 	source_path: string;
 	target_parent_path: string;
 }
+
+// Node deletion types (matches server API)
+export interface DeleteNodesResponse {
+	deleted_nodes: DeletedNodeInfo[];
+	failed_deletions: FailedDeletion[];
+	operation_id: string;
+	warnings: string[];
+}
+
+export interface DeletedNodeInfo {
+	node_id: string;
+	was_physical: boolean;
+	descendants_deleted: string[]; // UUIDs of recursively deleted children for UI feedback
+}
+
+export interface FailedDeletion {
+	node_id: string;
+	error: string;
+}

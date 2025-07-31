@@ -15,6 +15,7 @@ import type {
     EdgeDeletionPayload,
     MoveOperation,
     MoveNodesResponse,
+    DeleteNodesResponse,
 } from '../types/types';
 import type { KartaEdgeCreationPayload } from '$lib/types/types';
 import type { PersistenceService } from './PersistenceService';
@@ -597,7 +598,47 @@ export class ServerAdapter implements PersistenceService {
         }
     }
 
-    async deleteNode(nodeId: string): Promise<void> { console.warn(`[ServerAdapter.deleteNode] Not implemented for ID: ${nodeId}`); }
+    async deleteNodes(nodeHandles: string[]): Promise<DeleteNodesResponse> {
+        console.log(`[ServerAdapter.deleteNodes] ===== STARTING SERVER DELETE REQUEST =====`);
+        console.log(`[ServerAdapter.deleteNodes] Node handles to delete:`, nodeHandles);
+        
+        const url = `${SERVER_BASE_URL}/api/nodes`;
+        const payload = {
+            node_handles: nodeHandles, // Can be paths or UUIDs
+            context_id: null
+        };
+        
+        console.log(`[ServerAdapter.deleteNodes] Request URL: ${url}`);
+        console.log(`[ServerAdapter.deleteNodes] Request payload:`, JSON.stringify(payload, null, 2));
+
+        try {
+            console.log(`[ServerAdapter.deleteNodes] Sending DELETE request to server...`);
+            const response = await fetch(url, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+
+            console.log(`[ServerAdapter.deleteNodes] Server response status: ${response.status}`);
+            console.log(`[ServerAdapter.deleteNodes] Server response headers:`, Object.fromEntries(response.headers.entries()));
+
+            if (!response.ok) {
+                const errorBody = await response.text();
+                console.error(`[ServerAdapter.deleteNodes] Error deleting nodes. Status: ${response.status}`, errorBody);
+                throw new Error(`Server responded with status ${response.status}`);
+            }
+
+            const deleteResponse = await response.json();
+            console.log(`[ServerAdapter.deleteNodes] Server delete response:`, JSON.stringify(deleteResponse, null, 2));
+            console.log(`[ServerAdapter.deleteNodes] ===== SERVER DELETE REQUEST COMPLETED =====`);
+            return deleteResponse;
+            
+        } catch (error) {
+            console.error(`[ServerAdapter.deleteNodes] Network error deleting nodes:`, error);
+            throw error;
+        }
+    }
+
     async getNodes(): Promise<DataNode[]> { console.warn('[ServerAdapter.getNodes] Not implemented'); return []; }
     async checkNameExists(name: string): Promise<boolean> { console.warn(`[ServerAdapter.checkNameExists] Not implemented for name: ${name}`); return false; }
     async getDataNodesByIds(nodeIds: NodeId[]): Promise<Map<NodeId, DataNode>> { console.warn(`[ServerAdapter.getDataNodesByIds] Not implemented`); return new Map(); }
