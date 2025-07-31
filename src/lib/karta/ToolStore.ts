@@ -6,6 +6,7 @@ import { ContextTool } from '../tools/ContextTool';
 import { createEdges, edges as edgeStore, reconnectEdge } from './EdgeStore';
 import { currentViewNodes, currentContextId, activeAdapter } from './ContextStore';
 import { nodes } from './NodeStore';
+import { notifications } from './NotificationStore';
 
 
 
@@ -122,7 +123,6 @@ export function startReconnectionProcess(edgeId: NodeId, endpoint: 'from' | 'to'
 
 	// Prevent dragging contains edges from the target (child) end
 	if (edge.contains && endpoint === 'to') {
-		// Contains edges cannot be reconnected from the target side
 		return;
 	}
 
@@ -149,7 +149,9 @@ export function finishReconnectionProcess(targetNodeId: NodeId | null) {
 
 		// Rule: Prevent self-connections
 		if (newSource === newTarget) {
-			// Cannot reconnect to the same node
+			const allNodes = get(nodes);
+			const nodeName = allNodes.get(newTarget)?.attributes?.name || newTarget;
+			notifications.error(`Cannot connect '${nodeName}' to itself`);
 			cancelReconnectionProcess();
 			return;
 		}
@@ -162,7 +164,10 @@ export function finishReconnectionProcess(targetNodeId: NodeId | null) {
 		);
 
 		if (edgeExists) {
-			// Edge already exists - cancel reconnection
+			const allNodes = get(nodes);
+			const sourceName = allNodes.get(newSource)?.attributes?.name || newSource;
+			const targetName = allNodes.get(newTarget)?.attributes?.name || newTarget;
+			notifications.error(`Connection between '${sourceName}' and '${targetName}' already exists`);
 			cancelReconnectionProcess();
 			return;
 		}
@@ -262,11 +267,23 @@ async function handleContainsEdgeReconnection(nodeId: NodeId, newParentId: NodeI
 			});
 			
 			console.log(`[ToolStore] Bulk node path update completed. Updated ${response.moved_nodes.length} nodes.`);
+			
+			// Success notification
+			const nodeName = node.attributes?.name || node.path || nodeId;
+			const parentName = newParent.attributes?.name || newParent.path || newParentId;
+			if (response.moved_nodes.length > 1) {
+				notifications.success(`Moved '${nodeName}' and ${response.moved_nodes.length - 1} children to '${parentName}'`);
+			} else {
+				notifications.success(`Moved '${nodeName}' to '${parentName}'`);
+			}
 		} else {
 			console.error('[ToolStore] Adapter does not support moveNodes operation');
+			notifications.error('Move operation not supported');
 		}
 	} catch (error) {
 		console.error('[ToolStore] Failed to move node:', error);
+		const nodeName = node.attributes?.name || node.path || nodeId;
+		notifications.error(`Failed to move '${nodeName}': ${error instanceof Error ? error.message : 'Unknown error'}`, 5000);
 	}
 }
 

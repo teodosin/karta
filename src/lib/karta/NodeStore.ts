@@ -9,6 +9,7 @@ import { Tween } from 'svelte/motion';
 import { currentContextId, contexts, removeViewNodeFromContext, existingContextsMap, activeAdapter } from './ContextStore';
 import { cubicInOut } from 'svelte/easing';
 import { viewTransform, centerViewOnCanvasPoint } from './ViewportStore';
+import { notifications } from './NotificationStore';
 
 // Animation constants (matching ContextStore)
 const NODE_TWEEN_DURATION = 1000;
@@ -465,6 +466,13 @@ export async function deleteDataNodePermanently(nodeId: NodeId): Promise<void> {
         console.log(`[deleteDataNodePermanently] Node data:`, nodeData);
         console.log(`[deleteDataNodePermanently] Node type: ${nodeData?.ntype}, Path: ${nodeData?.path}`);
         
+        // Check if this is a system node that shouldn't be deleted
+        if (nodeData?.attributes?.isSystemNode) {
+            const nodeName = nodeData.attributes?.name || nodeData.path || nodeId;
+            notifications.error(`Cannot delete '${nodeName}' - system node is protected`);
+            return;
+        }
+        
         // 2. Use path instead of UUID when available (works for both indexed and unindexed files)
         if (nodeData?.path) {
             nodeHandle = nodeData.path;
@@ -582,9 +590,17 @@ export async function deleteDataNodePermanently(nodeId: NodeId): Promise<void> {
             const totalDeleted = deletedNodeIds.size;
             const fileType = mainDeletion.was_physical ? "physical file/directory" : "virtual node";
             const identifier = nodeData?.path || nodeId; // Use path if available, otherwise UUID
+            const nodeName = nodeData?.attributes?.name || identifier;
             
             console.log(`[deleteDataNodePermanently] Successfully deleted ${fileType} at ${identifier}` + 
                        (totalDeleted > 1 ? ` and ${totalDeleted - 1} related nodes` : ''));
+            
+            // Success notification
+            if (totalDeleted > 1) {
+                notifications.success(`Deleted '${nodeName}' and ${totalDeleted - 1} related nodes`);
+            } else {
+                notifications.success(`Deleted '${nodeName}'`);
+            }
             
             if (deleteResponse.warnings.length > 0) {
                 console.warn(`[deleteDataNodePermanently] Warnings: ${deleteResponse.warnings.join(', ')}`);
@@ -600,6 +616,12 @@ export async function deleteDataNodePermanently(nodeId: NodeId): Promise<void> {
 
     } catch (error) {
         console.error(`[deleteDataNodePermanently] ERROR: Exception during deletion of node ${nodeId}:`, error);
+        
+        // Error notification with node name if available
+        const nodeData = get(nodes).get(nodeId);
+        const nodeName = nodeData?.attributes?.name || nodeData?.path || nodeId;
+        notifications.error(`Failed to delete '${nodeName}': ${error instanceof Error ? error.message : 'Unknown error'}`, 5000);
+        
         throw error; // Re-throw for caller to handle
     }
 }

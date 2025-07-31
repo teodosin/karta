@@ -13,19 +13,20 @@
 </script>
 
 <div
-	class="fixed bottom-4 right-4 z-50 flex flex-col items-end space-y-2 pointer-events-none"
+	class="fixed bottom-4 right-4 z-50 flex flex-col items-end pointer-events-none"
 	aria-live="assertive"
 >
 	{#each currentNotifications as notification (notification.id)}
 		<div
 			in:fly|local={{ y: 20, duration: 300 }}
 			out:slide|local={{ duration: fadeOutDuration }}
-			class="w-auto max-w-sm rounded-md p-3 shadow-lg text-sm font-medium pointer-events-auto {notification.type ===
+			class="w-auto max-w-sm rounded-md p-2 text-xs font-medium pointer-events-auto bg-opacity-80 {notification.type ===
 			'success'
-				? 'bg-green-500 text-white'
+				? 'text-green-300'
 				: notification.type === 'error'
-				? 'bg-red-500 text-white'
-				: 'bg-gray-800 text-white'}"
+				? 'text-red-300'
+				: 'text-gray-100'}"
+			style="background-color: var(--color-viewport-bg, #2b2b36); opacity: 0.7;"
 		>
 			{notification.message}
 		</div>

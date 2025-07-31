@@ -2,6 +2,7 @@ import { writable, get } from 'svelte/store';
 import { activeAdapter } from './ContextStore';
 import type { KartaEdge, EdgeId, NodeId, KartaEdgeCreationPayload, EdgeDeletionPayload } from '../types/types';
 import { nodes, ensureNodesExist } from './NodeStore';
+import { notifications } from './NotificationStore';
 import { v4 as uuidv4 } from 'uuid';
 
 export const edges = writable<Map<EdgeId, KartaEdge>>(new Map());
@@ -18,14 +19,15 @@ export async function createEdges(sourceIds: NodeId[], targetId: NodeId) {
     }
 
     for (const sourceId of sourceIds) {
-        if (sourceId === targetId) {
-            console.warn("Cannot connect node to itself.");
-            continue;
-        }
-
         const sourceNode = allNodes.get(sourceId);
         if (!sourceNode) {
             console.error(`[createEdges] Source node ${sourceId} not found in store.`);
+            continue;
+        }
+
+        if (sourceId === targetId) {
+            const nodeName = sourceNode.attributes?.name || sourceNode.path || sourceId;
+            notifications.error(`Cannot connect '${nodeName}' to itself`);
             continue;
         }
 
@@ -35,7 +37,9 @@ export async function createEdges(sourceIds: NodeId[], targetId: NodeId) {
                 (edge.source === targetId && edge.target === sourceId)
         );
         if (edgeExists) {
-            console.warn(`Edge between ${sourceId} and ${targetId} already exists.`);
+            const sourceName = sourceNode.attributes?.name || sourceNode.path || sourceId;
+            const targetName = targetNode.attributes?.name || targetNode.path || targetId;
+            notifications.error(`Connection between '${sourceName}' and '${targetName}' already exists`);
             continue;
         }
 
@@ -64,8 +68,19 @@ export async function createEdges(sourceIds: NodeId[], targetId: NodeId) {
         try {
             console.log('[EdgeStore.createEdges] Payload to be sent to adapter:', JSON.stringify(newEdges, null, 2));
             await activeAdapter.createEdges(newEdges);
+            
+            // Success notification
+            if (newEdges.length === 1) {
+                const edge = newEdges[0];
+                const sourceName = allNodes.get(edge.source)?.attributes?.name || edge.source_path || edge.source;
+                const targetName = allNodes.get(edge.target)?.attributes?.name || edge.target_path || edge.target;
+                notifications.success(`Connected '${sourceName}' to '${targetName}'`);
+            } else {
+                notifications.success(`Created ${newEdges.length} new connections`);
+            }
         } catch (error) {
             console.error("Error saving edges:", error);
+            notifications.error(`Failed to create connections: ${error instanceof Error ? error.message : 'Unknown error'}`);
             // TODO: Add error handling, maybe revert the store update
         }
     } else {
@@ -135,9 +150,15 @@ export async function reconnectEdge(edgeId: EdgeId, newSourceId?: NodeId, newTar
                     e.set(newEdge.id, newEdge);
                     return e;
                 });
+                
+                // Success notification
+                const oldTargetName = allNodes.get(old_to)?.attributes?.name || old_to;
+                const newTargetName = allNodes.get(new_to)?.attributes?.name || new_to;
+                notifications.success(`Moved edge from '${oldTargetName}' to '${newTargetName}'`);
             }
         } catch (error) {
             console.error('Error reconnecting edge:', error);
+            notifications.error(`Failed to reconnect edge: ${error instanceof Error ? error.message : 'Unknown error'}`);
             // Revert on error
             edges.update((e) => {
                 const edgeToRevert = e.get(edgeId);
