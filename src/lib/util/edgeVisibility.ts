@@ -15,6 +15,10 @@ export function shouldShowEdge(
         case 'never':
             return false;
         case 'all-selected':
+            // Show edges for all selected nodes, even if the other end isn't selected
+            return selectedNodeIds.size > 0 && 
+                   (selectedNodeIds.has(edge.source) || selectedNodeIds.has(edge.target));
+        case 'between-selected':
             // Show if both source and target are selected, and at least one node is selected
             return selectedNodeIds.size > 0 && 
                    selectedNodeIds.has(edge.source) && 

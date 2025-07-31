@@ -14,7 +14,11 @@
 		} else {
 			const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
 			const screenX = rect.right + 8; // 8px spacing to the right
-			const screenY = rect.top;
+			
+			// Center the menu vertically on the screen
+			const menuHeight = 300; // Approximate height of the filter menu
+			const screenY = (window.innerHeight - menuHeight) / 2;
+			
 			openFilterMenu(screenX, screenY);
 		}
 	}

@@ -11,7 +11,8 @@
 
 	const visibilityOptions: { value: EdgeVisibilityMode; label: string }[] = [
 		{ value: 'always', label: 'Show always' },
-		{ value: 'all-selected', label: 'Show only on all selected' },
+		{ value: 'all-selected', label: 'Show for all selected' },
+		{ value: 'between-selected', label: 'Show only between selected' },
 		{ value: 'single-selected', label: 'Show only on single selected' },
 		{ value: 'never', label: 'Never' }
 	];

@@ -168,7 +168,7 @@ export interface ColorTheme {
 }
 
 // Edge filter settings
-export type EdgeVisibilityMode = 'always' | 'all-selected' | 'single-selected' | 'never';
+export type EdgeVisibilityMode = 'always' | 'all-selected' | 'between-selected' | 'single-selected' | 'never';
 
 export interface EdgeFilterSettings {
   containsEdges: EdgeVisibilityMode;
