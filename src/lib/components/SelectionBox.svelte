@@ -145,7 +145,7 @@
 <style>
 	.selection-box {
 		border-style: dashed;
-		border-color: #60a5fa; /* Tailwind blue-400 */
+		border-color: var(--color-contrast-color);
 		/* border-width is now set inline */
 		z-index: 50; /* Above properties panel (z-40) */
 	}
@@ -157,7 +157,7 @@
 		position: absolute;
 		width: 10px; /* Base size, visual size controlled by transform */
 		height: 10px; /* Base size, visual size controlled by transform */
-		background-color: #3b82f6; /* Tailwind blue-500 */
+		background-color: var(--color-contrast-color);
 		border: 1px solid white; /* This border will also scale visually */
 		border-radius: 2px;
 		z-index: 51; /* Ensure handles are above selection box */

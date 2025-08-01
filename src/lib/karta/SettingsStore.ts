@@ -10,11 +10,13 @@ const defaultSettings: KartaSettings = {
 	savelastViewedContextPath: true,
 	lastViewedContextPath: null,
 	colorTheme: {
-		'viewport-bg': '#2b2b36',
+		'viewport-bg': '#000000',
 		'panel-bg': '#431d1f',
 		'focal-hl': '#f4902dff',
 		'panel-hl': '#741f2fff',
-		'text-color': '#f0f0f0'
+		'text-color': '#f0f0f0',
+		'contrast-color': '#60a5fa',
+		'connection-color': '#505050'
 	},
 	edgeFilters: {
 		containsEdges: 'always',

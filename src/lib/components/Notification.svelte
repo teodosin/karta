@@ -26,7 +26,7 @@
 				: notification.type === 'error'
 				? 'text-red-300'
 				: 'text-gray-100'}"
-			style="background-color: var(--color-viewport-bg, #2b2b36); opacity: 0.7;"
+			style="background-color: var(--color-viewport-bg, #000000); opacity: 0.7;"
 		>
 			{notification.message}
 		</div>

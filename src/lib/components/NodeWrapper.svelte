@@ -189,8 +189,8 @@
 								type="text"
 								bind:value={editedName}
 								on:keydown={handleKeyDown}
-								class="bg-gray-900 text-xs p-0 border border-blue-500 rounded outline-none focus:ring-1 focus:ring-blue-400"
-								style="color: var(--color-text-color); width:{Math.min(
+								class="bg-gray-900 text-xs p-0 border rounded outline-none focus:ring-1"
+								style="color: var(--color-text-color); border-color: var(--color-contrast-color); --tw-ring-color: var(--color-contrast-color); width:{Math.min(
 									viewNode.state.current.width - 12,
 									Math.max(60, editedName.length * 7 + 10)
 								)}px"

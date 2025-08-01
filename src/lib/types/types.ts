@@ -188,6 +188,8 @@ export interface ColorTheme {
   'focal-hl': string;
   'panel-hl': string;
   'text-color': string;
+  'contrast-color': string;
+  'connection-color': string;
   // Add other theme properties here
 }
 

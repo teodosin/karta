@@ -8,7 +8,9 @@
 		{ key: 'panel-bg', label: 'Panel Background' },
 		{ key: 'focal-hl', label: 'Focal Highlight' },
 		{ key: 'panel-hl', label: 'Panel Highlight' },
-		{ key: 'text-color', label: 'Text Color' }
+		{ key: 'text-color', label: 'Text Color' },
+		{ key: 'contrast-color', label: 'Contrast Color' },
+		{ key: 'connection-color', label: 'Connection Color' }
 	];
 
 	function handleOpenPicker(key: keyof ColorTheme, e: MouseEvent) {

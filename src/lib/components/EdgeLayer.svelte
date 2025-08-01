@@ -189,7 +189,7 @@
 		fill: none;
 	}
 	:global(.edge) {
-		stroke: #6b7280; /* gray-500 */
+		stroke: var(--color-connection-color);
 		/* stroke-width is now set inline based on inverseScale */
 		fill: none;
 		/* The transition for the hover effect (stroke color) is now handled by the browser's default transition behavior,
@@ -197,15 +197,16 @@
 		conflict with Svelte's 'fade' transition, which needs to animate the 'opacity' property. */
 	}
 	:global(.edge-group.selected .edge) {
-		stroke: #3b82f6; /* blue-500 */
+		stroke: var(--color-contrast-color);
 	}
 
 	/* --- Contains Edge Styles --- */
 	:global(.edge-group.contains .edge-part) {
-		stroke: rgba(156, 163, 175, 0.1); /* gray-400 at 10% opacity */
+		stroke: var(--color-connection-color);
+		opacity: 0.4;
 	}
 	:global(.edge-group.contains.selected .edge-part) {
-		stroke: rgba(59, 130, 246, 0.5); /* blue-500 at 50% opacity */
+		stroke: color-mix(in srgb, var(--color-contrast-color) 50%, transparent);
 	}
 
 	/* --- Hit Area & Hover Effects --- */
@@ -224,25 +225,26 @@
 		stroke: #9ca3af; /* gray-400 */
 	}
 	:global(.edge-container:hover .edge-group.selected .edge) {
-		stroke: #93c5fd; /* blue-300 */
+		stroke: color-mix(in srgb, var(--color-contrast-color) 70%, white);
 	}
 	:global(.edge-container:hover .edge-group .edge-part) {
-		stroke: rgba(156, 163, 175, 0.4); /* gray-400 at 40% opacity */
+		stroke: var(--color-connection-color);
+		opacity: 0.7;
 	}
 
 	/* --- Directional Marker --- */
 	:global(.edge-marker) {
-		fill: #6b7280; /* gray-500 */
+		fill: var(--color-connection-color);
 		stroke: none;
 	}
 	:global(.edge-group.selected .edge-marker) {
-		fill: #3b82f6; /* blue-500 */
+		fill: var(--color-contrast-color);
 	}
 	:global(.edge-container:hover .edge-group .edge-marker) {
 		fill: #9ca3af; /* gray-400 */
 	}
 	:global(.edge-container:hover .edge-group.selected .edge-marker) {
-		fill: #93c5fd; /* blue-300 */
+		fill: color-mix(in srgb, var(--color-contrast-color) 70%, white);
 	}
 
 	/* --- Temp Lines --- */

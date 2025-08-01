@@ -260,8 +260,10 @@
 				spellcheck="false"
 				class="w-full mt-2 px-3 py-2 text-sm border border-gray-700 rounded 
 				       text-white placeholder-gray-400
-				       focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
-				style="background-color: var(--color-viewport-bg);"
+				       focus:outline-none focus:ring-1 focus:border-transparent"
+				style="background-color: var(--color-viewport-bg); --tw-ring-color: var(--color-contrast-color);"
+				on:focus={(e) => e.currentTarget.style.borderColor = 'var(--color-contrast-color)'}
+				on:blur={(e) => e.currentTarget.style.borderColor = 'transparent'}
 			/>
 		</div>
 
@@ -393,7 +395,7 @@
 	/* Fuzzy match highlighting - use !important to override any conflicting styles */
 	.highlight {
 		font-weight: 700 !important;
-		color: #60a5fa !important; /* Bright blue */
+		color: var(--color-contrast-color) !important;
 		background-color: transparent !important; /* Remove any background */
 	}
 
