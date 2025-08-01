@@ -198,6 +198,42 @@ pub async fn create_node(
 
     let final_path = parent_path.join(&name);
 
+    // Create physical file/directory if the node type requires it
+    if payload.ntype.to_string().starts_with("core/fs/") {
+        let filesystem_path = final_path.full(service.vault_fs_path());
+        
+        match payload.ntype.to_string().as_str() {
+            ntype if ntype.starts_with("core/fs/dir") => {
+                // Create physical directory
+                if let Err(e) = std::fs::create_dir_all(&filesystem_path) {
+                    println!("[create_node] Failed to create directory at {:?}: {}", filesystem_path, e);
+                    return Err(StatusCode::INTERNAL_SERVER_ERROR);
+                }
+                println!("[create_node] Created physical directory at {:?}", filesystem_path);
+            },
+            ntype if ntype.starts_with("core/fs/file") => {
+                // Create physical file
+                // First ensure parent directory exists
+                if let Some(parent_dir) = filesystem_path.parent() {
+                    if let Err(e) = std::fs::create_dir_all(parent_dir) {
+                        println!("[create_node] Failed to create parent directory for file at {:?}: {}", parent_dir, e);
+                        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+                    }
+                }
+                
+                // Create empty file
+                if let Err(e) = std::fs::File::create(&filesystem_path) {
+                    println!("[create_node] Failed to create file at {:?}: {}", filesystem_path, e);
+                    return Err(StatusCode::INTERNAL_SERVER_ERROR);
+                }
+                println!("[create_node] Created physical file at {:?}", filesystem_path);
+            },
+            _ => {
+                // Other core/fs types - no specific action needed
+            }
+        }
+    }
+
     let mut new_node = DataNode::new(&final_path, payload.ntype);
     
     // Set attributes from payload
