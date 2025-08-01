@@ -42,8 +42,12 @@ mod context_endpoints;
 mod write_endpoints;
 mod asset_endpoints;
 mod edge_endpoints;
+mod search_endpoints;
 pub mod karta_service;
 pub mod settings;
+
+#[cfg(test)]
+mod search_tests;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -62,6 +66,7 @@ pub fn create_router(state: AppState) -> Router<()> {
     	.route("/", get(data_endpoints::get_vault_info))
     	.route("/api/asset/{*path}", get(asset_endpoints::get_asset))
         .route("/api/paths", get(data_endpoints::get_paths))
+        .route("/api/search", get(search_endpoints::search_nodes))
         .route("/api/contexts", get(data_endpoints::get_available_contexts))
         .route("/api/nodes", post(write_endpoints::create_node).delete(write_endpoints::delete_nodes))
         .route("/api/nodes/move", post(write_endpoints::move_nodes))

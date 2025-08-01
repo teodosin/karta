@@ -8,6 +8,7 @@ use std::{
 };
 use tracing::info;
 use uuid::Uuid;
+use fuzzy_matcher::{skim::SkimMatcherV2, FuzzyMatcher};
 
 use tokio::sync::RwLock;
 
@@ -19,6 +20,7 @@ use crate::{
 };
 
 use super::edge_endpoints::{CreateEdgePayload, DeleteEdgePayload};
+use super::search_endpoints::{SearchResult, SearchResponse};
 
 pub struct KartaService {
     vault_fs_path: PathBuf,
@@ -443,6 +445,90 @@ impl KartaService {
 
             Ok(all_paths.into_iter().collect())
         }
+    }
+
+    pub fn search_nodes(&self, query: &str, limit: usize, min_score: f64) -> Result<SearchResponse, Box<dyn Error>> {
+        use std::time::Instant;
+        let start = Instant::now();
+        
+        // Get all paths (filesystem + indexed)
+        let all_paths = self.get_paths(false)?;
+        let indexed_paths: HashSet<String> = self.data.get_all_indexed_paths()?.into_iter().collect();
+        
+        // Initialize fuzzy matcher
+        let matcher = SkimMatcherV2::default();
+        
+        // Perform fuzzy matching and collect results
+        let mut scored_results: Vec<(String, i64)> = Vec::new();
+        
+        for path in all_paths {
+            if let Some(score) = matcher.fuzzy_match(&path, query) {
+                scored_results.push((path, score));
+            }
+        }
+        
+        // Sort by score (descending - higher scores are better)
+        scored_results.sort_by(|a, b| b.1.cmp(&a.1));
+        
+        let total_found = scored_results.len();
+        
+        // Convert to SearchResult and apply filtering/limiting
+        let mut results = Vec::new();
+        for (path, raw_score) in scored_results.into_iter() {
+            // Normalize score to 0.0-1.0 range (SkimV2 scores can be quite high)
+            let normalized_score = (raw_score as f64) / 1000.0; // Rough normalization
+            let normalized_score = normalized_score.min(1.0).max(0.0);
+            
+            if normalized_score < min_score {
+                continue;
+            }
+            
+            if results.len() >= limit {
+                break;
+            }
+            
+            let is_indexed = indexed_paths.contains(&path);
+            
+            // Determine node type and UUID if indexed
+            let (ntype, id) = if is_indexed {
+                // Normalize path for node lookup - remove leading slash if present
+                let lookup_path = if path.starts_with('/') {
+                    &path[1..]
+                } else {
+                    &path
+                };
+                match self.open_node(&NodeHandle::Path(NodePath::from(lookup_path.to_string()))) {
+                    Ok(node) => (node.ntype().to_string(), Some(node.uuid())),
+                    Err(_) => ("Unknown".to_string(), None),
+                }
+            } else {
+                // For non-indexed filesystem items, infer type from path
+                let ntype = if std::path::Path::new(&path).is_dir() {
+                    "Directory"
+                } else {
+                    "File"
+                };
+                (ntype.to_string(), None)
+            };
+            
+            results.push(SearchResult {
+                id,
+                path,
+                ntype,
+                is_indexed,
+                score: normalized_score,
+            });
+        }
+        
+        let took_ms = start.elapsed().as_millis() as u64;
+        
+        Ok(SearchResponse {
+            truncated: total_found > results.len(),
+            results,
+            total_found,
+            query: query.to_string(),
+            took_ms,
+        })
     }
 
     /// Opens a single node by its handle, reconciling filesystem and database information.
