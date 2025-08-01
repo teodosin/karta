@@ -15,16 +15,20 @@ pub struct ColorTheme {
     pub focal_hl: String,
     pub panel_hl: String,
     pub text_color: String,
+    pub contrast_color: String,
+    pub connection_color: String,
 }
 
 impl Default for ColorTheme {
     fn default() -> Self {
         ColorTheme {
-            viewport_bg: "#0d0d11ff".to_string(),
+            viewport_bg: "#000000".to_string(),
             panel_bg: "#431d1f".to_string(),
             focal_hl: "#f4902dff".to_string(),
             panel_hl: "#741f2fff".to_string(),
             text_color: "#f0f0f0".to_string(),
+            contrast_color: "#60a5fa".to_string(),
+            connection_color: "#505050".to_string(),
         }
     }
 }

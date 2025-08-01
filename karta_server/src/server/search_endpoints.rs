@@ -11,6 +11,7 @@ pub struct SearchResult {
     pub ntype: String,          // Node type (File, Directory, etc.)
     pub is_indexed: bool,       // Whether it exists in database
     pub score: f64,             // Fuzzy match score (0.0-1.0)
+    pub match_indices: Option<Vec<usize>>, // Character indices that matched the query
 }
 
 #[derive(Deserialize)]

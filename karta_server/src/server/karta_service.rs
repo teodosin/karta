@@ -459,11 +459,11 @@ impl KartaService {
         let matcher = SkimMatcherV2::default();
         
         // Perform fuzzy matching and collect results
-        let mut scored_results: Vec<(String, i64)> = Vec::new();
+        let mut scored_results: Vec<(String, i64, Vec<usize>)> = Vec::new();
         
         for path in all_paths {
-            if let Some(score) = matcher.fuzzy_match(&path, query) {
-                scored_results.push((path, score));
+            if let Some((score, indices)) = matcher.fuzzy_indices(&path, query) {
+                scored_results.push((path, score, indices));
             }
         }
         
@@ -474,7 +474,7 @@ impl KartaService {
         
         // Convert to SearchResult and apply limiting only (no score filtering)
         let mut results = Vec::new();
-        for (path, raw_score) in scored_results.into_iter() {
+        for (path, raw_score, indices) in scored_results.into_iter() {
             if results.len() >= limit {
                 break;
             }
@@ -513,6 +513,7 @@ impl KartaService {
                 ntype,
                 is_indexed,
                 score: normalized_score,
+                match_indices: Some(indices),
             });
         }
         
