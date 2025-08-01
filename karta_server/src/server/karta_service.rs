@@ -472,20 +472,16 @@ impl KartaService {
         
         let total_found = scored_results.len();
         
-        // Convert to SearchResult and apply filtering/limiting
+        // Convert to SearchResult and apply limiting only (no score filtering)
         let mut results = Vec::new();
         for (path, raw_score) in scored_results.into_iter() {
-            // Normalize score to 0.0-1.0 range (SkimV2 scores can be quite high)
-            let normalized_score = (raw_score as f64) / 1000.0; // Rough normalization
-            let normalized_score = normalized_score.min(1.0).max(0.0);
-            
-            if normalized_score < min_score {
-                continue;
-            }
-            
             if results.len() >= limit {
                 break;
             }
+            
+            // Normalize score to 0.0-1.0 range (SkimV2 scores can be quite high)
+            let normalized_score = (raw_score as f64) / 1000.0; // Rough normalization
+            let normalized_score = normalized_score.min(1.0).max(0.0);
             
             let is_indexed = indexed_paths.contains(&path);
             
