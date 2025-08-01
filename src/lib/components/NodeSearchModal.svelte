@@ -10,6 +10,7 @@
 	} from '$lib/karta/UIStateStore';
 	import { addExistingNodeToCurrentContext } from '$lib/karta/NodeStore';
 	import { fade, scale } from 'svelte/transition';
+	import { Search } from 'lucide-svelte';
 
 	let searchInput: HTMLInputElement;
 	let searchQuery = '';
@@ -138,15 +139,16 @@
 		<div
 			class="fixed z-45 pointer-events-none"
 			style={destinationMarkerStyle}
+			transition:fade={{ duration: 200 }}
 		>
 			<!-- Central white dot that fades in/out -->
-			<div class="absolute w-1.5 h-1.5 bg-white rounded-full shadow-lg transform -translate-x-1/2 -translate-y-1/2" transition:fade={{ duration: 300 }}></div>
+			<div class="absolute w-1.5 h-1.5 bg-white rounded-full shadow-lg transform -translate-x-1/2 -translate-y-1/2"></div>
 			
 			<!-- First pulsating expanding ring -->
-			<div class="absolute w-0 h-0 border-2 border-white rounded-full transform -translate-x-1/2 -translate-y-1/2 animate-ring-pulse"></div>
+			<div class="absolute w-4 h-4 border-2 border-white rounded-full animate-ring-pulse" style="left: -8.5px; top: -8.5px;"></div>
 			
 			<!-- Second pulsating expanding ring (delayed) -->
-			<div class="absolute w-0 h-0 border-2 border-white rounded-full transform -translate-x-1/2 -translate-y-1/2 animate-ring-pulse-delayed"></div>
+			<div class="absolute w-4 h-4 border-2 border-white rounded-full animate-ring-pulse-delayed" style="left: -8.5px; top: -8.5px;"></div>
 		</div>
 	{/if}
 
@@ -155,7 +157,7 @@
 		bind:this={modalElement}
 		class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 
 		       border border-gray-700 rounded-lg shadow-2xl w-[500px] max-w-[90vw] h-[400px] flex flex-col"
-		style="background-color: color-mix(in srgb, var(--color-panel-bg) 90%, transparent);"
+		style="background-color: color-mix(in srgb, var(--color-panel-bg) 80%, transparent);"
 		role="dialog"
 		aria-modal="true"
 		aria-labelledby="search-node-label"
@@ -210,7 +212,9 @@
 			{:else if searchQuery.trim().length > 0 && allNodePaths.length > 0}
 				<div class="p-6 text-center">
 					<div class="text-gray-400">
-						<div class="text-2xl mb-2">🔍</div>
+						<div class="flex justify-center mb-2">
+							<Search size={32} />
+						</div>
 						<div class="text-sm font-medium mb-1">No matches</div>
 						<div class="text-xs">Try a different search term</div>
 					</div>
@@ -282,22 +286,22 @@
 	/* Custom marker animations */
 	@keyframes ring-pulse {
 		0% {
-			transform: translate(-50%, -50%) scale(0);
+			transform: scale(1);
 			opacity: 1;
 		}
 		100% {
-			transform: translate(-50%, -50%) scale(4);
+			transform: scale(4);
 			opacity: 0;
 		}
 	}
 
 	@keyframes ring-pulse-delayed {
 		0% {
-			transform: translate(-50%, -50%) scale(0);
+			transform: scale(1);
 			opacity: 0.8;
 		}
 		100% {
-			transform: translate(-50%, -50%) scale(3.5);
+			transform: scale(3.5);
 			opacity: 0;
 		}
 	}
