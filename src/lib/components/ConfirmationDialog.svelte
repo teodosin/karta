@@ -28,14 +28,14 @@
 {#if $isConfirmationDialogOpen}
 <script></script>
 <div
-	class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]"
+	class="fixed inset-0 flex items-center justify-center z-[100] pointer-events-none"
 	role="dialog"
 	aria-modal="true"
 	aria-labelledby="confirmation-dialog-title"
 	on:keydown={handleKeyDown}
 	tabindex="-1"
 >
-	<div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 max-w-sm w-full">
+	<div class="bg-white dark:bg-gray-800 rounded-lg shadow-2xl p-6 max-w-sm w-full pointer-events-auto border border-gray-200 dark:border-gray-700">
 		<h3 id="confirmation-dialog-title" class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
 			Confirm Action
 		</h3>

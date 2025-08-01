@@ -25,6 +25,7 @@
 	import {
 		nodes,
 		deleteDataNodePermanently,
+		deleteSelectedNodesPermanently,
 		findPhysicalParentPath,
 	} from "$lib/karta/NodeStore";
 	import { edges, deleteEdges } from "$lib/karta/EdgeStore";
@@ -85,6 +86,10 @@
 
 		if (contextType === "node" && targetNodeId) {
 			const nodeState = targetViewNode?.state.current;
+			const currentSelection = get(selectedNodeIds);
+			const isMultipleSelected = currentSelection.size > 1;
+			const selectedNodesList = Array.from(currentSelection);
+			
 			items = [
 				{
 					label: "Enter Context",
@@ -149,15 +154,28 @@
 						if (targetNodeId) requestNodeRename(targetNodeId);
 					},
 					disabled:
+						isMultipleSelected ||
 						!targetDataNode ||
 						targetDataNode.attributes?.isSystemNode,
 				},
 				{
-					label: "Delete Permanently",
+					label: isMultipleSelected ? `Delete ${currentSelection.size} Items Permanently` : "Delete Permanently",
 					action: () => {
-						// Ensure targetNodeId is not null or undefined before proceeding
-						if (targetNodeId) {
-							// Check if it's a directory to show appropriate warning
+						if (isMultipleSelected) {
+							// Handle multiple selections
+							const confirmationMessage = `Are you sure you want to permanently delete ${currentSelection.size} items? This action cannot be undone.`;
+								
+							openConfirmationDialog(
+								confirmationMessage,
+								async () => {
+									// Call bulk deletion function
+									await deleteSelectedNodesPermanently(selectedNodesList);
+									clearSelection(); // Clear selection after deletion
+								},
+								selectedNodesList[0], // Use first selected node ID as placeholder
+							);
+						} else if (targetNodeId) {
+							// Handle single selection
 							const isDirectory = targetDataNode?.ntype === 'core/fs/dir';
 							const confirmationMessage = isDirectory 
 								? "Are you sure you want to permanently delete this folder? This will also delete all files and subfolders inside it. This action cannot be undone."
@@ -165,20 +183,16 @@
 								
 							openConfirmationDialog(
 								confirmationMessage,
-								// The callback now receives the ID
 								async (idToDelete) => {
-									console.log(`[ContextMenuManager] INITIATING PERMANENT DELETION for node: ${idToDelete}`);
-									console.log(`[ContextMenuManager] Current context: ${$currentContextId}`);
-									console.log(`[ContextMenuManager] Target node was:`, targetDataNode);
-									// Call the actual permanent deletion function with the received ID
 									await deleteDataNodePermanently(idToDelete);
 								},
-								targetNodeId, // Pass the targetNodeId here
+								targetNodeId,
 							);
 						}
 					},
 					disabled:
-						!targetNodeId || targetNodeId === $currentContextId, // Disable if it's the focal node
+						(!targetNodeId && !isMultipleSelected) || 
+						(targetNodeId === $currentContextId && !isMultipleSelected), // Disable if it's the focal node and not multiple selection
 				}
 			);
 		} else if (contextType === "edge") {

@@ -193,7 +193,6 @@ export function findPhysicalParentPath(contextId: NodeId): string {
         throw new Error(`[findPhysicalParentPath] Invalid State: Parent node '${parentNode.path}' is not a directory.`);
     }
 
-    console.log(`[findPhysicalParentPath] Found physical parent: '${parentNode.path}'`);
     return parentNode.path;
 }
 
@@ -348,11 +347,9 @@ export async function updateNodeAttributes(nodeId: NodeId, newAttributes: Record
                 
                 if (isRenameOperation && dataNode.path && (persistenceService as any).renameNode) {
                     // Try the path-based rename endpoint first for rename operations
-                    console.log(`[updateNodeAttributes] Using path-based rename for node at path "${dataNode.path}"`);
                     try {
                         persistedNode = await (persistenceService as any).renameNode(dataNode.path, newAttributes.name);
                     } catch (renameError) {
-                        console.log(`[updateNodeAttributes] Path-based rename failed, falling back to updateNode:`, renameError);
                         // Fall back to the regular updateNode method
                         persistedNode = await (persistenceService as ServerAdapter).updateNode(updatedNodeData);
                     }
@@ -450,21 +447,139 @@ export async function fetchAvailableContextDetails(): Promise<{ id: NodeId, name
 import { edges, deleteEdges } from './EdgeStore';
 import { ROOT_NODE_ID } from '$lib/constants';
 
-export async function deleteDataNodePermanently(nodeId: NodeId): Promise<void> {
+/**
+ * Delete multiple selected nodes permanently.
+ * This function handles bulk deletion of nodes, respecting system nodes and providing appropriate feedback.
+ */
+export async function deleteSelectedNodesPermanently(nodeIds: NodeId[]): Promise<void> {
     if (!persistenceService) {
-        console.error("[deleteDataNodePermanently] Persistence service not available.");
+        return;
+    }
+
+    if (nodeIds.length === 0) {
         return;
     }
 
     try {
-        console.log(`[deleteDataNodePermanently] ===== STARTING DELETION PROCESS FOR NODE ${nodeId} =====`);
+        // 1. Validate nodes and filter out system nodes
+        const allNodes = get(nodes);
+        const validNodeIds: NodeId[] = [];
+        const systemNodes: string[] = [];
+        const nodeHandles: string[] = [];
         
+        for (const nodeId of nodeIds) {
+            const nodeData = allNodes.get(nodeId);
+            
+            // Check if it's a system node that shouldn't be deleted
+            if (nodeData?.attributes?.isSystemNode) {
+                const nodeName = nodeData.attributes?.name || nodeData.path || nodeId;
+                systemNodes.push(nodeName);
+                continue;
+            }
+            
+            validNodeIds.push(nodeId);
+            
+            // Use path instead of UUID when available (works for both indexed and unindexed files)
+            if (nodeData?.path) {
+                nodeHandles.push(nodeData.path);
+            } else {
+                nodeHandles.push(nodeId);
+            }
+        }
+        
+        // Show warning for system nodes
+        if (systemNodes.length > 0) {
+            notifications.info(`Skipped ${systemNodes.length} system node(s): ${systemNodes.join(', ')}`);
+        }
+        
+        if (validNodeIds.length === 0) {
+            notifications.error("No valid nodes to delete.");
+            return;
+        }
+        
+        // 2. Call server deletion
+        const deleteResponse = await persistenceService.deleteNodes(nodeHandles);
+        
+        // 3. Check for server failures
+        if (deleteResponse.failed_deletions.length > 0) {
+            const errors = deleteResponse.failed_deletions.map(f => f.error).join(', ');
+            notifications.error(`Failed to delete some nodes: ${errors}`);
+            
+            // Continue with successful deletions if any
+            if (deleteResponse.deleted_nodes.length === 0) {
+                return;
+            }
+        }
+
+        // 4. Process successfully deleted nodes from server response
+        const deletedNodeIds = new Set<NodeId>();
+        for (const deletedInfo of deleteResponse.deleted_nodes) {
+            deletedNodeIds.add(deletedInfo.node_id);
+            // Also add all descendants that were deleted
+            for (const descendantId of deletedInfo.descendants_deleted) {
+                deletedNodeIds.add(descendantId);
+            }
+        }
+
+        // 5. Remove all deleted nodes from the nodes store
+        nodes.update(nodeMap => {
+            for (const deletedId of deletedNodeIds) {
+                nodeMap.delete(deletedId);
+            }
+            return nodeMap;
+        });
+
+        // 6. Remove edges connected to deleted nodes from edges store
+        const allEdges = get(edges);
+        const edgesToDelete = [...allEdges.values()].filter(edge => 
+            deletedNodeIds.has(edge.source) || deletedNodeIds.has(edge.target)
+        );
+        
+        if (edgesToDelete.length > 0) {
+            edges.update(edgeMap => {
+                for (const edge of edgesToDelete) {
+                    edgeMap.delete(edge.id);
+                }
+                return edgeMap;
+            });
+        }
+
+        // 7. Clean up contexts for deleted nodes
+        for (const deletedId of deletedNodeIds) {
+            try {
+                await persistenceService.deleteContext(deletedId);
+                existingContextsMap.update(map => {
+                    map.delete(deletedId);
+                    return map;
+                });
+            } catch (contextDeleteError) {
+                // Context deletion is not critical, continue silently
+            }
+        }
+
+        // 8. Success notification
+        const totalDeleted = deletedNodeIds.size;
+        
+        if (totalDeleted === 1) {
+            notifications.success(`Deleted 1 node`);
+        } else {
+            notifications.success(`Deleted ${totalDeleted} nodes`);
+        }
+
+    } catch (error) {
+        notifications.error(`Failed to delete nodes: ${error}`);
+    }
+}
+
+export async function deleteDataNodePermanently(nodeId: NodeId): Promise<void> {
+    if (!persistenceService) {
+        return;
+    }
+
+    try {
         // 1. Get the node data to determine the best deletion approach
         const nodeData = get(nodes).get(nodeId);
         let nodeHandle = nodeId; // Default to UUID
-        
-        console.log(`[deleteDataNodePermanently] Node data:`, nodeData);
-        console.log(`[deleteDataNodePermanently] Node type: ${nodeData?.ntype}, Path: ${nodeData?.path}`);
         
         // Check if this is a system node that shouldn't be deleted
         if (nodeData?.attributes?.isSystemNode) {
@@ -476,74 +591,41 @@ export async function deleteDataNodePermanently(nodeId: NodeId): Promise<void> {
         // 2. Use path instead of UUID when available (works for both indexed and unindexed files)
         if (nodeData?.path) {
             nodeHandle = nodeData.path;
-            console.log(`[deleteDataNodePermanently] Using path for deletion: ${nodeHandle}`);
-        } else {
-            console.log(`[deleteDataNodePermanently] Using UUID for deletion: ${nodeHandle}`);
         }
         
-        // Get current store state before deletion for comparison
-        const allNodesBefore = get(nodes);
-        const allEdgesBefore = get(edges);
-        console.log(`[deleteDataNodePermanently] Store state before deletion: ${allNodesBefore.size} nodes, ${allEdgesBefore.size} edges`);
-        console.log(`[deleteDataNodePermanently] All node IDs before deletion:`, Array.from(allNodesBefore.keys()));
-        
         // 3. Try deletion with the chosen handle (path preferred, UUID fallback)
-        console.log(`[deleteDataNodePermanently] Calling server deleteNodes([${nodeHandle}])`);
         const deleteResponse = await persistenceService.deleteNodes([nodeHandle]);
-        console.log(`[deleteDataNodePermanently] Server response:`, deleteResponse);
         
-        // 3. Check for server failures
+        // 4. Check for server failures
         if (deleteResponse.failed_deletions.length > 0) {
             const failure = deleteResponse.failed_deletions[0];
-            console.error(`[deleteDataNodePermanently] Server failed to delete node ${nodeId}: ${failure.error}`);
             throw new Error(`Failed to delete node: ${failure.error}`);
         }
 
-        // 4. Process successfully deleted nodes from server response
-        console.log(`[deleteDataNodePermanently] Processing server response: ${deleteResponse.deleted_nodes.length} deleted nodes`);
+        // 5. Process successfully deleted nodes from server response
         const deletedNodeIds = new Set<NodeId>();
         for (const deletedInfo of deleteResponse.deleted_nodes) {
-            console.log(`[deleteDataNodePermanently] Server deleted node ${deletedInfo.node_id}, with ${deletedInfo.descendants_deleted.length} descendants`);
-            console.log(`[deleteDataNodePermanently] Descendants deleted:`, deletedInfo.descendants_deleted);
-            
             deletedNodeIds.add(deletedInfo.node_id);
             // Also add all descendants that were deleted
             for (const descendantId of deletedInfo.descendants_deleted) {
                 deletedNodeIds.add(descendantId);
             }
         }
-        
-        console.log(`[deleteDataNodePermanently] Total nodes to delete from client stores: ${deletedNodeIds.size}`);
-        console.log(`[deleteDataNodePermanently] All deleted node IDs:`, Array.from(deletedNodeIds));
 
-        // 5. Remove all deleted nodes from the nodes store
+        // 6. Remove all deleted nodes from the nodes store
         // ViewNodes in other contexts will automatically become ghost nodes
-        console.log(`[deleteDataNodePermanently] Removing ${deletedNodeIds.size} nodes from nodes store`);
         nodes.update(nodeMap => {
             for (const deletedId of deletedNodeIds) {
-                const deletedNode = nodeMap.get(deletedId);
-                if (deletedNode) {
-                    console.log(`[deleteDataNodePermanently] Removing node ${deletedId} (${deletedNode.ntype}) from store`);
-                } else {
-                    console.log(`[deleteDataNodePermanently] Node ${deletedId} not found in store (already removed?)`);
-                }
                 nodeMap.delete(deletedId);
             }
             return nodeMap;
         });
 
-        // 6. Remove edges connected to deleted nodes from edges store
-        console.log(`[deleteDataNodePermanently] Checking for edges to remove...`);
+        // 7. Remove edges connected to deleted nodes from edges store
         const allEdges = get(edges);
-        console.log(`[deleteDataNodePermanently] Total edges in store: ${allEdges.size}`);
         const edgesToDelete = [...allEdges.values()].filter(edge => 
             deletedNodeIds.has(edge.source) || deletedNodeIds.has(edge.target)
         );
-        
-        console.log(`[deleteDataNodePermanently] Found ${edgesToDelete.length} edges to delete`);
-        for (const edge of edgesToDelete) {
-            console.log(`[deleteDataNodePermanently] Will delete edge ${edge.id}: ${edge.source} -> ${edge.target} (contains: ${edge.contains})`);
-        }
         
         if (edgesToDelete.length > 0) {
             edges.update(edgeMap => {
@@ -552,48 +634,35 @@ export async function deleteDataNodePermanently(nodeId: NodeId): Promise<void> {
                 }
                 return edgeMap;
             });
-            
-            console.log(`[deleteDataNodePermanently] Removed ${edgesToDelete.length} edges from store for deleted nodes`);
         }
 
-        // 7. Remove ViewNodes from current context for all deleted nodes (including descendants)
+        // 8. Remove ViewNodes from current context for all deleted nodes (including descendants)
         const currentCtxId = get(currentContextId);
-        console.log(`[deleteDataNodePermanently] Current context ID: ${currentCtxId}`);
         if (currentCtxId) {
-            console.log(`[deleteDataNodePermanently] Removing ViewNodes for ${deletedNodeIds.size} deleted nodes from current context ${currentCtxId}`);
             for (const deletedId of deletedNodeIds) {
-                console.log(`[deleteDataNodePermanently] Removing ViewNode ${deletedId} from current context ${currentCtxId}`);
                 await removeViewNodeFromContext(currentCtxId, deletedId);
             }
         }
 
-        // 8. Delete contexts for deleted nodes and update the existingContextsMap
-        console.log(`[deleteDataNodePermanently] Cleaning up contexts for ${deletedNodeIds.size} deleted nodes`);
+        // 9. Delete contexts for deleted nodes and update the existingContextsMap
         for (const deletedId of deletedNodeIds) {
             try {
-                console.log(`[deleteDataNodePermanently] Attempting to delete context for node ${deletedId}`);
                 await persistenceService.deleteContext(deletedId);
                 existingContextsMap.update(map => {
                     map.delete(deletedId);
                     return map;
                 });
-                console.log(`[deleteDataNodePermanently] Successfully deleted context for node ${deletedId}`);
             } catch (contextDeleteError) {
-                // Log but continue - context deletion is not critical
-                console.warn(`[deleteDataNodePermanently] Error deleting context for node ${deletedId}:`, contextDeleteError);
+                // Context deletion is not critical, continue silently
             }
         }
 
-        // 9. Log success with details from server response
+        // 10. Success notification
         const mainDeletion = deleteResponse.deleted_nodes.find((d: any) => d.node_id === nodeId || deletedNodeIds.has(d.node_id));
         if (mainDeletion) {
             const totalDeleted = deletedNodeIds.size;
-            const fileType = mainDeletion.was_physical ? "physical file/directory" : "virtual node";
             const identifier = nodeData?.path || nodeId; // Use path if available, otherwise UUID
             const nodeName = nodeData?.attributes?.name || identifier;
-            
-            console.log(`[deleteDataNodePermanently] Successfully deleted ${fileType} at ${identifier}` + 
-                       (totalDeleted > 1 ? ` and ${totalDeleted - 1} related nodes` : ''));
             
             // Success notification
             if (totalDeleted > 1) {
@@ -601,22 +670,9 @@ export async function deleteDataNodePermanently(nodeId: NodeId): Promise<void> {
             } else {
                 notifications.success(`Deleted '${nodeName}'`);
             }
-            
-            if (deleteResponse.warnings.length > 0) {
-                console.warn(`[deleteDataNodePermanently] Warnings: ${deleteResponse.warnings.join(', ')}`);
-            }
         }
-        
-        // Get final store state for comparison
-        const allNodesAfter = get(nodes);
-        const allEdgesAfter = get(edges);
-        console.log(`[deleteDataNodePermanently] Store state after deletion: ${allNodesAfter.size} nodes, ${allEdgesAfter.size} edges`);
-        console.log(`[deleteDataNodePermanently] All node IDs after deletion:`, Array.from(allNodesAfter.keys()));
-        console.log(`[deleteDataNodePermanently] ===== DELETION PROCESS COMPLETED =====`);
 
     } catch (error) {
-        console.error(`[deleteDataNodePermanently] ERROR: Exception during deletion of node ${nodeId}:`, error);
-        
         // Error notification with node name if available
         const nodeData = get(nodes).get(nodeId);
         const nodeName = nodeData?.attributes?.name || nodeData?.path || nodeId;
@@ -851,7 +907,6 @@ export async function addExistingNodeToCurrentContext(path: string, position: { 
 
         // 4. Add the fetched DataNode to the global store if it's not already there
         // This prevents it from appearing as a ghost node
-        console.log(`[addExistingNodeToCurrentContext] Adding node to context - ID: ${dataNode.id}, Path: "${dataNode.path}"`);
         nodes.update(n => {
             if (!n.has(dataNode.id)) {
                 n.set(dataNode.id, dataNode);
