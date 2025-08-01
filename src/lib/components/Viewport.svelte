@@ -1070,10 +1070,9 @@
 			aria-hidden="true"
 		></div>
 
-		<!-- The Menu Component (positioned using screen coords) -->
+		<!-- The Menu Component (positioned using same calculated screen coords as marker) -->
 		<CreateNodeMenu
-			x={$createNodeMenuPosition.screenX + 10}
-			y={$createNodeMenuPosition.screenY + 10}
+			position={{ x: markerScreenX + 10, y: markerScreenY + 10 }}
 		/>
 	{/if}
 
