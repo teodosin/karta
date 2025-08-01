@@ -1,61 +1,53 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { get } from 'svelte/store';
-	import { browser } from '$app/environment'; // Import browser environment variable
-	import { localAdapter } from '$lib/util/LocalAdapter'; // Import localAdapter
+	import { browser } from '$app/environment';
+	import { localAdapter } from '$lib/util/LocalAdapter';
 	import {
 		isNodeSearchOpen,
 		nodeSearchPosition,
 		closeNodeSearch
 	} from '$lib/karta/UIStateStore';
-	// NodeId type might not be needed here anymore
-	import { addExistingNodeToCurrentContext } from '$lib/karta/NodeStore'; // Keep addExistingNodeToCurrentContext
-	import { fade } from 'svelte/transition';
-
-	// Removed SearchResult type
+	import { addExistingNodeToCurrentContext } from '$lib/karta/NodeStore';
+	import { fade, scale } from 'svelte/transition';
 
 	let searchInput: HTMLInputElement;
 	let searchQuery = '';
-	let allNodePaths: string[] = []; // Store all fetched paths
-	let filteredNodePaths: string[] = []; // Store filtered paths for display
-	let selectedIndex = -1; // For keyboard navigation
+	let allNodePaths: string[] = [];
+	let filteredNodePaths: string[] = [];
+	let selectedIndex = -1;
 
-	// --- Positioning ---
-	let modalElement: HTMLDivElement;
-	let positionStyle = '';
-	$: if ($nodeSearchPosition && modalElement) {
-		// Position slightly offset from the click position
-		const x = $nodeSearchPosition.screenX + 10;
-		const y = $nodeSearchPosition.screenY + 10;
-		// TODO: Add logic to prevent going off-screen
-		positionStyle = `left: ${x}px; top: ${y}px;`;
+	// --- Destination Marker Positioning ---
+	let destinationMarkerStyle = '';
+	$: if ($nodeSearchPosition) {
+		// Use screen coordinates for the destination marker
+		const x = $nodeSearchPosition.screenX;
+		const y = $nodeSearchPosition.screenY;
+		destinationMarkerStyle = `left: ${x}px; top: ${y}px;`;
 	}
 
 	// --- Search Logic (Local Filtering) ---
-	// No need for performSearch or debounceTimer
+	let modalElement: HTMLDivElement;
 
 	// Reactive block to filter paths based on search query
 	$: {
 		if (!allNodePaths) {
-			filteredNodePaths = []; // Handle case where paths haven't loaded yet
+			filteredNodePaths = [];
 		} else if (searchQuery.trim().length > 0) {
 			const lowerCaseQuery = searchQuery.toLowerCase();
-			// Basic filter (TODO: Replace with fuzzy search library like fuse.js later)
 			filteredNodePaths = allNodePaths.filter(path =>
 				path.toLowerCase().includes(lowerCaseQuery)
 			);
 		} else {
-			// Show all paths if query is empty (create new array reference)
 			filteredNodePaths = [...allNodePaths];
 		}
 		if (selectedIndex >= filteredNodePaths.length) {
-			selectedIndex = -1; // Reset selection if it becomes invalid after filtering
+			selectedIndex = -1;
 		} else if (filteredNodePaths.length > 0 && selectedIndex === -1) {
-	            // Optionally select the first item automatically? Or leave as -1.
-	            // selectedIndex = 0;
-	       } else if (filteredNodePaths.length === 0) {
-	           selectedIndex = -1; // Ensure reset if no results
-	       }
+			// Optionally select the first item automatically
+		} else if (filteredNodePaths.length === 0) {
+			selectedIndex = -1;
+		}
 	}
 
 	// --- Event Handlers ---
@@ -90,9 +82,10 @@
 	}
 
 	function handleClickOutside(event: MouseEvent) {
-		// Use pointerdown to catch clicks before they might trigger other actions
+		// The backdrop div will handle closing, so we don't need this for the modal itself
+		// Keep this for any future use cases where clicks need to be handled differently
 		if ($isNodeSearchOpen && modalElement && !modalElement.contains(event.target as Node)) {
-			closeNodeSearch();
+			// Don't close here since backdrop handles it
 		}
 	}
 
@@ -133,96 +126,187 @@
 </script>
 
 {#if $isNodeSearchOpen}
+	<!-- Transparent backdrop for click-to-close -->
+	<div 
+		class="fixed inset-0 z-40"
+		transition:fade={{ duration: 200 }}
+		on:click={closeNodeSearch}
+	></div>
+
+	<!-- Pulsating destination marker -->
+	{#if $nodeSearchPosition}
+		<div
+			class="fixed z-45 pointer-events-none"
+			style={destinationMarkerStyle}
+		>
+			<!-- Central white dot that fades in/out -->
+			<div class="absolute w-1.5 h-1.5 bg-white rounded-full shadow-lg transform -translate-x-1/2 -translate-y-1/2" transition:fade={{ duration: 300 }}></div>
+			
+			<!-- First pulsating expanding ring -->
+			<div class="absolute w-0 h-0 border-2 border-white rounded-full transform -translate-x-1/2 -translate-y-1/2 animate-ring-pulse"></div>
+			
+			<!-- Second pulsating expanding ring (delayed) -->
+			<div class="absolute w-0 h-0 border-2 border-white rounded-full transform -translate-x-1/2 -translate-y-1/2 animate-ring-pulse-delayed"></div>
+		</div>
+	{/if}
+
+	<!-- Large centered modal -->
 	<div
 		bind:this={modalElement}
-		class="absolute z-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded shadow-lg p-3 flex flex-col gap-2 min-w-[250px]"
-		style={positionStyle}
+		class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 
+		       border border-gray-700 rounded-lg shadow-2xl w-[500px] max-w-[90vw] h-[400px] flex flex-col"
+		style="background-color: color-mix(in srgb, var(--color-panel-bg) 90%, transparent);"
 		role="dialog"
 		aria-modal="true"
 		aria-labelledby="search-node-label"
-		transition:fade={{ duration: 100 }}
+		transition:scale={{ duration: 200, start: 0.95 }}
 		on:keydown={handleKeyDown}
 		tabindex="-1"
 	>
-		<label id="search-node-label" for="search-node-input" class="text-sm font-medium text-gray-700 dark:text-gray-300">
-			Search Node by Path:
-		</label>
-		<input
-			bind:this={searchInput}
-			bind:value={searchQuery}
-			id="search-node-input"
-			type="text"
-			placeholder="Enter node path..."
-			class="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
-		/>
+		<!-- Modal header -->
+		<div class="p-3 border-b border-gray-700">
+			<label id="search-node-label" for="search-node-input" class="text-sm font-medium" style="color: var(--color-text-color);">
+				Search Nodes
+			</label>
+			
+			<!-- Search input -->
+			<input
+				bind:this={searchInput}
+				bind:value={searchQuery}
+				id="search-node-input"
+				type="text"
+				placeholder="Type to search..."
+				class="w-full mt-2 px-3 py-2 text-sm border border-gray-700 rounded 
+				       text-white placeholder-gray-400
+				       focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+				style="background-color: var(--color-viewport-bg);"
+			/>
+		</div>
 
-		{#if filteredNodePaths.length > 0}
-			<ul class="mt-2 max-h-60 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded" role="listbox">
-				{#each filteredNodePaths as path, index (path)} <!-- Iterate over paths, use path as key -->
-					<!-- svelte-ignore a11y_click_events_have_key_events -->
-					<li
-						class="px-3 py-1.5 text-sm cursor-pointer truncate {selectedIndex === index
-							? 'bg-blue-100 dark:bg-blue-900 text-blue-900 dark:text-blue-100'
-							: 'text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'}"
-						class:selected={selectedIndex === index}
-						on:click={() => handleResultClick(path)}
-						on:mouseenter={() => (selectedIndex = index)}
-						role="option"
-						aria-selected={selectedIndex === index}
-						id="search-result-{index}"
-					>
-						{path} <!-- Display the path -->
-					</li>
-				{/each}
-			</ul>
-		{:else if searchQuery.trim().length > 0 && allNodePaths.length > 0} <!-- Show 'not found' only if search attempted on existing paths -->
-			<div class="mt-2 px-3 py-1.5 text-sm text-gray-500 italic">No matching nodes found.</div>
-			     {:else if allNodePaths.length === 0 && searchQuery.trim().length === 0} <!-- Indicate loading or no nodes -->
-			          <div class="mt-2 px-3 py-1.5 text-sm text-gray-500 italic">Loading node paths...</div>
-		{/if}
+		<!-- Results container (fixed height with scroll) -->
+		<div class="flex-1 overflow-hidden">
+			{#if filteredNodePaths.length > 0}
+				<ul class="h-full overflow-y-auto" role="listbox">
+					{#each filteredNodePaths as path, index (path)}
+						<!-- svelte-ignore a11y_click_events_have_key_events -->
+						<li
+							class="px-3 py-2 text-xs cursor-pointer border-b border-gray-700 last:border-b-0
+							       {selectedIndex === index
+								? 'hover-bg-panel-hl'
+								: 'hover:opacity-80'}"
+							style="color: var(--color-text-color);"
+							on:click={() => handleResultClick(path)}
+							on:mouseenter={() => (selectedIndex = index)}
+							role="option"
+							aria-selected={selectedIndex === index}
+							id="search-result-{index}"
+						>
+							<div class="font-mono truncate">
+								{path}
+							</div>
+						</li>
+					{/each}
+				</ul>
+			{:else if searchQuery.trim().length > 0 && allNodePaths.length > 0}
+				<div class="p-6 text-center">
+					<div class="text-gray-400">
+						<div class="text-2xl mb-2">🔍</div>
+						<div class="text-sm font-medium mb-1">No matches</div>
+						<div class="text-xs">Try a different search term</div>
+					</div>
+				</div>
+			{:else if allNodePaths.length === 0 && searchQuery.trim().length === 0}
+				<div class="p-6 text-center">
+					<div class="text-gray-400">
+						<div class="animate-spin text-lg mb-2">⟳</div>
+						<div class="text-sm font-medium">Loading...</div>
+					</div>
+				</div>
+			{:else}
+				<div class="p-6 text-center">
+					<div class="text-gray-400">
+						<div class="text-sm font-medium mb-1">Start typing</div>
+						<div class="text-xs">Search nodes by path</div>
+					</div>
+				</div>
+			{/if}
+		</div>
+
+		<!-- Modal footer with shortcuts -->
+		<div class="p-2 border-t border-gray-700" style="background-color: color-mix(in srgb, var(--color-panel-bg) 80%, black);">
+			<div class="flex items-center justify-between text-xs text-gray-400">
+				<div class="flex items-center gap-3">
+					<span><kbd class="px-1 py-0.5 bg-gray-700 rounded text-xs">↑↓</kbd> Navigate</span>
+					<span><kbd class="px-1 py-0.5 bg-gray-700 rounded text-xs">Enter</kbd> Add</span>
+				</div>
+				<span><kbd class="px-1 py-0.5 bg-gray-700 rounded text-xs">Esc</kbd> Close</span>
+			</div>
+		</div>
 	</div>
 {/if}
 
 <style>
-	/* Add any specific styles if needed */
-	li.selected {
-		/* Ensure selected style overrides hover */
-		background-color: #dbeafe; /* Tailwind blue-100 */
-		color: #1e40af; /* Tailwind blue-800 */
-	}
-	:global(.dark) li.selected {
-		background-color: #1e3a8a; /* Tailwind blue-900 */
-		color: #dbeafe; /* Tailwind blue-100 */
-	}
-
-	/* Custom Scrollbar for Search Results List (using CSS pseudo-elements) */
+	/* Custom scrollbar for search results */
 	ul::-webkit-scrollbar {
-		width: 3px; /* 3px width */
+		width: 6px;
 	}
 
 	ul::-webkit-scrollbar-track {
-		background: transparent; /* Transparent track */
+		background: transparent;
 	}
 
 	ul::-webkit-scrollbar-thumb {
-		/* Using Tailwind gray-500 with opacity for thumb */
-		background-color: rgba(107, 114, 128, 0.5); /* gray-500 @ 50% */
+		background-color: rgba(156, 163, 175, 0.5);
 		border-radius: 3px;
 	}
 
 	ul::-webkit-scrollbar-thumb:hover {
-		/* Using Tailwind gray-600 with opacity for hover */
-		background-color: rgba(75, 85, 99, 0.7); /* gray-600 @ 70% */
+		background-color: rgba(107, 114, 128, 0.7);
 	}
 
-	/* Dark mode scrollbar thumb */
 	:global(.dark) ul::-webkit-scrollbar-thumb {
-		/* Using Tailwind gray-400 with opacity for dark mode thumb */
-		background-color: rgba(156, 163, 175, 0.5); /* gray-400 @ 50% */
+		background-color: rgba(107, 114, 128, 0.5);
 	}
 
 	:global(.dark) ul::-webkit-scrollbar-thumb:hover {
-		/* Using Tailwind gray-500 with opacity for dark mode hover */
-		background-color: rgba(107, 114, 128, 0.7); /* gray-500 @ 70% */
+		background-color: rgba(156, 163, 175, 0.7);
+	}
+
+	/* Keyboard shortcuts styling */
+	kbd {
+		font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+		font-size: 0.75rem;
+		font-weight: 500;
+	}
+
+	/* Custom marker animations */
+	@keyframes ring-pulse {
+		0% {
+			transform: translate(-50%, -50%) scale(0);
+			opacity: 1;
+		}
+		100% {
+			transform: translate(-50%, -50%) scale(4);
+			opacity: 0;
+		}
+	}
+
+	@keyframes ring-pulse-delayed {
+		0% {
+			transform: translate(-50%, -50%) scale(0);
+			opacity: 0.8;
+		}
+		100% {
+			transform: translate(-50%, -50%) scale(3.5);
+			opacity: 0;
+		}
+	}
+
+	.animate-ring-pulse {
+		animation: ring-pulse 2s ease-out infinite;
+	}
+
+	.animate-ring-pulse-delayed {
+		animation: ring-pulse-delayed 2s ease-out infinite 0.4s;
 	}
 </style>
