@@ -34,6 +34,7 @@ export interface SearchResult {
   ntype: string;          // Node type (File, Directory, etc.)
   is_indexed: boolean;    // Whether it exists in database
   score: number;          // Fuzzy match score (0.0-1.0)
+  match_indices?: number[]; // Character indices that matched the query
 }
 
 export interface SearchQuery {

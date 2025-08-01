@@ -24,6 +24,41 @@
 	// Create an instance of ServerAdapter for search
 	const serverAdapter = new ServerAdapter();
 
+	// Optimized helper function to create highlight segments
+	function createHighlightSegments(text: string, matchIndices?: number[]): Array<{text: string, highlighted: boolean}> {
+		if (!matchIndices || matchIndices.length === 0) {
+			return [{ text, highlighted: false }];
+		}
+
+		// Convert to Set for O(1) lookup instead of O(n) includes()
+		const highlightSet = new Set(matchIndices);
+		const segments: Array<{text: string, highlighted: boolean}> = [];
+		let currentSegment = '';
+		let isHighlighted = false;
+
+		for (let i = 0; i < text.length; i++) {
+			const shouldHighlight = highlightSet.has(i);
+			
+			if (shouldHighlight !== isHighlighted) {
+				// State change - push current segment if it exists
+				if (currentSegment) {
+					segments.push({ text: currentSegment, highlighted: isHighlighted });
+					currentSegment = '';
+				}
+				isHighlighted = shouldHighlight;
+			}
+			
+			currentSegment += text[i];
+		}
+		
+		// Push final segment
+		if (currentSegment) {
+			segments.push({ text: currentSegment, highlighted: isHighlighted });
+		}
+		
+		return segments;
+	}
+
 	// --- Destination Marker Positioning ---
 	let destinationMarkerStyle = '';
 	$: if ($nodeSearchPosition) {
@@ -197,7 +232,7 @@
 	<div
 		bind:this={modalElement}
 		class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 
-		       border border-gray-700 rounded-lg shadow-2xl w-[500px] max-w-[90vw] h-[400px] flex flex-col"
+		       border border-gray-700 rounded-lg shadow-2xl w-[700px] max-w-[90vw] h-[400px] flex flex-col"
 		style="background-color: color-mix(in srgb, var(--color-panel-bg) 80%, transparent);"
 		role="dialog"
 		aria-modal="true"
@@ -219,6 +254,10 @@
 				id="search-node-input"
 				type="text"
 				placeholder="Type to search..."
+				autocomplete="off"
+				autocorrect="off"
+				autocapitalize="off"
+				spellcheck="false"
 				class="w-full mt-2 px-3 py-2 text-sm border border-gray-700 rounded 
 				       text-white placeholder-gray-400
 				       focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
@@ -260,7 +299,13 @@
 						>
 							<div class="flex items-center justify-between">
 								<div class="font-mono truncate flex-1">
-									{result.path}
+									{#each createHighlightSegments(result.path, result.match_indices) as segment}
+										{#if segment.highlighted}
+											<span class="highlight">{segment.text}</span>
+										{:else}
+											<span>{segment.text}</span>
+										{/if}
+									{/each}
 								</div>
 								<div class="flex items-center gap-2 ml-2 text-xs opacity-70">
 									{#if result.is_indexed}
@@ -340,9 +385,16 @@
 
 	/* Keyboard shortcuts styling */
 	kbd {
-		font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+		font-family: ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 		font-size: 0.75rem;
 		font-weight: 500;
+	}
+
+	/* Fuzzy match highlighting - use !important to override any conflicting styles */
+	.highlight {
+		font-weight: 700 !important;
+		color: #60a5fa !important; /* Bright blue */
+		background-color: transparent !important; /* Remove any background */
 	}
 
 	/* Custom marker animations */
