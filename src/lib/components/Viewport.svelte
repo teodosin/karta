@@ -1053,10 +1053,13 @@
 	{#if $isCreateNodeMenuOpen && $createNodeMenuPosition}
 		<!-- Create Node Menu related elements -->
 		{@const transform = viewTransform.current}
+		{@const rect = canvasContainer?.getBoundingClientRect()}
 		<!-- Access tween value directly -->
-		{@const markerScreenX =
+		{@const markerScreenX = rect ? 
+			$createNodeMenuPosition.canvasX * transform.scale + transform.posX + rect.left + $viewportWidth / 2 :
 			$createNodeMenuPosition.canvasX * transform.scale + transform.posX}
-		{@const markerScreenY =
+		{@const markerScreenY = rect ?
+			$createNodeMenuPosition.canvasY * transform.scale + transform.posY + rect.top + $viewportHeight / 2 :
 			$createNodeMenuPosition.canvasY * transform.scale + transform.posY}
 
 		<!-- Position Marker (positioned using transformed canvas coords) -->
