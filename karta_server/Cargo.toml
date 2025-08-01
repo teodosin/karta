@@ -24,6 +24,7 @@ mime_guess = "2.0.5"
 walkdir = "2.5.0"
 trash = "5.2" # For safe deletion to system trash
 chrono = { version = "0.4", features = ["serde"] } # For timestamps
+fuzzy-matcher = "0.3.7"
 
 [dev-dependencies]
 git2 = "0.20.2"
