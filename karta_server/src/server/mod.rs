@@ -77,6 +77,7 @@ pub fn create_router(state: AppState) -> Router<()> {
             .get(data_endpoints::get_node_by_uuid)
         )
         .route("/api/nodes/by-path/{*path}", get(data_endpoints::get_node_by_path))
+        .route("/api/nodes/by-path-and-index/{*path}", post(data_endpoints::get_and_index_node_by_path))
         .route("/api/edges", 
             post(edge_endpoints::create_edges)
             .delete(edge_endpoints::delete_edges)
