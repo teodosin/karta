@@ -832,15 +832,15 @@ export function updateViewNodeAttributeImmediate(viewNodeId: string, attributeKe
  */
 export async function addExistingNodeToCurrentContext(path: string, position: { x: number; y: number }): Promise<void> {
 
-    // 1. Check localAdapter
-    if (!localAdapter) {
-        console.error("[addExistingNodeToCurrentContext] LocalAdapter not available.");
+    // 1. Check persistenceService
+    if (!persistenceService) {
+        console.error("[addExistingNodeToCurrentContext] Persistence service not available.");
         return;
     }
 
     try {
-        // 2. Call localAdapter.getDataNodeByPath(path)
-        const dataNode = await localAdapter.getDataNodeByPath(path);
+        // 2. Call persistenceService.getAndIndexDataNodeByPath(path) to fetch AND index the node
+        const dataNode = await (persistenceService as ServerAdapter).getAndIndexDataNodeByPath(path);
 
         // 3. Check if DataNode exists
         if (!dataNode) {
@@ -851,6 +851,7 @@ export async function addExistingNodeToCurrentContext(path: string, position: { 
 
         // 4. Add the fetched DataNode to the global store if it's not already there
         // This prevents it from appearing as a ghost node
+        console.log(`[addExistingNodeToCurrentContext] Adding node to context - ID: ${dataNode.id}, Path: "${dataNode.path}"`);
         nodes.update(n => {
             if (!n.has(dataNode.id)) {
                 n.set(dataNode.id, dataNode);
@@ -951,9 +952,9 @@ export async function addExistingNodeToCurrentContext(path: string, position: { 
             return newCtxMap;
         });
 
-        // 8d. Persist context via localAdapter.saveContext()
+        // 8d. Persist context via persistenceService.saveContext()
         if (updatedContext) {
-            await localAdapter.saveContext(updatedContext);
+            await persistenceService.saveContext(updatedContext);
             // Optionally select the newly added node
             setSelectedNodes(new Set([dataNode.id]));
         } else {

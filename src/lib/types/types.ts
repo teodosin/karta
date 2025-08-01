@@ -27,6 +27,29 @@ export type NodeHandle = {
   type: 'uuid', value: NodeId
 }
 
+// Search-related types
+export interface SearchResult {
+  id?: NodeId;             // UUID if indexed in database
+  path: string;            // Full path from vault root
+  ntype: string;          // Node type (File, Directory, etc.)
+  is_indexed: boolean;    // Whether it exists in database
+  score: number;          // Fuzzy match score (0.0-1.0)
+}
+
+export interface SearchQuery {
+  q: string;              // Search query
+  limit?: number;         // Max results (default 100)
+  min_score?: number;     // Filter low-quality matches (default 0.1)
+}
+
+export interface SearchResponse {
+  results: SearchResult[];
+  total_found: number;    // How many matched (before limit)
+  truncated: boolean;     // Whether results were limited
+  query: string;
+  took_ms: number;
+}
+
 export interface DataNode {
   id: NodeId;
   ntype: string;

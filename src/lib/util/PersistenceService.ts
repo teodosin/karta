@@ -1,4 +1,4 @@
-import type { AssetData, Context, ContextBundle, DataNode, EdgeDeletionPayload, KartaEdge, KartaEdgeCreationPayload, NodeId, StorableContext, DeleteNodesResponse } from "$lib/types/types";
+import type { AssetData, Context, ContextBundle, DataNode, EdgeDeletionPayload, KartaEdge, KartaEdgeCreationPayload, NodeId, StorableContext, DeleteNodesResponse, SearchQuery, SearchResponse } from "$lib/types/types";
 
 export interface PersistenceService {
     // Node methods
@@ -35,4 +35,7 @@ export interface PersistenceService {
     getAsset(assetId: string): Promise<AssetData | undefined>;
     deleteAsset(assetId: string): Promise<void>;
     getAssetObjectUrl(assetId: string): Promise<string | null>;
+
+    // Search methods
+    searchNodes(query: SearchQuery): Promise<SearchResponse>;
 }

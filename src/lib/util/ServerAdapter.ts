@@ -16,6 +16,8 @@ import type {
     MoveOperation,
     MoveNodesResponse,
     DeleteNodesResponse,
+    SearchQuery,
+    SearchResponse,
 } from '../types/types';
 import type { KartaEdgeCreationPayload } from '$lib/types/types';
 import type { PersistenceService } from './PersistenceService';
@@ -286,6 +288,12 @@ export class ServerAdapter implements PersistenceService {
                 const serverKartaEdges = serverResponse[1] as ServerKartaEdge[];
                 const serverContextData = serverResponse[2] as ServerContext;
 
+                // Log all DataNode paths in the incoming context bundle
+                console.log(`[ServerAdapter.loadContextBundle] Context "${contextPath}" contains ${serverDataNodes.length} DataNodes:`);
+                serverDataNodes.forEach(sNode => {
+                    console.log(`  - ID: ${sNode.uuid}, Path: "${sNode.path}"`);
+                });
+
                 const clientDataNodes: DataNode[] = serverDataNodes.map(sNode => {
                     const attributes = transformServerAttributesToRecord(sNode.attributes);
                     // Extract name from the path
@@ -377,7 +385,14 @@ export class ServerAdapter implements PersistenceService {
     async saveContext(context: Context): Promise<void> {
         const modifiedViewNodes = Array.from(context.viewNodes.values()).filter(vn => vn.status === 'modified');
 
+        console.log(`[ServerAdapter.saveContext] Context ${context.id} has ${context.viewNodes.size} total ViewNodes, ${modifiedViewNodes.length} modified:`);
+        modifiedViewNodes.forEach(vn => {
+            const dataNode = context.viewNodes.get(vn.id);
+            console.log(`  - Modified ViewNode ID: ${vn.id} (status: ${vn.status})`);
+        });
+
         if (modifiedViewNodes.length === 0) {
+            console.log(`[ServerAdapter.saveContext] No modified ViewNodes to save for context ${context.id}`);
             return Promise.resolve();
         }
 
@@ -676,6 +691,47 @@ export class ServerAdapter implements PersistenceService {
         }
     }
 
+    /**
+     * Gets a DataNode by path and ensures it's indexed in the database.
+     * This is useful when adding nodes from search results to ensure they have UUIDs.
+     */
+    async getAndIndexDataNodeByPath(path: string): Promise<DataNode | undefined> {
+        const encodedPath = encodeURIComponent(path);
+        const url = `${SERVER_BASE_URL}/api/nodes/by-path-and-index/${encodedPath}`;
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+            });
+            if (!response.ok) {
+                if (response.status !== 404) {
+                    apiLogger.error(`Error fetching and indexing node with path "${path}". Status: ${response.status}`);
+                }
+                return undefined;
+            }
+            const serverNode: ServerDataNode = await response.json();
+            const attributes = transformServerAttributesToRecord(serverNode.attributes);
+            // Extract name from the path
+            const nameFromPath = serverNode.path.split('/').pop() || (serverNode.path === '' ? 'root' : '');
+            attributes['name'] = nameFromPath;
+
+            console.log(`[ServerAdapter.getAndIndexDataNodeByPath] Retrieved and indexed node: ${path} (UUID: ${serverNode.uuid})`);
+
+            return {
+                id: serverNode.uuid,
+                ntype: serverNode.ntype.type_path,
+                createdAt: (serverNode.created_time?.secs_since_epoch ?? 0) * 1000,
+                modifiedAt: (serverNode.modified_time?.secs_since_epoch ?? 0) * 1000,
+                path: serverNode.path,
+                attributes: attributes,
+                isSearchable: attributes['isSearchable'] ?? true,
+            };
+        } catch (error) {
+            apiLogger.error(`Network error fetching and indexing node with path "${path}":`, error);
+            return undefined;
+        }
+    }
+
     async createEdges(edges: KartaEdgeCreationPayload[]): Promise<KartaEdge[] | undefined> {
         const url = `${SERVER_BASE_URL}/api/edges`;
         console.log('[ServerAdapter.createEdges] Sending payload to server:', JSON.stringify(edges, null, 2));
@@ -877,6 +933,48 @@ export class ServerAdapter implements PersistenceService {
             return result;
         } catch (error) {
             console.error(`[ServerAdapter.moveNodes] Network error moving nodes:`, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Search for nodes using the backend search API
+     * @param query Search query with term, limit, and optional min_score
+     * @returns Search response with results, metadata, and timing
+     */
+    async searchNodes(query: SearchQuery): Promise<SearchResponse> {
+        const params = new URLSearchParams();
+        params.set('q', query.q);
+        
+        if (query.limit !== undefined) {
+            params.set('limit', query.limit.toString());
+        }
+        
+        if (query.min_score !== undefined) {
+            params.set('min_score', query.min_score.toString());
+        }
+
+        const url = `${SERVER_BASE_URL}/api/search?${params.toString()}`;
+        
+        try {
+            apiLogger.log(`[ServerAdapter.searchNodes] Searching with query: "${query.q}"`);
+            
+            const response = await fetch(url);
+            
+            if (!response.ok) {
+                console.error(`[ServerAdapter.searchNodes] Search failed. Status: ${response.status} ${response.statusText}`);
+                const errorBody = await response.text();
+                console.error(`[ServerAdapter.searchNodes] Error body: ${errorBody}`);
+                throw new Error(`Search failed: ${response.status} ${response.statusText}`);
+            }
+            
+            const searchResponse: SearchResponse = await response.json();
+            
+            apiLogger.log(`[ServerAdapter.searchNodes] Found ${searchResponse.results.length} results in ${searchResponse.took_ms}ms`);
+            
+            return searchResponse;
+        } catch (error) {
+            console.error(`[ServerAdapter.searchNodes] Network error during search:`, error);
             throw error;
         }
     }

@@ -10,7 +10,9 @@ import type {
 	AssetData,
 	KartaExportData,
 	ContextBundle,
-	EdgeDeletionPayload
+	EdgeDeletionPayload,
+	SearchQuery,
+	SearchResponse
 } from '../types/types';
 import type { PersistenceService } from './PersistenceService';
 
@@ -695,6 +697,18 @@ export class LocalAdapter implements PersistenceService { // Added export here
   console.warn('[LocalAdapter.reconnectEdge] Not implemented.');
         return undefined;
     }
+
+	// Search method stub - will be implemented properly later
+	async searchNodes(query: SearchQuery): Promise<SearchResponse> {
+		console.warn('[LocalAdapter.searchNodes] Not implemented - using empty results');
+		return {
+			results: [],
+			total_found: 0,
+			truncated: false,
+			query: query.q,
+			took_ms: 0
+		};
+	}
 }
 
 // Define database schema (for TypeScript type checking)

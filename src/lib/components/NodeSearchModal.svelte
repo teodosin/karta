@@ -2,7 +2,8 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { get } from 'svelte/store';
 	import { browser } from '$app/environment';
-	import { localAdapter } from '$lib/util/LocalAdapter';
+	import { ServerAdapter } from '$lib/util/ServerAdapter';
+	import type { SearchResult } from '$lib/types/types';
 	import {
 		isNodeSearchOpen,
 		nodeSearchPosition,
@@ -14,9 +15,14 @@
 
 	let searchInput: HTMLInputElement;
 	let searchQuery = '';
-	let allNodePaths: string[] = [];
-	let filteredNodePaths: string[] = [];
+	let searchResults: SearchResult[] = [];
 	let selectedIndex = -1;
+	let isSearching = false;
+	let searchError = '';
+	let debounceTimer: number;
+	
+	// Create an instance of ServerAdapter for search
+	const serverAdapter = new ServerAdapter();
 
 	// --- Destination Marker Positioning ---
 	let destinationMarkerStyle = '';
@@ -27,37 +33,78 @@
 		destinationMarkerStyle = `left: ${x}px; top: ${y}px;`;
 	}
 
-	// --- Search Logic (Local Filtering) ---
+	// --- Search Logic (Server API) ---
 	let modalElement: HTMLDivElement;
+	let lastSearchQuery = ''; // Track the last searched query to prevent duplicates
 
-	// Reactive block to filter paths based on search query
-	$: {
-		if (!allNodePaths) {
-			filteredNodePaths = [];
-		} else if (searchQuery.trim().length > 0) {
-			const lowerCaseQuery = searchQuery.toLowerCase();
-			filteredNodePaths = allNodePaths.filter(path =>
-				path.toLowerCase().includes(lowerCaseQuery)
-			);
-		} else {
-			filteredNodePaths = [...allNodePaths];
+	// Debounced search function
+	async function performSearch(query: string) {
+		const trimmedQuery = query.trim();
+		
+		// Prevent searching with the same query multiple times
+		if (trimmedQuery === lastSearchQuery) {
+			return;
 		}
-		if (selectedIndex >= filteredNodePaths.length) {
+		
+		if (!trimmedQuery) {
+			searchResults = [];
+			isSearching = false;
+			searchError = '';
+			lastSearchQuery = '';
+			return;
+		}
+
+		lastSearchQuery = trimmedQuery;
+		isSearching = true;
+		searchError = '';
+
+		try {
+			const response = await serverAdapter.searchNodes({
+				q: trimmedQuery,
+				limit: 50 // Limit results for better UX
+			});
+			
+			searchResults = response.results;
+			console.log(`[NodeSearchModal] Found ${searchResults.length} results for "${trimmedQuery}"`);
+		} catch (error) {
+			console.error('[NodeSearchModal] Search failed:', error);
+			searchError = error instanceof Error ? error.message : 'Search failed';
+			searchResults = [];
+		} finally {
+			isSearching = false;
+		}
+	}
+
+	// Reactive block to trigger search with debouncing
+	// Reactive search - only triggers when searchQuery changes
+	$: if (searchQuery !== undefined) {
+		if (debounceTimer) {
+			clearTimeout(debounceTimer);
+		}
+		
+		debounceTimer = setTimeout(() => {
+			performSearch(searchQuery);
+		}, 300); // 300ms delay
+	}
+
+	// Separate reactive block for selection management
+	$: if (searchResults) {
+		// Reset selection when results change
+		if (selectedIndex >= searchResults.length) {
 			selectedIndex = -1;
-		} else if (filteredNodePaths.length > 0 && selectedIndex === -1) {
+		} else if (searchResults.length > 0 && selectedIndex === -1) {
 			// Optionally select the first item automatically
-		} else if (filteredNodePaths.length === 0) {
+		} else if (searchResults.length === 0) {
 			selectedIndex = -1;
 		}
 	}
 
 	// --- Event Handlers ---
-	async function handleResultClick(path: string) { // Accept path string
-		const position = get(nodeSearchPosition); // Get position from store
-		if (position && path) {
+	async function handleResultClick(result: SearchResult) {
+		const position = get(nodeSearchPosition);
+		if (position && result.path) {
 			// Call action with the selected PATH and canvas coordinates
-			await addExistingNodeToCurrentContext(path, { x: position.canvasX, y: position.canvasY });
-		} else {
+			await addExistingNodeToCurrentContext(result.path, { x: position.canvasX, y: position.canvasY });
 		}
 		closeNodeSearch(); // Close modal after action
 	}
@@ -67,17 +114,17 @@
 			closeNodeSearch();
 		} else if (event.key === 'ArrowDown') {
 			event.preventDefault();
-			selectedIndex = Math.min(selectedIndex + 1, filteredNodePaths.length - 1);
+			selectedIndex = Math.min(selectedIndex + 1, searchResults.length - 1);
 		} else if (event.key === 'ArrowUp') {
 			event.preventDefault();
 			selectedIndex = Math.max(selectedIndex - 1, 0); // Don't go below 0
 		} else if (event.key === 'Enter') {
 			event.preventDefault();
-			if (selectedIndex >= 0 && selectedIndex < filteredNodePaths.length) {
-				handleResultClick(filteredNodePaths[selectedIndex]); // Pass selected path
-			} else if (filteredNodePaths.length === 1) {
+			if (selectedIndex >= 0 && selectedIndex < searchResults.length) {
+				handleResultClick(searchResults[selectedIndex]);
+			} else if (searchResults.length === 1) {
 				// If only one result, Enter selects it even if not highlighted
-				handleResultClick(filteredNodePaths[0]); // Pass the single path
+				handleResultClick(searchResults[0]);
 			}
 		}
 	}
@@ -90,19 +137,6 @@
 		}
 	}
 
-	async function fetchNodePaths() {
-		if (localAdapter) {
-			try {
-				allNodePaths = await localAdapter.getAllNodePaths();
-				filteredNodePaths = [...allNodePaths]; // Initialize filtered list (create new array reference)
-			} catch (error) {
-				allNodePaths = [];
-				filteredNodePaths = [];
-			}
-		} else {
-		}
-	}
-
 	onMount(() => {
 		// Use pointerdown listener for click outside, only in browser
 		if (browser) {
@@ -110,9 +144,13 @@
 		}
 	});
 
-	// Reactive statement to fetch paths and focus input when modal opens
+	// Reactive statement to focus input when modal opens
 	$: if ($isNodeSearchOpen) {
-		fetchNodePaths();
+		// Reset search state when modal opens
+		lastSearchQuery = '';
+		searchResults = [];
+		searchError = '';
+		selectedIndex = -1;
 		// Focus the input when the modal opens
 		searchInput?.focus();
 	}
@@ -122,7 +160,10 @@
 		if (browser) {
 			window.removeEventListener('pointerdown', handleClickOutside, true);
 		}
-		// clearTimeout(debounceTimer); // Removed leftover timer clear
+		// Clear debounce timer
+		if (debounceTimer) {
+			clearTimeout(debounceTimer);
+		}
 	});
 </script>
 
@@ -187,9 +228,23 @@
 
 		<!-- Results container (fixed height with scroll) -->
 		<div class="flex-1 overflow-hidden">
-			{#if filteredNodePaths.length > 0}
+			{#if isSearching}
+				<div class="p-6 text-center">
+					<div class="text-gray-400">
+						<div class="animate-spin text-lg mb-2">⟳</div>
+						<div class="text-sm font-medium">Searching...</div>
+					</div>
+				</div>
+			{:else if searchError}
+				<div class="p-6 text-center">
+					<div class="text-red-400">
+						<div class="text-sm font-medium mb-1">Search Error</div>
+						<div class="text-xs">{searchError}</div>
+					</div>
+				</div>
+			{:else if searchResults.length > 0}
 				<ul class="h-full overflow-y-auto" role="listbox">
-					{#each filteredNodePaths as path, index (path)}
+					{#each searchResults as result, index (result.path)}
 						<!-- svelte-ignore a11y_click_events_have_key_events -->
 						<li
 							class="px-3 py-2 text-xs cursor-pointer border-b border-gray-700 last:border-b-0
@@ -197,19 +252,30 @@
 								? 'hover-bg-panel-hl'
 								: 'hover:opacity-80'}"
 							style="color: var(--color-text-color);"
-							on:click={() => handleResultClick(path)}
+							on:click={() => handleResultClick(result)}
 							on:mouseenter={() => (selectedIndex = index)}
 							role="option"
 							aria-selected={selectedIndex === index}
 							id="search-result-{index}"
 						>
-							<div class="font-mono truncate">
-								{path}
+							<div class="flex items-center justify-between">
+								<div class="font-mono truncate flex-1">
+									{result.path}
+								</div>
+								<div class="flex items-center gap-2 ml-2 text-xs opacity-70">
+									{#if result.is_indexed}
+										<span class="bg-blue-600 text-white px-1 rounded text-xs">DB</span>
+									{:else}
+										<span class="bg-gray-600 text-white px-1 rounded text-xs">FS</span>
+									{/if}
+									<span class="text-xs">{result.ntype}</span>
+									<span class="text-xs opacity-50">{Math.round(result.score * 100)}%</span>
+								</div>
 							</div>
 						</li>
 					{/each}
 				</ul>
-			{:else if searchQuery.trim().length > 0 && allNodePaths.length > 0}
+			{:else if searchQuery.trim().length > 0}
 				<div class="p-6 text-center">
 					<div class="text-gray-400">
 						<div class="flex justify-center mb-2">
@@ -219,18 +285,14 @@
 						<div class="text-xs">Try a different search term</div>
 					</div>
 				</div>
-			{:else if allNodePaths.length === 0 && searchQuery.trim().length === 0}
-				<div class="p-6 text-center">
-					<div class="text-gray-400">
-						<div class="animate-spin text-lg mb-2">⟳</div>
-						<div class="text-sm font-medium">Loading...</div>
-					</div>
-				</div>
 			{:else}
 				<div class="p-6 text-center">
 					<div class="text-gray-400">
-						<div class="text-sm font-medium mb-1">Start typing</div>
-						<div class="text-xs">Search nodes by path</div>
+						<div class="flex justify-center mb-2">
+							<Search size={32} />
+						</div>
+						<div class="text-sm font-medium">Search for nodes</div>
+						<div class="text-xs">Type to find files, folders, and indexed nodes</div>
 					</div>
 				</div>
 			{/if}

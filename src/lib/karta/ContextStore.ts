@@ -607,7 +607,7 @@ export async function switchContext(newContextHandle: NodeHandle, isUndoRedo: bo
     }
 
 
-    // --- Phase 1: Save Old Context State (Async) ---
+    // --- Phase 1: Save Old Context State (Sync) ---
     const oldContext = get(contexts).get(oldContextId);
 
     if (oldContext) {
@@ -615,8 +615,11 @@ export async function switchContext(newContextHandle: NodeHandle, isUndoRedo: bo
         oldContext.viewportSettings = { ...viewTransform.current };
         storeLogger.log(`Saving old context ${oldContextId} with viewNodes:`, oldContext.viewNodes);
 
-        activeAdapter.saveContext(oldContext)
-            .catch(error => console.error(`Error saving old context ${oldContextId}:`, error));
+        try {
+            await activeAdapter.saveContext(oldContext);
+        } catch (error) {
+            console.error(`Error saving old context ${oldContextId}:`, error);
+        }
 
         const targetNodeInOldContext = oldContext.viewNodes.get(newContextId);
         if (targetNodeInOldContext) {
@@ -688,11 +691,18 @@ export async function switchContext(newContextHandle: NodeHandle, isUndoRedo: bo
         // part of the incoming context's data bundle. The server is the source of truth.
         // This prevents stale data and ensures virtual nodes are correctly ghosted.
         const incomingDataNodeIds = new Set(loadedDataNodesMap.keys());
+        console.log(`[switchContext] Incoming DataNode IDs for context "${newContextId}":`, Array.from(incomingDataNodeIds));
         nodes.update(currentNodes => {
+            const nodesToPurge: string[] = [];
             for (const nodeId of currentNodes.keys()) {
                 if (!incomingDataNodeIds.has(nodeId)) {
+                    const nodeToRemove = currentNodes.get(nodeId);
+                    nodesToPurge.push(`${nodeId} (path: "${nodeToRemove?.path || 'unknown'}")`);
                     currentNodes.delete(nodeId);
                 }
+            }
+            if (nodesToPurge.length > 0) {
+                console.log(`[switchContext] Purging ${nodesToPurge.length} DataNodes from memory:`, nodesToPurge);
             }
             return currentNodes;
         });
