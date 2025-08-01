@@ -544,7 +544,15 @@ export async function deleteSelectedNodesPermanently(nodeIds: NodeId[]): Promise
             });
         }
 
-        // 7. Clean up contexts for deleted nodes
+        // 7. Remove ViewNodes from current context for all deleted nodes (including descendants)
+        const currentCtxId = get(currentContextId);
+        if (currentCtxId) {
+            for (const deletedId of deletedNodeIds) {
+                await removeViewNodeFromContext(currentCtxId, deletedId);
+            }
+        }
+
+        // 8. Clean up contexts for deleted nodes
         for (const deletedId of deletedNodeIds) {
             try {
                 await persistenceService.deleteContext(deletedId);
@@ -557,7 +565,7 @@ export async function deleteSelectedNodesPermanently(nodeIds: NodeId[]): Promise
             }
         }
 
-        // 8. Success notification
+        // 9. Success notification
         const totalDeleted = deletedNodeIds.size;
         
         if (totalDeleted === 1) {
