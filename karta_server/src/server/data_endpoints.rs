@@ -58,6 +58,26 @@ pub async fn get_node_by_path(
     }
 }
 
+pub async fn get_and_index_node_by_path(
+    State(app_state): State<AppState>,
+    Path(path): Path<String>,
+) -> Result<Json<DataNode>, StatusCode> {
+    let mut service = app_state.service.write().unwrap();
+
+    let processed_path = path.trim_start_matches('/');
+    let node_path_to_open = if processed_path == "root" {
+        NodePath::root()
+    } else {
+        NodePath::from(processed_path.to_string())
+    };
+
+    // Use the new open_and_index_node method which opens the node and ensures it's indexed
+    match service.open_and_index_node(&node_path_to_open) {
+        Ok(node) => Ok(Json(node)),
+        Err(_) => Err(StatusCode::NOT_FOUND),
+    }
+}
+
 pub async fn root() -> &'static str {
     "Welcome to Karta Server"
 }

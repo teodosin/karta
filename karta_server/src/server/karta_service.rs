@@ -563,6 +563,24 @@ impl KartaService {
         }
     }
 
+    /// Opens a node by path and ensures it's indexed in the database.
+    /// This is useful for cases like search where we want to ensure a node becomes
+    /// available for future UUID-based lookups after being accessed.
+    pub fn open_and_index_node(&mut self, path: &NodePath) -> Result<DataNode, Box<dyn Error>> {
+        let node = self.open_node(&NodeHandle::Path(path.clone()))?;
+        
+        // Check if the node is already indexed in the database
+        let is_already_indexed = self.data().open_node(&NodeHandle::Uuid(node.uuid())).is_ok();
+        
+        if !is_already_indexed {
+            // Index the node by inserting it into the database
+            self.data.insert_nodes(vec![node.clone()]);
+            println!("[open_and_index_node] Indexed node: {:?} (UUID: {})", path, node.uuid());
+        }
+        
+        Ok(node)
+    }
+
     /// Opens a context's Data and View.
     /// This is the main function for opening a context.
     /// Reconciles indexed data from the database with physical data from the filesystem.
