@@ -43,6 +43,16 @@
 	// Check if context exists for this node using the new map
 	$: hasContext = $existingContextsMap.has(viewNode.id);
 
+	// Extract file extension from the node name
+	$: fileExtension = (() => {
+		const name = dataNode.attributes.name || '';
+		const lastDotIndex = name.lastIndexOf('.');
+		if (lastDotIndex > 0 && lastDotIndex < name.length - 1) {
+			return name.substring(lastDotIndex + 1).toUpperCase();
+		}
+		return 'FILE';
+	})();
+
 	// Instance logic...
 
 	// Determine ring classes based on focal state and context existence
@@ -55,13 +65,16 @@
 <!-- File Node Appearance: Simple Rounded Rectangle - Apply focus ring here -->
 <div
 	class={`
-		w-full h-full rounded-[1rem] bg-panel-bg mb-4
+		w-full h-full rounded-[1rem] bg-panel-bg mb-4 p-2
 		shadow-inner flex items-center justify-center pointer-events-auto
 		${ringClasses}
 	`}
 >
-	<!-- Optional: Could add a subtle icon or pattern, e.g., a file icon -->
-	<!-- <span class="text-white opacity-50 text-xs">F</span> -->
+	<div class="h-full w-full bg-viewport-bg/50 rounded-[0.5rem] flex items-center justify-center">
+		<span class="text-[var(--color-text)] opacity-70 text-xs font-medium text-center px-1 leading-tight">
+			{fileExtension}
+		</span>
+	</div>
 </div>
 
 <style>

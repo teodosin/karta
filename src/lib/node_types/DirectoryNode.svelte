@@ -8,7 +8,7 @@
 	// MODULE SCRIPT
 	import type { TweenableNodeState, PropertyDefinition } from '$lib/types/types';
 	import type { NodeTypeDefinition, IconComponent } from './types';
-	// Optional: import icon like Folder from 'lucide-svelte'; // Example for DirectoryNode
+	import { Folder } from 'lucide-svelte';
 
 	function getDefaultAttributes(baseName = 'Directory'): Record<string, any> { // Changed baseName
 		return {
@@ -28,7 +28,7 @@
 		getDefaultAttributes,
 		getDefaultViewNodeState,
 		displayName: 'Directory', // Changed displayName
-		// icon: Folder as IconComponent // Example
+		icon: Folder as IconComponent,
 		propertySchema: directoryNodePropertySchema
 	};
 </script>
@@ -63,8 +63,7 @@
 	`}
 	on:dblclick={handleDoubleClick}
 >
-	<!-- Optional: Could add a subtle icon or pattern, e.g., a folder icon -->
-	<!-- <span class="text-white opacity-50 text-xs">D</span> -->
+	<Folder class="text-[var(--color-text)] opacity-40" size={40} fill="currentColor" />
 </div>
 
 <style>
