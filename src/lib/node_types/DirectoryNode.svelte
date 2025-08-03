@@ -63,7 +63,7 @@
 	`}
 	on:dblclick={handleDoubleClick}
 >
-	<Folder class="text-[var(--color-text)] opacity-40" size={40} fill="currentColor" />
+	<Folder class="text-[var(--color-text)] opacity-40 pointer-events-none" size={40} fill="currentColor" />
 </div>
 
 <style>
