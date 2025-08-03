@@ -1,6 +1,24 @@
-This document outlines some of the architectural decisions made so far as well as open questions. It is not exhaustive. Comments and feedback are appreciated. 
+---
+title: "Karta Architecture History"
+date: 2025-08-03
+status: draft
+description: "Historical architecture document from Karta's early development - preserved for context"
+tags: ["architecture", "history", "development"]
+---
 
-Note: This doc has not been updated yet since the formation of the monorepo. Things are in flux, but some of the decisions made here are still relevant. 
+<!-- 
+WARNING: This is an outdated architecture document from before the monorepo consolidation.
+Much of the information here is no longer accurate. For current architecture details, 
+see the individual project READMEs:
+- karta_server/README.md for backend architecture
+- karta_svelte/README.md for frontend architecture
+
+This file is kept for historical reference only.
+-->
+
+# Karta Architecture (Historical)
+
+This document outlines some of the architectural decisions made during Karta's early development as well as open questions that were being considered at the time. It is not exhaustive and much of it is now outdated. 
 
 ### Background
 

@@ -1,4 +1,14 @@
-This text aims to paint a picture of where the Karta came from and where it might be going. It is a living document, intended to be updated as the project progresses and its inspirations and goals are clarified. Some sections rely on possibly vague metaphors that may or may not make sense to you. Feedback is welcome and much appreciated. 
+---
+title: "The Vision Behind Karta"
+date: 2025-08-03
+status: draft
+description: "Exploring the motivation and long-term vision for Karta - from file organization to creative authoring"
+tags: ["vision", "creative-tools", "graph-based"]
+---
+
+# The Vision Behind Karta
+
+This text aims to paint a picture of where Karta came from and where it might be going. It's a living document, intended to be updated as the project progresses and its inspirations and goals are clarified. Some sections rely on possibly vague metaphors that may or may not make sense to you. Feedback is welcome and much appreciated. 
 
 Karta is currently being worked on as my master's thesis project. The topics covered there will likely be similar to this document, though obviously more in depth. It will be available to read when finished. 
 
