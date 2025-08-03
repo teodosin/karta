@@ -1,0 +1,40 @@
+/* Import Google Fonts: Nunito (base), Lustria, Bodoni Moda */
+@import url('https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=Lustria&family=Nunito:ital,wght@0,200..1000;1,200..1000&display=swap');
+@import 'tailwindcss';
+@plugin '@tailwindcss/typography';
+
+@tailwind utilities;
+
+html, body {
+  margin: 0;
+  margin-top: 0;
+  padding: 0;
+  overflow: hidden;
+  overscroll-behavior-x: none; /* Prevent browser back/forward on horizontal swipe */
+  /* Explicitly set font and use CSS variables */
+  /* Apply base font, background, and text color using Tailwind utilities */
+  @apply font-sans bg-gray-900; /* Use default Tailwind classes */
+  color: var(--color-text-color);
+}
+
+* {
+  box-sizing: border-box;
+  /* Ensure borders don't conflict with dark theme */
+  border-color: theme('colors.gray.700'); /* Keep default border for now */
+  font-family: 'Nunito', sans-serif;
+}
+
+@theme {
+  --color-panel-bg: #431d1f;
+  --color-viewport-bg: #000000;
+  --color-text-color: #f0f0f0;
+  --color-panel-hl: #741f2fff;
+  --color-contrast-color: #60a5fa;
+  --color-connection-color: #505050;
+}
+
+@layer utilities {
+  .hover-bg-panel-hl:hover {
+    background-color: var(--color-panel-hl);
+  }
+}
