@@ -1,0 +1,165 @@
+import { writable, get } from 'svelte/store';
+import type { NodeId } from '../types/types';
+import { createNodeAtPosition } from './NodeStore'; // Assuming NodeStore exports createNodeAtPosition
+import { getDefaultAttributesForType } from '$lib/node_types/registry'; // Assuming this is needed here
+
+// Create Node Menu Stores
+export const isCreateNodeMenuOpen = writable<boolean>(false);
+export const createNodeMenuPosition = writable<{ screenX: number; screenY: number; canvasX: number; canvasY: number } | null>(null);
+
+// Context Menu Stores
+export const isContextMenuOpen = writable<boolean>(false);
+export const contextMenuPosition = writable<{ x: number; y: number } | null>(null); // Screen coordinates
+export type ContextMenuContextType = { type: 'node' | 'edge' | 'background'; id?: string };
+export const contextMenuContext = writable<ContextMenuContextType | null>(null);
+
+// Properties Panel Stores
+export const propertiesPanelVisible = writable<boolean>(false);
+export const propertiesPanelNodeId = writable<NodeId | null>(null);
+export const propertiesPanelPosition = writable<{ x: number; y: number }>({ x: 0, y: 0 }); // Initial safe default
+export const propertiesPanelSize = writable<{ width: number; height: number }>({ width: 300, height: 400 }); // Default size
+export const propertiesPanelCollapsed = writable<boolean>(false);
+
+// Rename Request State
+export const nodeRenameRequestId = writable<NodeId | null>(null);
+
+// Confirmation Dialog Stores
+export const isConfirmationDialogOpen = writable<boolean>(false);
+export const confirmationDialogMessage = writable<string>('');
+export const confirmationDialogAction = writable<(() => void) | null>(null); // Action to run on confirm
+
+// Create Node Menu Actions
+export function openCreateNodeMenu(screenX: number, screenY: number, canvasX: number, canvasY: number) {
+    createNodeMenuPosition.set({ screenX, screenY, canvasX, canvasY });
+    isCreateNodeMenuOpen.set(true);
+}
+
+export function closeCreateNodeMenu() {
+    isCreateNodeMenuOpen.set(false);
+    createNodeMenuPosition.set(null);
+}
+
+export async function createNodeFromMenu(ntype: string) {
+    const position = get(createNodeMenuPosition);
+    const viewportEl = document.getElementById('viewport'); // Assuming viewport has this ID
+
+    // Use the canvas coordinates directly from the stored position
+    if (position) {
+        // Get default attributes from registry for the selected type
+        const defaultAttributes = getDefaultAttributesForType(ntype);
+        // Use stored canvasX, canvasY
+        await createNodeAtPosition(position.canvasX, position.canvasY, ntype, defaultAttributes);
+        closeCreateNodeMenu(); // Close menu after successful creation attempt
+    } else if (viewportEl) { // Added check for viewportEl for error message context
+        console.error('[KartaStore] Cannot create node from menu: Position not found in store.');
+
+        closeCreateNodeMenu(); // Close menu after creation
+    } else {
+        console.error('[KartaStore] Cannot create node from menu: Viewport element not found.');
+        closeCreateNodeMenu(); // Close menu even if creation failed
+    }
+}
+
+// Context Menu Actions
+export function openContextMenu(position: { x: number; y: number }, context: ContextMenuContextType) {
+    contextMenuPosition.set(position);
+    contextMenuContext.set(context);
+    isContextMenuOpen.set(true);
+}
+
+export function closeContextMenu() {
+    isContextMenuOpen.set(false);
+    contextMenuPosition.set(null);
+    contextMenuContext.set(null);
+}
+
+// Confirmation Dialog Actions
+// Update signature to accept contextId and the action callback type
+export function openConfirmationDialog(message: string, actionCallback: (contextId: NodeId) => void, contextId: NodeId) {
+	confirmationDialogMessage.set(message);
+	// Store a function that calls the original callback with the captured contextId
+	confirmationDialogAction.set(() => {
+		actionCallback(contextId);
+		// DO NOT close dialog here; it's closed by ConfirmationDialog.svelte
+	});
+	isConfirmationDialogOpen.set(true);
+}
+
+export function closeConfirmationDialog() {
+    isConfirmationDialogOpen.set(false);
+    confirmationDialogMessage.set('');
+    confirmationDialogAction.set(null);
+}
+
+// Node Search Modal Stores
+export const isNodeSearchOpen = writable<boolean>(false);
+export const nodeSearchPosition = writable<{ screenX: number; screenY: number; canvasX: number; canvasY: number } | null>(null);
+
+// Filter Menu Stores
+export const isFilterMenuOpen = writable<boolean>(false);
+export const filterMenuPosition = writable<{ screenX: number; screenY: number } | null>(null);
+
+// Node Search Modal Actions
+export function openNodeSearch(screenX: number, screenY: number, canvasX: number, canvasY: number) {
+    nodeSearchPosition.set({ screenX, screenY, canvasX, canvasY });
+    isNodeSearchOpen.set(true);
+}
+
+export function closeNodeSearch() {
+    isNodeSearchOpen.set(false);
+    nodeSearchPosition.set(null);
+}
+
+// Filter Menu Actions
+export function openFilterMenu(screenX: number, screenY: number) {
+    filterMenuPosition.set({ screenX, screenY });
+    isFilterMenuOpen.set(true);
+}
+
+export function closeFilterMenu() {
+    isFilterMenuOpen.set(false);
+    filterMenuPosition.set(null);
+}
+
+// Properties Panel Actions
+export function setPropertiesPanelVisibility(visible: boolean) {
+    propertiesPanelVisible.set(visible);
+}
+
+export function setPropertiesPanelNode(nodeId: NodeId | null) {
+    propertiesPanelNodeId.set(nodeId);
+    // Automatically show panel when a node is set, hide when null? Or handle in subscription?
+    // Let's handle visibility explicitly via subscription for now.
+}
+
+export function setPropertiesPanelPosition(pos: { x: number; y: number }) {
+    propertiesPanelPosition.set(pos);
+}
+
+export function setPropertiesPanelSize(size: { width: number; height: number }) {
+    propertiesPanelSize.set(size);
+}
+
+export function togglePropertiesPanelCollapsed() {
+    propertiesPanelCollapsed.update(collapsed => !collapsed);
+}
+
+/** Signals that a rename should be initiated for the specified node. */
+export function requestNodeRename(nodeId: NodeId) {
+    // This function will likely need to interact with NodeStore to check if the node is a system node
+    // For now, just setting the request ID.
+    nodeRenameRequestId.set(nodeId);
+}
+// --- Subscription to link selection changes to properties panel visibility ---
+import { selectedNodeIds } from './SelectionStore';
+
+selectedNodeIds.subscribe(selectedIds => {
+	if (selectedIds.size === 1) {
+		const selectedId = selectedIds.values().next().value;
+		setPropertiesPanelNode(selectedId ?? null); // Use nullish coalescing for type safety
+		setPropertiesPanelVisibility(true);
+	} else {
+		setPropertiesPanelNode(null);
+		setPropertiesPanelVisibility(false);
+	}
+});
