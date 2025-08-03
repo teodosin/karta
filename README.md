@@ -1,5 +1,7 @@
 # Karta
 
+![Karta Logo](docs/karta_logo.png)
+
 A node-based file organization tool for creative projects.
 
 > [!IMPORTANT] 
