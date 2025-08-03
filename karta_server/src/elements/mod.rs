@@ -7,6 +7,7 @@ pub (crate) mod node_path;
 pub (crate) mod nodetype;
 pub (crate) mod edge;
 pub (crate) mod attribute;
+pub (crate) mod view_node;
 
 
 

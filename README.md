@@ -1,67 +1,90 @@
 # Karta
-![Demo gif](/docs/karta.gif)
+
+![Karta Logo](docs/karta_logo.png)
+
+A node-based file organization tool for creative projects.
 
 > [!IMPORTANT] 
-> This project is in its very early stages and is therefore highly experimental, barely usable and not really useful yet. Most of the mentioned features are planned but not yet implemented. The version shown in the gif above is in the v.0.0.1_legacy branch. 
+> This project is in active development and not ready for production use. It's functional but still rough around the edges. The current focus is getting the core features stable before expanding functionality.
 
-## Introduction
+## What is this?
 
-**Karta** is a node-based file explorer and compositor. It creates a network out of a selected section of the file system and allows for files and folders to be arranged spatially and for arbitrary connections to be made between them. Attributes may be added to any node or connection. This network could then be queried for various purposes, though originally intended for structuring creative projects and making media art. 
+Karta turns your file system into a spatial graph. Instead of just folders and files, you get nodes and connections. You can arrange your project files on a canvas, create arbitrary links between them, and view your work from different "contexts" - basically different perspectives that show the same files arranged differently.
 
-The project is free and open-sourced under a GPL license. 
+It's designed for complex creative projects where you need to see relationships between many different files and ideas. Think game development, world-building, writing projects with lots of interconnected parts.
 
-For a more detailed explanation of the project's purpose and goals, refer to docs/vision.md. For technical details refer to docs/architecture.md. 
+## Current state
 
-Key features:
-* Local first - the files and network database exist locally on your machine. No lock-in. The goal is to keep the storage format well documented and allow for syncing and exporting to plain text files. 
-* Contextual - nodes don't have absolute spatial positions, but rather contextual ones. Since the network is always viewed from the point of view or "context" of some individual node, the positions of its connections are always relative to it. Two nodes can be positioned differently relative to each other depending on which context you look from.
-* Virtual nodes - not all nodes have to physically exist in the file system. You can create "virtual" nodes of different types that get stored directly in the database. 
+**What works:**
+- Basic node-based file visualization
+- Creating connections between files
+- Context switching (viewing the same network from different focal points)
+- Server integration with graph database
+- File system integration
 
-## Project Structure
+**What doesn't work yet:**
+- Packaged desktop app (currently requires running server and client separately)
+- Export/sharing functionality
+- Custom node types
+- Smooth performance with large vaults and images
 
-The core of the project is karta_server. It's a local HTTP server responsible for managing the underlying graph structure. Multiple clients can read from and write to it. 
+## Licensing (work in progress)
 
-Bevy_karta_client is a Karta client for the Bevy game engine. Bevy_karta_ui is the corresponding ui layer. Karta_bevy is the standalone application that combines these. These are all incomplete, but functional, and may be expanded upon. 
+The licensing situation is being sorted out to enable both open source development and commercial use of created content. Currently everything is private while we figure this out, but the plan is:
+
+- **Editor**: GPL - keeps the editing tools open source
+- **Runtime**: MIT - allows commercial use of exported networks
+
+Both will be part of this repository but serve different purposes. If you're interested in contributing or using this, please reach out so we can discuss the licensing before you invest time. 
+
+## Architecture
+
+This is a monorepo with two main parts:
+
+**`karta_server/`** - Rust backend
+- Uses [agdb](https://github.com/agnesoft/agdb) graph database for storage
+- Handles the core graph operations and file system integration
+- See [karta_server/README.md](./karta_server/README.md)
+
+**`karta_svelte/`** - Desktop application (Tauri + SvelteKit)
+- SvelteKit frontend with Tauri wrapper for desktop functionality
+- Currently works with the separate server, but the plan is to bundle the server into the Tauri app
+- For now you need to run both server and client separately during development
+- See [karta_svelte/README.md](./karta_svelte/README.md)
+
+The long-term plan includes splitting functionality into editor and runtime components to enable embedding Karta networks in other applications, while keeping both in this repository.
+
+## Development setup
+
+Prerequisites: Rust, Node.js 18+, and your package manager of choice.
+
+```bash
+# Server (in one terminal)
+cd karta_server
+cargo run
+
+# Client (in another terminal)  
+cd karta_svelte
+npm install
+npm run dev
+```
+
+See the individual READMEs for more detailed setup instructions.
 
 ## Contributing
 
-It's much too early for me to ask or hope for contributions. The most valuable thing you might contribute at this stage is sharing your thoughts about the project and discussing it with me, to help clarify the path forward. I am active in the Bevy discord, so you may find me there under the same username. 
+It's too early to ask for contributions, but feedback and discussion are very welcome. The project is still finding its direction and having conversations about what this should become is valuable.
 
-Use the develop branch for the most up-to-date version. Main is for stable-ish releases. 
+If you want to try it out, expect rough edges and incomplete features. But if something clicks for you or you see potential, I'd love to hear about it.
 
-## Development
+## Background
 
-### Development within docker container
+The motivation is pretty simple: creative projects are interconnected webs of ideas and files, but our tools treat them as isolated pieces in folder hierarchies. This makes it hard to see the relationships and patterns that actually matter for the work.
 
-For those who don't want to install the development environment directly to their computers, 
-it is possible to develop Karta within an isolated [Docker](https://docs.docker.com/) container. 
-You can build the image and run the container from the project root directory by typing: 
+Karta tries to make those connections visible and interactive. Whether that's actually useful remains to be seen, but it's worth exploring.
 
-    docker compose up
+---
 
-This command will build the `karta-rust-devenv` docker image, if it does not already exist, and 
-start the container. After that it is possible to run e.g. VSCode and connect to this running container by 
-executing the "Dev Containers: Attach to running container" command, and chose the correct container. 
-This will open a new VSCode instance which is now running within our rust development container. 
-If you install rust- or any other plugin to VSCode, it will be valid only when running this container. 
-
-The project directory is to be found in `/project` directory. Use the terminal from VSCode to run 
-any command within the context of docker container. 
-
-Resources:
-- https://github.com/bevyengine/bevy/issues/11768 
-- https://github.com/bevyengine/bevy/discussions/4953#discussioncomment-8571666
-
-#### Running from docker container
-
-First you have to [install NVIDIA container toolkit on host](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html), 
-The script is for example: 
-
-    curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg \
-    && curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
-    sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
-    sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
-    sudo apt-get install -y nvidia-container-toolkit
-    sudo nvidia-ctk runtime configure --runtime=docker
+*Built for creative work that doesn't fit neatly into folders.*
 
 

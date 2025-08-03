@@ -1,8 +1,15 @@
-use std::path::PathBuf;
+use std::{error::Error, path::PathBuf};
 
 use agdb::{DbError, DbValue};
+use uuid::Uuid;
 
 use super::nodetype::ARCHETYPES;
+
+#[derive(Debug)]
+pub enum NodeHandle {
+    Path(NodePath),
+    Uuid(Uuid),
+}
 
 /// Newtype wrapper for the node path. Acts as the main struct for
 /// creating and modifying node paths, turning them into db aliases/strings and
@@ -12,24 +19,49 @@ pub struct NodePath(PathBuf);
 
 impl NodePath {
     /// Get NodePath of the root node. Note that this is not
-    /// the user_root, which must be accessed through the graph.
+    /// the vault, which must be accessed through the graph.
     pub fn root() -> Self {
         NodePath(PathBuf::from(""))
     }
 
-    /// Get the user_root of the graph
-    pub fn user_root() -> Self {
-        NodePath(PathBuf::from("user_root"))
+    /// Get the vault of the graph
+    pub fn vault() -> Self {
+        NodePath(PathBuf::from("vault"))
     }
 
-    /// Create a new NodePath from a pathbuf relative to the user_root.
-    /// Supplying an empty pathbuf will create a NodePath to the userroot.
+    /// Create a new NodePath from a pathbuf relative to the vault.
+    /// Supplying an empty pathbuf will create a NodePath to the userroot (vault).
+    /// If the path is "vault", it also returns NodePath::vault().
+    /// Otherwise, it prepends "vault/" to the given path.
     pub fn new(path: PathBuf) -> Self {
-        if path.to_str().unwrap().is_empty() {
-            return NodePath::user_root();
+        let path_str_opt = path.to_str();
+
+        if path_str_opt.map_or(true, |s| s.is_empty()) {
+            // Handles empty path
+            return NodePath::vault();
         }
-        let root = NodePath::user_root().buf().clone();
-        return NodePath(root.join(path));
+
+        // We know path_str_opt is Some(path_str) at this point.
+        // Check if the path is exactly "vault"
+        if path == PathBuf::from("vault") {
+            return NodePath::vault();
+        }
+
+        // Check if path already starts with "vault/"
+        // PathBuf::components().next() can be used to check the first part robustly.
+        let mut components = path.components();
+        if let Some(std::path::Component::Normal(first_comp)) = components.next() {
+            if first_comp == std::ffi::OsStr::new("vault") {
+                // Path already correctly starts with "vault" (e.g., "vault/foo.txt")
+                // So, we can use the path as is, without prepending another "vault/".
+                return NodePath(path);
+            }
+        }
+
+        // For other paths that do not start with "vault" (e.g., "foo.txt", "bar/baz.txt"),
+        // prepend "vault/" to make them relative to the vault concept.
+        let vault_prefix_pb = NodePath::vault().0; // PathBuf::from("vault")
+        NodePath(vault_prefix_pb.join(path))
     }
 
     pub fn join(&self, path: &str) -> Self {
@@ -102,21 +134,25 @@ impl NodePath {
             if NodePath::atype(atype) == *self {
                 return true;
             }
-        } 
+        }
         false
     }
 
-    /// Get the absolute file path, including the user_root. Root path must be provided.
+    /// Get the absolute file path, including the vault. Root path must be provided.
     /// Note that this function doesn't take into account whether the path exists or not.
     pub fn full(&self, root_path: &PathBuf) -> PathBuf {
         let full_path = root_path.clone();
-        let path_to_join = self.0.strip_prefix("user_root").unwrap_or(&self.0).to_path_buf();
+        let path_to_join = self
+            .0
+            .strip_prefix("vault")
+            .unwrap_or(&self.0)
+            .to_path_buf();
         full_path.join(path_to_join)
     }
 
-    /// Get a NodePath from an absolute path and the vault user_root path.
+    /// Get a NodePath from an absolute path and the vault vault path.
     /// users/me/projects/my_vault/big/medium/small.txt -> NodePath("big/medium/small.txt")
-    /// NodePath("big/medium/small.txt").alias() -> "/user_root/big/medium/small.txt"
+    /// NodePath("big/medium/small.txt").alias() -> "/vault/big/medium/small.txt"
     pub fn from_dir_path(root_path: &PathBuf, file_path: &PathBuf) -> Self {
         let relative_path = file_path.strip_prefix(root_path).unwrap_or(file_path);
         NodePath::new(relative_path.to_path_buf())
@@ -129,17 +165,62 @@ impl NodePath {
             None => None,
         }
     }
+
+    /// Checks if the NodePath represents the virtual root node ("").
+    pub fn is_root(&self) -> bool {
+        self.0 == PathBuf::from("")
+    }
+
+    /// Checks if the NodePath represents the vault root node ("vault").
+    pub fn is_vault_root(&self) -> bool {
+        self.0 == PathBuf::from("vault")
+    }
+
+    /// If the path is under "vault/" (e.g., "vault/foo/bar"), returns "foo/bar".
+    /// If the path is "vault", returns an empty string.
+    /// Otherwise (e.g., for the virtual root ""), returns None.
+    pub fn strip_vault_prefix(&self) -> Option<String> {
+        let path_str = self.0.to_string_lossy();
+        if path_str == "vault" {
+            Some("".to_string())
+        } else if path_str.starts_with("vault/") {
+            Some(path_str["vault/".len()..].to_string())
+        } else {
+            None
+        }
+    }
+
+    pub fn reparent(
+        &self,
+        old_base: &NodePath,
+        new_base: &NodePath,
+    ) -> Result<NodePath, Box<dyn Error>> {
+        let relative_path = self
+            .0
+            .strip_prefix(&old_base.0)
+            .map_err(|_| "Node is not a descendant of the old base path")?;
+        let new_path_buf = new_base.0.join(relative_path);
+        Ok(NodePath(new_path_buf))
+    }
 }
 
 impl From<String> for NodePath {
-    fn from(path: String) -> Self {
-        NodePath::new(PathBuf::from(path))
+    fn from(path_str: String) -> Self {
+        if path_str == "vault" {
+            return NodePath::vault();
+        }
+        // NodePath::new will handle empty string correctly (returns NodePath::vault())
+        // and prepend "vault/" to other non-empty, non-"vault" strings.
+        NodePath::new(PathBuf::from(path_str))
     }
 }
 
 impl From<&str> for NodePath {
-    fn from(path: &str) -> Self {
-        NodePath::new(PathBuf::from(path))
+    fn from(path_str: &str) -> Self {
+        if path_str == "vault" {
+            return NodePath::vault();
+        }
+        NodePath::new(PathBuf::from(path_str))
     }
 }
 
@@ -160,6 +241,4 @@ impl From<NodePath> for DbValue {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    
 }

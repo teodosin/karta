@@ -1,23 +1,27 @@
-use std::{error::Error, path::{self, PathBuf}};
+use std::{
+    error::Error,
+    path::{self, PathBuf},
+};
 
 use agdb::QueryBuilder;
 
 use crate::{
-    elements::nodetype::NodeType,
-    graph_traits::{self, graph_core::GraphCore, graph_node::GraphNode},
+    elements::{node::ROOT_UUID, nodetype::ARCHETYPES},
+    graph_traits::{self, graph_core::GraphCore, graph_node::GraphNodes},
+    prelude::{DataNode, GraphEdge, NodePath, NodeTypeId, StoragePath},
 };
 
-use super::{node::Node, node_path::NodePath, nodetype::{NodeTypeId, ARCHETYPES}, GraphAgdb, StoragePath};
+use super::GraphAgdb;
 
 /// Implementation block for the Graph struct itself.
 /// Includes constructors and utility functions.
 impl GraphCore for GraphAgdb {
-    fn storage_path(&self) -> graph_traits::StoragePath {
+    fn storage_path(&self) -> PathBuf {
         self.storage_path.clone()
     }
 
-    fn user_root_dirpath(&self) -> PathBuf {
-        let path = self.root_path.clone();
+    fn vault_dirpath(&self) -> PathBuf {
+        let path = self.vault_fs_path.clone();
         // println!("root_path: {:?}", path);
         path
     }
@@ -28,7 +32,7 @@ impl GraphCore for GraphAgdb {
 
     /// Gets the name of the root directory without the full path
     fn root_name(&self) -> String {
-        self.root_path
+        self.vault_fs_path
             .file_name()
             .unwrap()
             .to_str()
@@ -39,34 +43,16 @@ impl GraphCore for GraphAgdb {
     /// Constructor. Panics if the db cannot be created.
     ///
     /// Takes the desired root directory of the graph as a parameter and the name for the db.
-    /// The name of the root directory will become the user_root of the graph,
+    /// The name of the root directory will become the vault of the graph,
     /// as first child of the root node.
     ///
     /// Creates the db at the storage_path, or initialises the db if it already exists there.
     ///
     /// TODO: Add error handling.
-    fn new(name: &str, root_path: PathBuf, custom_storage_path: Option<PathBuf>) -> Self {
-        let storage_enum = match custom_storage_path {
-            Some(path) => graph_traits::StoragePath::Custom(path),
-            None => graph_traits::StoragePath::Default,
-        };
-        let storage_path = match storage_enum.clone() {
-            StoragePath::Custom(path) => path,
-            StoragePath::Default => {
-                directories::ProjectDirs::from("com", "teodosin_labs", "karta_server")
-                    .unwrap()
-                    .data_dir()
-                    .to_path_buf()
-            }
-        };
-        let storage_dir = storage_path.join(".kartaVault");
-
-
-        // Create the path if it doesn't exist
+    fn new(name: &str, vault_fs_path: PathBuf, storage_dir: PathBuf) -> Self {
         if !storage_dir.exists() {
             std::fs::create_dir_all(&storage_dir).expect("Failed to create storage path");
         }
-        
         let db_path = storage_dir.join(format!("{}.agdb", name));
 
         // Check if the database already exists
@@ -77,208 +63,58 @@ impl GraphCore for GraphAgdb {
         let mut giraphe = GraphAgdb {
             name: name.to_string(),
             db,
-            root_path: root_path.into(),
-            storage_path: storage_enum,
-            maintain_readable_files: false,
+            vault_fs_path: vault_fs_path.into(),
+            storage_path: storage_dir,
         };
 
+        // Indexes for faster lookup based on attributes
+        giraphe.db.exec_mut(QueryBuilder::insert().index("uuid").query());
+        giraphe.db.exec_mut(QueryBuilder::insert().index("ntype").query());
+        giraphe.db.exec_mut(QueryBuilder::insert().index("path").query());
+
         if !open_existing {
-            giraphe.init_archetype_nodes();
-        }
+            let archetypes = ARCHETYPES;
 
-        return giraphe;
-    }
+            archetypes.iter().for_each(|atype| {
+                let atype_path = NodePath::atype(*atype);
+                let ntype = if atype_path == NodePath::root() {
+                    NodeTypeId::root_type()
+                } else if atype_path == NodePath::vault() {
+                    NodeTypeId::dir_type()
+                } else {
+                    NodeTypeId::archetype_type()
+                };
 
-    /// Create the initial archetype nodes for the graph. Includes
-    /// the root,
-    /// attributes,
-    /// settings,
-    /// nodetypes
-    fn init_archetype_nodes(&mut self) {
-        let archetypes = ARCHETYPES;
+                let node = DataNode::new(&atype_path, ntype);
+                let node_uuid = node.uuid();
 
-        // println!("Length of archetypes {}", archetypes.len());
+                giraphe.insert_nodes(vec![node]);
 
-        archetypes.iter().for_each(|at| {
-            // println!("{}", at);
-        });
 
-        archetypes.iter().for_each(|atype| {
-            let atype_path = NodePath::atype(*atype);
-            // println!("Atypepath {:?}", atype_path);
+                if atype_path != NodePath::root() {
+                    let root_to_atype_edge =
+                        crate::prelude::Edge::new_cont(ROOT_UUID, node_uuid);
 
-            // println!("Creating archetype node: {}", atype_path.alias());
-
-            let ntype = if atype_path == NodePath::root() {
-                // println!("Root node in question");
-                NodeTypeId::root_type()
-            } else {
-                // println!("Archetype node in question");
-                NodeTypeId::archetype_type()
-            };
-
-            let node: Node = Node::new(&atype_path, ntype);
-
-            // println!("alias is {}", atype_path.alias());
-
-            let query = self.db.exec_mut(
-                &QueryBuilder::insert()
-                    .nodes()
-                    .aliases(atype_path.alias())
-                    .values(&node)
-                    .query(),
-            );
-
-            match query {
-                Ok(_) => {
-                    // println!("Created archetype node: {}", atype_path.alias());
-                }
-                Err(ref err) => {
-                    panic!("Failed to create archetype node: {}", err);
-                    // println!("Failed to create archetype node: {}", err);
-                }
-            }
-
-            if atype_path != NodePath::root() {
-                // println!(
-                //     "autoparent: parent {:?} to child {:?}",
-                //     &NodePath::root(),
-                //     &atype_path
-                // );
-                self.autoparent_nodes(&NodePath::root(), &atype_path);
-            } else {
-                // println!("Root node, no autoparenting");
-            }
-        });
-    }
-
-    /// Syncs a node in the db with the file system. Errs on archetype nodes as
-    /// well as other virtual nodes. 
-    fn index_single_node(&mut self, path: &NodePath) -> Result<Node, Box<dyn Error>>{
-        
-        let full_path = path.full(&self.root_path);
-        let is_user_root = full_path == self.user_root_dirpath();
-
-        let mut node_alias: String;
-
-        let mut is_phys: bool;
-        let mut is_dir: bool;
-
-        // The user_root is a special case, because its directory name and its
-        // alias are different. So we need to check for that.
-        if is_user_root {
-            node_alias = NodePath::user_root().alias();
-            is_phys = full_path.exists();
-            is_dir = full_path.is_dir();
-            assert!(is_phys && is_dir, "User root directory must exist and be a directory");
-        } else {
-            if path.is_atype() {
-                return Err("Archetype nodes cannot be indexed".into())
-            }
-            node_alias = path.alias();
-            is_phys = full_path.exists();
-            is_dir = full_path.is_dir();
-        }
-
-        // println!("Indexing node: {}", node_alias);
-        // println!("Is phys: {} is dir: {}", is_phys, is_dir);
-
-        // Handle the case where the node is already in the db
-        let node = self.db.exec(&QueryBuilder::select().ids(node_alias.clone()).query());
-        if node.is_ok() {
-            // println!("Node already exists");
-            return Err("Node already exists".into())
-        }
-
-        if is_phys {
-            // println!("Indexing node: {}", node_alias);
-            if is_dir {
-                return self.create_node_by_path(path, Some(NodeTypeId::dir_type()))
-            } else {
-                return self.create_node_by_path(path, Some(NodeTypeId::file_type()))
-            } 
-        } else {
-            return Err("Cannot index virtual node".into())
-        }
-        return Err("Indexing of path failed".into())
-    }
-
-    /// Syncs the node's and its relationships in the db with the file system.
-    fn index_node_context(&mut self, path: &NodePath) {
-        let full_path = path.full(&self.root_path);
-        let mut node_alias: String;
-
-        let is_user_root = full_path == self.user_root_dirpath();
-        let mut is_phys: bool;
-        let mut is_dir: bool;
-
-        // The user_root is a special case, because its directory name and its
-        // alias are different. So we need to check for that.
-        if is_user_root {
-            node_alias = NodePath::user_root().alias();
-            is_phys = full_path.exists();
-            is_dir = full_path.is_dir();
-            assert!(is_phys && is_dir, "User root directory must exist and be a directory");
-        } else {
-            node_alias = path.alias();
-            is_phys = full_path.exists();
-            is_dir = full_path.is_dir();
-        }
-
-        // Only the user_root nodes is guaranteed to not have a valid parent
-        // in the current vault. Other parents should be indexed. 
-        if !is_user_root {
-            let parent = path.parent();
-            if parent.is_some(){
-                self.index_single_node(&parent.unwrap());
-            }
-        }
-
-        // If the path is a directory, we must check for its contents in the 
-        // file system and index them.
-        if is_dir {
-            let children = full_path.read_dir().unwrap();
-            children.into_iter().for_each(|child| {
-                match child {
-                    Ok(child) => {
-                        let path = child.path();
-                        let child_path = NodePath::from_dir_path(&self.user_root_dirpath(), &path);
-                        // println!("Indexing child: {:?}", child_path);
-
-                        self.index_single_node(&child_path);
-                    },
-                    Err(err) => {
-                        // println!("Error reading directory: {}", err);
-                    }
+                    giraphe.insert_edges(vec![root_to_atype_edge]);
                 }
             });
         }
 
-        // TODO: Check an existing node's relationships to find nodes that need updating 
-
-        // More code here pls
-        // More pls
-        // Pls?
-    }
-
-    fn cleanup_dead_nodes(&mut self) {
-        todo!()
-    }
-
-    fn maintain_readable_files(&mut self, maintain: bool) {
-        self.maintain_readable_files = maintain;
+        return giraphe;
     }
 
     fn get_all_aliases(&self) -> Vec<String> {
         let all = self.db().exec(&QueryBuilder::select().aliases().query());
         match all {
             Ok(aliases) => {
-                let all: Vec<String> = aliases.elements.iter().map(|alias| {
-                    alias.values[0].value.to_string()
-                }).collect();
+                let all: Vec<String> = aliases
+                    .elements
+                    .iter()
+                    .map(|alias| alias.values[0].value.to_string())
+                    .collect();
 
                 all
-            },
+            }
             Err(err) => {
                 // println!("Error: {}", err);
                 vec![]

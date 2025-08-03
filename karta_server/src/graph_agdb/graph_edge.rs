@@ -1,25 +1,19 @@
-use std::{error::Error, path::PathBuf};
+use std::error::Error;
 
-use agdb::{DbElement, QueryBuilder};
+use agdb::{DbElement, DbUserValue, QueryBuilder};
+use uuid::Uuid;
 
-use crate::{elements, graph_traits::graph_edge::GraphEdge};
+use crate::{graph_traits::graph_edge::GraphEdge, prelude::Edge};
 
-use super::{attribute::{Attribute, RESERVED_EDGE_ATTRS}, edge::Edge, node_path::NodePath, GraphAgdb, StoragePath};
+use super::GraphAgdb;
 
 impl GraphEdge for GraphAgdb {
-    fn get_edge_strict(
-        &self,
-        from: &NodePath,
-        to: &NodePath,
-    ) -> Result<Edge, Box<dyn Error>> {
-        let from_al = from.alias();
-        let to_al = to.alias();
-
+    fn get_edge_strict(&self, from: &Uuid, to: &Uuid) -> Result<Edge, Box<dyn Error>> {
         let edge_query = self.db.exec(
             &QueryBuilder::search()
-            .from(from_al)
-            .to(to_al)
-            .query()
+                .from(from.to_string())
+                .to(to.to_string())
+                .query(),
         );
 
         if edge_query.is_err() {
@@ -28,117 +22,244 @@ impl GraphEdge for GraphAgdb {
         let edge_query = edge_query.unwrap();
 
         let edge_elems: Vec<&DbElement> = edge_query
-            .elements.iter().filter(|e| {
-                e.id.0 < 0
-            })
+            .elements
+            .iter()
+            .filter(|e| e.id.0 < 0)
             .collect::<Vec<_>>();
 
-        assert_eq!(edge_elems.len(), 1, "Expected only 1 edge, got {}", edge_elems.len());
+        if edge_elems.len() != 1 {
+            return Err(format!("Expected 1 edge, got {}", edge_elems.len()).into());
+        }
         let edge_id = edge_elems.first().unwrap().id;
 
         // The search doesn't return the values, so we have to do a separate select
-        // on the edge id. 
-        let keys = Vec::new();
-        let data_query = self.db.exec(
-            &QueryBuilder::select().values(keys).ids(edge_id).query()
-        );
+        // on the edge id.
+        let data_query = self
+            .db
+            .exec(&QueryBuilder::select().ids(edge_id).query());
 
         if data_query.is_err() {
             return Err("Failed to get edge data".into());
         }
         let data_query = data_query.unwrap();
-        let data_elem = data_query.elements.first().unwrap();
-        // println!("Edge element: {:#?}", data_elem);
+        let data_elem = data_query
+            .elements
+            .first()
+            .ok_or("No element found for edge id")?;
 
-        let edge = Edge::try_from(data_elem.clone());
+        Edge::try_from(data_elem.clone()).map_err(|e| e.into())
+    }
 
-        // println!("Edge: {:#?}", edge);
+    fn insert_edges(&mut self, edges: Vec<Edge>) {
+        for edge in edges {
+            let source_uuid = edge.source();
+            let target_uuid = edge.target();
 
-        match edge {
-            Ok(edge) => {
-                return Ok(edge);
-            }
-            Err(e) => {
-                return Err(e.into());
+            println!("[insert_edges] Creating edge from {} to {}", source_uuid, target_uuid);
+
+            let edge_query_result = self.db.exec_mut(
+                &QueryBuilder::insert()
+                    .edges()
+                    .from(source_uuid.to_string())
+                    .to(target_uuid.to_string())
+                    .values_uniform(edge)
+                    .query(),
+            );
+
+            match edge_query_result {
+                Ok(_) => println!("[insert_edges] Successfully inserted edge."),
+                Err(e) => println!("[insert_edges] Error inserting edge: {:?}", e),
             }
         }
     }
 
-    fn create_edge(
-        &mut self,
-        source_path: &NodePath,
-        target_path: &NodePath,
-    ) -> Result<(), Box<dyn Error>> {
-        let alias = source_path.alias();
-        let child_alias = target_path.alias();
 
-        todo!()
+    /// Delete edges by their UUIDs. If an edge has the "contains" attribute, it will be cleared instead of deleted.
+    fn get_edges_between_nodes(&self, nodes: &[Uuid]) -> Result<Vec<Edge>, Box<dyn Error>> {
+        if nodes.len() < 2 {
+            return Ok(Vec::new());
+        }
+
+        let mut all_edges = std::collections::HashMap::new();
+
+        for i in 0..nodes.len() {
+            for j in 0..nodes.len() {
+                if i == j {
+                    continue;
+                }
+
+                let source_uuid = nodes[i].to_string();
+                let target_uuid = nodes[j].to_string();
+
+                let query = QueryBuilder::select().ids(
+                    QueryBuilder::search()
+                        .from(source_uuid)
+                        .to(target_uuid)
+                        .query()
+                ).query();
+
+                if let Ok(result) = self.db.exec(&query) {
+                    for element in result.elements.into_iter().filter(|e| e.id.0 < 0) {
+                        if let Ok(edge) = Edge::try_from(element) {
+                            all_edges.insert(edge.uuid(), edge);
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(all_edges.values().cloned().collect())
     }
 
-    /// Changes the parent directory of a node. If the node is physical, it will be moved in the file system.
-    /// If the node is virtual, the parent will be changed in the db.
-    /// Note that due to the implementation, all children of the node will have to be reindexed, recursively.
-    fn reparent_node(
-        &self,
-        node_path: &NodePath,
-        new_parent_path: &NodePath,
-    ) -> Result<(), Box<dyn Error>> {
-        // Check if node is in database at all
-        let alias = node_path.alias();
-        let existing = self.db.exec(&QueryBuilder::select().ids(alias).query());
-        
-        todo!()
+    fn delete_edges(&mut self, edges: &[(Uuid, Uuid)]) -> Result<(), Box<dyn Error>> {
+        self.db.transaction_mut(|t| -> Result<(), agdb::QueryError> {
+            for (source, target) in edges {
+                // First, get the edge to determine if it's a "contains" edge.
+                let get_edge_query = QueryBuilder::select().ids(
+                    QueryBuilder::search()
+                        .from(source.to_string())
+                        .to(target.to_string())
+                        .query()
+                ).query();
+
+                let query_result = t.exec(&get_edge_query)?;
+
+                if let Some(element) = query_result.elements.iter().find(|e| e.id.0 < 0) {
+                    let edge = Edge::try_from(element.clone())?;
+
+                    if edge.is_contains() {
+                        // It's a "contains" edge. This type of edge cannot be deleted via this endpoint.
+                        // Return an error to abort the transaction.
+                        return Err(agdb::QueryError::from("Deletion of 'contains' edges is not allowed."));
+                    } else {
+                        // It's a normal edge, so we can remove it entirely.
+                        let remove_edge_query = QueryBuilder::remove()
+                            .ids(element.id)
+                            .query();
+                        t.exec_mut(&remove_edge_query)?;
+                    }
+                }
+            }
+            Ok(())
+        })?;
+
+        Ok(())
     }
 
-    /// Moves an edge and all its attributes to a new source and target. Parent edges can't be reconnected this way,
-    /// use the reparent_node function instead.
     fn reconnect_edge(
-        &self,
-        edge: Edge,
-        from: &NodePath,
-        to: &NodePath,
+        &mut self,
+        old_from: &Uuid,
+        old_to: &Uuid,
+        new_from: &Uuid,
+        new_to: &Uuid,
+    ) -> Result<Edge, Box<dyn Error>> {
+        let new_edge = self.db.transaction_mut(|t| {
+            // Replicate get_edge_strict logic inside transaction
+            let edge_query = t.exec(
+                &QueryBuilder::search()
+                    .from(old_from.to_string())
+                    .to(old_to.to_string())
+                    .query(),
+            )?;
+
+            let edge_elems: Vec<&DbElement> = edge_query
+                .elements
+                .iter()
+                .filter(|e| e.id.0 < 0)
+                .collect::<Vec<_>>();
+
+            if edge_elems.len() != 1 {
+                return Err(agdb::QueryError::from(format!(
+                    "Expected 1 edge, got {}",
+                    edge_elems.len()
+                )));
+            }
+            let edge_id = edge_elems.first().unwrap().id;
+
+            let data_query = t.exec(&QueryBuilder::select().ids(edge_id).query())?;
+            let data_elem = data_query
+                .elements
+                .first()
+                .ok_or_else(|| agdb::QueryError::from("No element found for edge id"))?;
+
+            let original_edge = Edge::try_from(data_elem.clone())?;
+
+            if original_edge.is_contains() {
+                return Err(agdb::QueryError::from(
+                    "Reconnection of 'contains' edges is not allowed via this method.",
+                ));
+            }
+
+            // 1. Delete old edge
+            t.exec_mut(&QueryBuilder::remove().ids(edge_id).query())?;
+
+            // 2. Create new edge
+            let mut new_edge = Edge::new(*new_from, *new_to);
+            new_edge.set_attributes(original_edge.attributes().clone());
+
+            t.exec_mut(
+                &QueryBuilder::insert()
+                    .edges()
+                    .from(new_from.to_string())
+                    .to(new_to.to_string())
+                    .values_uniform(new_edge.clone())
+                    .query(),
+            )?;
+
+            Ok(new_edge)
+        })?;
+
+        Ok(new_edge)
+    }
+
+    fn reparent_node(
+        &mut self,
+        node_uuid: &Uuid,
+        old_parent_uuid: &Uuid,
+        new_parent_uuid: &Uuid,
     ) -> Result<(), Box<dyn Error>> {
-        todo!()
-    }
+        self.db.transaction_mut(|t| -> Result<(), agdb::QueryError> {
+            // 1. Find the existing contains edge from old parent to node
+            let find_edge_query = QueryBuilder::select().ids(
+                QueryBuilder::search()
+                    .from(old_parent_uuid.to_string())
+                    .to(node_uuid.to_string())
+                    .query()
+            ).query();
 
-    fn insert_edge(&self, edge: Edge) -> Result<(), Box<dyn Error>> {
-        Ok(())
-    }
-
-    /// Delete an edge from the graph. Edges with the attribute "contains" refer to the parent-child relationship
-    /// between nodes and will be ignored. All other attributes will be cleared from them instead.
-    fn delete_edge(&self, edge: Edge) -> Result<(), Box<dyn Error>> {
-        Ok(())
-    }
-
-    /// Insert attributes to an edge. Ignore reserved attribute names. Update attributes that already exist.
-    fn insert_edge_attr(&self, edge: Edge, attr: Attribute) -> Result<(), Box<dyn Error>> {
-        use RESERVED_EDGE_ATTRS;
-        let slice = attr.name.as_str();
-        let is_reserved = RESERVED_EDGE_ATTRS.contains(&slice);
-
-        if is_reserved {
-            return Err(format!(
-                "Cannot delete reserved attribute name: {}",
-                slice
-            ).into());
-        }
-
-        Ok(())
-    }
-
-    /// Delete attributes from an edge. Ignore reserved attribute names.
-    fn delete_edge_attr(&self, edge: Edge, attr: Attribute) -> Result<(), Box<dyn Error>> {
-        use RESERVED_EDGE_ATTRS;
-        let slice = attr.name.as_str();
-        let is_reserved = RESERVED_EDGE_ATTRS.contains(&slice);
-
-        if is_reserved {
-            return Err(format!(
-                "Cannot insert reserved attribute name: {}",
-                slice
-            ).into());
-        }
+            let query_result = t.exec(&find_edge_query)?;
+            
+            if let Some(element) = query_result.elements.iter().find(|e| e.id.0 < 0) {
+                let edge = Edge::try_from(element.clone())?;
+                
+                // Verify it's actually a contains edge before proceeding
+                if edge.is_contains() {
+                    // 2. Delete the old contains edge (bypassing normal restrictions)
+                    t.exec_mut(&QueryBuilder::remove().ids(element.id).query())?;
+                    
+                    // 3. Create new contains edge from new parent to node
+                    let new_edge = Edge::new_cont(*new_parent_uuid, *node_uuid);
+                    t.exec_mut(
+                        &QueryBuilder::insert()
+                            .edges()
+                            .from(new_parent_uuid.to_string())
+                            .to(node_uuid.to_string())
+                            .values_uniform(new_edge)
+                            .query(),
+                    )?;
+                } else {
+                    return Err(agdb::QueryError::from(
+                        "Edge found is not a contains edge - reparent_node can only move contains edges"
+                    ));
+                }
+            } else {
+                return Err(agdb::QueryError::from(
+                    "No contains edge found between old parent and node"
+                ));
+            }
+            
+            Ok(())
+        })?;
 
         Ok(())
     }

@@ -6,8 +6,11 @@ use crate::elements::node;
 // Determining a sound architecture for node types is difficult and
 // not urgent quite yet.
 
+pub const KARTA_VERSION: &str = "0.1.0";
 
-pub const ARCHETYPES: [&str; 5] = ["", "user_root", "attributes", "nodetypes", "settings"];
+
+// pub const ARCHETYPES: [&str; 5] = ["", "vault", "attributes", "nodetypes", "settings"];
+pub const ARCHETYPES: [&str; 2] = ["", "vault"];
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct NodeTypeId {
@@ -16,96 +19,65 @@ pub struct NodeTypeId {
 }
 
 impl NodeTypeId {
-    pub fn new(type_path: String, version: String) -> Self {
-        Self { type_path, version }
-    }
-
     pub fn to_string(&self) -> String {
         format!("{}@{}", self.type_path, self.version)
+    }
+
+    pub fn new(type_path: &str) -> Self {
+        Self {
+            type_path: type_path.to_string(),
+            version: KARTA_VERSION.to_string(),
+        }
     }
 
     pub fn root_type() -> Self {
         Self {
             type_path: "core/root".to_string(),
-            version: "1.0".to_string(),
+            version: KARTA_VERSION.to_string(),
         }
     }
 
     pub fn archetype_type() -> Self {
         Self {
             type_path: "core/archetype".to_string(),
-            version: "1.0".to_string(),
+            version: KARTA_VERSION.to_string(),
         }
     }
 
     pub fn dir_type() -> Self {
         Self {
-            type_path: "core/dir".to_string(),
-            version: "1.0".to_string(),
+            type_path: "core/fs/dir".to_string(),
+            version: KARTA_VERSION.to_string(),
         }
     }
 
     /// Generic file type. 
     pub fn file_type() -> Self {
         Self {
-            type_path: "core/file".to_string(),
-            version: "1.0".to_string(),
+            type_path: "core/fs/file".to_string(),
+            version: KARTA_VERSION.to_string(),
         }
     }
-}
 
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub enum NodePhysicality {
-    None,
-    Dir,
-    File(String),  // stores the file extension
-}
+    pub fn image_type() -> Self {
+    	Self {
+    		type_path: "core/image".to_string(),
+    		version: KARTA_VERSION.to_string(),
+    	}
+    }
+   
+    pub fn virtual_generic() -> Self {
+        Self {
+            type_path: "core/virtual_generic".to_string(),
+            version: KARTA_VERSION.to_string(),
+        }
+    }
 
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub enum DataType {
-    String,
-    Int,
-    Float,
-    Bool,
-    Vec2,
-    Vec3,
-    Vec4,
-    Mat4,
-    Texture,
-    Sound,
-    Font,
-    Mesh,
-    GCloud,
-    SDFunction,
-    SDField,
-    Material,
-    Camera,
-    Light,
-    Script,
-    Other(String),
-}
+    /// Check if this is the root node specifically
+    pub fn is_root_node(&self) -> bool {
+        self.type_path == "core/root"
+    }
 
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct NodeType {
-    type_id: NodeTypeId,
-    physicality: NodePhysicality,
-    inputs: Vec<InputSocket>,
-    outputs: Vec<OutputSocket>,
-}
-
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct InputSocket {
-    name: String,
-    data_type: DataType,
-    default_value: Option<String>,
-    is_multiple: bool,
-}
-
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct OutputSocket {
-    name: String,
-    data_type: DataType,
-    is_multiple: bool,
 }
 
 impl TryFrom<DbValue> for NodeTypeId {

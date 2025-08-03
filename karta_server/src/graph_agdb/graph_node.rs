@@ -1,496 +1,296 @@
-use std::{error::Error, path::PathBuf, vec};
+use std::{collections::VecDeque, error::Error, path::PathBuf, time::SystemTime, vec};
 
-use agdb::{DbElement, DbId, QueryBuilder};
+use agdb::{DbElement, DbId, DbUserValue, QueryBuilder, CountComparison, QueryCondition};
+use uuid::Uuid;
 
 use crate::{
-    elements::{self, edge::Edge, nodetype::NodeType},
-    graph_traits::graph_node::GraphNode,
-    prelude::GraphCore,
+    elements::{self, edge::Edge, node, node_path::NodeHandle},
+    graph_traits::graph_node::GraphNodes,
+    prelude::{DataNode, GraphCore, GraphEdge, NodePath, NodeTypeId},
 };
 
-use super::{
-    attribute::{Attribute, RelativePosition, RESERVED_NODE_ATTRS}, node::Node, node_path::NodePath, nodetype::NodeTypeId, GraphAgdb, StoragePath
-};
+use super::GraphAgdb;
 
-impl GraphNode for GraphAgdb {
-    fn open_node(&self, path: &NodePath) -> Result<Node, Box<dyn Error>> {
-        let alias = path.alias();
+impl GraphNodes for GraphAgdb {
+    fn open_node(&self, handle: &NodeHandle) -> Result<DataNode, Box<dyn Error>> {
+        let query_result = match handle {
+            NodeHandle::Path(path) => self.db.exec(
+                &QueryBuilder::select()
+                    .search()
+                    .index("path")
+                    .value(path.alias())
+                    .query(),
+            ),
+            NodeHandle::Uuid(id) => self.db.exec(
+                &QueryBuilder::select()
+                    .ids(id.to_string())
+                    .query(),
+            ),
+        }?;
 
-        let node = self.db.exec(&QueryBuilder::select().ids(alias).query());
+        let db_element = query_result
+            .elements
+            .first()
+            .ok_or_else(|| format!("Node with handle {:?} not found in DB", handle))?;
 
-        match node {
-            Ok(node) => {
-                let node = node.elements.first().unwrap().clone();
-                let node = Node::try_from(node);
-
-                // Dirty
-                Ok(node.unwrap())
-            }
-            Err(_err) => {
-                return Err("Could not open node".into());
-            }
-        }
+        DataNode::try_from(db_element.clone()).map_err(|e| e.into())
     }
 
-    fn open_node_connections(&self, path: &NodePath) -> Vec<(Node, Edge)> {
-        // Step 1: Check if the node is a physical node in the file system.
-        // Step 2: Check if the node exists in the db.
-        // Step 3: Check if all the physical dirs and files in the node are in the db.
-        // Step 4: The ones that are not, add to the db.
-        // Step 5?: Delete the physical nodes in the db that are not in the file system.
-        // THOUGH Automatically deleting the nodes
-        // honestly seems like a bad idea. Maybe a warning should be issued instead.
+    fn open_nodes_by_uuid(&self, uuids: Vec<Uuid>) -> Result<Vec<DataNode>, Box<dyn Error>> {
+        if uuids.is_empty() {
+            return Ok(Vec::new());
+        }
 
-        // Resolve the full path to the node
-        let full_path = path.full(&self.root_path);
-        let is_physical = full_path.exists();
-        let is_dir = full_path.is_dir();
+        let mut datanodes = Vec::new();
+        
+        // Query each UUID individually to handle missing nodes gracefully
+        for uuid in uuids {
+            let uuid_string = uuid.to_string();
+            match self.db.exec(
+                &QueryBuilder::select()
+                    .ids(uuid_string)
+                    .query(),
+            ) {
+                Ok(query_result) => {
+                    // Try to convert each element that exists
+                    for element in query_result.elements {
+                        if let Ok(datanode) = DataNode::try_from(element) {
+                            datanodes.push(datanode);
+                        }
+                    }
+                }
+                Err(_) => {
+                    // Node doesn't exist, skip it
+                    continue;
+                }
+            }
+        }
 
-        let as_str = path.alias();
+        Ok(datanodes)
+    }
+
+    fn open_node_connections(&self, path: &NodePath) -> Vec<(DataNode, Edge)> {
+        println!("[open_node_connections] Getting connections for path: '{}'", path.alias());
+        let focal_node = match self.open_node(&NodeHandle::Path(path.clone())) {
+            Ok(node) => node,
+            Err(_) => {
+                println!("[open_node_connections] -> Focal node not found. Returning empty vec.");
+                return vec![];
+            }
+        };
+        let focal_uuid_str = focal_node.uuid().to_string();
+        println!("[open_node_connections] -> Focal node UUID: {}", focal_uuid_str);
 
         let mut node_ids: Vec<DbId> = Vec::new();
         let mut edge_ids: Vec<DbId> = Vec::new();
 
-        // Links from node
-        // println!("Searching for links from node {}", as_str);
-        let links = self.db.exec(
-            &QueryBuilder::search()
-                .from(path.alias())
-                .where_()
-                .distance(agdb::CountComparison::LessThanOrEqual(2))
-                .query(),
-        );
+        let from_query = QueryBuilder::search().from(focal_uuid_str.clone()).where_().distance(CountComparison::LessThan(2)).query();
+        let to_query = QueryBuilder::search().to(focal_uuid_str).where_().distance(CountComparison::LessThan(2)).query();
 
-        match links {
-            Ok(links) => {
-                for elem in links.elements.iter() {
-                    if elem.id.0 < 0 {
-                        // Is edge
-                        edge_ids.push(elem.id);
-                    } else if elem.id.0 > 0 {
-                        // Is node
-                        // println!("Link: {:?}", elem);
-                        node_ids.push(elem.id);
-                    }
-                }
+        if let Ok(search_result) = self.db.exec(&from_query) {
+            println!("[open_node_connections] -> Found {} elements connected FROM focal node.", search_result.elements.len());
+            for elem in search_result.elements.iter() {
+                if elem.id.0 < 0 { edge_ids.push(elem.id); } else { node_ids.push(elem.id); }
             }
-            Err(_e) => {}
         }
 
-        // Backlinks to node
-        let backlinks = self.db.exec(
-            &QueryBuilder::search()
-                .to(path.alias())
-                .where_()
-                .distance(agdb::CountComparison::LessThanOrEqual(2))
-                .query(),
-        );
+        if let Ok(search_result) = self.db.exec(&to_query) {
+            println!("[open_node_connections] -> Found {} elements connected TO focal node.", search_result.elements.len());
+            for elem in search_result.elements.iter() {
+                if elem.id.0 < 0 { edge_ids.push(elem.id); } else { node_ids.push(elem.id); }
+            }
+        }
+        
+        let full_edges_result = self.db.exec(&QueryBuilder::select().ids(edge_ids).query());
+        let full_edges = full_edges_result.map_or(vec![], |r| r.elements);
+        println!("[open_node_connections] -> Total unique edges found: {}", full_edges.len());
 
-        match backlinks {
-            Ok(backlinks) => {
-                for elem in backlinks.elements.iter() {
-                    if elem.id.0 < 0 {
-                        // Is edge
-                        edge_ids.push(elem.id);
-                    } else if elem.id.0 > 0 {
-                        // Is node
-                        // println!("Backlink: {:?}", elem);
-                        let balias = self
-                            .db
-                            .exec(&QueryBuilder::select().aliases().ids(elem.id).query());
-                        // println!("balias: {:?}", balias);
-                        node_ids.push(elem.id);
-                    }
+        let mut connections: Vec<(DataNode, Edge)> = Vec::new();
+        let mut processed_nodes = std::collections::HashSet::new();
+
+        for db_edge in &full_edges {
+            let edge = match Edge::try_from(db_edge.clone()) {
+                Ok(e) => e,
+                Err(_) => continue,
+            };
+
+            let other_node_uuid = if *edge.source() == focal_node.uuid() {
+                *edge.target()
+            } else {
+                *edge.source()
+            };
+
+            if other_node_uuid == focal_node.uuid() { continue; }
+
+            if let Ok(data_node) = self.open_node(&NodeHandle::Uuid(other_node_uuid)) {
+                if processed_nodes.insert(data_node.uuid()) {
+                    println!("[open_node_connections] -> Adding connection: '{}' ({})", data_node.path().alias(), data_node.uuid());
+                    connections.push((data_node, edge));
                 }
             }
-            Err(_e) => {}
         }
-
-        let full_nodes = match self
-            .db
-            .exec(&QueryBuilder::select().values(vec![]).ids(node_ids).query())
-        {
-            Ok(nodes) => nodes.elements,
-            Err(_e) => vec![],
-        };
-        let full_edges = match self
-            .db
-            .exec(&QueryBuilder::select().values(vec![]).ids(edge_ids).query())
-        {
-            Ok(edges) => edges.elements,
-            Err(_e) => vec![],
-        };
-
-        let connections: Vec<(Node, Edge)> = full_nodes
-            .iter()
-            .filter_map(|node| {
-                let node = Node::try_from(node.clone()).unwrap();
-
-                // println!("Returning node {:?}", node.path());
-                // Ignore the original node
-                if node.path() == *path {
-                    return None;
-                }
-                let edge = full_edges
-                    .iter()
-                    .find(|edge| {
-                        if edge.from.unwrap() == node.id().unwrap()
-                            || edge.to.unwrap() == node.id().unwrap()
-                        {
-                            true
-                        } else {
-                            false
-                        }
-                    })
-                    .unwrap();
-                let edge = Edge::try_from(edge.clone()).unwrap();
-
-                // println!("Nodes: {:?}", node.path());
-                Some((node, edge))
-            })
-            .collect();
-
+        
+        println!("[open_node_connections] -> Returning {} connections.", connections.len());
         connections
     }
 
-    fn create_node_by_path(
-        &mut self,
-        path: &NodePath,
-        ntype: Option<NodeTypeId>,
-    ) -> Result<Node, Box<dyn Error>> {
-        let full_path = path.full(&self.root_path);
-        let alias = path.alias();
+    fn insert_nodes(&mut self, nodes: Vec<DataNode>) {
+        let mut queue: VecDeque<DataNode> = nodes.into();
+        let mut processed_paths = std::collections::HashSet::new();
 
-        // Check if the node already exists in the db.
-        // If it does, don't insert it, and return an error.
-        // Possibly redundant, unless used for updating an existing node.
-        let existing = self
-            .db
-            .exec(&QueryBuilder::select().ids(alias.clone()).query());
+        while let Some(node) = queue.pop_front() {
+            let node_path = node.path();
+            println!("[insert_nodes] Processing node: {:?}", node_path);
 
-        match existing {
-            Ok(_) => {
-                // return Err("node already exists".into());
+            if processed_paths.contains(&node_path) {
+                println!("[insert_nodes] -> Path already processed, skipping.");
+                continue;
             }
-            Err(_e) => {
-                // Node doesn't exist, proceed to insertion
+
+            if let Some(parent_path) = node_path.parent() {
+                println!("[insert_nodes] -> Checking parent: {:?}", parent_path);
+                if parent_path != NodePath::root() && parent_path != NodePath::vault() && self.open_node(&NodeHandle::Path(parent_path.clone())).is_err() {
+                    println!("[insert_nodes] -> Parent not found. Creating placeholder for {:?} and requeueing.", parent_path);
+                    queue.push_front(node);
+                    queue.push_front(DataNode::new(&parent_path, NodeTypeId::dir_type()));
+                    continue;
+                }
+                 println!("[insert_nodes] -> Parent found or is archetype. Proceeding with insertion.");
             }
-        }
+            
+            let node_uuid = node.uuid();
+            println!("[insert_nodes] -> Inserting/updating node with UUID: {}", node_uuid);
 
-        // Determine type of node. If not specified, it's an Other node.
-        let mut ntype = match ntype {
-            Some(ntype) => ntype,
-            None => NodeTypeId::new("core/other".to_string(), "1.0".to_string()),
-        };
+            // Use open_node to check for existence, which is more robust.
+            if self.open_node(&NodeHandle::Uuid(node_uuid)).is_ok() {
+                // Node exists, update its values.
+                println!("[insert_nodes] -> Node {} exists, updating values.", node_uuid);
+                self.db.exec_mut(
+                    &QueryBuilder::insert()
+                        .values_uniform(node.clone().to_db_values())
+                        .ids(node_uuid.to_string())
+                        .query()
+                ).unwrap();
+            } else {
+                // Node does not exist, insert it.
+                println!("[insert_nodes] -> Node {} does not exist, inserting new node.", node_uuid);
+                self.db.exec_mut(
+                    &QueryBuilder::insert()
+                        .nodes()
+                        .aliases(node_uuid.to_string())
+                        .values(node.clone())
+                        .query()
+                ).unwrap();
+            }
 
-        let is_file = full_path.exists() && !full_path.is_dir();
-        let is_dir = full_path.is_dir();
-
-        if is_file {
-            ntype = NodeTypeId::new("core/file".to_string(), "1.0".to_string());
-        } else if is_dir {
-            ntype = NodeTypeId::new("core/directory".to_string(), "1.0".to_string());
-        }
-
-        let node = Node::new(&path.clone(), ntype);
-
-        // println!("Creating node: {:?}", node.path());
-
-        let nodeqr = self.db.exec_mut(
-            &QueryBuilder::insert()
-                .nodes()
-                .aliases(alias)
-                .values(&node)
-                .query(),
-        );
-
-        match nodeqr {
-            Ok(nodeqr) => {
-                let node_elem = &nodeqr.elements[0];
-                let nid = node_elem.id;
-                // If parent is not root, check if the parent node already exists in the db.
-                // If not, call this function recursively.
-                let parent_path = path.parent();
-                match parent_path {
-                    Some(parent_path) => {
-                        if parent_path.parent().is_some() {
-                            // println!("About to insert parent node: {:?}", parent_path);
-
-                            let n = self.create_node_by_path(&parent_path, Some(NodeTypeId::dir_type()));
-
-                            match n {
-                                Ok(n) => {
-                                    let parent_path = n.path();
-                                    self.autoparent_nodes(&parent_path, &path);
-                                }
-                                Err(e) => {
-                                    // println!("Failed to insert parent node: {}", e);
-                                }
-                            }
-                        }
-                        Ok(node)
-                    }
-                    None => {
-                        // If the parent is root, parent them and move along.
-                        self.autoparent_nodes(&NodePath::new(PathBuf::from("")), &path);
-                        Ok(node)
-                    }
+            if let Some(parent_path) = node.path().parent() {
+                let parent_path_clone = parent_path.clone();
+                println!("[insert_nodes] -> Attempting to create edge from parent {:?} to new node.", parent_path_clone);
+                if let Ok(parent_node) = self.open_node(&NodeHandle::Path(parent_path)) {
+                     let edge = Edge::new_cont(parent_node.uuid(), node_uuid);
+                     println!("[insert_nodes] -> Edge created: {:?} -> {:?}", parent_node.uuid(), node_uuid);
+                     self.insert_edges(vec![edge]);
+                } else {
+                    println!("[insert_nodes] -> FAILED to open parent node {:?} to create edge.", parent_path_clone);
                 }
             }
-            Err(e) => {
-                // println!("Failed to insert node: {}", e);
-                Err(e.into())
-            }
+
+            processed_paths.insert(node_path.clone());
+            println!("[insert_nodes] Finished processing: {:?}", node_path);
         }
     }
+    
+    fn get_all_indexed_paths(&self) -> Result<Vec<String>, Box<dyn Error>> {
+        let query_result = self.db.exec(
+            &QueryBuilder::select()
+                .ids(
+                    QueryBuilder::search()
+                        .elements()
+                        .where_()
+                        .node()
+                        .query()
+                )
+                .query()
+        )?;
 
-    /// Creates a node under a given parent with the given name.
-    /// The path is relative to the root of the graph.
-    /// Do not include the root dir name.
-    fn create_node_by_name(
-        &mut self,
-        parent_path: Option<NodePath>,
-        name: &str,
-        ntype: Option<NodeTypeId>,
-    ) -> Result<Node, Box<dyn Error>> {
-        let parent_path = parent_path.unwrap_or_else(|| NodePath::new("".into()));
-
-        let rel_path = if parent_path.buf().as_os_str().is_empty() {
-            NodePath::new(PathBuf::from(name))
-        } else {
-            NodePath::new(parent_path.buf().join(name))
-        };
-
-        self.create_node_by_path(&rel_path, ntype)
-    }
-
-    /// Inserts a Node.
-    fn insert_node(&mut self, node: Node) -> Result<(), Box<dyn Error>> {
-        todo!()
-    }
-
-    /// Deletes a node. Error if trying to delete root or archetype nodes.
-    ///
-    /// Setting "files" and/or "dirs" to true could also delete from the file system,
-    /// and recursively. Very dangerous. Though not implementing this would mean that
-    /// those files would constantly be at a risk of getting reindexed, so this
-    /// should probably still be implemented, unless we want to just mark nodes as deleted
-    /// but never actually delete them, which seems like a smelly solution to me.
-    fn delete_nodes(
-        &mut self,
-        paths: &Vec<NodePath>,
-        files: bool,
-        dirs: bool,
-    ) -> Result<(), Box<dyn Error>> {
-        let aliases = paths
-            .iter()
-            .map(|path| path.alias())
-            .collect::<Vec<String>>();
-
-        let query = self
-            .db
-            .exec_mut(&QueryBuilder::remove().ids(aliases).query());
-
-        match query {
-            Ok(query) => Ok(()),
-            Err(e) => Err(e.into()),
-        }
-    }
-
-    /// Is this even needed? Does open node get all attributes?
-    fn get_node_attrs(&self, path: &NodePath) -> Result<Vec<Attribute>, Box<dyn Error>> {
-        let alias = path.alias();
-        let keys = Vec::new();
-        let attrs = self
-            .db
-            .exec(&QueryBuilder::select().values(keys).ids(alias).query());
-
-        match attrs {
-            Ok(attrs) => {
-                let mut attrs = attrs.elements;
-                assert!(attrs.len() == 1);
-                let vec = attrs
-                    .first()
-                    .unwrap()
-                    .values
-                    .iter()
-                    .map(|attr| {
-                        let attr = attr.to_owned();
-                        Attribute::new_float(
-                            attr.key.to_string(),
-                            attr.value.to_f64().unwrap().to_f64() as f32,
-                        )
-                    })
-                    .collect();
-
-                return Ok(vec);
-            }
-            Err(e) => {
-                // println!("Failed to get attributes: {}", e);
-                return Err(e.to_string().into());
-            }
-        }
-    }
-
-    fn insert_node_attrs(
-        &mut self,
-        path: &NodePath,
-        attrs: Vec<Attribute>,
-    ) -> Result<(), Box<dyn Error>> {
-        use RESERVED_NODE_ATTRS;
-
-        // Check if the node exists. If it doesn't, errrrrrrr
-        let alias = path.alias();
-        let node = self
-            .db
-            .exec(&QueryBuilder::select().ids(alias.clone()).query());
-        match node {
-            Ok(node) => {}
-            Err(e) => {
-                return Err(e.into());
-            }
-        }
-
-        // Error if attributes is empty
-        if attrs.is_empty() {
-            return Err("Attributes cannot be empty".into());
-        }
-
-        let filtered_attrs = attrs
-            .iter()
-            .filter(|attr| {
-                let slice = attr.name.as_str();
-                let is_reserved = RESERVED_NODE_ATTRS.contains(&slice);
-
-                if is_reserved {
-                    return false;
-                }
-                return true;
+        let paths = query_result
+            .elements
+            .into_iter()
+            .filter(|element| element.id.0 > 0) // Filter for nodes only
+            .filter_map(|element| {
+                DataNode::try_from(element).ok().map(|node| node.path().alias().to_string())
             })
-            .map(|attr| {
-                let attr = (attr.name.clone(), attr.value.clone()).into();
-                return attr;
-            })
-            .collect::<Vec<agdb::DbKeyValue>>();
-
-        // Error if filtered attrs is empty
-        if filtered_attrs.is_empty() {
-            return Err("All insertion requests were for protected attributes".into());
-        }
-
-        let added = self.db.exec_mut(
-            &QueryBuilder::insert()
-                .values(vec![filtered_attrs])
-                .ids(alias)
-                .query(),
-        );
-
-        // println!("Added: {:?}", added);
-
-        match added {
-            query_result => {
-                return Ok(());
-            }
-            query_error => {
-                return Err("Failed to insert attribute".into());
-            }
-        }
-    }
-
-    fn delete_node_attrs(
-        &mut self,
-        path: &NodePath,
-        attr_names: Vec<&str>,
-    ) -> Result<(), Box<dyn Error>> {
-        use RESERVED_NODE_ATTRS;
-
-        if attr_names.len() == 0 {
-            return Err("No attributes to delete".into());
-        }
-
-        // Protect reserved attribute names
-        let filtered_attrs: Vec<agdb::DbValue> = attr_names
-            .iter()
-            .filter(|&&attr_name| !RESERVED_NODE_ATTRS.contains(&attr_name))
-            .map(|&s| agdb::DbValue::from(s))
             .collect();
 
-        if filtered_attrs.len() == 0 {
-            return Err("All deletion requests were for protected attributes".into());
-        }
-
-        let node = self.db.exec_mut(
-            &QueryBuilder::remove()
-                .values(filtered_attrs)
-                .ids(path.alias())
-                .query(),
-        );
-
-        match node {
-            Ok(node) => Ok(()),
-            Err(e) => Err(e.into()),
-        }
+        Ok(paths)
     }
 
-    /// Merges a vector of nodes into the last one.
-    fn merge_nodes(&mut self, nodes: Vec<NodePath>) -> Result<(), Box<dyn Error>> {
-        Ok(())
-    }
+    fn update_node_attributes(&mut self, uuid: Uuid, attributes: Vec<crate::elements::attribute::Attribute>) -> Result<(), Box<dyn Error>> {
+        let db_values: Vec<agdb::DbKeyValue> = attributes.into_iter().map(|attr| attr.into()).collect();
 
-    // fn set_relative_positions
-
-    // fn set_node_pins
-
-    // fn set_pin_on nodes
-
-    fn autoparent_nodes(
-        &mut self,
-        parent: &NodePath,
-        child: &NodePath,
-    ) -> Result<(), Box<dyn Error>> {
-        // println!("Autoparenting nodes: {:?} and {:?}", parent, child);
-        let edge = Edge::new_cont(parent, child);
-
-        let edge = self.db.exec_mut(
+        self.db.exec_mut(
             &QueryBuilder::insert()
-                .edges()
-                .from(parent.alias())
-                .to(child.alias())
-                .values_uniform(&edge)
-                .query(),
-        ); // For whatever reason this does not insert the attribute into the edge.
+                .values_uniform(db_values)
+                .ids(uuid.to_string())
+                .query()
+        )?;
 
-        let eid = edge.unwrap().ids();
-        let eid = eid.first().unwrap();
-        // println!("Id of the edge: {:#?}", eid);
-
-        let edge = self
-            .db
-            .exec(&QueryBuilder::select().keys().ids(*eid).query());
-
-        match edge {
-            Ok(edge) => {
-                // Insert the attribute to the edge
-                // // println!("Edge inserted: {:#?}", edge.elements);
-                Ok(())
-            }
-            Err(e) => Err(e.into()),
-        }
-    }
-
-    fn save_relative_positions(
-        &mut self,
-        ctx_root: &NodePath,
-        nodes: Vec<(&NodePath, RelativePosition)>,
-    ) -> Result<(), Box<dyn Error>> {
         Ok(())
     }
+    fn get_all_descendants(&self, path: &NodePath) -> Result<Vec<DataNode>, Box<dyn Error>> {
+        let mut descendants = Vec::new();
+        let mut stack = Vec::new();
+        let mut visited = std::collections::HashSet::new();
 
-    fn get_relative_positions(
-        &self,
-        ctx_root: &NodePath,
-        nodes: Vec<&NodePath>,
-    ) -> Result<Vec<(&NodePath, RelativePosition)>, Box<dyn Error>> {
-        Err("Not implemented".into())
+        let start_node = self.open_node(&NodeHandle::Path(path.clone()))?;
+        println!("[DEBUG] get_all_descendants: Starting with node '{}' (UUID: {})", start_node.path().alias(), start_node.uuid());
+        stack.push(start_node.clone());
+        visited.insert(start_node.uuid());
+
+        while let Some(current_node) = stack.pop() {
+            println!("[DEBUG] get_all_descendants: Processing node '{}' (UUID: {})", current_node.path().alias(), current_node.uuid());
+            
+            // Use open_node_connections which properly filters edges from this node
+            let connections = self.open_node_connections(&current_node.path());
+            println!("[DEBUG] get_all_descendants: Found {} connections from '{}'", connections.len(), current_node.path().alias());
+            
+            for (connected_node, edge) in connections {
+                println!("[DEBUG] get_all_descendants: Examining edge {} -> {} (contains: {})", 
+                    edge.source(), edge.target(), edge.is_contains());
+                
+                // Only follow contains edges where current_node is the source (parent)
+                if edge.is_contains() && *edge.source() == current_node.uuid() {
+                    println!("[DEBUG] get_all_descendants: Following contains edge to child '{}' (UUID: {})", 
+                        connected_node.path().alias(), connected_node.uuid());
+                    if visited.insert(connected_node.uuid()) {
+                        stack.push(connected_node.clone());
+                        descendants.push(connected_node);
+                    } else {
+                        println!("[DEBUG] get_all_descendants: Child already visited, skipping");
+                    }
+                } else if edge.is_contains() {
+                    println!("[DEBUG] get_all_descendants: Skipping contains edge where this node is the child");
+                } else {
+                    println!("[DEBUG] get_all_descendants: Skipping non-contains edge");
+                }
+            }
+        }
+
+        println!("[DEBUG] get_all_descendants: Found {} total descendants of '{}'", descendants.len(), path.alias());
+        for (i, desc) in descendants.iter().enumerate() {
+            println!("[DEBUG] get_all_descendants:   {}: '{}' (UUID: {})", i, desc.path().alias(), desc.uuid());
+        }
+
+        Ok(descendants)
+    }
+
+    fn delete_node_and_edges(&mut self, node_id: &Uuid) -> Result<(), Box<dyn Error>> {
+        // agdb automatically deletes all edges (incoming and outgoing) when a node is deleted
+        let delete_node_query = QueryBuilder::remove()
+            .ids(node_id.to_string())
+            .query();
+        self.db.exec_mut(&delete_node_query)?;
+        
+        Ok(())
     }
 }
