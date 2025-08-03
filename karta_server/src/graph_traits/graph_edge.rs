@@ -1,99 +1,148 @@
 use std::error::Error;
 
-use super::{attribute::Attribute, edge::Edge, node_path::NodePath};
+use uuid::Uuid;
+
+use super::{edge::Edge};
 
 
 pub trait GraphEdge {
     fn get_edge_strict(
-        &self, 
-        from: &NodePath, 
-        to: &NodePath
+        &self,
+        from: &Uuid,
+        to: &Uuid
     ) -> Result<Edge, Box<dyn Error>>;
 
-    fn create_edge(
-        &mut self,
-        source_path: &NodePath,
-        target_path: &NodePath,
-    ) -> Result<(), Box<dyn Error>>;
+    fn insert_edges(&mut self, edges: Vec<Edge>);
 
-    /// Changes the parent directory of a node. If the node is physical, it will be moved in the file system.
-    /// If the node is virtual, the parent will be changed in the db.
-    /// Note that due to the implementation, all children of the node will have to be reindexed, recursively.
-    fn reparent_node(
-        &self,
-        node_path: &NodePath,
-        new_parent_path: &NodePath,
-    ) -> Result<(), Box<dyn Error>>;
+    fn get_edges_between_nodes(&self, nodes: &[Uuid]) -> Result<Vec<Edge>, Box<dyn Error>>;
 
-    /// Moves an edge and all its attributes to a new source and target. Parent edges can't be reconnected this way,
-    /// use the reparent_node function instead.
+    fn delete_edges(&mut self, edges: &[(Uuid, Uuid)]) -> Result<(), Box<dyn Error>>;
+
     fn reconnect_edge(
-        &self,
-        edge: Edge,
-        from: &NodePath,
-        to: &NodePath,
+        &mut self,
+        old_from: &Uuid,
+        old_to: &Uuid,
+        new_from: &Uuid,
+        new_to: &Uuid,
+    ) -> Result<Edge, Box<dyn Error>>;
+
+    /// Reparent a node by moving its contains edge from old parent to new parent
+    /// This is specifically for moving nodes in the hierarchy and bypasses the
+    /// normal restrictions on contains edge manipulation
+    fn reparent_node(
+        &mut self,
+        node_uuid: &Uuid,
+        old_parent_uuid: &Uuid,
+        new_parent_uuid: &Uuid,
     ) -> Result<(), Box<dyn Error>>;
-
-    fn insert_edge(&self, edge: Edge) -> Result<(), Box<dyn Error>>;
-
-    /// Delete an edge from the graph. Edges with the attribute "contains" refer to the parent-child relationship
-    /// between nodes and will be ignored. All other attributes will be cleared from them instead.
-    fn delete_edge(&self, edge: Edge) -> Result<(), Box<dyn Error>>;
-
-    /// Insert attributes to an edge. Ignore reserved attribute names. Update attributes that already exist.
-    fn insert_edge_attr(&self, edge: Edge, attr: Attribute) -> Result<(), Box<dyn Error>>;
-
-    /// Delete attributes from an edge. Ignore reserved attribute names.
-    fn delete_edge_attr(&self, edge: Edge, attr: Attribute) -> Result<(), Box<dyn Error>>;
-
-    // Open all edges in the graph
-    // fn open_all_edges(&self) -> Vec<Edge>;
 }
 
 #[cfg(test)]
 mod tests {
-//     #![allow(warnings)]
+    use crate::{
+        elements::{node::DataNode, node_path::NodePath, edge::Edge, nodetype::NodeTypeId},
+        graph_agdb::GraphAgdb,
+        graph_traits::{graph_edge::GraphEdge, graph_node::GraphNodes},
+        utils::utils::KartaServiceTestContext,
+    };
 
-//     use crate::{
-//         elements::NodePath,
-//         graph_agdb::GraphAgdb,
-//         graph_traits::{graph_edge::GraphEdge, graph_node::GraphNode},
-//         utils::{cleanup_graph, setup_graph},
-//     };
-//     use std::path::PathBuf;
+    #[test]
+    fn test_delete_edge() {
+        let mut ctx = KartaServiceTestContext::new("test_delete_edge");
+        let node1 = DataNode::new(&NodePath::from("node1"), NodeTypeId::new("core/text"));
+        let node2 = DataNode::new(&NodePath::from("node2"), NodeTypeId::new("core/text"));
+        let edge = Edge::new(node1.uuid(), node2.uuid());
 
-//     #[test]
-//     fn create_new_edge() {
-//         let func_name = "create_new_edge";
-//         let mut graph = setup_graph(func_name);
+        ctx.with_service_mut(|s| {
+            s.data_mut().insert_nodes(vec![node1.clone(), node2.clone()]);
+            s.data_mut().insert_edges(vec![edge.clone()]);
+        });
 
-//         // Create two nodes
-//         let path1 = NodePath::from("node1");
-//         let path2 = NodePath::from("node2");
+        let edge_result = ctx.with_service(|s| s.data().get_edge_strict(&node1.uuid(), &node2.uuid()));
+        assert!(edge_result.is_ok());
 
-//         let node1 = graph.create_node_by_path(path1.clone(), None).unwrap();
-//         let node2 = graph.create_node_by_path(path2.clone(), None).unwrap();
+        let result = ctx.with_service_mut(|s| s.data_mut().delete_edges(&[(node1.uuid(), node2.uuid())]));
+        assert!(result.is_ok());
 
-//         // Create an edge between the nodes
-//         let edge = graph.create_edge(&path1, &path2);
+        let edge_result = ctx.with_service(|s| s.data().get_edge_strict(&node1.uuid(), &node2.uuid()));
+        assert!(edge_result.is_err());
+    }
 
-//         assert!(edge.is_ok(), "Failed to create edge");
+    #[test]
+    fn test_reconnect_edge() {
+        let mut ctx = KartaServiceTestContext::new("test_reconnect_edge");
+        let node1 = DataNode::new(&NodePath::from("node1"), NodeTypeId::new("core/text"));
+        let node2 = DataNode::new(&NodePath::from("node2"), NodeTypeId::new("core/text"));
+        let node3 = DataNode::new(&NodePath::from("node3"), NodeTypeId::new("core/text"));
+        let edge = Edge::new(node1.uuid(), node2.uuid());
 
-//         // Verify the edge exists
-//         // let edge_exists = graph.edge_exists(node1.id, node2.id);
-//         // assert!(edge_exists, "Edge does not exist after creation");
+        ctx.with_service_mut(|s| {
+            s.data_mut().insert_nodes(vec![node1.clone(), node2.clone(), node3.clone()]);
+            s.data_mut().insert_edges(vec![edge.clone()]);
+        });
 
-//         cleanup_graph(func_name);
-//     }
+        let initial_edge = 
+            ctx.with_service(|s| s.data().get_edge_strict(&node1.uuid(), &node2.uuid()));
+        assert!(initial_edge.is_ok());
 
-//     // Test creating an Edge with attributes
-//     // Test converting Attribute to DbKeyValue
-//     // Test creating Edge with reserved attribute names
-//     // Test inserting a new edge
-//     // Test reconnecting an edge
-//     // Test deleting an edge (non-parent edge)
-//     // Test deleting a parent edge (should fail or be ignored)
-//     // Test inserting edge attributes (normal and reserved)
-//     // Test deleting edge attributes (normal and reserved)
-//     // Test creating a parent-child relationship between nodes
+        let result = ctx.with_service_mut(|s| {
+            s.data_mut()
+                .reconnect_edge(&node1.uuid(), &node2.uuid(), &node1.uuid(), &node3.uuid())
+        });
+
+        assert!(result.is_ok());
+
+        let old_edge =
+            ctx.with_service(|s| s.data().get_edge_strict(&node1.uuid(), &node2.uuid()));
+        assert!(old_edge.is_err());
+
+        let new_edge =
+            ctx.with_service(|s| s.data().get_edge_strict(&node1.uuid(), &node3.uuid()));
+        assert!(new_edge.is_ok());
+    }
+
+    #[test]
+    fn test_reconnect_edge_to_root() {
+        // Test reconnecting the "to" end to the root
+        let mut ctx_to = KartaServiceTestContext::new("test_reconnect_edge_to_root_to");
+        let root_node_to = ctx_to.with_service(|s| s.data().open_node(&crate::elements::node_path::NodeHandle::Path(NodePath::root()))).unwrap();
+        let node1_to = DataNode::new(&NodePath::from("node1"), NodeTypeId::new("core/text"));
+        let node2_to = DataNode::new(&NodePath::from("node2"), NodeTypeId::new("core/text"));
+        let edge_to = Edge::new(node1_to.uuid(), node2_to.uuid());
+
+        ctx_to.with_service_mut(|s| {
+            s.data_mut().insert_nodes(vec![node1_to.clone(), node2_to.clone()]);
+            s.data_mut().insert_edges(vec![edge_to.clone()]);
+        });
+
+        let result_to = ctx_to.with_service_mut(|s| {
+            s.data_mut()
+                .reconnect_edge(&node1_to.uuid(), &node2_to.uuid(), &node1_to.uuid(), &root_node_to.uuid())
+        });
+
+        assert!(result_to.is_ok());
+        assert!(ctx_to.with_service(|s| s.data().get_edge_strict(&node1_to.uuid(), &node2_to.uuid())).is_err());
+        assert!(ctx_to.with_service(|s| s.data().get_edge_strict(&node1_to.uuid(), &root_node_to.uuid())).is_ok());
+
+        // Test reconnecting the "from" end to the root
+        let mut ctx_from = KartaServiceTestContext::new("test_reconnect_edge_to_root_from");
+        let root_node_from = ctx_from.with_service(|s| s.data().open_node(&crate::elements::node_path::NodeHandle::Path(NodePath::root()))).unwrap();
+        let node1_from = DataNode::new(&NodePath::from("node1"), NodeTypeId::new("core/text"));
+        let node2_from = DataNode::new(&NodePath::from("node2"), NodeTypeId::new("core/text"));
+        let edge_from = Edge::new(node1_from.uuid(), node2_from.uuid());
+
+        ctx_from.with_service_mut(|s| {
+            s.data_mut().insert_nodes(vec![node1_from.clone(), node2_from.clone()]);
+            s.data_mut().insert_edges(vec![edge_from.clone()]);
+        });
+
+        let result_from = ctx_from.with_service_mut(|s| {
+            s.data_mut()
+                .reconnect_edge(&node1_from.uuid(), &node2_from.uuid(), &root_node_from.uuid(), &node2_from.uuid())
+        });
+
+        assert!(result_from.is_ok());
+        assert!(ctx_from.with_service(|s| s.data().get_edge_strict(&node1_from.uuid(), &node2_from.uuid())).is_err());
+        assert!(ctx_from.with_service(|s| s.data().get_edge_strict(&root_node_from.uuid(), &node2_from.uuid())).is_ok());
+    }
 }
