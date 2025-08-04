@@ -1,0 +1,1 @@
+This folder contains base read-only stores used by both runtime and editor. They rely only on svelte/store and core types, avoiding any persistence or editor-specific logic.

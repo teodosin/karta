@@ -1,0 +1,1 @@
+Theme tokens and CSS variables shared between runtime and editor will live here in future phases. Kept empty for Phase 1.

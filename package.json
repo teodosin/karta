@@ -1,0 +1,30 @@
+{
+  "name": "karta-workspace",
+  "private": true,
+  "description": "Karta monorepo workspace (pnpm). Contains @karta/core (MIT), @karta/runtime (MIT), karta_svelte (GPL), karta_server (GPL), website (harness), and examples.",
+  "packageManager": "pnpm@10.14.0",
+  "version": "0.0.0",
+  "workspaces": [
+    "core",
+    "runtime",
+    "website",
+    "karta_svelte",
+    "karta_server",
+    "docs",
+    "examples/*"
+  ],
+  "scripts": {
+    "build": "pnpm -r --filter ./core --filter ./runtime --filter ./website run build",
+    "build:all": "pnpm -r run build",
+    "dev": "pnpm --filter ./website run dev",
+    "lint": "pnpm -r run lint",
+    "typecheck": "pnpm -r run typecheck",
+    "changeset": "changeset",
+    "release:version": "changeset version",
+    "release:publish": "echo \"Manual publish only. Use pnpm -r publish --access public in individual packages when ready.\"",
+    "validate": "pnpm lint && pnpm typecheck"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.27.8"
+  }
+}

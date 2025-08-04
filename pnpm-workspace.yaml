@@ -1,0 +1,8 @@
+packages:
+  - "core"
+  - "runtime"
+  - "website"
+  - "karta_svelte"
+  - "karta_server"
+  - "docs"
+  - "examples/*"
