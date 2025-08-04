@@ -1,1 +1,25 @@
-/target
+# Rust build artifacts
+/target/
+**/*.rs.bk
+
+# agdb database files
+*.agdb
+
+# Performance reports (development artifacts)
+docs/perf_reports/
+
+# Development logs
+*.log
+
+# RON config files (development only)
+dev_config.ron
+local_config.ron
+test_config.ron
+
+# Temporary files
+*.tmp
+*.temp
+
+# Development databases
+dev.db
+test.db

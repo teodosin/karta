@@ -2,3 +2,14 @@
 # will have compiled files and executables
 /target/
 /gen/schemas
+
+# Tauri specific
+.tauri/
+WixTools/
+
+# Development logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
