@@ -7,11 +7,19 @@
     import { ConnectTool } from '$lib/tools/ConnectTool';
     import { ContextTool } from '$lib/tools/ContextTool';
     // Import Lucide icons
-    import { MousePointer2, Workflow, Focus, Save, type Icon as LucideIcon } from 'lucide-svelte';
+    import { MousePointer2, Workflow, Focus, Save, Package, type Icon as LucideIcon } from 'lucide-svelte';
     import FilterMenu from './FilterMenu.svelte';
+    import ExportModal from './ExportModal.svelte';
+    import { selectedCount } from '$lib/karta/ExportStore';
     import { onMount } from 'svelte';
 
     // No local setMode function needed anymore
+    
+    let showExportModal = false;
+    
+    function openExportModal() {
+        showExportModal = true;
+    }
     
     onMount(() => {
         console.log('Toolbar mounted with FilterMenu');
@@ -77,5 +85,31 @@
         </button>
     </div>
 
+    <!-- Export Button -->
+    <div class="relative group">
+        <button
+            type="button"
+            class="toolbar-button p-2 rounded transition-colors focus:outline-none focus:ring-2 hover-bg-panel-hl relative"
+            on:click={openExportModal}
+            aria-label="Export Bundle"
+        >
+            <Package class="transition-all" strokeWidth={1.5} size={20} />
+            {#if $selectedCount > 0}
+                <span class="absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                    {$selectedCount}
+                </span>
+            {/if}
+            <!-- Tooltip shown on hover -->
+            <span
+                class="absolute left-full top-1/2 transform -translate-y-1/2 ml-3 px-2 py-1 text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none bg-gray-900 text-white"
+            >
+                Export Bundle {$selectedCount > 0 ? `(${$selectedCount})` : ''}
+            </span>
+        </button>
+    </div>
+
     <!-- TODO: Add Reset View/All later -->
 </div>
+
+<!-- Export Modal -->
+<ExportModal bind:isOpen={showExportModal} />

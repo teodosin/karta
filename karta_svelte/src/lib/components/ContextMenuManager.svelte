@@ -28,6 +28,8 @@
 		deleteSelectedNodesPermanently,
 		findPhysicalParentPath,
 	} from "$lib/karta/NodeStore";
+	import { BundleExporter } from "$lib/export/BundleExporter";
+	import { exportActions } from "$lib/karta/ExportStore";
 	import { edges, deleteEdges } from "$lib/karta/EdgeStore";
 	import {
 		currentContextId,
@@ -157,6 +159,35 @@
 						isMultipleSelected ||
 						!targetDataNode ||
 						targetDataNode.attributes?.isSystemNode,
+				},
+				{
+					label: (() => {
+						const isDirectory = targetDataNode?.ntype === 'core/fs/dir';
+						const isAlreadySelected = targetNodeId ? exportActions.isNodeSelected(targetNodeId) : false;
+						
+						if (isAlreadySelected) {
+							return "Remove from Export Bundle";
+						} else if (isDirectory) {
+							return "Add Directory to Export Bundle";
+						} else {
+							return "Add to Export Bundle";
+						}
+					})(),
+					action: () => {
+						if (targetNodeId) {
+							const isDirectory = targetDataNode?.ntype === 'core/fs/dir';
+							const isAlreadySelected = exportActions.isNodeSelected(targetNodeId);
+							
+							if (isAlreadySelected) {
+								exportActions.removeNode(targetNodeId);
+							} else if (isDirectory) {
+								exportActions.addDirectory(targetNodeId, true); // Recursive by default
+							} else {
+								exportActions.addNode(targetNodeId);
+							}
+						}
+					},
+					disabled: !targetNodeId,
 				},
 				{
 					label: isMultipleSelected ? `Delete ${currentSelection.size} Items Permanently` : "Delete Permanently",
