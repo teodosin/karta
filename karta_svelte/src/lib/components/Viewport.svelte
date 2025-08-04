@@ -1,13 +1,36 @@
 <!--
-// --- Karta Runtime Component ---
-// This file is planned for inclusion in the MIT-licensed `karta_runtime` package.
-// It should focus on displaying the graph and handling interactions in "Play Mode".
-// Avoid adding editor-specific logic or dependencies here.
-// Interaction logic should read configuration from node attributes.
+ // --- Karta Runtime Component ---
+ // This file is planned for inclusion in the MIT-licensed `karta_runtime` package.
+ // It should focus on displaying the graph and handling interactions in "Play Mode".
+ // Avoid adding editor-specific logic or dependencies here.
+ // Interaction logic should read configuration from node attributes.
 -->
-<script lang="ts">
-	import { get } from "svelte/store";
-	import { onMount, onDestroy } from "svelte";
+ <script lang="ts">
+ 	// Debug overlay reactive const (declared to satisfy Svelte binding)
+ 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 	export let __vt: { posX: number; posY: number; scale: number } | undefined = undefined;
+ 	import { get } from "svelte/store";
+ 	import { onMount, onDestroy } from "svelte";
+ 
+// Runtime-only helpers (single declaration)
+let __wheelCleanup: (() => void) | null = null;
+let __spaceHeld = false;
+function __onKeyDown(ev: KeyboardEvent) {
+	if (ev.code === "Space") {
+		__spaceHeld = true;
+		ev.preventDefault();
+	}
+}
+function __onKeyUp(ev: KeyboardEvent) {
+	if (ev.code === "Space") {
+		__spaceHeld = false;
+	}
+}
+ 	// Runtime-only helpers (declared top-level but used only in onMount to avoid SSR)
+ 	
+ 	// Non-passive wheel binding cleanup
+ 	
+ 	// Space+drag panning fallback
 	import {
 		contexts,
 		currentContextId,
@@ -82,19 +105,40 @@
 
 	onMount(() => {
 		lifecycleLogger.log("Viewport mounted");
+		// Bind non-passive wheel listener here to avoid SSR window usage during render
+		if (canvasContainer) {
+			const wheelHandler = (e: WheelEvent) => handleWheel(e);
+			canvasContainer.addEventListener("wheel", wheelHandler, { passive: false });
+			__wheelCleanup = () => canvasContainer && canvasContainer.removeEventListener("wheel", wheelHandler as any);
+		}
+		// Global key handlers also in onMount (no SSR access)
+		if (typeof window !== "undefined") {
+			window.addEventListener("keydown", __onKeyDown as any, { passive: false });
+			window.addEventListener("keyup", __onKeyUp as any);
+		}
 
 		// Setup reactive store logging
 		watchStore(nodes, "NodeStore");
 		watchStore(contexts, "ContextStore");
 		watchStore(vaultName, "VaultStore");
 	});
+	onDestroy(() => {
+		if (__wheelCleanup) __wheelCleanup();
+		if (typeof window !== "undefined") {
+			window.removeEventListener("keydown", __onKeyDown as any);
+			window.removeEventListener("keyup", __onKeyUp as any);
+		}
+	});
 
 	let canvasContainer: HTMLElement;
 
 	// Calculate inverse scale for constant screen size elements, to be passed to children
+	// Align with tween 'current' which is what the template renders
 	$: inverseScale = 1 / viewTransform.current.scale;
 
 	let canvas: HTMLElement;
+
+	// (duplicate onMount/onDestroy block removed)
 
 	$: currentCtx = $contexts.get($currentContextId);
 
@@ -122,14 +166,19 @@
 	function getImageDimensionsFromUrl(
 		url: string,
 	): Promise<{ width: number; height: number }> {
-		return new Promise((resolve, reject) => {
+		return new Promise((resolve) => {
+			// Guard for SSR: window/Image are not defined on server
+			if (typeof window === "undefined") {
+				resolve({ width: 100, height: 100 });
+				return;
+			}
 			const img = new Image();
 			img.onload = () => {
 				resolve({ width: img.naturalWidth, height: img.naturalHeight });
 			};
-			img.onerror = (error) => {
+			img.onerror = () => {
 				// Fallback to default dimensions if loading fails
-				resolve({ width: 100, height: 100 }); // Or use registry defaults?
+				resolve({ width: 100, height: 100 });
 			};
 			img.src = url;
 		});
@@ -194,23 +243,28 @@
 		const w = $viewportWidth;
 		const h = $viewportHeight;
 
-		const currentTransform = viewTransform.target;
+		// Use the CURRENT value that drives rendering
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const currentTransform = (viewTransform as any).current as { scale: number; posX: number; posY: number };
 
 		let newScale = currentTransform.scale;
 		let newPosX = currentTransform.posX;
 		let newPosY = currentTransform.posY;
-		const panSensitivityFactor = 1.2; // Adjust this for faster/slower panning
+		const panSensitivityFactor = 1.2;
+
+		// Debug start
+		// eslint-disable-next-line no-console
+		console.debug('[Viewport.handleWheel:start]', {
+			ctrl: e.ctrlKey, deltaX: e.deltaX, deltaY: e.deltaY,
+			mouseX, mouseY, w, h, currentTransform
+		});
 
 		if (e.ctrlKey) {
-			// Pinch-to-zoom (Ctrl key pressed)
 			const zoomSensitivityFactor = 0.015;
 			const zoomAmount = e.deltaY * -zoomSensitivityFactor;
 			newScale = currentTransform.scale * (1 + zoomAmount);
-
-			// Clamp the scale
 			newScale = Math.max(0.1, Math.min(newScale, 5));
 
-			// If we zoomed, recalculate position to keep the canvas point under the mouse
 			if (newScale !== currentTransform.scale) {
 				const canvasPointX = (mouseX - currentTransform.posX - w / 2) / currentTransform.scale;
 				const canvasPointY = (mouseY - currentTransform.posY - h / 2) / currentTransform.scale;
@@ -219,60 +273,51 @@
 				newPosY = mouseY - canvasPointY * newScale - h / 2;
 			}
 		} else {
-			// Default to panning for both mouse wheel and touchpad
 			newPosX = currentTransform.posX - e.deltaX * panSensitivityFactor;
 			newPosY = currentTransform.posY - e.deltaY * panSensitivityFactor;
-			// Keep scale the same when panning
 			newScale = currentTransform.scale;
 		}
 
-		// Close menus if transform changes
-		if (
-			newScale !== currentTransform.scale ||
-			newPosX !== currentTransform.posX ||
-			newPosY !== currentTransform.posY
-		) {
-			closeContextMenu();
-			closeCreateNodeMenu();
-		}
+		const newTransformWheel = { scale: newScale, posX: newPosX, posY: newPosY };
 
-		// Directly set the new transform without tweening for immediate response
-		const newTransformWheel = {
-			scale: newScale,
-			posX: newPosX,
-			posY: newPosY,
-		};
+		// Debug apply
+		// eslint-disable-next-line no-console
+		console.debug('[Viewport.handleWheel:apply]', { newTransformWheel });
+
 		viewTransform.set(newTransformWheel, { duration: 0 });
 
-		// Call tool's wheel handler if it exists
+		// Debug after-set (microtask)
+		queueMicrotask(() => {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any, no-console
+			console.debug('[Viewport.handleWheel:after-set]', (viewTransform as any).current);
+		});
+
 		get(currentTool)?.onWheel?.(e);
 	}
 
 	function handlePointerDown(e: PointerEvent) {
-		// Middle mouse panning takes precedence
-		if (e.button === 1) {
+		// Middle mouse panning takes precedence OR Space+Left-drag fallback for panning
+		if ((e.button === 1) || (e.button === 0 && __spaceHeld)) {
 			e.preventDefault();
 			isPanning = true;
-			const currentTransform = viewTransform.target;
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const currentTransform = (viewTransform as any).current as { scale: number; posX: number; posY: number };
 			panStartX = e.clientX - currentTransform.posX;
 			panStartY = e.clientY - currentTransform.posY;
-			// Ensure canvasContainer is bound before manipulating style/listeners
+
+			// Debug pan start
+			// eslint-disable-next-line no-console
+			console.debug('[Viewport.pan:start]', {
+				clientX: e.clientX, clientY: e.clientY, panStartX, panStartY, currentTransform
+			});
+
 			if (canvasContainer) {
 				canvasContainer.style.cursor = "grabbing";
-				// Capture the pointer for this drag sequence
 				canvasContainer.setPointerCapture(e.pointerId);
-				// Add listeners directly to the element that captured the pointer
-				canvasContainer.addEventListener(
-					"pointermove",
-					handleElementPointerMove,
-				);
-				canvasContainer.addEventListener(
-					"pointerup",
-					handleElementPointerUp,
-				);
-			} else {
+				canvasContainer.addEventListener("pointermove", handleElementPointerMove);
+				canvasContainer.addEventListener("pointerup", handleElementPointerUp);
 			}
-			return; // Don't delegate middle mouse
+			return;
 		}
 
 		const targetElement = e.target as HTMLElement;
@@ -602,9 +647,6 @@
 
 	// New handler for pointer move on the element during middle-mouse pan
 	function handleElementPointerMove(e: PointerEvent) {
-		// Check if we are still panning (redundant check if listeners are removed correctly, but safe)
-		// Also check if the moving pointer is the one we captured
-		// Add null check for canvasContainer
 		if (
 			isPanning &&
 			canvasContainer &&
@@ -612,27 +654,44 @@
 		) {
 			const newPosX = e.clientX - panStartX;
 			const newPosY = e.clientY - panStartY;
-			// Close menus if transform changes
+
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const currentTransform = (viewTransform as any).current as { scale: number; posX: number; posY: number };
+
+			// Debug pan move
+			// eslint-disable-next-line no-console
+			console.debug('[Viewport.pan:move]', {
+				clientX: e.clientX, clientY: e.clientY, newPosX, newPosY, currentTransform
+			});
+
 			if (
-				newPosX !== viewTransform.target.posX ||
-				newPosY !== viewTransform.target.posY
+				newPosX !== currentTransform.posX ||
+				newPosY !== currentTransform.posY
 			) {
 				closeContextMenu();
 				closeCreateNodeMenu();
 			}
 			const newTransformPan = {
-				scale: viewTransform.target.scale,
+				scale: currentTransform.scale,
 				posX: newPosX,
 				posY: newPosY,
 			};
+
+			// Debug pan apply
+			// eslint-disable-next-line no-console
+			console.debug('[Viewport.pan:apply]', newTransformPan);
+
 			viewTransform.set(newTransformPan, { duration: 0 });
+
+			queueMicrotask(() => {
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any, no-console
+				console.debug('[Viewport.pan:after-set]', (viewTransform as any).current);
+			});
 		}
 	}
 
 	// New handler for pointer up on the element during middle-mouse pan
 	function handleElementPointerUp(e: PointerEvent) {
-		// Check if this is the up event for the pointer we captured and the middle button
-		// Add null check for canvasContainer
 		if (
 			isPanning &&
 			e.button === 1 &&
@@ -640,18 +699,13 @@
 			canvasContainer.hasPointerCapture(e.pointerId)
 		) {
 			isPanning = false;
-			// No need for inner null check now, already checked above
-			canvasContainer.style.cursor = "default"; // Reset cursor
-			// Remove listeners from the element
-			canvasContainer.removeEventListener(
-				"pointermove",
-				handleElementPointerMove,
-			);
-			canvasContainer.removeEventListener(
-				"pointerup",
-				handleElementPointerUp,
-			);
-			// Release the pointer capture
+			// Debug pan end
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any, no-console
+			console.debug('[Viewport.pan:end]', (viewTransform as any).current);
+
+			canvasContainer.style.cursor = "default";
+			canvasContainer.removeEventListener("pointermove", handleElementPointerMove);
+			canvasContainer.removeEventListener("pointerup", handleElementPointerUp);
 			canvasContainer.releasePointerCapture(e.pointerId);
 		}
 	}
@@ -824,34 +878,70 @@
 		// This helps ensure keyboard events are captured correctly.
 		canvasContainer?.focus();
 	});
+{/script}
 
-	// --- Lifecycle & Effects ---
+<!-- Always-visible debug overlay (outside script, valid Svelte markup) -->
+<!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -->
+{#key (viewTransform as any).current}
+<!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -->
+{@const __vt = (viewTransform as any).current as { posX: number; posY: number; scale: number }}
+<div style="position: fixed; left: 8px; bottom: 8px; z-index: 1000; background: rgba(0,0,0,0.6); color: #e5e7eb; font: 12px/1.2 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; padding: 6px 8px; border-radius: 6px; pointer-events: none;">
+	posX: {__vt.posX.toFixed(2)} | posY: {__vt.posY.toFixed(2)} | scale: {__vt.scale.toFixed(4)}
+</div>
+{/key}
+
+<script lang="ts">
+{#if true}
+	{@html (() => {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const vt = (viewTransform as any).current as { posX: number; posY: number; scale: number };
+		return `<div style="position: fixed; left: 8px; bottom: 8px; z-index: 1000; background: rgba(0,0,0,0.6); color: #e5e7eb; font: 12px/1.2 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; padding: 6px 8px; border-radius: 6px; pointer-events: none;">
+			posX: ${vt.posX.toFixed(2)} | posY: ${vt.posY.toFixed(2)} | scale: ${vt.scale.toFixed(4)}
+		</div>`;
+	})()}
+{/if}
+	<!-- Always-visible debug overlay -->
+	{#key (viewTransform as any).current}
+		{@const __vt = (viewTransform as any).current as { posX: number; posY: number; scale: number }}
+		<div style="position: fixed; left: 8px; bottom: 8px; z-index: 1000; background: rgba(0,0,0,0.6); color: #e5e7eb; font: 12px/1.2 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; padding: 6px 8px; border-radius: 6px; pointer-events: none;">
+			posX: {__vt.posX.toFixed(2)} | posY: {__vt.posY.toFixed(2)} | scale: {__vt.scale.toFixed(4)}
+		</div>
+	{/key}
+
+	<!-- Always-visible debug overlay -->
+	{svelty(() => {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const vt = (viewTransform as any).current as { posX: number; posY: number; scale: number };
+		return `
+<div style="position: fixed; left: 8px; bottom: 8px; z-index: 1000; background: rgba(0,0,0,0.6); color: #e5e7eb; font: 12px/1.2 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; padding: 6px 8px; border-radius: 6px; pointer-events: none;">
+	posX: ${vt.posX.toFixed(2)} | posY: ${vt.posY.toFixed(2)} | scale: ${vt.scale.toFixed(4)}
+</div>`;
+	})}
 
 	// Effect to manage global listeners for connection drag
 	// Svelte 5: Use $effect rune
 	// Svelte 4: Use $: reactive statement with a function call or onMount/onDestroy
 	$: {
-		// Reactive block for Svelte 4 effect simulation
 		if (typeof window !== "undefined") {
-			// Ensure runs only in browser
 			if ($isConnecting) {
-				window.addEventListener(
-					"pointermove",
-					handleConnectionPointerMove,
-				);
+				window.addEventListener("pointermove", handleConnectionPointerMove);
 				window.addEventListener("pointerup", handleConnectionPointerUp);
 			} else {
-				window.removeEventListener(
-					"pointermove",
-					handleConnectionPointerMove,
-				);
-				window.removeEventListener(
-					"pointerup",
-					handleConnectionPointerUp,
-				);
+				window.removeEventListener("pointermove", handleConnectionPointerMove);
+				window.removeEventListener("pointerup", handleConnectionPointerUp);
 			}
 		}
 	}
+
+	<!-- Always-visible debug overlay -->
+	<div style="position: fixed; left: 8px; bottom: 8px; z-index: 1000; background: rgba(0,0,0,0.6); color: #e5e7eb; font: 12px/1.2 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; padding: 6px 8px; border-radius: 6px; pointer-events: none;">
+		<!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -->
+		{#key (viewTransform as any).current}
+			<!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -->
+			{#let vt = (viewTransform as any).current}
+			posX: {vt.posX.toFixed(2)} | posY: {vt.posY.toFixed(2)} | scale: {vt.scale.toFixed(4)}
+		{/key}
+	</div>
 
 	// Ensure listeners are removed on component destroy
 	onDestroy(() => {
@@ -993,6 +1083,12 @@
 
 	// Removed duplicate helper function readFileAsDataURL
 </script>
+<style>
+	#viewport {
+		touch-action: none;
+		overscroll-behavior: contain;
+	}
+</style>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->

@@ -1,152 +1,154 @@
-import { writable, get, derived } from 'svelte/store';
+import { writable, get } from 'svelte/store';
 import { Tween } from 'svelte/motion';
 import { cubicInOut } from 'svelte/easing';
 import type { ViewportSettings, AbsoluteTransform } from '../types/types';
 import { currentContextId, currentViewNodes } from './ContextStore';
 import { storeLogger } from '$lib/debug';
 
-
-
-const DEFAULT_FOCAL_TRANSFORM:  AbsoluteTransform = { x: 0, y: 0, scale: 1 };
+const DEFAULT_FOCAL_TRANSFORM: AbsoluteTransform = { x: 0, y: 0, scale: 1 };
 const DEFAULT_VIEWPORT_SETTINGS: ViewportSettings = { scale: 1, posX: 0, posY: 0 };
 const VIEWPORT_TWEEN_DURATION = 1000;
 
-
+// Canonical tween controlling the viewport. We use its public value as the
+// single source of truth for rendering and math. Avoid mixing "target/current".
 export const viewTransform = new Tween<ViewportSettings>(
 	{ ...DEFAULT_VIEWPORT_SETTINGS },
 	{ duration: VIEWPORT_TWEEN_DURATION, easing: cubicInOut }
 );
 
-
+// Reactive viewport dimensions
 export const viewportWidth = writable(0);
 export const viewportHeight = writable(0);
 
-
-
-
+// Convenience getter for the current tween value (single source of truth)
+function getCurrentTransform(): ViewportSettings {
+	// Use the tween's current value as the single source of truth
+	// Custom Tween exposes .current (not a Svelte readable store)
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	return (viewTransform as any).current as ViewportSettings;
+}
 
 // Viewport Actions
-/** Centers the viewport on a specific canvas coordinate, maintaining current scale. */
+/** Center the viewport on a specific canvas coordinate. */
 export function centerViewOnCanvasPoint(canvasX: number, canvasY: number) {
-
-    const viewportEl = document.getElementById('viewport');
-
-    if (!viewportEl) {
-    	console.error("[centerViewOnCanvasPoint] Viewport element not found.");
-    	return;
-    }
-
-    const targetScale = 1;
-    const targetPosX  = -canvasX * targetScale;
-    const targetPosY  = -canvasY * targetScale;
-
-    const newTransform = {
-        scale: targetScale,
-        posX: targetPosX,
-        posY: targetPosY
-    };
-
-    viewTransform.set(newTransform, { duration: VIEWPORT_TWEEN_DURATION });
+	const viewportEl = document.getElementById('viewport');
+	if (!viewportEl) {
+		console.error('[centerViewOnCanvasPoint] Viewport element not found.');
+		return;
+	}
+	// Keep current scale; just re-center position
+	const current = getCurrentTransform();
+	const targetScale = current.scale;
+	const targetPosX = -canvasX * targetScale;
+	const targetPosY = -canvasY * targetScale;
+	viewTransform.set({ scale: targetScale, posX: targetPosX, posY: targetPosY }, { duration: VIEWPORT_TWEEN_DURATION });
 }
 
 
 
 
 
-/** Centers the viewport on the current focal node. */
+/** Center on the current focal node. */
 export function centerOnFocalNode() {
-
-    const focalNodeId = get(currentContextId);
-    const focalViewNode = get(currentViewNodes).get(focalNodeId);
-
-    if (focalViewNode) {
-    	const nodeState = focalViewNode.state.current;
-    	const centerX   = nodeState.x;
-    	const centerY   = nodeState.y;
-
-    	centerViewOnCanvasPoint(centerX, centerY);
-
-    } else {
-        storeLogger.warn(`Cannot center on focal node: ViewNode ${focalNodeId} not found in current context.`);
-    }
+	const focalNodeId = get(currentContextId);
+	const focalViewNode = get(currentViewNodes).get(focalNodeId);
+	if (focalViewNode) {
+		const nodeState = focalViewNode.state.current;
+		const centerX = nodeState.x;
+		const centerY = nodeState.y;
+		centerViewOnCanvasPoint(centerX, centerY);
+	} else {
+		storeLogger.warn(`Cannot center on focal node: ViewNode ${focalNodeId} not found in current context.`);
+	}
 }
 
 
 
 
 
-/** Calculates the bounding box of all nodes in the current context and adjusts the viewport to frame them. */
+/** Frame all nodes in current context with padding. */
 export function frameContext() {
+	const viewportEl = document.getElementById('viewport');
+	if (!viewportEl) {
+		console.error('[frameContext] Viewport element not found.');
+		return;
+	}
+	const rect = viewportEl.getBoundingClientRect();
+	const nodesInContext = get(currentViewNodes);
 
-    const viewportEl = document.getElementById('viewport');
+	let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
 
-    if (!viewportEl) {
-    	console.error("[frameContext] Viewport element not found.");
-    	return;
-    }
-    const rect = viewportEl.getBoundingClientRect();
-    const nodesInContext = get(currentViewNodes);
+	nodesInContext.forEach((viewNode) => {
+		const state = viewNode.state.current;
+		const nodeLeft = state.x - (state.width / 2) * state.scale;
+		const nodeRight = state.x + (state.width / 2) * state.scale;
+		const nodeTop = state.y - (state.height / 2) * state.scale;
+		const nodeBottom = state.y + (state.height / 2) * state.scale;
 
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+		minX = Math.min(minX, nodeLeft);
+		minY = Math.min(minY, nodeTop);
+		maxX = Math.max(maxX, nodeRight);
+		maxY = Math.max(maxY, nodeBottom);
+	});
 
-    nodesInContext.forEach(viewNode => {
+	const boundsWidth = maxX - minX;
+	const boundsHeight = maxY - minY;
+	const boundsCenterX = minX + boundsWidth / 2;
+	const boundsCenterY = minY + boundsHeight / 2;
 
-    	const state         = viewNode.state.current;
-    	const nodeLeft      = state.x - (state.width  / 2)  * state.scale;
-    	const nodeRight     = state.x + (state.width  / 2)  * state.scale;
-    	const nodeTop       = state.y - (state.height / 2)  * state.scale;
-    	const nodeBottom    = state.y + (state.height / 2)  * state.scale;
+	// Fallback: center on first node or reset
+	if (boundsWidth <= 0 || boundsHeight <= 0) {
+		const firstNode = nodesInContext.values().next().value;
+		if (firstNode) {
+			const state = firstNode.state.current;
+			centerViewOnCanvasPoint(state.x + state.width / 2, state.y + state.height / 2);
+		} else {
+			viewTransform.set({ ...DEFAULT_VIEWPORT_SETTINGS }, { duration: 0 });
+		}
+		return;
+	}
 
-    	minX = Math.min(minX, nodeLeft);
-    	minY = Math.min(minY, nodeTop);
-    	maxX = Math.max(maxX, nodeRight);
-    	maxY = Math.max(maxY, nodeBottom);
-    });
+	const padding = 0.1;
+	const scaleX = rect.width / (boundsWidth * (1 + padding));
+	const scaleY = rect.height / (boundsHeight * (1 + padding));
 
-    const boundsWidth   = maxX - minX;
-    const boundsHeight  = maxY - minY;
-    const boundsCenterX = minX + boundsWidth / 2;
-    const boundsCenterY = minY + boundsHeight / 2;
+	const targetScale = Math.min(scaleX, scaleY, 2);
+	const targetPosX = -boundsCenterX * targetScale;
+	const targetPosY = -boundsCenterY * targetScale;
 
-    // Fallback: center on the first node found (or the focal node if it exists)
-    if (boundsWidth <= 0 || boundsHeight <= 0) {
-    	const firstNode = nodesInContext.values().next().value;
-    	if (firstNode) {
-    		const state = firstNode.state.current;
-    		centerViewOnCanvasPoint(state.x + state.width / 2, state.y + state.height / 2);
-    	} else {
-    		viewTransform.set({ ...DEFAULT_VIEWPORT_SETTINGS }, { duration: 0 }); // Reset if truly empty
-    	}
-    	return;
-    }
-
-    const padding       = 0.1;
-    const scaleX        = rect.width  / (boundsWidth  * (1 + padding));
-    const scaleY        = rect.height / (boundsHeight * (1 + padding));
-
-    const targetScale   = Math.min(scaleX, scaleY, 2);
-    const targetPosX    = -boundsCenterX * targetScale;
-    const targetPosY    = -boundsCenterY * targetScale;
-
-    const newTransform = { scale: targetScale, posX: targetPosX, posY: targetPosY };
-    viewTransform.set(newTransform, { duration: 0 });
+	viewTransform.set({ scale: targetScale, posX: targetPosX, posY: targetPosY }, { duration: VIEWPORT_TWEEN_DURATION });
 }
 
 
 
 
 
-/** Converts screen coordinates to canvas coordinates based on the current viewport transform. */
-export function screenToCanvasCoordinates(screenX: number, screenY: number, containerRect: DOMRect): { x: number; y: number } {
+/** Convert screen coordinates to canvas coordinates using the same transform the view renders with. */
+export function screenToCanvasCoordinates(
+	screenX: number,
+	screenY: number,
+	containerRect: DOMRect
+): { x: number; y: number } {
+	const currentTransform = getCurrentTransform();
+	const vw = get(viewportWidth);
+	const vh = get(viewportHeight);
 
-    const currentTransform = viewTransform.target;
-    const vw = get(viewportWidth);
-    const vh = get(viewportHeight);
+	// Inverse of the transform applied in Viewport.svelte
+	const canvasX = (screenX - containerRect.left - currentTransform.posX - vw / 2) / currentTransform.scale;
+	const canvasY = (screenY - containerRect.top - currentTransform.posY - vh / 2) / currentTransform.scale;
 
-    // This is the inverse of the transformation applied in Viewport.svelte
-    // It accounts for the pan (posX, posY), zoom (scale), and the viewport center offset (vw/2, vh/2)
-    const canvasX = (screenX - containerRect.left - currentTransform.posX - vw / 2) / currentTransform.scale;
-    const canvasY = (screenY - containerRect.top  - currentTransform.posY - vh / 2) / currentTransform.scale;
+	// Debug logging
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	if (typeof window !== 'undefined' && (window as any).__KARTA_DEBUG_VIEWPORT) {
+		// eslint-disable-next-line no-console
+		console.debug('[ViewportStore.screenToCanvasCoordinates]', {
+			screenX, screenY,
+			containerLeft: containerRect.left, containerTop: containerRect.top,
+			vw, vh,
+			currentTransform,
+			result: { x: canvasX, y: canvasY }
+		});
+	}
 
 	return { x: canvasX, y: canvasY };
 }
