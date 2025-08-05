@@ -2,7 +2,7 @@
   import { fade, scale, slide } from 'svelte/transition';
   import { selectedNodes, selectedCount, exportActions } from '$lib/karta/ExportStore';
   import type { ExportableNode } from '$lib/karta/ExportStore';
-  import { Package } from 'lucide-svelte';
+  import { Package, Eye, Folder, FolderOpen, File, FileText, List, GitBranch, Info } from 'lucide-svelte';
   
   export let isOpen = false;
   
@@ -10,6 +10,8 @@
   let exportDescription = '';
   let includeAssets = true;
   let modalElement: HTMLDivElement;
+  let showTreeView = false;
+  let bundleTree: any = null; // TODO: Define proper type for bundle tree structure
   
   $: stats = exportActions.getExportStats();
   
@@ -28,6 +30,84 @@
   function handleKeyDown(event: KeyboardEvent) {
     if (event.key === 'Escape') {
       closeModal();
+    }
+  }
+
+  // TODO: Implement server endpoint to get detailed bundle tree structure
+  // This will show exactly what files/nodes are included in each directory
+  async function loadBundleTree() {
+    if (bundleTree) {
+      showTreeView = !showTreeView;
+      return;
+    }
+    
+    try {
+      // TODO: Replace with actual server call
+      // const response = await serverAdapter.getBundleTree(exportActions.getExportableNodeIds());
+      // bundleTree = response.tree;
+      
+      // Mock tree structure for now
+      bundleTree = {
+        name: "Export Bundle",
+        type: "bundle",
+        children: $selectedNodes.map(node => ({
+          name: getNodeDisplayName(node),
+          type: node.node.ntype,
+          path: node.node.path,
+          children: node.includeChildren ? [
+            { name: "Loading...", type: "placeholder" }
+          ] : undefined
+        }))
+      };
+      showTreeView = true;
+    } catch (error) {
+      console.error('Failed to load bundle tree:', error);
+    }
+  }
+
+  // TODO: Implement preview functionality using Tauri
+  // This will open a new Tauri window with the runtime component displaying the selected bundle
+  // The runtime will be read-only and show exactly what the exported bundle contains
+  async function previewBundle() {
+    try {
+      // TODO: When runtime refactor is complete, implement this:
+      // 1. Create a temporary bundle from selected nodes
+      // 2. Use Tauri's window API to open a new window
+      // 3. Load the runtime component in the new window
+      // 4. Pass the bundle data to the runtime for preview
+      
+      console.log('Preview functionality will be implemented after runtime refactor');
+      console.log('Selected nodes for preview:', exportActions.getExportableNodeIds());
+      
+      // Placeholder: For now, just show an alert
+      alert(`Preview functionality coming soon!\n\nWould preview ${$selectedCount} selected items in a new runtime window.`);
+      
+      /* Future implementation:
+      const { invoke } = await import('@tauri-apps/api/tauri');
+      const { WebviewWindow } = await import('@tauri-apps/api/window');
+      
+      // Create bundle data
+      const bundleData = {
+        title: exportTitle || 'Preview Bundle',
+        description: exportDescription,
+        nodes: exportActions.getExportableNodeIds(),
+        includeAssets
+      };
+      
+      // Open new Tauri window with runtime
+      const previewWindow = new WebviewWindow('bundle-preview', {
+        url: '/runtime-preview',
+        title: `Preview: ${bundleData.title}`,
+        width: 1200,
+        height: 800,
+        resizable: true
+      });
+      
+      // Pass bundle data to the preview window
+      await previewWindow.emit('load-bundle', bundleData);
+      */
+    } catch (error) {
+      console.error('Preview failed:', error);
     }
   }
   
@@ -53,10 +133,18 @@
   }
   
   function getNodeIcon(node: ExportableNode): string {
+    // Return component name for Lucide icons instead of emoji
     if (node.node.ntype === 'core/fs/dir') {
-      return node.includeChildren ? '📁' : '📂';
+      return node.includeChildren ? 'FolderOpen' : 'Folder';
     }
-    return '📄';
+    return 'File';
+  }
+  
+  function getNodeIconComponent(node: ExportableNode) {
+    if (node.node.ntype === 'core/fs/dir') {
+      return node.includeChildren ? FolderOpen : Folder;
+    }
+    return File;
   }
   
   function getNodeDisplayName(node: ExportableNode): string {
@@ -140,15 +228,22 @@
           </label>
           
           <!-- Stats -->
-          <div class="text-xs opacity-70" style="color: var(--color-text-color);">
-            📄 {stats.files} files • 📁 {stats.directories} directories
+          <div class="text-xs opacity-70 flex items-center gap-2" style="color: var(--color-text-color);">
+            <div class="flex items-center gap-1">
+              <File size={12} />
+              {stats.files} files
+            </div>
+            <div class="flex items-center gap-1">
+              <Folder size={12} />
+              {stats.directories} directories
+            </div>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Selected items list -->
-    <div class="flex-1 overflow-hidden">
+    <div class="flex-1 overflow-hidden flex flex-col">
       {#if $selectedNodes.length === 0}
         <div class="p-6 text-center">
           <div class="text-gray-400">
@@ -160,37 +255,89 @@
           </div>
         </div>
       {:else}
-        <ul class="h-full overflow-y-auto" role="listbox">
-          {#each $selectedNodes as exportableNode (exportableNode.id)}
-            <li
-              class="px-3 py-2 text-xs border-b border-gray-700 last:border-b-0 flex items-center justify-between"
-              style="color: var(--color-text-color);"
-              transition:slide={{ duration: 200 }}
-            >
-              <div class="flex items-center space-x-3 flex-1 min-w-0">
-                <span class="text-lg">{getNodeIcon(exportableNode)}</span>
-                <div class="flex-1 min-w-0">
-                  <div class="font-mono text-sm truncate">
-                    {getNodeDisplayName(exportableNode)}
-                  </div>
-                  <div class="text-xs opacity-60">
-                    Added {formatDate(exportableNode.addedAt)}
-                    {#if exportableNode.includeChildren}
-                      • Includes subdirectories
+        <!-- View toggle header -->
+        <div class="p-3 border-b border-gray-700 flex items-center justify-between">
+          <div class="text-sm font-medium" style="color: var(--color-text-color);">
+            Selected Items
+          </div>
+          <button
+            on:click={loadBundleTree}
+            class="text-xs px-2 py-1 rounded hover:bg-gray-600 flex items-center gap-1"
+            style="color: var(--color-text-color);"
+          >
+            <svelte:component this={showTreeView ? List : GitBranch} size={12} />
+            {showTreeView ? 'List View' : 'Tree View'}
+          </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto">
+          {#if showTreeView && bundleTree}
+            <!-- Tree structure view -->
+            <div class="p-3">
+              <div class="text-xs font-medium mb-2" style="color: var(--color-text-color);">
+                Bundle Structure Preview
+              </div>
+              <!-- TODO: Implement proper tree component with server data -->
+              <div class="space-y-1 text-xs" style="color: var(--color-text-color);">
+                <div class="font-mono flex items-center gap-1">
+                  <Package size={12} />
+                  {bundleTree.name}
+                </div>
+                {#each bundleTree.children as child}
+                  <div class="pl-4 font-mono flex items-center gap-1">
+                    <svelte:component this={child.type === 'core/fs/dir' ? Folder : File} size={12} />
+                    {child.name}
+                    {#if child.children}
+                      {#each child.children as subChild}
+                        <div class="pl-8 text-gray-400 flex items-center gap-1">
+                          <File size={10} />
+                          {subChild.name}
+                        </div>
+                      {/each}
                     {/if}
                   </div>
-                </div>
+                {/each}
               </div>
-              <button
-                on:click={() => removeNode(exportableNode.id)}
-                class="text-red-400 hover:text-red-300 text-xs ml-3 px-2 py-1 rounded hover:bg-red-900/20"
-                aria-label="Remove from export"
-              >
-                Remove
-              </button>
-            </li>
-          {/each}
-        </ul>
+              <div class="mt-3 p-2 bg-gray-700/50 rounded text-xs text-gray-400 flex items-center gap-2">
+                <Info size={12} />
+                Detailed tree structure will be loaded from server
+              </div>
+            </div>
+          {:else}
+            <!-- Simple list view -->
+            <ul class="h-full" role="listbox">
+              {#each $selectedNodes as exportableNode (exportableNode.id)}
+                <li
+                  class="px-3 py-2 text-xs border-b border-gray-700 last:border-b-0 flex items-center justify-between"
+                  style="color: var(--color-text-color);"
+                  transition:slide={{ duration: 200 }}
+                >
+                  <div class="flex items-center space-x-3 flex-1 min-w-0">
+                <svelte:component this={getNodeIconComponent(exportableNode)} size={16} />
+                <div class="flex-1 min-w-0">
+                      <div class="font-mono text-sm truncate">
+                        {getNodeDisplayName(exportableNode)}
+                      </div>
+                      <div class="text-xs opacity-60">
+                        Added {formatDate(exportableNode.addedAt)}
+                        {#if exportableNode.includeChildren}
+                          • Includes subdirectories
+                        {/if}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    on:click={() => removeNode(exportableNode.id)}
+                    class="text-red-400 hover:text-red-300 text-xs ml-3 px-2 py-1 rounded hover:bg-red-900/20"
+                    aria-label="Remove from export"
+                  >
+                    Remove
+                  </button>
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        </div>
       {/if}
     </div>
 
@@ -215,6 +362,15 @@
             style="color: var(--color-text-color); background-color: var(--color-viewport-bg);"
           >
             Cancel
+          </button>
+          <button
+            on:click={previewBundle}
+            disabled={$selectedCount === 0}
+            class="px-3 py-1.5 text-xs font-medium rounded bg-gray-600 hover:bg-gray-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white flex items-center gap-1"
+            title="Preview bundle in runtime (coming soon)"
+          >
+            <Eye size={12} />
+            Preview
           </button>
           <button
             on:click={requestExport}
