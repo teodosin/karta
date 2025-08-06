@@ -293,3 +293,36 @@ export interface FailedDeletion {
 	node_id: string;
 	error: string;
 }
+
+// Export/Bundle types
+export interface BundleTreeNode {
+	name: string;
+	path: string;
+	node_type: string;
+	is_directory: boolean;
+	children?: BundleTreeNode[];
+	size?: number;
+	file_count?: number;
+}
+
+export interface BundleTreeResponse {
+	tree: BundleTreeNode;
+	total_files: number;
+	total_size: number;
+	includes_assets: boolean;
+}
+
+export interface ExportBundleRequest {
+	node_ids: string[];
+	title?: string;
+	description?: string;
+	include_assets: boolean;
+}
+
+export interface ExportBundleResponse {
+	download_url: string;
+	bundle_id: string;
+	filename: string;
+	size: number;
+	expires_at: string; // ISO timestamp
+}

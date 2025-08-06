@@ -2,7 +2,9 @@
   import { fade, scale, slide } from 'svelte/transition';
   import { selectedNodes, selectedCount, exportActions } from '$lib/karta/ExportStore';
   import type { ExportableNode } from '$lib/karta/ExportStore';
+  import type { BundleTreeResponse, ExportBundleRequest } from '$lib/types/types';
   import { Package, Eye, Folder, FolderOpen, File, FileText, List, GitBranch, Info } from 'lucide-svelte';
+  import { ServerAdapter } from '$lib/util/ServerAdapter';
   
   export let isOpen = false;
   
@@ -11,7 +13,9 @@
   let includeAssets = true;
   let modalElement: HTMLDivElement;
   let showTreeView = false;
-  let bundleTree: any = null; // TODO: Define proper type for bundle tree structure
+  let bundleTree: BundleTreeResponse | null = null;
+  
+  const serverAdapter = new ServerAdapter();
   
   $: stats = exportActions.getExportStats();
   
@@ -33,8 +37,7 @@
     }
   }
 
-  // TODO: Implement server endpoint to get detailed bundle tree structure
-  // This will show exactly what files/nodes are included in each directory
+  // Get detailed tree structure for bundle preview
   async function loadBundleTree() {
     if (bundleTree) {
       showTreeView = !showTreeView;
@@ -42,26 +45,31 @@
     }
     
     try {
-      // TODO: Replace with actual server call
-      // const response = await serverAdapter.getBundleTree(exportActions.getExportableNodeIds());
-      // bundleTree = response.tree;
-      
-      // Mock tree structure for now
-      bundleTree = {
-        name: "Export Bundle",
-        type: "bundle",
-        children: $selectedNodes.map(node => ({
-          name: getNodeDisplayName(node),
-          type: node.node.ntype,
-          path: node.node.path,
-          children: node.includeChildren ? [
-            { name: "Loading...", type: "placeholder" }
-          ] : undefined
-        }))
-      };
+      const nodeIds = exportActions.getExportableNodeIds();
+      bundleTree = await serverAdapter.getBundleTree(nodeIds);
       showTreeView = true;
     } catch (error) {
       console.error('Failed to load bundle tree:', error);
+      // Fall back to mock structure
+      bundleTree = {
+        tree: {
+          name: "Export Bundle",
+          path: "/",
+          node_type: "bundle",
+          is_directory: true,
+          children: $selectedNodes.map(node => ({
+            name: getNodeDisplayName(node),
+            path: node.node.path || node.id,
+            node_type: node.node.ntype,
+            is_directory: node.node.ntype === 'core/fs/dir',
+            children: node.includeChildren ? [] : undefined
+          }))
+        },
+        total_files: $selectedNodes.length,
+        total_size: 0,
+        includes_assets: true
+      };
+      showTreeView = true;
     }
   }
 
@@ -112,20 +120,27 @@
   }
   
   async function requestExport() {
-    // TODO: Implement server-side export request
-    const exportableNodeIds = exportActions.getExportableNodeIds();
-    
-    console.log('Requesting export with:', {
-      nodeIds: exportableNodeIds,
-      title: exportTitle || 'Karta Export',
-      description: exportDescription,
-      includeAssets
-    });
-    
-    // For now, just close the modal
-    // In the future, this will trigger server export and file download
-    alert('Export functionality will be implemented server-side. Selected nodes: ' + exportableNodeIds.join(', '));
-    closeModal();
+    try {
+      const exportRequest: ExportBundleRequest = {
+        node_ids: exportActions.getExportableNodeIds(),
+        title: exportTitle || undefined,
+        description: exportDescription || undefined,
+        include_assets: includeAssets
+      };
+      
+      console.log('Requesting export with:', exportRequest);
+      
+      const response = await serverAdapter.exportBundle(exportRequest);
+      
+      // Open download link
+      const downloadUrl = serverAdapter.downloadBundle(response.bundle_id);
+      window.open(downloadUrl, '_blank');
+      
+      closeModal();
+    } catch (error) {
+      console.error('Export failed:', error);
+      alert('Export failed. Please try again.');
+    }
   }
   
   function formatDate(date: Date): string {
@@ -277,30 +292,32 @@
               <div class="text-xs font-medium mb-2" style="color: var(--color-text-color);">
                 Bundle Structure Preview
               </div>
-              <!-- TODO: Implement proper tree component with server data -->
+              <!-- Tree component with server data -->
               <div class="space-y-1 text-xs" style="color: var(--color-text-color);">
                 <div class="font-mono flex items-center gap-1">
                   <Package size={12} />
-                  {bundleTree.name}
+                  {bundleTree.tree.name}
                 </div>
-                {#each bundleTree.children as child}
-                  <div class="pl-4 font-mono flex items-center gap-1">
-                    <svelte:component this={child.type === 'core/fs/dir' ? Folder : File} size={12} />
-                    {child.name}
-                    {#if child.children}
-                      {#each child.children as subChild}
-                        <div class="pl-8 text-gray-400 flex items-center gap-1">
-                          <File size={10} />
-                          {subChild.name}
-                        </div>
-                      {/each}
-                    {/if}
-                  </div>
-                {/each}
+                {#if bundleTree.tree.children}
+                  {#each bundleTree.tree.children as child}
+                    <div class="pl-4 font-mono flex items-center gap-1">
+                      <svelte:component this={child.is_directory ? Folder : File} size={12} />
+                      {child.name}
+                      {#if child.children}
+                        {#each child.children as subChild}
+                          <div class="pl-8 text-gray-400 flex items-center gap-1">
+                            <svelte:component this={subChild.is_directory ? Folder : File} size={10} />
+                            {subChild.name}
+                          </div>
+                        {/each}
+                      {/if}
+                    </div>
+                  {/each}
+                {/if}
               </div>
               <div class="mt-3 p-2 bg-gray-700/50 rounded text-xs text-gray-400 flex items-center gap-2">
                 <Info size={12} />
-                Detailed tree structure will be loaded from server
+                {bundleTree.total_files} files • {Math.round(bundleTree.total_size / 1024)}KB total
               </div>
             </div>
           {:else}

@@ -18,6 +18,9 @@ import type {
     DeleteNodesResponse,
     SearchQuery,
     SearchResponse,
+    BundleTreeResponse,
+    ExportBundleRequest,
+    ExportBundleResponse,
 } from '../types/types';
 import type { KartaEdgeCreationPayload } from '$lib/types/types';
 import type { PersistenceService } from './PersistenceService';
@@ -977,5 +980,68 @@ export class ServerAdapter implements PersistenceService {
             console.error(`[ServerAdapter.searchNodes] Network error during search:`, error);
             throw error;
         }
+    }
+
+    /**
+     * Get detailed tree structure for export bundle
+     */
+    async getBundleTree(nodeIds: string[]): Promise<BundleTreeResponse> {
+        try {
+            const url = `${SERVER_BASE_URL}/api/exports/tree`;
+            const params = new URLSearchParams();
+            nodeIds.forEach(id => params.append('node_ids', id));
+            
+            const response = await fetch(`${url}?${params.toString()}`);
+            
+            if (!response.ok) {
+                throw new Error(`Failed to get bundle tree: ${response.status} ${response.statusText}`);
+            }
+            
+            const treeResponse: BundleTreeResponse = await response.json();
+            
+            apiLogger.log(`[ServerAdapter.getBundleTree] Got tree with ${treeResponse.total_files} files`);
+            
+            return treeResponse;
+        } catch (error) {
+            console.error(`[ServerAdapter.getBundleTree] Network error:`, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Export nodes as a downloadable bundle
+     */
+    async exportBundle(request: ExportBundleRequest): Promise<ExportBundleResponse> {
+        try {
+            const url = `${SERVER_BASE_URL}/api/exports/bundle`;
+            
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(request)
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Failed to export bundle: ${response.status} ${response.statusText}`);
+            }
+            
+            const exportResponse: ExportBundleResponse = await response.json();
+            
+            apiLogger.log(`[ServerAdapter.exportBundle] Created bundle: ${exportResponse.filename}`);
+            
+            return exportResponse;
+        } catch (error) {
+            console.error(`[ServerAdapter.exportBundle] Network error:`, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Download a bundle file
+     */
+    downloadBundle(bundleId: string): string {
+        return `${SERVER_BASE_URL}/api/exports/download/${bundleId}`;
     }
 }

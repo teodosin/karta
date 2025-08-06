@@ -43,6 +43,7 @@ mod write_endpoints;
 mod asset_endpoints;
 mod edge_endpoints;
 mod search_endpoints;
+mod export_endpoints;
 pub mod karta_service;
 pub mod settings;
 
@@ -85,6 +86,9 @@ pub fn create_router(state: AppState) -> Router<()> {
         )
         .route("/api/ctx/{id}", put(write_endpoints::save_context))
         .route("/api/settings", get(settings::get_settings_handler).put(settings::update_settings_handler))
+        .route("/api/exports/tree", get(export_endpoints::get_bundle_tree))
+        .route("/api/exports/bundle", post(export_endpoints::export_bundle))
+        .route("/api/exports/download/{bundle_id}", get(export_endpoints::download_bundle))
         .route("/ctx/{*id}", get(context_endpoints::open_context_from_fs_path)) // Corrected wildcard syntax
         .layer(cors) // Apply the CORS layer
         // So what routes do we want?
