@@ -4,12 +4,13 @@
   "version": "0.1.0",
   "identifier": "com.karta.dev",
   "build": {
-    "frontendDist": "../src",
+    "frontendDist": "../build",
     "devUrl": "http://localhost:5173",
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build"
   },
   "app": {
+    "withGlobalTauri": true,
     "windows": [
       {
         "title": "Karta",
@@ -21,6 +22,14 @@
     ],
     "security": {
       "csp": null
+    }
+  },
+  "plugins": {
+    "shell": {
+      "all": false,
+      "execute": true,
+      "sidecar": true,
+      "open": false
     }
   },
   "bundle": {

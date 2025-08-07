@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { browser } from '$app/environment';
 	import '../app.css';
 	import { settings } from '$lib/karta/SettingsStore';
 	import { initializeStores } from '$lib/karta/ContextStore';
@@ -23,9 +24,23 @@
 		const initializeApp = async () => {
 			await settings.loadSettings();
 
-			await initializeVault();
+			// Check if we're in Tauri mode
+			let isTauriApp = false;
+			if (browser && typeof window !== 'undefined' && typeof (window as any).isTauri === 'function') {
+				isTauriApp = (window as any).isTauri();
+			} else {
+				isTauriApp = browser && '__TAURI__' in window;
+			}
+
+			// Only initialize server-dependent stores in web mode
+			// In Tauri mode, ServerSetupModal will handle this after server is ready
+			if (!isTauriApp) {
+				await initializeVault();
+				await initializeStores();
+			}
+			
+			// Always initialize tools (not server-dependent)
 			await initializeTools();
-			await initializeStores();
 		};
 
 

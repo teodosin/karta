@@ -15,13 +15,19 @@ name = "app_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
-tauri-build = { version = "2.2.0", features = [] }
+tauri-build = { version = "2.3.1", features = [] }
 
 [dependencies]
-serde_json = "1.0"
-serde = { version = "1.0", features = ["derive"] }
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri-plugin-log = "2"
+tauri-plugin-dialog = "2"
+karta_server = { path = "../../karta_server" }
+reqwest = { version = "0.12", features = ["json"] }
+ron = "0.10"
+tokio = { version = "1.47.1", features = ["time"] }
 log = "0.4"
-tauri = { version = "2.5.0", features = [] }
-tauri-plugin-log = "2.0.0-rc"
+dirs = "5.0"
 
 [workspace]

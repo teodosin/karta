@@ -107,9 +107,15 @@ pub fn create_router(state: AppState) -> Router<()> {
 
 
 pub async fn run_server(root_path: PathBuf) {
-    tracing_subscriber::fmt()
-        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
-        .init();
+    run_server_with_logging(root_path, true).await;
+}
+
+pub async fn run_server_with_logging(root_path: PathBuf, init_logging: bool) {
+    if init_logging {
+        tracing_subscriber::fmt()
+            .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+            .init();
+    }
 
     let name = "karta_server";
 
