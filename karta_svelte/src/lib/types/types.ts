@@ -308,6 +308,7 @@ export interface BundleTreeNode {
 export interface BundleTreeResponse {
 	tree: BundleTreeNode;
 	total_files: number;
+	total_directories: number;
 	total_size: number;
 	includes_assets: boolean;
 }

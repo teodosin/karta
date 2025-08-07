@@ -155,6 +155,7 @@
 						this={NodeComponent}
 						{dataNode}
 						{viewNode}
+						mode="editor"
 					/>
 				{:else}
 					<!-- Fallback rendering if component not found -->

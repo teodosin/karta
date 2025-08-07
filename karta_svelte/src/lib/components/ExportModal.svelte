@@ -2,9 +2,10 @@
   import { fade, scale, slide } from 'svelte/transition';
   import { selectedNodes, selectedCount, exportActions } from '$lib/karta/ExportStore';
   import type { ExportableNode } from '$lib/karta/ExportStore';
-  import type { BundleTreeResponse, ExportBundleRequest } from '$lib/types/types';
+  import type { BundleTreeResponse, ExportBundleRequest, BundleTreeNode } from '$lib/types/types';
   import { Package, Eye, Folder, FolderOpen, File, FileText, List, GitBranch, Info } from 'lucide-svelte';
   import { ServerAdapter } from '$lib/util/ServerAdapter';
+  import TreeNode from './TreeNode.svelte';
   
   export let isOpen = false;
   
@@ -16,6 +17,11 @@
   let bundleTree: BundleTreeResponse | null = null;
   
   const serverAdapter = new ServerAdapter();
+  
+  // Reactive statement to reset tree when selection changes
+  $: if ($selectedNodes) {
+    bundleTree = null; // Reset tree when selection changes
+  }
   
   $: stats = exportActions.getExportStats();
   
@@ -46,7 +52,9 @@
     
     try {
       const nodeIds = exportActions.getExportableNodeIds();
+      console.log('Loading bundle tree for node IDs:', nodeIds);
       bundleTree = await serverAdapter.getBundleTree(nodeIds);
+      console.log('Received bundle tree:', bundleTree);
       showTreeView = true;
     } catch (error) {
       console.error('Failed to load bundle tree:', error);
@@ -66,6 +74,7 @@
           }))
         },
         total_files: $selectedNodes.length,
+        total_directories: 0,
         total_size: 0,
         includes_assets: true
       };
@@ -167,6 +176,7 @@
   }
 </script>
 
+<!-- Recursive Tree Node Component Function -->
 {#if isOpen}
   <!-- Transparent backdrop for click-to-close -->
   <div 
@@ -292,32 +302,15 @@
               <div class="text-xs font-medium mb-2" style="color: var(--color-text-color);">
                 Bundle Structure Preview
               </div>
-              <!-- Tree component with server data -->
-              <div class="space-y-1 text-xs" style="color: var(--color-text-color);">
-                <div class="font-mono flex items-center gap-1">
-                  <Package size={12} />
-                  {bundleTree.tree.name}
-                </div>
-                {#if bundleTree.tree.children}
-                  {#each bundleTree.tree.children as child}
-                    <div class="pl-4 font-mono flex items-center gap-1">
-                      <svelte:component this={child.is_directory ? Folder : File} size={12} />
-                      {child.name}
-                      {#if child.children}
-                        {#each child.children as subChild}
-                          <div class="pl-8 text-gray-400 flex items-center gap-1">
-                            <svelte:component this={subChild.is_directory ? Folder : File} size={10} />
-                            {subChild.name}
-                          </div>
-                        {/each}
-                      {/if}
-                    </div>
-                  {/each}
+              <!-- Recursive tree component with server data -->
+              <div class="space-y-1 text-xs max-h-60 overflow-y-auto" style="color: var(--color-text-color);">
+                {#if bundleTree.tree}
+                  <TreeNode node={bundleTree.tree} depth={0} />
                 {/if}
               </div>
               <div class="mt-3 p-2 bg-gray-700/50 rounded text-xs text-gray-400 flex items-center gap-2">
                 <Info size={12} />
-                {bundleTree.total_files} files • {Math.round(bundleTree.total_size / 1024)}KB total
+                {bundleTree.total_files} files • {bundleTree.total_directories} directories • {Math.round(bundleTree.total_size / 1024)}KB total
               </div>
             </div>
           {:else}

@@ -10,6 +10,7 @@ import type { DataNode, ViewNode, TweenableNodeState, PropertyDefinition } from 
 export interface NodeTypeProps {
 	dataNode: DataNode;
 	viewNode: ViewNode;
+	mode?: 'editor' | 'runtime'; // Support runtime mode
 }
 
 // Define a specific type for our node components using Svelte 5's component type
@@ -39,6 +40,9 @@ export interface NodeTypeDefinition {
 	// Optional properties for future use (e.g., in menus)
 	displayName?: string; // User-friendly name for UI
 	icon?: IconComponent; // e.g., a Lucide icon component
+
+	// Runtime mode support
+	supportsRuntime?: boolean; // Whether this node type supports runtime mode
 
 	// Optional schema defining editable properties for this node type
 	propertySchema?: PropertyDefinition[];

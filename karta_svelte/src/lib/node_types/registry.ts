@@ -35,6 +35,10 @@ for (const path in modules) {
 			definition: definition,
 			component: component
 		};
+		
+		// Log runtime support
+		const runtimeSupport = definition.supportsRuntime ? 'with runtime support' : 'editor only';
+		console.log(`[Editor Registry] Registered: ${definition.ntype} (${definition.displayName || 'unnamed'}) - ${runtimeSupport}`);
 	} else {
 		// Add more specific warnings
 		let warnings = [];
@@ -42,7 +46,7 @@ for (const path in modules) {
 		if (!definition) warnings.push("nodeTypeDef export missing");
 		else if (!definition.ntype) warnings.push("ntype missing in nodeTypeDef");
 		if (!component) warnings.push("default export (component) missing");
-		console.warn(`[Registry] Failed to load node type from path: ${path}. Issues: ${warnings.join(', ')}.`);
+		console.warn(`[Editor Registry] Failed to load node type from path: ${path}. Issues: ${warnings.join(', ')}.`);
 	}
 }
 

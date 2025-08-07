@@ -29,7 +29,8 @@
 		getDefaultViewNodeState,
 		displayName: 'Node',
 		// icon: Circle as IconComponent // Example
-		propertySchema: genericNodePropertySchema
+		propertySchema: genericNodePropertySchema,
+		supportsRuntime: true // Generic nodes support runtime mode
 	};
 </script>
 
@@ -40,14 +41,18 @@
 
 	export let dataNode: DataNode;
 	export let viewNode: ViewNode;
-	// Check if context exists for this node using the new map
-	$: hasContext = $existingContextsMap.has(viewNode.id);
+	export let mode: 'editor' | 'runtime' = 'editor';
+	
+	// Check if context exists for this node using the new map (only in editor mode)
+	$: hasContext = mode === 'editor' ? $existingContextsMap.has(viewNode.id) : false;
 
 	// Instance logic...
 
-	// Determine ring classes based on focal state and context existence
-	$: ringClasses = dataNode.id === $currentContextId
-		? 'ring-4 ring-offset-2 ring-offset-gray-900 ring-[var(--color-focal-hl)]' // Focal highlight
+	// Determine ring classes based on mode and focal state
+	$: ringClasses = mode === 'runtime' 
+		? 'rounded' // Runtime mode: simple styling
+		: dataNode.id === $currentContextId
+			? 'ring-4 ring-offset-2 ring-offset-gray-900 ring-[var(--color-focal-hl)]' // Focal highlight
 		: hasContext
 			? 'ring-2 ring-[var(--color-focal-hl)]' // Use border for context outline
 			: ''; // No border/ring

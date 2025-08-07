@@ -39,7 +39,9 @@
 		getDefaultViewNodeState,
 		displayName: 'Text',
 		// icon: Type as IconComponent // Example
-		propertySchema: textNodePropertySchema
+		propertySchema: textNodePropertySchema,
+		// Runtime mode compatibility
+		supportsRuntime: true
 	};
 </script>
 
@@ -54,8 +56,10 @@
 
 	export let dataNode: DataNode;
 	export let viewNode: ViewNode;
-	// Check if context exists for this node using the new map
-	$: hasContext = $existingContextsMap.has(viewNode.id);
+	export let mode: 'editor' | 'runtime' = 'editor';
+	
+	// Check if context exists for this node using the new map (only in editor mode)
+	$: hasContext = mode === 'editor' ? $existingContextsMap.has(viewNode.id) : false;
 
 	// Type assertion for dataNode attributes - assumes NodeWrapper ensures correct ntype/attributes
 	$: dataNodeAttributes = dataNode.attributes as {
@@ -90,19 +94,24 @@
 	$: effectiveFont = viewNodeAttributes?.viewtype_font ?? dataNodeAttributes?.viewtype_font ?? FALLBACK_FONT;
 	$: effectiveFontSize = viewNodeAttributes?.viewtype_fontSize ?? dataNodeAttributes?.viewtype_fontSize ?? FALLBACK_FONT_SIZE;
 
-	// Determine ring classes based on focal state and context existence
-	$: ringClasses = dataNode.id === $currentContextId
-		? 'ring-4 ring-offset-2 ring-offset-gray-900 ring-[var(--color-focal-hl)] rounded' // Focal highlight
-		: hasContext
-			? 'ring-2 ring-[var(--color-focal-hl)] rounded' // Use border for context outline
-			: 'rounded shadow-md'; // Default rounded corners and shadow
+	// Determine ring classes based on mode and focal state
+	$: ringClasses = mode === 'runtime' 
+		? 'rounded shadow-md' // Runtime mode: simple styling
+		: dataNode.id === $currentContextId
+			? 'ring-4 ring-offset-2 ring-offset-gray-900 ring-[var(--color-focal-hl)] rounded' // Focal highlight
+			: hasContext
+				? 'ring-2 ring-[var(--color-focal-hl)] rounded' // Use border for context outline
+				: 'rounded shadow-md'; // Default rounded corners and shadow
 
 	let isEditing = false;
+	let textAreaElement: HTMLTextAreaElement;
 	let editedText = '';
-	let textAreaElement: HTMLTextAreaElement | null = null;
+
+	// Editing is only enabled in editor mode
+	$: canEdit = mode === 'editor';
 
 	async function startEditing() {
-		if (isEditing) return; // Prevent re-entry if already editing
+		if (!canEdit || isEditing) return; // Prevent editing in runtime mode or if already editing
 		editedText = textContent;
 		isEditing = true;
 		await tick(); // Wait for textarea to render
@@ -192,7 +201,7 @@
 	style:background-color={effectiveFillColor}
 	style:color={effectiveTextColor}
 	style:transition="background-color 1000ms cubic-bezier(0.165, 0.84, 0.44, 1), color 1000ms cubic-bezier(0.165, 0.84, 0.44, 1)"
-	on:dblclick={startEditing}
+	on:dblclick={canEdit ? startEditing : undefined}
 >
 	{#if isEditing}
 		<!-- Editing State: Textarea -->

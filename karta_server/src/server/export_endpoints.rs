@@ -6,7 +6,8 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::fs;
 use uuid::Uuid;
 
 /// Request structure for getting bundle tree structure
@@ -41,6 +42,7 @@ pub struct BundleTreeNode {
 pub struct BundleTreeResponse {
     pub tree: BundleTreeNode,
     pub total_files: usize,
+    pub total_directories: usize,
     pub total_size: u64,
     pub includes_assets: bool,
 }
@@ -64,10 +66,10 @@ pub async fn get_bundle_tree(
 ) -> Result<Json<BundleTreeResponse>, StatusCode> {
     let service = state.service.read().unwrap();
     
-    // TODO: Implement detailed tree analysis
-    // For now, return a simplified structure based on the selected nodes
+    println!("Getting bundle tree for node IDs: {:?}", params.node_ids);
     
     let mut total_files = 0;
+    let mut total_directories = 0;
     let mut total_size = 0;
     let mut children = Vec::new();
     
@@ -83,41 +85,88 @@ pub async fn get_bundle_tree(
         
         match node_result {
             Ok(node) => {
-                let node_path = node.path().alias().to_string();
-                let is_directory = node.is_dir();
+                let node_path_str = node.path().alias().to_string();
+                let node_path = Path::new(&node_path_str);
                 
-                // For directories, we would recursively scan contents
-                let (file_count, size) = if is_directory {
-                    // TODO: Implement recursive directory scanning
-                    // For now, return placeholder values
-                    (1, 1024)
+                println!("Processing node: {} -> path: {}", node_id, node_path_str);
+                
+                // Check if the path actually exists on the filesystem
+                if !node_path.exists() {
+                    println!("Path does not exist: {}", node_path_str);
+                    // If path doesn't exist, create a simple node entry
+                    let tree_node = BundleTreeNode {
+                        name: node.name(),
+                        path: node_path_str,
+                        node_type: node.ntype().to_string(),
+                        is_directory: false,
+                        children: None,
+                        size: Some(0),
+                        file_count: None,
+                    };
+                    children.push(tree_node);
+                    total_files += 1; // Count non-existent paths as files
+                    continue;
+                }
+                
+                // Use filesystem metadata to determine if it's a directory
+                let metadata = match fs::metadata(node_path) {
+                    Ok(meta) => meta,
+                    Err(_) => {
+                        // If we can't read metadata, treat as a regular file with 0 size
+                        let tree_node = BundleTreeNode {
+                            name: node.name(),
+                            path: node_path_str,
+                            node_type: node.ntype().to_string(),
+                            is_directory: false,
+                            children: None,
+                            size: Some(0),
+                            file_count: None,
+                        };
+                        children.push(tree_node);
+                        total_files += 1;
+                        continue;
+                    }
+                };
+                
+                let is_directory = metadata.is_dir();
+                
+                if is_directory {
+                    // Recursively scan directory contents
+                    let (dir_children, dir_file_count, dir_dir_count, dir_size) = scan_directory_tree(node_path)?;
+                    
+                    total_files += dir_file_count;
+                    total_directories += dir_dir_count + 1; // +1 for the directory itself
+                    total_size += dir_size;
+                    
+                    let tree_node = BundleTreeNode {
+                        name: node.name(),
+                        path: node_path_str,
+                        node_type: node.ntype().to_string(),
+                        is_directory: true,
+                        children: Some(dir_children),
+                        size: None,
+                        file_count: Some(dir_file_count),
+                    };
+                    
+                    children.push(tree_node);
                 } else {
-                    // For files, get actual size if possible
-                    let file_size = std::fs::metadata(&node_path)
-                        .map(|m| m.len())
-                        .unwrap_or(0);
-                    (1, file_size)
-                };
-                
-                total_files += file_count;
-                total_size += size;
-                
-                let tree_node = BundleTreeNode {
-                    name: node.name(),
-                    path: node_path,
-                    node_type: node.ntype().to_string(),
-                    is_directory,
-                    children: if is_directory { 
-                        // TODO: Add actual children when implementing recursive scanning
-                        Some(vec![])
-                    } else { 
-                        None 
-                    },
-                    size: if !is_directory { Some(size) } else { None },
-                    file_count: if is_directory { Some(file_count) } else { None },
-                };
-                
-                children.push(tree_node);
+                    // Handle individual files
+                    let file_size = metadata.len();
+                    total_files += 1;
+                    total_size += file_size;
+                    
+                    let tree_node = BundleTreeNode {
+                        name: node.name(),
+                        path: node_path_str,
+                        node_type: node.ntype().to_string(),
+                        is_directory: false,
+                        children: None,
+                        size: Some(file_size),
+                        file_count: None,
+                    };
+                    
+                    children.push(tree_node);
+                }
             }
             Err(_) => {
                 // Error accessing node, skip
@@ -139,11 +188,87 @@ pub async fn get_bundle_tree(
     let response = BundleTreeResponse {
         tree,
         total_files,
+        total_directories,
         total_size,
         includes_assets: true, // TODO: Determine based on actual content
     };
     
+    println!("Returning bundle tree response: {} files, {} directories, {} bytes", 
+             total_files, total_directories, total_size);
+    
     Ok(Json(response))
+}
+
+/// Recursively scan a directory and build tree structure
+/// Returns (children, total_file_count, total_directory_count, total_size)
+fn scan_directory_tree(dir_path: &Path) -> Result<(Vec<BundleTreeNode>, usize, usize, u64), StatusCode> {
+    let mut children = Vec::new();
+    let mut total_files = 0;
+    let mut total_directories = 0;
+    let mut total_size = 0;
+    
+    let read_dir = fs::read_dir(dir_path).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    
+    for entry in read_dir {
+        let entry = entry.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        let entry_path = entry.path();
+        let metadata = entry.metadata().map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        
+        let name = entry_path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("Unknown")
+            .to_string();
+        
+        let path = entry_path.to_string_lossy().to_string();
+        
+        if metadata.is_dir() {
+            // Recursively scan subdirectory
+            let (subdir_children, subdir_file_count, subdir_dir_count, subdir_size) = scan_directory_tree(&entry_path)?;
+            
+            total_files += subdir_file_count;
+            total_directories += subdir_dir_count + 1; // +1 for the subdirectory itself
+            total_size += subdir_size;
+            
+            let tree_node = BundleTreeNode {
+                name,
+                path,
+                node_type: "core/fs/dir".to_string(),
+                is_directory: true,
+                children: Some(subdir_children),
+                size: None,
+                file_count: Some(subdir_file_count),
+            };
+            
+            children.push(tree_node);
+        } else {
+            // Handle file
+            let file_size = metadata.len();
+            total_files += 1;
+            total_size += file_size;
+            
+            // Determine file type based on extension
+            let file_type = entry_path
+                .extension()
+                .and_then(|ext| ext.to_str())
+                .map(|ext| format!("core/fs/file/{}", ext))
+                .unwrap_or_else(|| "core/fs/file".to_string());
+            
+            let tree_node = BundleTreeNode {
+                name,
+                path,
+                node_type: file_type,
+                is_directory: false,
+                children: None,
+                size: Some(file_size),
+                file_count: None,
+            };
+            
+            children.push(tree_node);
+        }
+    }
+    
+    Ok((children, total_files, total_directories, total_size))
 }
 
 /// Export selected nodes as a downloadable bundle
