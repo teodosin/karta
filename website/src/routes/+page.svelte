@@ -9,8 +9,18 @@
 </svelte:head>
 
 <!-- Hero Section -->
-<section class="min-h-screen text-white flex items-center" style="background: linear-gradient(to bottom right, var(--color-viewport-bg), var(--color-panel-bg), var(--color-panel-hl));">
-	<div class="container mx-auto px-6">
+<section class="min-h-screen text-white flex items-center relative overflow-hidden" style="background: linear-gradient(to bottom right, var(--color-viewport-bg), var(--color-panel-bg), var(--color-panel-hl));">
+	<!-- Background screenshot overlay -->
+	<div class="absolute inset-0 opacity-10">
+		<img 
+			src="/hero-screenshot.png" 
+			alt="Karta interface preview"
+			class="w-full h-full object-cover object-center"
+			style="mix-blend-mode: screen;"
+		/>
+	</div>
+	
+	<div class="container mx-auto px-6 relative z-10">
 		<div class="max-w-4xl mx-auto text-center">
 			<h1 class="text-5xl md:text-7xl font-bold mb-6" style="background: linear-gradient(to right, var(--color-focal-hl), var(--color-contrast-color)); -webkit-background-clip: text; background-clip: text; color: transparent;">
 				Karta
@@ -24,12 +34,12 @@
 			<div class="border rounded-lg p-4 mb-8 max-w-2xl mx-auto" style="background-color: rgba(245, 158, 11, 0.1); border-color: rgba(245, 158, 11, 0.4);">
 				<p class="text-yellow-200 text-sm">
 					⚠️ <strong>Experimental Release:</strong> This is the first alpha version and is not yet usable as a file browser replacement. 
-					<span class="text-yellow-100">But it's a glimpse into the future of file organization—try it and see what's possible!</span>
+					<span class="text-yellow-100">But it's an experiment in visual file organization—try it and see what you think!</span>
 				</p>
 			</div>
 			<div class="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
 				<a 
-					href="https://github.com/teodosin/karta_ecosystem/releases" 
+					href="https://github.com/teodosin/karta/releases" 
 					class="inline-flex items-center gap-2 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200 hover:opacity-80"
 					style="background-color: var(--color-focal-hl);"
 				>
@@ -37,7 +47,7 @@
 					Download Alpha 0.1.0
 				</a>
 				<a 
-					href="https://github.com/teodosin/karta_ecosystem" 
+					href="https://github.com/teodosin/karta" 
 					class="inline-flex items-center gap-2 border-2 text-gray-300 hover:text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200 hover:border-gray-400"
 					style="border-color: var(--color-connection-color);"
 				>
@@ -57,10 +67,10 @@
 	<div class="container mx-auto px-6">
 		<div class="max-w-6xl mx-auto">
 			<h2 class="text-4xl font-bold text-center mb-4" style="color: var(--color-text-color);">
-				Organize. Visualize. Create.
+				Organize. Visualize. Connect.
 			</h2>
 			<p class="text-xl text-center mb-16 text-gray-400 max-w-3xl mx-auto">
-				Transform how you manage files with a canvas-based approach that reveals connections and relationships.
+				A different approach to managing files with a canvas-based interface that shows connections and relationships.
 			</p>
 			
 			<div class="grid md:grid-cols-3 gap-8 mb-16">
@@ -95,22 +105,29 @@
 				</div>
 			</div>
 
-			<!-- Screenshots placeholder -->
+			<!-- Feature Showcase -->
 			<div class="rounded-lg shadow-lg p-8 mb-16 border" style="background-color: var(--color-panel-bg); border-color: var(--color-panel-hl);">
-				<h3 class="text-2xl font-semibold mb-6 text-center" style="color: var(--color-text-color);">
-					See Karta in Action
-				</h3>
-				<div class="grid md:grid-cols-2 gap-8">
-					<div class="rounded-lg aspect-video flex items-center justify-center border" style="background-color: var(--color-viewport-bg); border-color: var(--color-connection-color);">
-						<p style="color: var(--color-text-color);">Project Graph View</p>
+				<div class="grid lg:grid-cols-2 gap-8 items-center">
+					<div>
+						<h3 class="text-2xl font-semibold mb-4" style="color: var(--color-text-color);">
+							Visual File Organization
+						</h3>
+						<p class="text-gray-400 mb-4">
+							An alternative way to browse and organize your files. Karta's node-based interface lets you see connections and relationships that traditional folder structures hide.
+						</p>
+						<p class="text-gray-400">
+							Create custom contexts, link related files, and navigate your projects with visual cues that might make more sense for your workflow.
+						</p>
 					</div>
-					<div class="rounded-lg aspect-video flex items-center justify-center border" style="background-color: var(--color-viewport-bg); border-color: var(--color-connection-color);">
-						<p style="color: var(--color-text-color);">Contextual Node Organization</p>
+					<div class="rounded-lg overflow-hidden border" style="border-color: var(--color-connection-color);">
+						<img 
+							src="/interface-screenshot.png" 
+							alt="Karta interface showing node-based file organization"
+							class="w-full h-auto"
+							style="background-color: var(--color-viewport-bg);"
+						/>
 					</div>
 				</div>
-				<p class="text-center text-gray-400 mt-4">
-					<em>Screenshots coming soon - Karta is currently in early alpha</em>
-				</p>
 			</div>
 		</div>
 	</div>
@@ -124,7 +141,7 @@
 				What's Coming Next
 			</h2>
 			<p class="text-xl text-center mb-12 text-gray-300">
-				Karta is actively being developed. Here's what's on the horizon:
+				Karta is a work in progress. Here's what's planned:
 			</p>
 			
 			<div class="grid md:grid-cols-3 gap-6">
@@ -164,7 +181,7 @@
 					Want to stay updated on development progress?
 				</p>
 				<a 
-					href="https://github.com/teodosin/karta_ecosystem" 
+					href="https://github.com/teodosin/karta" 
 					class="inline-flex items-center gap-2 font-semibold hover:opacity-80 transition-opacity"
 					style="color: var(--color-focal-hl);"
 				>
@@ -185,7 +202,7 @@
 				The canvas file browser for visual organization.
 			</p>
 			<div class="flex justify-center gap-6 mb-6">
-				<a href="https://github.com/teodosin/karta_ecosystem" class="transition-colors" style="color: var(--color-text-color); hover: var(--color-focal-hl);">
+				<a href="https://github.com/teodosin/karta" class="transition-colors" style="color: var(--color-text-color); hover: var(--color-focal-hl);">
 					GitHub
 				</a>
 				<a href="mailto:karta@teodosin.com" class="transition-colors" style="color: var(--color-text-color);">
