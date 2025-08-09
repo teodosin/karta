@@ -72,18 +72,18 @@ jobs:
           key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
 
       - name: Install frontend dependencies
-        working-directory: karta/karta_svelte
+        working-directory: karta_svelte
         run: pnpm install
 
       - name: Build frontend
-        working-directory: karta/karta_svelte
+        working-directory: karta_svelte
         run: pnpm build
 
       - name: Install Tauri CLI
         run: cargo install tauri-cli --version "^2.0"
 
       - name: Build Tauri app
-        working-directory: karta/karta_svelte
+        working-directory: karta_svelte
         run: cargo tauri build --target ${{ matrix.target }}
 
       - name: Upload artifacts (Linux)
@@ -92,8 +92,8 @@ jobs:
         with:
           name: karta-${{ matrix.name }}
           path: |
-            karta/karta_svelte/src-tauri/target/${{ matrix.target }}/release/bundle/appimage/*.AppImage
-            karta/karta_svelte/src-tauri/target/${{ matrix.target }}/release/bundle/deb/*.deb
+            karta_svelte/src-tauri/target/${{ matrix.target }}/release/bundle/appimage/*.AppImage
+            karta_svelte/src-tauri/target/${{ matrix.target }}/release/bundle/deb/*.deb
 
       - name: Upload artifacts (Windows)
         if: matrix.os == 'windows-latest'
@@ -101,8 +101,8 @@ jobs:
         with:
           name: karta-${{ matrix.name }}
           path: |
-            karta/karta_svelte/src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi
-            karta/karta_svelte/src-tauri/target/${{ matrix.target }}/release/bundle/nsis/*.exe
+            karta_svelte/src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi
+            karta_svelte/src-tauri/target/${{ matrix.target }}/release/bundle/nsis/*.exe
 
       - name: Upload artifacts (macOS)
         if: matrix.os == 'macos-latest'
@@ -110,8 +110,8 @@ jobs:
         with:
           name: karta-${{ matrix.name }}
           path: |
-            karta/karta_svelte/src-tauri/target/${{ matrix.target }}/release/bundle/macos/*.app
-            karta/karta_svelte/src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
+            karta_svelte/src-tauri/target/${{ matrix.target }}/release/bundle/macos/*.app
+            karta_svelte/src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
 
   release:
     needs: build
