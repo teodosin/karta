@@ -1,0 +1,30 @@
+/* Import Google Fonts: Nunito (base), Lustria, Bodoni Moda */
+@import url('https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=Lustria&family=Nunito:ital,wght@0,200..1000;1,200..1000&display=swap');
+@import 'tailwindcss';
+
+:root {
+  --color-panel-bg: #431d1f;
+  --color-viewport-bg: #000000;
+  --color-text-color: #f0f0f0;
+  --color-panel-hl: #741f2f;
+  --color-focal-hl: #f4902d;
+  --color-contrast-color: #60a5fa;
+  --color-connection-color: #505050;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Nunito', sans-serif;
+  background-color: var(--color-viewport-bg);
+  color: var(--color-text-color);
+}
+
+* {
+  box-sizing: border-box;
+  font-family: 'Nunito', sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}

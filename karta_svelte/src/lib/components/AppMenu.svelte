@@ -147,11 +147,12 @@
 </script>
 
 <div class="fixed top-2 left-2 z-[60]">
-	<!-- Standard HTML button with Tailwind classes for styling -->
+<!-- Standard HTML button with Tailwind classes for styling -->
+<div class="flex items-center gap-2 m-2">
 	<button
 		on:click={toggleMenu}
 		type="button"
-		class="m-2 inline-flex items-center justify-center rounded-md p-1 text-foreground focus:outline-none focus:ring-2 focus:ring-inset"
+		class="inline-flex items-center justify-center rounded-md p-1 text-foreground focus:outline-none focus:ring-2 focus:ring-inset"
 		style="--panel-hl: {$settings.colorTheme[
 			'panel-hl'
 		]}; --focal-hl: {$settings.colorTheme['focal-hl']};"
@@ -163,6 +164,8 @@
 			<Menu class="h-5 w-5" />
 		{/if}
 	</button>
+	<span class="text-sm text-gray-300 font-mono">Karta Alpha 0.1.0</span>
+</div>
 
 	{#if isOpen}
 		<div

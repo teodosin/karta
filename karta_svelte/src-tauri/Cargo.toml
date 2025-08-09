@@ -1,10 +1,10 @@
 [package]
 name = "karta"
 version = "0.1.0"
-description = "A Tauri App"
+description = "Karta - A node-based graph tool for organizing complex creative projects"
 authors = ["teodosin"]
 license = "GPL 3"
-repository = ""
+repository = "https://github.com/teodosin/karta_ecosystem"
 edition = "2021"
 rust-version = "1.77.2"
 

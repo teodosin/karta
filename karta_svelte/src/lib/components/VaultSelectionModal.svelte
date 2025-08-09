@@ -143,8 +143,8 @@
 					Select Vault
 				</h2>
 			</div>
-			<p class="text-sm mt-1 opacity-70" style="color: var(--color-text-color);">
-				Choose an existing vault or browse for a new directory
+			<p class="text-sm mt-2 opacity-80" style="color: var(--color-text-color);">
+				Choose an existing vault or create a new one. Karta will only have access to files inside of a vault. This keeps your workspace isolated and secure.
 			</p>
 		</div>
 
