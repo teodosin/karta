@@ -58,6 +58,7 @@ pub struct AppState {
 pub fn create_router(state: AppState) -> Router<()> {
     let cors = CorsLayer::new()
         .allow_origin("http://localhost:5173".parse::<axum::http::HeaderValue>().unwrap())
+        .allow_origin("http://localhost:7360".parse::<axum::http::HeaderValue>().unwrap())
         .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE, Method::OPTIONS, Method::PATCH])
         .allow_headers([axum::http::header::CONTENT_TYPE]);
 

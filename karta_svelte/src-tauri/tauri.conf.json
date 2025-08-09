@@ -5,8 +5,8 @@
   "identifier": "com.karta.dev",
   "build": {
     "frontendDist": "../build",
-    "devUrl": "http://localhost:5173",
-    "beforeDevCommand": "pnpm dev",
+    "devUrl": "http://localhost:7360",
+    "beforeDevCommand": "pnpm dev --port 7360",
     "beforeBuildCommand": "pnpm build"
   },
   "app": {
