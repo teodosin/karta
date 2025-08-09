@@ -13,7 +13,7 @@
 	<!-- Background screenshot overlay -->
 	<div class="absolute inset-0 opacity-10">
 		<img 
-			src="/hero-screenshot.png" 
+			src="{base}/hero-screenshot.png" 
 			alt="Karta interface preview"
 			class="w-full h-full object-cover object-center"
 			style="mix-blend-mode: screen;"
@@ -121,7 +121,7 @@
 					</div>
 					<div class="rounded-lg overflow-hidden border" style="border-color: var(--color-connection-color);">
 						<img 
-							src="/interface-screenshot.png" 
+							src="{base}/interface-screenshot.png" 
 							alt="Karta interface showing node-based file organization"
 							class="w-full h-auto"
 							style="background-color: var(--color-viewport-bg);"
