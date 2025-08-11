@@ -6,6 +6,7 @@
 	import { initializeStores } from '$lib/karta/ContextStore';
 	import { initializeVault } from '$lib/karta/VaultStore';
 	import NodeSearchModal from '$lib/components/NodeSearchModal.svelte';
+	import TutorialModal from '$lib/components/TutorialModal.svelte';
     import { initializeTools } from '$lib/karta/ToolStore';
 
 	let { children } = $props();
@@ -64,3 +65,4 @@
 {@render children()}
 
 <NodeSearchModal />
+<TutorialModal />

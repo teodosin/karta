@@ -75,7 +75,7 @@ See the individual READMEs for more detailed setup instructions.
 
 It's too early to ask for contributions, but feedback and discussion are very welcome. The project is still finding its direction and having conversations about what this should become is valuable.
 
-If you want to try it out, expect rough edges and incomplete features. But if something clicks for you or you see potential, I'd love to hear about it.
+If you want to try it out, expect rough edges and incomplete features. But if something clicks for you or you see potential, I'd love to hear about it. You can send your questions, feedback and feature ideas directly to karta@teodosin.com.
 
 ## Background
 
