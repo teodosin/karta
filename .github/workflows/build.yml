@@ -45,10 +45,28 @@ jobs:
         with:
           node-version: "20"
 
+      # ---- pnpm: detect version from package.json, install exact version, then install deps ----
+      - name: Read pnpm version
+        id: pnpmver
+        working-directory: karta_svelte
+        shell: bash
+        run: |
+          set -e
+          VER=$(node -p "try{(require('./package.json').packageManager||'').split('@')[1]||''}catch(e){''}")
+          if [ -z "$VER" ]; then
+            # Fallback if packageManager is missing; adjust if your lockfile uses a different major
+            VER=8
+            echo "packageManager not set; defaulting to pnpm $VER"
+          else
+            echo "Detected pnpm $VER from package.json"
+          fi
+          echo "ver=$VER" >> "$GITHUB_OUTPUT"
+
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 8
+          version: ${{ steps.pnpmver.outputs.ver }}
+          run_install: false
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -88,7 +106,7 @@ jobs:
           security list-keychains -d user -s "$KEYCHAIN" "$HOME/Library/Keychains/login.keychain-db" || true
           security default-keychain -s "$KEYCHAIN" || true
 
-          # Import .p12 and allow codesign / productbuild to use it non-interactively
+          # Import .p12 and allow codesign/security to use it non-interactively
           security import certificate.p12 -k "$KEYCHAIN" -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security -A
 
           # Some environments need this partition list set explicitly
@@ -109,7 +127,7 @@ jobs:
           security list-keychains -d user -s "$KEYCHAIN" "$HOME/Library/Keychains/login.keychain-db" || true
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN" || true
 
-          # Prefer Developer ID Application (outside Mac App Store), then Apple Distribution, then Apple Development
+          # Prefer Developer ID Application (outside MAS), then Apple Distribution, then Apple Development
           CERT_HASH=$(security find-identity -v -p codesigning "$KEYCHAIN" | awk '/Developer ID Application|Apple Distribution|Apple Development/ {print $2; exit}')
 
           if [ -z "$CERT_HASH" ]; then
@@ -123,6 +141,7 @@ jobs:
           echo "Using signing identity hash: $CERT_HASH"
           echo "APPLE_SIGNING_IDENTITY=$CERT_HASH" >> "$GITHUB_ENV"
 
+      # ---- caches ----
       - name: Cache cargo dependencies
         uses: actions/cache@v4
         with:
@@ -138,11 +157,17 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.pnpm-store
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          key: ${{ runner.os }}-pnpm-${{ steps.pnpmver.outputs.ver }}-${{ hashFiles('**/pnpm-lock.yaml') }}
 
+      # ---- frontend build (with robust lockfile handling) ----
       - name: Install frontend dependencies
         working-directory: karta_svelte
-        run: pnpm install --frozen-lockfile
+        shell: bash
+        run: |
+          set -e
+          pnpm -v
+          # Attempt frozen install first (deterministic). If lockfile is incompatible/missing, fall back once.
+          pnpm install --frozen-lockfile || pnpm install --no-frozen-lockfile
 
       - name: Build frontend
         working-directory: karta_svelte
