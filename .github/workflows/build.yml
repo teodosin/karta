@@ -54,7 +54,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
-      # Windows: keep MSI build; avoid failing if a newer WiX is preinstalled
+      # Windows: avoid failing if WiX is already present/newer
       - name: Ensure WiX (Windows)
         if: matrix.os == 'windows-latest'
         shell: powershell
@@ -84,7 +84,7 @@ jobs:
           security set-keychain-settings -t 3600 -u "$KEYCHAIN"
 
           # Import the .p12 and allow non-interactive codesign
-          security import certificate.p12 -k "$KEYCHAIN" -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign -A
+          security import certificate.p12 -k "$KEYCHAIN" -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security -A
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
 
           echo "== Identities in build keychain =="
@@ -139,9 +139,59 @@ jobs:
         run: pnpm build
 
       - name: Install Tauri CLI
-        run: cargo install tauri-cli --version "^2.0"
+        run: cargo install tauri-cli --version "^2.0" --force
 
-      # ---------- NEW: notarization preflight (macOS) ----------
+      # ---------- diagnostics (macOS) ----------
+      - name: Diagnose Apple ID credentials (macOS)
+        if: matrix.os == 'macos-latest'
+        shell: bash
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}   # app-specific password
+        run: |
+          set -euo pipefail
+          [ -n "${APPLE_ID:-}" ] || { echo "::error::APPLE_ID is empty"; exit 1; }
+          [ -n "${APPLE_PASSWORD:-}" ] || { echo "::error::APPLE_PASSWORD (app-specific) is empty"; exit 1; }
+
+          # If altool exists, use it to validate Apple ID + app-specific password only
+          if xcrun -f altool >/dev/null 2>&1; then
+            if ! xcrun altool --list-providers -u "$APPLE_ID" -p "$APPLE_PASSWORD" >/dev/null 2>&1; then
+              echo "::error::Apple ID or APPLE_PASSWORD invalid (altool provider listing failed)."
+              exit 1
+            fi
+            echo "Apple ID + app-specific password are valid (altool)."
+          else
+            echo "altool not available on this runner; skipping Apple ID-only validation."
+          fi
+
+      - name: Diagnose Team ID vs signing identity (macOS)
+        if: matrix.os == 'macos-latest'
+        shell: bash
+        env:
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          CERT_ID: ${{ env.CERT_ID }}
+        run: |
+          set -euo pipefail
+          KEYCHAIN="build.keychain"
+          [ -n "${APPLE_TEAM_ID:-}" ] || { echo "::error::APPLE_TEAM_ID is empty"; exit 1; }
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN" || true
+
+          TEAM_FROM_CERT=$(security find-identity -v -p codesigning "$KEYCHAIN" \
+            | awk -v h="$CERT_ID" 'index($0,h){ if (match($0, /\(([A-Z0-9]{10})\)/, a)) print a[1]; }')
+
+          if [ -z "$TEAM_FROM_CERT" ]; then
+            echo "::error::Could not derive Team ID from the selected signing identity $CERT_ID."
+            exit 1
+          fi
+
+          if [ "$TEAM_FROM_CERT" != "$APPLE_TEAM_ID" ]; then
+            echo "::error::Team mismatch: identity belongs to $TEAM_FROM_CERT but APPLE_TEAM_ID=$APPLE_TEAM_ID."
+            exit 1
+          fi
+          echo "Team ID matches the signing certificate: $TEAM_FROM_CERT"
+
+      # ---------- notarization preflight (macOS) ----------
       - name: Notarization preflight (macOS)
         if: matrix.os == 'macos-latest'
         shell: bash
@@ -152,18 +202,11 @@ jobs:
           APPLE_PROVIDER_SHORT_NAME: ${{ secrets.APPLE_PROVIDER_SHORT_NAME }} # optional
         run: |
           set -euo pipefail
-          # Mask values defensively
-          [ -n "${APPLE_ID:-}" ] && echo "::add-mask::$APPLE_ID"
-          [ -n "${APPLE_PASSWORD:-}" ] && echo "::add-mask::$APPLE_PASSWORD"
-          [ -n "${APPLE_TEAM_ID:-}" ] && echo "::add-mask::$APPLE_TEAM_ID"
-          [ -n "${APPLE_PROVIDER_SHORT_NAME:-}" ] && echo "::add-mask::$APPLE_PROVIDER_SHORT_NAME"
 
-          # Presence checks (no values printed)
           [ -n "${APPLE_ID:-}" ] || { echo "::error::APPLE_ID is empty"; exit 1; }
           [ -n "${APPLE_PASSWORD:-}" ] || { echo "::error::APPLE_PASSWORD (app-specific) is empty"; exit 1; }
           [ -n "${APPLE_TEAM_ID:-}" ] || { echo "::error::APPLE_TEAM_ID is empty"; exit 1; }
 
-          # Validate creds without uploading anything
           if ! xcrun notarytool history \
                 --apple-id "$APPLE_ID" \
                 --team-id "$APPLE_TEAM_ID" \
