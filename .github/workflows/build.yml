@@ -141,89 +141,49 @@ jobs:
       - name: Install Tauri CLI
         run: cargo install tauri-cli --version "^2.0" --force
 
-      # ---------- diagnostics (macOS) ----------
-      # 1) Apple ID + app-specific password: show raw altool error to pinpoint the cause
-      - name: Diagnose Apple ID credentials (macOS)
+      # ---------- App Store Connect API key (macOS) ----------
+      - name: Prepare App Store Connect API key (macOS)
         if: matrix.os == 'macos-latest'
         shell: bash
         env:
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}   # app-specific password
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}               # Key ID
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}         # Issuer ID (Team key)
+          APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY_BASE64 }} # base64 of .p8 contents
         run: |
           set -euo pipefail
-          [ -n "${APPLE_ID:-}" ] || { echo "::error::APPLE_ID is empty"; exit 1; }
-          [ -n "${APPLE_PASSWORD:-}" ] || { echo "::error::APPLE_PASSWORD (app-specific) is empty"; exit 1; }
+          [ -n "${APPLE_API_KEY:-}" ] || { echo "::error::APPLE_API_KEY missing"; exit 1; }
+          [ -n "${APPLE_API_ISSUER:-}" ] || { echo "::error::APPLE_API_ISSUER missing"; exit 1; }
+          [ -n "${APPLE_API_KEY_BASE64:-}" ] || { echo "::error::APPLE_API_KEY_BASE64 missing"; exit 1; }
+          KEY_FILE="$(mktemp -t asc_key_XXXXXX).p8"
+          echo "$APPLE_API_KEY_BASE64" | base64 --decode > "$KEY_FILE"
+          chmod 600 "$KEY_FILE"
+          echo "APPLE_API_KEY_PATH=$KEY_FILE" >> "$GITHUB_ENV"
+          echo "Prepared API key file."
 
-          # Use altool if available and capture its exact error text
-          if xcrun -f altool >/dev/null 2>&1; then
-            if ! xcrun altool --list-providers -u "$APPLE_ID" -p "$APPLE_PASSWORD" 1>/dev/null 2>altool_err.log; then
-              echo "::group::altool error (Apple ID + app-specific password)"
-              # Print the message without control chars; altool doesn't echo secrets
-              sed -e 's/[^[:print:]\t]\+//g' altool_err.log || true
-              echo "::endgroup::"
-              echo "::error::Apple ID authentication failed. Recreate APPLE_PASSWORD (app-specific) and confirm this Apple ID has App Store Connect access."
-              exit 1
-            fi
-            echo "Apple ID + app-specific password are valid (altool)."
-          else
-            echo "altool not available on this runner; skipping Apple ID-only validation."
-          fi
-
-      # 2) Ensure the Team ID matches the selected signing identity
-      - name: Diagnose Team ID vs signing identity (macOS)
+      # ---------- Notarization preflight (macOS, API key) ----------
+      - name: Notarization preflight (macOS, API key)
         if: matrix.os == 'macos-latest'
         shell: bash
         env:
-          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          CERT_ID: ${{ env.CERT_ID }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_KEY_PATH: ${{ env.APPLE_API_KEY_PATH }}
         run: |
           set -euo pipefail
-          KEYCHAIN="build.keychain"
-          [ -n "${APPLE_TEAM_ID:-}" ] || { echo "::error::APPLE_TEAM_ID is empty"; exit 1; }
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN" || true
-
-          TEAM_FROM_CERT=$(security find-identity -v -p codesigning "$KEYCHAIN" \
-            | awk -v h="$CERT_ID" 'index($0,h){ if (match($0, /\(([A-Z0-9]{10})\)/, a)) print a[1]; }')
-
-          if [ -z "$TEAM_FROM_CERT" ]; then
-            echo "::error::Could not derive Team ID from the selected signing identity $CERT_ID."
-            exit 1
-          fi
-
-          if [ "$TEAM_FROM_CERT" != "$APPLE_TEAM_ID" ]; then
-            echo "::error::Team mismatch: identity belongs to $TEAM_FROM_CERT but APPLE_TEAM_ID=$APPLE_TEAM_ID."
-            exit 1
-          fi
-          echo "Team ID matches the signing certificate: $TEAM_FROM_CERT"
-
-      # 3) Notarization preflight using notarytool
-      - name: Notarization preflight (macOS)
-        if: matrix.os == 'macos-latest'
-        shell: bash
-        env:
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}     # app-specific password
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          APPLE_PROVIDER_SHORT_NAME: ${{ secrets.APPLE_PROVIDER_SHORT_NAME }} # optional
-        run: |
-          set -euo pipefail
-
-          [ -n "${APPLE_ID:-}" ] || { echo "::error::APPLE_ID is empty"; exit 1; }
-          [ -n "${APPLE_PASSWORD:-}" ] || { echo "::error::APPLE_PASSWORD (app-specific) is empty"; exit 1; }
-          [ -n "${APPLE_TEAM_ID:-}" ] || { echo "::error::APPLE_TEAM_ID is empty"; exit 1; }
-
+          [ -n "${APPLE_API_KEY:-}" ] || { echo "::error::APPLE_API_KEY missing"; exit 1; }
+          [ -n "${APPLE_API_ISSUER:-}" ] || { echo "::error::APPLE_API_ISSUER missing"; exit 1; }
+          [ -n "${APPLE_API_KEY_PATH:-}" ] || { echo "::error::APPLE_API_KEY_PATH missing"; exit 1; }
           if ! xcrun notarytool history \
-                --apple-id "$APPLE_ID" \
-                --team-id "$APPLE_TEAM_ID" \
-                --password "$APPLE_PASSWORD" >/dev/null 2>notary_err.log; then
-            echo "::group::notarytool error"
+                --key "$APPLE_API_KEY_PATH" \
+                --key-id "$APPLE_API_KEY" \
+                --issuer "$APPLE_API_ISSUER" >/dev/null 2>notary_err.log; then
+            echo "::group::notarytool error (API key)"
             sed -e 's/[^[:print:]\t]\+//g' notary_err.log || true
             echo "::endgroup::"
-            echo "::error::Notarization credentials invalid (APPLE_ID / APPLE_PASSWORD / APPLE_TEAM_ID). If this Apple ID is in multiple teams, set APPLE_PROVIDER_SHORT_NAME."
+            echo "::error::API-key notarization credentials invalid (KEY/KEY_ID/ISSUER)."
             exit 1
           fi
-          echo "Notarization credentials look valid."
+          echo "API key credentials look valid."
 
       - name: Build Tauri app
         working-directory: karta_svelte
@@ -232,10 +192,11 @@ jobs:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           APPLE_SIGNING_IDENTITY: ${{ env.CERT_ID }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}     # app-specific password
+          # Notarization via API key (no Apple ID/password needed)
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_KEY_PATH: ${{ env.APPLE_API_KEY_PATH }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          APPLE_PROVIDER_SHORT_NAME: ${{ secrets.APPLE_PROVIDER_SHORT_NAME }} # optional
 
       # ---------- artifacts ----------
       - name: Upload artifacts (Linux)
