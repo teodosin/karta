@@ -29,7 +29,7 @@
 				The Canvas File Browser
 			</p>
 			<p class="text-lg mb-8 text-gray-300 leading-relaxed max-w-2xl mx-auto">
-				Organize visually and by association. No importing necessary.
+				Organize your work locally, visually, and by association. 
 			</p>
 			<div class="border rounded-lg p-4 mb-8 max-w-2xl mx-auto" style="background-color: rgba(245, 158, 11, 0.1); border-color: rgba(245, 158, 11, 0.4);">
 				<p class="text-yellow-200 text-sm">
