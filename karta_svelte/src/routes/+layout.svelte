@@ -5,6 +5,7 @@
 	import { settings } from '$lib/karta/SettingsStore';
 	import { initializeStores } from '$lib/karta/ContextStore';
 	import { initializeVault } from '$lib/karta/VaultStore';
+	import { serverManager } from '$lib/tauri/server';
 	import NodeSearchModal from '$lib/components/NodeSearchModal.svelte';
 	import TutorialModal from '$lib/components/TutorialModal.svelte';
     import { initializeTools } from '$lib/karta/ToolStore';
@@ -23,9 +24,7 @@
 
 	onMount(() => {
 		const initializeApp = async () => {
-			await settings.loadSettings();
-
-			// Check if we're in Tauri mode
+			// Check if we're in Tauri mode early
 			let isTauriApp = false;
 			if (browser && typeof window !== 'undefined' && typeof (window as any).isTauri === 'function') {
 				isTauriApp = (window as any).isTauri();
@@ -33,11 +32,22 @@
 				isTauriApp = browser && '__TAURI__' in window;
 			}
 
-			// Only initialize server-dependent stores in web mode
-			// In Tauri mode, ServerSetupModal will handle this after server is ready
 			if (!isTauriApp) {
+				// Web mode: server is expected to be reachable; load settings and init stores now
+				await settings.loadSettings();
 				await initializeVault();
 				await initializeStores();
+			} else {
+				// Tauri mode: the backend server may not be running yet.
+				// Avoid early fetches that trigger CORS/network errors; load settings only if server is up.
+				try {
+					const up = await serverManager.checkServerStatus();
+					if (up) {
+						await settings.loadSettings();
+					}
+				} catch (e) {
+					// Ignore; ServerSetupModal will handle once server starts
+				}
 			}
 			
 			// Always initialize tools (not server-dependent)
