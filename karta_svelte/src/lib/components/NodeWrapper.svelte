@@ -12,7 +12,7 @@
 	import { vaultName } from "$lib/karta/VaultStore";
 	import { nodeRenameRequestId } from "$lib/karta/UIStateStore";
 	import { getNodeComponent } from "$lib/node_types/registry";
-	import { tick } from "svelte";
+	import { tick, onMount, onDestroy } from "svelte";
 	import { fade } from "svelte/transition";
 
 	export let dataNode: DataNode | undefined;
@@ -23,6 +23,23 @@
 
 	let isEditingName = false;
 	let editedName = "";
+
+	// rAF-sampled snapshot of the tweened node state so template updates every frame
+	let stateFrame = { ...viewNode.state.current };
+	let __stateRafId: number | null = null;
+
+	onMount(() => {
+		const loop = () => {
+			// Clone to ensure new reference and trigger Svelte reactivity
+			stateFrame = { ...viewNode.state.current };
+			__stateRafId = requestAnimationFrame(loop);
+		};
+		__stateRafId = requestAnimationFrame(loop);
+	});
+
+	onDestroy(() => {
+		if (__stateRafId) cancelAnimationFrame(__stateRafId);
+	});
 
 	// Dynamically get the component based on ntype - only if dataNode exists
 	$: NodeComponent = dataNode ? getNodeComponent(dataNode.ntype) : null;
@@ -134,11 +151,9 @@
 		`}
 		class:selected={isSelected}
 		class:ghost-node={isGhost}
-		style:width="{viewNode.state.current.width}px"
-		style:height="{viewNode.state.current.height}px"
-		style:transform="translate({viewNode.state.current.x}px, {viewNode.state
-			.current.y}px) scale({viewNode.state.current.scale}) rotate({viewNode
-			.state.current.rotation}deg) translateX(-50%) translateY(-50%)"
+		style:width="{stateFrame.width}px"
+		style:height="{stateFrame.height}px"
+		style:transform="translate({stateFrame.x}px, {stateFrame.y}px) scale({stateFrame.scale}) rotate({stateFrame.rotation}deg) translateX(-50%) translateY(-50%)"
 		on:mouseenter={(e: MouseEvent) => {
 			if (!isGhost) nodeWrapperRef?.classList.add("node-hover");
 		}}
@@ -191,7 +206,7 @@
 								on:keydown={handleKeyDown}
 								class="bg-gray-900 text-xs p-0 border rounded outline-none focus:ring-1"
 								style="color: var(--color-text-color); border-color: var(--color-contrast-color); --tw-ring-color: var(--color-contrast-color); width:{Math.min(
-									viewNode.state.current.width - 12,
+									stateFrame.width - 12,
 									Math.max(60, editedName.length * 7 + 10)
 								)}px"
 								spellcheck="false"
@@ -236,8 +251,8 @@
 	}
 	/* Apply hover only to non-ghost nodes */
 	.node-wrapper:not(.ghost-node).node-hover .node-content {
-		/* Example hover effect: slightly brighter */
-		/* filter: brightness(1.1); */ /* This filter interferes with backdrop-filter on child nodes like TextNode */
+		/* keep rule non-empty for linter without changing visuals */
+		outline-offset: 0;
 	}
 	.node-wrapper:not(.ghost-node).node-hover .node-label {
 		/* Make label more prominent on hover */
