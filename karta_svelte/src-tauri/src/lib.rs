@@ -291,9 +291,8 @@ async fn save_vault_bookmark(path: String, bookmark_b64: String, store: State<'_
 fn start_access_from_bookmark(bookmark_b64: &str) -> Result<(), String> {
     use cocoa::base::{id, nil};
     use cocoa::foundation::{NSData, NSAutoreleasePool, NSURL};
-    use objc::rc::StrongPtr;
     use objc::runtime::Object;
-    use objc::{msg_send, sel, sel_impl};
+    use objc::{class, msg_send, sel, sel_impl};
     use base64::Engine as _;
 
     unsafe {
@@ -304,22 +303,21 @@ fn start_access_from_bookmark(bookmark_b64: &str) -> Result<(), String> {
         let data: id = NSData::dataWithBytes_length_(nil, bytes.as_ptr() as _, bytes.len() as _);
 
         let mut is_stale: bool = false;
-        let error: *mut Object = std::ptr::null_mut();
-        let url: id = NSURL::URLByResolvingBookmarkData_options_relativeToURL_bookmarkDataIsStale_error_(
-            NSURL::alloc(nil),
-            data,
-            0,
-            nil,
-            &mut is_stale as *mut bool,
-            error,
-        );
+        let mut error: *mut Object = std::ptr::null_mut();
+        // Call +[NSURL URLByResolvingBookmarkData:options:relativeToURL:bookmarkDataIsStale:error:]
+        let url: id = msg_send![class!(NSURL),
+            URLByResolvingBookmarkData: data
+            options: 0u64
+            relativeToURL: nil
+            bookmarkDataIsStale: &mut is_stale
+            error: &mut error
+        ];
         if url == nil {
             return Err("Failed to resolve bookmark".into());
         }
-        let _url = StrongPtr::new(url);
 
-        // Start accessing security-scoped resource
-        let ok: bool = msg_send![_url.as_ptr(), startAccessingSecurityScopedResource];
+        // Start accessing security-scoped resource on the resolved NSURL
+    let ok: bool = msg_send![url, startAccessingSecurityScopedResource];
         if !ok { return Err("startAccessingSecurityScopedResource failed".into()); }
     }
     Ok(())
@@ -339,10 +337,9 @@ fn create_bookmark_from_path(path: &str) -> Result<String, String> {
         let url: id = NSURL::fileURLWithPath_(nil, ns_path);
         if url.is_null() { return Err("Failed to create file URL".into()); }
 
-        // Constant for NSURLBookmarkCreationWithSecurityScope
-        let opts: u64 = 0x2000;
+        // Constant for NSURLBookmarkCreationWithSecurityScope (0x2000)
         let mut error: *mut Object = std::ptr::null_mut();
-        let data: id = msg_send![url, bookmarkDataWithOptions: opts as u64
+        let data: id = msg_send![url, bookmarkDataWithOptions: 0x2000u64
             includingResourceValuesForKeys: nil
             relativeToURL: nil
             error: &mut error];
