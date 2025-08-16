@@ -33,8 +33,8 @@
 			</p>
 			<div class="border rounded-lg p-4 mb-8 max-w-2xl mx-auto" style="background-color: rgba(245, 158, 11, 0.1); border-color: rgba(245, 158, 11, 0.4);">
 				<p class="text-yellow-200 text-sm">
-					⚠️ <strong>Experimental Release:</strong> This is the first alpha version and is not yet usable as a file browser replacement. 
-					<span class="text-yellow-100">But it's an experiment in visual file organization—try it and see what you think!</span>
+					⚠️ <strong>Experimental Release:</strong> This is the first alpha version and therefore rough around the edges. 
+					<span class="text-yellow-100">If you encounter issues, please contact <a href="mailto:karta@teodosin.com">karta@teodosin.com</a>!</span>
 				</p>
 			</div>
 			<div class="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
