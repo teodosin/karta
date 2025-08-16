@@ -132,7 +132,7 @@ jobs:
 
       - name: Install frontend dependencies
         working-directory: karta_svelte
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Build frontend
         working-directory: karta_svelte
