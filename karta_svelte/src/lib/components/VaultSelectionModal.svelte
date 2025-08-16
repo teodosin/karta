@@ -4,6 +4,20 @@
 	import { fade, scale } from 'svelte/transition';
 	import { HardDrive, Plus, AlertTriangle, CheckCircle, Folder } from 'lucide-svelte';
 	import { serverManager, type VaultInfo } from '$lib/tauri/server';
+	import { invoke } from '@tauri-apps/api/core';
+	// OS detection for conditional macOS behavior in Tauri
+	let isTauriMac = false;
+
+	onMount(async () => {
+		if (browser && '__TAURI__' in window) {
+			try {
+				const { platform } = await import('@tauri-apps/api/os');
+				isTauriMac = (await platform()) === 'macos';
+			} catch {
+				isTauriMac = false;
+			}
+		}
+	});
 	
 	export let isOpen = false;
 	export let onVaultSelected: (vaultPath: string) => void = () => {};
@@ -33,6 +47,45 @@
 	async function selectVault(vaultPath: string) {
 		onVaultSelected(vaultPath);
 		closeModal();
+	}
+
+	// macOS sandbox: silent bookmark-based access if possible; otherwise one-time capture
+	async function selectVaultWithAccess(vaultPath: string) {
+		if (isTauriMac) {
+			try {
+				// First, try existing bookmark to enable access silently
+				const hasAccess = await invoke<boolean>('ensure_vault_access', { path: vaultPath });
+				if (hasAccess) {
+					await selectVault(vaultPath);
+					return;
+				}
+				// No bookmark yet: capture one using the directory picker, then save bookmark data
+				const { open } = await import('@tauri-apps/plugin-dialog');
+				const selectedPath = await open({ directory: true, multiple: false, defaultPath: vaultPath });
+				if (!selectedPath) return; // canceled
+				if (selectedPath !== vaultPath) {
+					await serverManager.addVaultToConfig(selectedPath);
+					vaultPath = selectedPath;
+				}
+				// Request a bookmark from the OS using the selected URL via the core side
+				// We cannot create the bookmark purely from JS; rely on a native save path:
+				// We'll round-trip the URL by asking the core to read a bookmark from the path.
+				// For simplicity, on macOS we use NSUrl bookmark creation via a small helper call.
+				// Here we re-use the ensure/save pair by asking the core to save the bookmark we pass.
+				// In this simplified flow, we ask the core to derive the bookmark from the path directly.
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				await invoke('save_vault_bookmark_from_path', { path: vaultPath });
+				// Then enable access and proceed
+				const granted = await invoke<boolean>('ensure_vault_access', { path: vaultPath });
+				if (granted) {
+					await selectVault(vaultPath);
+				}
+			} catch (err) {
+				error = err instanceof Error ? err.message : 'Failed to authorize directory access';
+			}
+			return;
+		}
+		await selectVault(vaultPath);
 	}
 
 	// Handle directory selection
@@ -80,7 +133,7 @@
 			} else if (selectedIndex >= 0 && selectedIndex < vaults.length) {
 				const vault = vaults[selectedIndex];
 				if (vault.exists && vault.has_karta_dir) {
-					selectVault(vault.path);
+					selectVaultWithAccess(vault.path);
 				}
 			}
 		}
@@ -178,7 +231,7 @@
 									? 'border-gray-600 hover:border-gray-500 hover:opacity-80'
 									: 'border-red-600 opacity-50 cursor-not-allowed'}"
 							style="background-color: color-mix(in srgb, var(--color-panel-bg) 40%, transparent);"
-							on:click={() => vault.exists && vault.has_karta_dir && selectVault(vault.path)}
+							on:click={() => vault.exists && vault.has_karta_dir && selectVaultWithAccess(vault.path)}
 							on:mouseenter={() => vault.exists && vault.has_karta_dir && (selectedIndex = index)}
 							role="button"
 							tabindex="-1"
