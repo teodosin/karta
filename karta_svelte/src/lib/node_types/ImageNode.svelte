@@ -48,6 +48,7 @@
 	import { settings } from '$lib/karta/SettingsStore';
 	import { onMount } from 'svelte';
 	import { localAdapter } from '$lib/util/LocalAdapter'; // Import localAdapter
+	import { api } from '$lib/apiBase';
 
 	export let dataNode: DataNode;
 	export let viewNode: ViewNode;
@@ -123,7 +124,7 @@
 				relativePath = relativePath.substring(1);
 			}
 			
-			const newUrl = `/api/asset/${encodeURI(relativePath)}`;
+			const newUrl = api(`/api/asset/${encodeURI(relativePath)}`);
 			if (imageUrl !== newUrl) {
 				imageUrl = newUrl;
 			}
