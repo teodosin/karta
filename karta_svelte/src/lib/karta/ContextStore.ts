@@ -19,7 +19,7 @@ import {
     viewTransform,
     DEFAULT_VIEWPORT_SETTINGS, VIEWPORT_TWEEN_DURATION, DEFAULT_FOCAL_TRANSFORM,
     centerOnFocalNode
-} from './ViewportStore';
+} from '$viewport';
 import { historyStack, futureStack } from './HistoryStore';
 import { clearSelection } from './SelectionStore';
 import { propertiesPanelPosition } from './UIStateStore';

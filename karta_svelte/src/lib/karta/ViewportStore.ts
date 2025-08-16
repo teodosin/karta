@@ -5,6 +5,13 @@ import type { ViewportSettings, AbsoluteTransform } from '../types/types';
 import { currentContextId, currentViewNodes } from './ContextStore';
 import { storeLogger } from '$lib/debug';
 
+// Duplicate module instance detector
+// @ts-ignore
+if (!(globalThis as any).__VT_ID__) (globalThis as any).__VT_ID__ = Symbol('vt');
+// eslint-disable-next-line no-console
+console.info('VT id at store', (globalThis as any).__VT_ID__);
+export const __VT_ID__ = (globalThis as any).__VT_ID__ as symbol;
+
 
 
 const DEFAULT_FOCAL_TRANSFORM:  AbsoluteTransform = { x: 0, y: 0, scale: 1 };

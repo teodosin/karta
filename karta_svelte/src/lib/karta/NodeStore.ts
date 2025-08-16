@@ -8,7 +8,7 @@ import { getDefaultAttributesForType, getDefaultViewNodeStateForType } from '$li
 import { Tween } from 'svelte/motion';
 import { currentContextId, contexts, removeViewNodeFromContext, existingContextsMap, activeAdapter } from './ContextStore';
 import { cubicInOut } from 'svelte/easing';
-import { viewTransform, centerViewOnCanvasPoint } from './ViewportStore';
+import { viewTransform, centerViewOnCanvasPoint } from '$viewport';
 import { notifications } from './NotificationStore';
 
 // Animation constants (matching ContextStore)

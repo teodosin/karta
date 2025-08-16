@@ -23,7 +23,8 @@
 		frameContext,
 		viewportWidth,
 		viewportHeight,
-	} from "$lib/karta/ViewportStore";
+		__VT_ID__
+	} from "$viewport";
 	import {
 		currentTool,
 		cancelConnectionProcess,
@@ -81,6 +82,8 @@
     import { type KartaEdge } from "$lib/types/types";
 
 	onMount(() => {
+		// eslint-disable-next-line no-console
+		console.info('VT id in component', __VT_ID__);
 		lifecycleLogger.log("Viewport mounted");
 
 		// Setup reactive store logging
