@@ -5,20 +5,18 @@
 	import { HardDrive, Plus, AlertTriangle, CheckCircle, Folder } from 'lucide-svelte';
 	import { serverManager, type VaultInfo } from '$lib/tauri/server';
 	import { invoke } from '@tauri-apps/api/core';
-	// OS detection for conditional macOS behavior in Tauri
+	// OS detection for conditional macOS behavior in Tauri without importing @tauri-apps/api/os
 	let isTauriMac = false;
 
 	onMount(async () => {
 		if (browser && '__TAURI__' in window) {
-			try {
-				const { platform } = await import('@tauri-apps/api/os');
-				isTauriMac = (await platform()) === 'macos';
-			} catch {
-				isTauriMac = false;
-			}
+			// Use UA/platform to detect macOS to avoid bundling @tauri-apps/api/os
+			const ua = navigator.userAgent || '';
+			const plat = (navigator as any).platform || '';
+			isTauriMac = /Macintosh|Mac OS X/i.test(ua) || /Mac/i.test(plat);
 		}
 	});
-	
+
 	export let isOpen = false;
 	export let onVaultSelected: (vaultPath: string) => void = () => {};
 	export let onClose: () => void = () => {};
@@ -65,17 +63,9 @@
 				if (!selectedPath) return; // canceled
 				if (selectedPath !== vaultPath) {
 					await serverManager.addVaultToConfig(selectedPath);
-					vaultPath = selectedPath;
+					vaultPath = selectedPath as string;
 				}
-				// Request a bookmark from the OS using the selected URL via the core side
-				// We cannot create the bookmark purely from JS; rely on a native save path:
-				// We'll round-trip the URL by asking the core to read a bookmark from the path.
-				// For simplicity, on macOS we use NSUrl bookmark creation via a small helper call.
-				// Here we re-use the ensure/save pair by asking the core to save the bookmark we pass.
-				// In this simplified flow, we ask the core to derive the bookmark from the path directly.
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				await invoke('save_vault_bookmark_from_path', { path: vaultPath });
-				// Then enable access and proceed
 				const granted = await invoke<boolean>('ensure_vault_access', { path: vaultPath });
 				if (granted) {
 					await selectVault(vaultPath);
@@ -100,8 +90,8 @@
 			
 			if (selectedPath) {
 				// Add to config and then select it
-				await serverManager.addVaultToConfig(selectedPath);
-				await selectVault(selectedPath);
+				await serverManager.addVaultToConfig(selectedPath as string);
+				await selectVault(selectedPath as string);
 			}
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to select directory';

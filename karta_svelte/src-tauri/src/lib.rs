@@ -198,7 +198,8 @@ pub fn run() {
             select_vault_directory,
             add_vault_to_config,
             ensure_vault_access,
-            save_vault_bookmark
+            save_vault_bookmark,
+            save_vault_bookmark_from_path
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
