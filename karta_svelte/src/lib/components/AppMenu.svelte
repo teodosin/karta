@@ -1,9 +1,10 @@
 <script lang="ts">
-	import { Menu, X } from "lucide-svelte";
+	import { Menu, X, HelpCircle } from "lucide-svelte";
 	import { fly } from "svelte/transition";
 	import { localAdapter } from "$lib/util/LocalAdapter"; // Import localAdapter
 	import ThemeEditor from "./ThemeEditor.svelte";
 	import { settings } from "$lib/karta/SettingsStore";
+	import { openTutorial } from "$lib/stores/TutorialStore";
 
 	let isOpen = false;
 	let fileInput: HTMLInputElement | null = null; // Reference for the hidden file input
@@ -164,6 +165,17 @@
 			<Menu class="h-5 w-5" />
 		{/if}
 	</button>
+	
+	<button
+		on:click={openTutorial}
+		type="button"
+		class="inline-flex items-center justify-center rounded-md p-1 text-gray-300 hover:text-white focus:outline-none focus:ring-2 focus:ring-inset transition-colors"
+		aria-label="Open Tutorial"
+		title="Tutorial"
+	>
+		<HelpCircle class="h-5 w-5" />
+	</button>
+	
 	<span class="text-sm text-gray-300 font-mono">Karta Alpha 0.1.0</span>
 </div>
 

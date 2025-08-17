@@ -7,6 +7,7 @@
 <script lang="ts">
 	import { fade } from 'svelte/transition';
 	import { get } from 'svelte/store';
+	import { onMount, onDestroy } from 'svelte';
 	import { edges } from '$lib/karta/EdgeStore';
 	import { contexts, currentContextId } from '$lib/karta/ContextStore';
 	import {
@@ -29,11 +30,37 @@
 	$: currentCtx = $contexts.get($currentContextId);
 	$: reconnectingEdge = $reconnectingEdgeId ? $edges.get($reconnectingEdgeId) : null;
 	$: isDraggingReconnection = $isReconnecting && $tempLineTargetPosition !== null;
+
+	// rAF tick to force re-evaluation of geometry that reads tween .current
+	let frameTick = 0;
+	let __rafId: number | null = null;
+	let nodePosFrame: Map<NodeId, { x: number; y: number }>; // per-frame snapshot
+	onMount(() => {
+		const loop = () => {
+			// Snapshot current node positions for this context
+			const m = new Map<NodeId, { x: number; y: number }>();
+			const vmap = currentCtx?.viewNodes;
+			if (vmap) {
+				vmap.forEach((vn, id) => {
+					const s = vn.state.current;
+					m.set(id as NodeId, { x: s.x, y: s.y });
+				});
+			}
+			nodePosFrame = m; // new reference each frame to trigger reactivity
+			frameTick = (frameTick + 1) % 1_000_000; // keep it bounded
+			__rafId = requestAnimationFrame(loop);
+		};
+		__rafId = requestAnimationFrame(loop);
+	});
+	onDestroy(() => {
+		if (__rafId) cancelAnimationFrame(__rafId);
+	});
 </script>
 
 <svg
 	class="absolute top-0 left-0 w-full h-full pointer-events-none"
 	style="overflow: visible;"
+	data-tick={frameTick}
 >
 	<!-- Edges -->
 	{#each [...$edges.values()] as edge (edge.id)}
@@ -43,12 +70,12 @@
 		{@const isVisible = shouldShowEdge(edge, visibilityMode, $selectedNodeIds)}
 
 		{#if sourceViewNode && targetViewNode && isVisible}
-			{@const sourceState = sourceViewNode.state.current}
-			{@const targetState = targetViewNode.state.current}
-			{@const sourceX = sourceState.x}
-			{@const sourceY = sourceState.y}
-			{@const targetX = targetState.x}
-			{@const targetY = targetState.y}
+			{@const sPos = nodePosFrame?.get(edge.source)}
+			{@const tPos = nodePosFrame?.get(edge.target)}
+			{@const sourceX = sPos?.x ?? sourceViewNode.state.current.x}
+			{@const sourceY = sPos?.y ?? sourceViewNode.state.current.y}
+			{@const targetX = tPos?.x ?? targetViewNode.state.current.x}
+			{@const targetY = tPos?.y ?? targetViewNode.state.current.y}
 			{@const midX = (sourceX + targetX) / 2}
 			{@const midY = (sourceY + targetY) / 2}
 			{@const dx = targetX - sourceX}

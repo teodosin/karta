@@ -48,7 +48,12 @@
 	async function startServer(vaultPath: string) {
 		try {
 			currentStep = 'starting-server';
+			
+			// Start server (returns immediately to avoid blocking UI)
 			await serverManager.startServer(vaultPath);
+			
+			// Poll for server readiness instead of waiting
+			await serverManager.pollForServerReady();
 			
 			// Initialize stores after server is ready
 			await initializeVault();

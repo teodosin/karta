@@ -4,7 +4,19 @@
 	import { fade, scale } from 'svelte/transition';
 	import { HardDrive, Plus, AlertTriangle, CheckCircle, Folder } from 'lucide-svelte';
 	import { serverManager, type VaultInfo } from '$lib/tauri/server';
-	
+	import { invoke } from '@tauri-apps/api/core';
+	// OS detection for conditional macOS behavior in Tauri without importing @tauri-apps/api/os
+	let isTauriMac = false;
+
+	onMount(async () => {
+		if (browser && '__TAURI__' in window) {
+			// Use UA/platform to detect macOS to avoid bundling @tauri-apps/api/os
+			const ua = navigator.userAgent || '';
+			const plat = (navigator as any).platform || '';
+			isTauriMac = /Macintosh|Mac OS X/i.test(ua) || /Mac/i.test(plat);
+		}
+	});
+
 	export let isOpen = false;
 	export let onVaultSelected: (vaultPath: string) => void = () => {};
 	export let onClose: () => void = () => {};
@@ -35,6 +47,37 @@
 		closeModal();
 	}
 
+	// macOS sandbox: silent bookmark-based access if possible; otherwise one-time capture
+	async function selectVaultWithAccess(vaultPath: string) {
+		if (isTauriMac) {
+			try {
+				// First, try existing bookmark to enable access silently
+				const hasAccess = await invoke<boolean>('ensure_vault_access', { path: vaultPath });
+				if (hasAccess) {
+					await selectVault(vaultPath);
+					return;
+				}
+				// No bookmark yet: capture one using the directory picker, then save bookmark data
+				const { open } = await import('@tauri-apps/plugin-dialog');
+				const selectedPath = await open({ directory: true, multiple: false, defaultPath: vaultPath });
+				if (!selectedPath) return; // canceled
+				if (selectedPath !== vaultPath) {
+					await serverManager.addVaultToConfig(selectedPath);
+					vaultPath = selectedPath as string;
+				}
+				await invoke('save_vault_bookmark_from_path', { path: vaultPath });
+				const granted = await invoke<boolean>('ensure_vault_access', { path: vaultPath });
+				if (granted) {
+					await selectVault(vaultPath);
+				}
+			} catch (err) {
+				error = err instanceof Error ? err.message : 'Failed to authorize directory access';
+			}
+			return;
+		}
+		await selectVault(vaultPath);
+	}
+
 	// Handle directory selection
 	async function selectNewDirectory() {
 		try {
@@ -47,8 +90,8 @@
 			
 			if (selectedPath) {
 				// Add to config and then select it
-				await serverManager.addVaultToConfig(selectedPath);
-				await selectVault(selectedPath);
+				await serverManager.addVaultToConfig(selectedPath as string);
+				await selectVault(selectedPath as string);
 			}
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to select directory';
@@ -80,7 +123,7 @@
 			} else if (selectedIndex >= 0 && selectedIndex < vaults.length) {
 				const vault = vaults[selectedIndex];
 				if (vault.exists && vault.has_karta_dir) {
-					selectVault(vault.path);
+					selectVaultWithAccess(vault.path);
 				}
 			}
 		}
@@ -178,7 +221,7 @@
 									? 'border-gray-600 hover:border-gray-500 hover:opacity-80'
 									: 'border-red-600 opacity-50 cursor-not-allowed'}"
 							style="background-color: color-mix(in srgb, var(--color-panel-bg) 40%, transparent);"
-							on:click={() => vault.exists && vault.has_karta_dir && selectVault(vault.path)}
+							on:click={() => vault.exists && vault.has_karta_dir && selectVaultWithAccess(vault.path)}
 							on:mouseenter={() => vault.exists && vault.has_karta_dir && (selectedIndex = index)}
 							role="button"
 							tabindex="-1"

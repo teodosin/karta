@@ -13,7 +13,7 @@
 	<!-- Background screenshot overlay -->
 	<div class="absolute inset-0 opacity-10">
 		<img 
-			src="/hero-screenshot.png" 
+			src="{base}/hero-screenshot.png" 
 			alt="Karta interface preview"
 			class="w-full h-full object-cover object-center"
 			style="mix-blend-mode: screen;"
@@ -29,12 +29,12 @@
 				The Canvas File Browser
 			</p>
 			<p class="text-lg mb-8 text-gray-300 leading-relaxed max-w-2xl mx-auto">
-				Organize visually and by association. No importing necessary.
+				Organize your work locally, visually, and by association. 
 			</p>
 			<div class="border rounded-lg p-4 mb-8 max-w-2xl mx-auto" style="background-color: rgba(245, 158, 11, 0.1); border-color: rgba(245, 158, 11, 0.4);">
 				<p class="text-yellow-200 text-sm">
-					⚠️ <strong>Experimental Release:</strong> This is the first alpha version and is not yet usable as a file browser replacement. 
-					<span class="text-yellow-100">But it's an experiment in visual file organization—try it and see what you think!</span>
+					⚠️ <strong>Experimental Release:</strong> This is the first alpha version and therefore rough around the edges. 
+					<span class="text-yellow-100">If you encounter issues, please contact <a href="mailto:karta@teodosin.com">karta@teodosin.com</a>!</span>
 				</p>
 			</div>
 			<div class="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
@@ -121,7 +121,7 @@
 					</div>
 					<div class="rounded-lg overflow-hidden border" style="border-color: var(--color-connection-color);">
 						<img 
-							src="/interface-screenshot.png" 
+							src="{base}/interface-screenshot.png" 
 							alt="Karta interface showing node-based file organization"
 							class="w-full h-auto"
 							style="background-color: var(--color-viewport-bg);"

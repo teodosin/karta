@@ -78,7 +78,12 @@
 		lifecycleLogger,
 	} from "$lib/debug";
 	import { vaultName } from "$lib/karta/VaultStore";
-    import { type KartaEdge } from "$lib/types/types";
+	import { type KartaEdge } from "$lib/types/types";
+	import { readable } from 'svelte/store';
+
+	// Fallback rAF sampler to ensure template updates even if Tween subscription doesn't emit
+	let vtFrame = viewTransform.current;
+	let __vtRafId: number | null = null;
 
 	onMount(() => {
 		lifecycleLogger.log("Viewport mounted");
@@ -87,12 +92,19 @@
 		watchStore(nodes, "NodeStore");
 		watchStore(contexts, "ContextStore");
 		watchStore(vaultName, "VaultStore");
+
+		// Start rAF loop to sample current tween value each frame
+		const loop = () => {
+			vtFrame = { ...viewTransform.current };
+			__vtRafId = requestAnimationFrame(loop);
+		};
+		__vtRafId = requestAnimationFrame(loop);
 	});
 
 	let canvasContainer: HTMLElement;
 
 	// Calculate inverse scale for constant screen size elements, to be passed to children
-	$: inverseScale = 1 / viewTransform.current.scale;
+	$: inverseScale = 1 / vtFrame.scale;
 
 	let canvas: HTMLElement;
 
@@ -855,6 +867,7 @@
 
 	// Ensure listeners are removed on component destroy
 	onDestroy(() => {
+	if (__vtRafId) cancelAnimationFrame(__vtRafId);
 		if (typeof window !== "undefined") {
 			window.removeEventListener(
 				"pointermove",
@@ -1017,9 +1030,8 @@
 	<div
 		class="w-full h-full relative origin-top-left"
 		bind:this={canvas}
-		style:transform="translate({viewTransform.current.posX +
-			$viewportWidth / 2}px, {viewTransform.current.posY +
-			$viewportHeight / 2}px) scale({viewTransform.current.scale})"
+		style="transform-origin: 0 0;"
+	style:transform="translate({(vtFrame.posX ?? 0) + (($viewportWidth ?? 0) / 2)}px, {(vtFrame.posY ?? 0) + (($viewportHeight ?? 0) / 2)}px) scale({vtFrame.scale ?? 1})"
 	>
 		<!-- Edge Rendering Layer -->
 		<EdgeLayer {inverseScale} />
@@ -1035,7 +1047,7 @@
 		<!-- Selection Box -->
 		{#if true}
 			<!-- Wrap in valid block to fix {@const} placement -->
-			{@const currentScaleValue = viewTransform.current.scale}
+			{@const currentScaleValue = vtFrame.scale}
 			{@const invScaleValue =
 				currentScaleValue > 0 ? 1 / currentScaleValue : 1}
 			{@const outlineWidthValue =
@@ -1052,7 +1064,7 @@
 	<!-- Create Node Menu (conditionally rendered) -->
 	{#if $isCreateNodeMenuOpen && $createNodeMenuPosition}
 		<!-- Create Node Menu related elements -->
-		{@const transform = viewTransform.current}
+	{@const transform = vtFrame}
 		{@const rect = canvasContainer?.getBoundingClientRect()}
 		<!-- Access tween value directly -->
 		{@const markerScreenX = rect ? 

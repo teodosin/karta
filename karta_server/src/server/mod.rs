@@ -16,7 +16,7 @@ use axum::{
     routing::{get, post, put},
     Extension, Json, Router, http::Method,
 };
-use tower_http::cors::{Any, CorsLayer};
+use tower_http::cors::{Any, CorsLayer, AllowOrigin};
 use karta_service::KartaService;
 use serde::Deserialize;
 use std::{borrow::Cow, io::{self, Write}, sync::RwLock};
@@ -56,11 +56,12 @@ pub struct AppState {
 }
 
 pub fn create_router(state: AppState) -> Router<()> {
+    // CORS for both dev (http://localhost:7360/5173) and Tauri production (tauri://localhost)
+    // Mirror the request's Origin so custom schemes like tauri://localhost are allowed.
     let cors = CorsLayer::new()
-        .allow_origin("http://localhost:5173".parse::<axum::http::HeaderValue>().unwrap())
-        .allow_origin("http://localhost:7360".parse::<axum::http::HeaderValue>().unwrap())
-        .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE, Method::OPTIONS, Method::PATCH])
-        .allow_headers([axum::http::header::CONTENT_TYPE]);
+        .allow_origin(AllowOrigin::mirror_request())
+        .allow_methods(Any)
+        .allow_headers(Any);
 
     let router = Router::new()
     

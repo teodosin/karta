@@ -3,7 +3,7 @@ name: Deploy Website
 on:
   push:
     branches: [ main ]
-    paths: [ 'karta/website/**' ]
+    paths: [ 'website/**' ]
   workflow_dispatch:
 
 permissions:
@@ -27,13 +27,18 @@ jobs:
         with:
           node-version: '20'
       
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8
+      
       - name: Install dependencies
-        working-directory: karta/website
-        run: npm install
+        working-directory: website
+        run: pnpm install
       
       - name: Build website
-        working-directory: karta/website
-        run: npm run build
+        working-directory: website
+        run: pnpm build
         env:
           NODE_ENV: production
       
@@ -43,7 +48,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: karta/website/build
+          path: website/build
 
   deploy:
     environment:
