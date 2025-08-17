@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import { API_BASE } from '$lib/apiBase';
 
 export interface VaultInfo {
     path: string;
@@ -26,7 +27,17 @@ export const serverManager: ServerManager = {
     },
 
     async checkServerStatus(): Promise<boolean> {
-        return await invoke('check_server_status');
+        // Prefer browser-side fetch to avoid blocking native event loop on Linux
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 1000);
+        try {
+            const res = await fetch(`${API_BASE}/`, { method: 'GET', signal: controller.signal, cache: 'no-store' });
+            return res.ok;
+        } catch {
+            return false;
+        } finally {
+            clearTimeout(timeout);
+        }
     },
 
     async pollForServerReady(maxAttempts = 30, intervalMs = 500): Promise<void> {

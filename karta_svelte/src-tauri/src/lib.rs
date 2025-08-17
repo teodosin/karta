@@ -31,15 +31,20 @@ impl ServerProcess {
             *sender_guard = Some(shutdown_tx);
         }
         
-        // Spawn server in background thread with error handling
+        // Spawn server in background thread with a dedicated Tokio runtime
         let handle = std::thread::spawn(move || {
-            match std::panic::catch_unwind(|| {
-                tauri::async_runtime::block_on(async {
+            let result = std::panic::catch_unwind(|| {
+                let rt = tokio::runtime::Builder::new_multi_thread()
+                    .enable_all()
+                    .build()
+                    .expect("failed to build tokio runtime for server");
+                rt.block_on(async move {
                     // Run the server without logging initialization (Tauri handles logging)
                     karta_server::prelude::run_server_with_logging(vault_path, false).await;
                 });
-            }) {
-                Ok(_) => println!("Server thread completed normally"),
+            });
+            match result {
+                Ok(_) => println!("Server thread completed"),
                 Err(e) => println!("Server thread panicked: {:?}", e),
             }
         });
