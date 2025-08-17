@@ -14,7 +14,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-18.04
+          - os: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
             name: linux-x86_64
           - os: windows-latest
@@ -49,10 +49,15 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: Install system dependencies (Ubuntu)
-        if: matrix.os == 'ubuntu-18.04'
+        if: matrix.os == 'ubuntu-22.04'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libwebkit2gtk-4.0-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf
 
       # Windows: avoid failing if WiX is already present/newer
       - name: Ensure WiX (Windows)
@@ -199,7 +204,7 @@ jobs:
 
       # ---------- artifacts ----------
       - name: Upload artifacts (Linux)
-        if: matrix.os == 'ubuntu-18.04'
+        if: matrix.os == 'ubuntu-22.04'
         uses: actions/upload-artifact@v4
         with:
           name: karta-${{ matrix.name }}
@@ -227,7 +232,7 @@ jobs:
 
   release:
     needs: build
-    runs-on: ubuntu-18.04
+  runs-on: ubuntu-22.04
     if: startsWith(github.ref, 'refs/tags/')
     steps:
       - name: Download all artifacts
