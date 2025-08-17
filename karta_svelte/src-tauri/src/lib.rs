@@ -2,6 +2,7 @@ use std::sync::{Arc, Mutex};
 use std::path::PathBuf;
 use tauri::{Manager, State};
 use std::collections::HashMap;
+use std::panic;
 
 // Global state for the server thread
 struct ServerProcess {
@@ -30,13 +31,17 @@ impl ServerProcess {
             *sender_guard = Some(shutdown_tx);
         }
         
-        // Spawn server in its own thread
+        // Spawn server in background thread with error handling
         let handle = std::thread::spawn(move || {
-            // Use Tauri's async runtime
-            tauri::async_runtime::block_on(async {
-                // Run the server without logging initialization (Tauri handles logging)
-                karta_server::prelude::run_server_with_logging(vault_path, false).await;
-            });
+            match std::panic::catch_unwind(|| {
+                tauri::async_runtime::block_on(async {
+                    // Run the server without logging initialization (Tauri handles logging)
+                    karta_server::prelude::run_server_with_logging(vault_path, false).await;
+                });
+            }) {
+                Ok(_) => println!("Server thread completed normally"),
+                Err(e) => println!("Server thread panicked: {:?}", e),
+            }
         });
         
         // Store the thread handle
@@ -78,16 +83,12 @@ impl ServerProcess {
 
 #[tauri::command]
 async fn start_server(vault_path: String, server_process: State<'_, ServerProcess>) -> Result<(), String> {
+    // Start server in background thread (non-blocking)
     server_process.start(&vault_path)?;
     
-    // Wait a moment for server to start
-    tokio::time::sleep(std::time::Duration::from_millis(2000)).await;
-    
-    // Test if server is responding
-    match reqwest::get("http://localhost:7370/").await {
-        Ok(response) if response.status().is_success() => Ok(()),
-        _ => Err("Server failed to start or is not responding".to_string()),
-    }
+    // Return immediately - don't wait or test connectivity here
+    // Frontend will poll for readiness to avoid blocking the UI thread
+    Ok(())
 }
 
 #[tauri::command]

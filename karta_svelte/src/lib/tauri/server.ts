@@ -10,6 +10,7 @@ export interface ServerManager {
     startServer(vaultPath: string): Promise<void>;
     stopServer(): Promise<void>;
     checkServerStatus(): Promise<boolean>;
+    pollForServerReady(maxAttempts?: number, intervalMs?: number): Promise<void>;
     getAvailableVaults(): Promise<VaultInfo[]>;
     selectVaultDirectory(): Promise<string | null>;
     addVaultToConfig(vaultPath: string): Promise<void>;
@@ -26,6 +27,20 @@ export const serverManager: ServerManager = {
 
     async checkServerStatus(): Promise<boolean> {
         return await invoke('check_server_status');
+    },
+
+    async pollForServerReady(maxAttempts = 30, intervalMs = 500): Promise<void> {
+        for (let i = 0; i < maxAttempts; i++) {
+            const isReady = await this.checkServerStatus();
+            if (isReady) {
+                return;
+            }
+            
+            // Wait before next attempt
+            await new Promise(resolve => setTimeout(resolve, intervalMs));
+        }
+        
+        throw new Error(`Server failed to start within ${(maxAttempts * intervalMs) / 1000} seconds`);
     },
 
     async getAvailableVaults(): Promise<VaultInfo[]> {
