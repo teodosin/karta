@@ -1,6 +1,8 @@
 use std::sync::{Arc, Mutex};
 use std::path::PathBuf;
 use tauri::{Manager, State};
+use std::collections::HashMap;
+use std::panic;
 
 // Global state for the server thread
 struct ServerProcess {
@@ -29,13 +31,22 @@ impl ServerProcess {
             *sender_guard = Some(shutdown_tx);
         }
         
-        // Spawn server in its own thread
+        // Spawn server in background thread with a dedicated Tokio runtime
         let handle = std::thread::spawn(move || {
-            // Use Tauri's async runtime
-            tauri::async_runtime::block_on(async {
-                // Run the server without logging initialization (Tauri handles logging)
-                karta_server::prelude::run_server_with_logging(vault_path, false).await;
+            let result = std::panic::catch_unwind(|| {
+                let rt = tokio::runtime::Builder::new_multi_thread()
+                    .enable_all()
+                    .build()
+                    .expect("failed to build tokio runtime for server");
+                rt.block_on(async move {
+                    // Run the server without logging initialization (Tauri handles logging)
+                    karta_server::prelude::run_server_with_logging(vault_path, false).await;
+                });
             });
+            match result {
+                Ok(_) => println!("Server thread completed"),
+                Err(e) => println!("Server thread panicked: {:?}", e),
+            }
         });
         
         // Store the thread handle
@@ -77,16 +88,12 @@ impl ServerProcess {
 
 #[tauri::command]
 async fn start_server(vault_path: String, server_process: State<'_, ServerProcess>) -> Result<(), String> {
+    // Start server in background thread (non-blocking)
     server_process.start(&vault_path)?;
     
-    // Wait a moment for server to start
-    tokio::time::sleep(std::time::Duration::from_millis(2000)).await;
-    
-    // Test if server is responding
-    match reqwest::get("http://localhost:7370/").await {
-        Ok(response) if response.status().is_success() => Ok(()),
-        _ => Err("Server failed to start or is not responding".to_string()),
-    }
+    // Return immediately - don't wait or test connectivity here
+    // Frontend will poll for readiness to avoid blocking the UI thread
+    Ok(())
 }
 
 #[tauri::command]
@@ -164,6 +171,7 @@ pub fn run() {
     
     tauri::Builder::default()
         .manage(server_process)
+        .manage(BookmarkStore::default())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             if cfg!(debug_assertions) {
@@ -180,6 +188,12 @@ pub fn run() {
                 // Stop server when main window closes
                 let server_process = window.state::<ServerProcess>();
                 let _ = server_process.stop();
+                // Stop all bookmark access on shutdown (best-effort)
+                #[cfg(target_os = "macos")]
+                {
+                    let store = window.state::<BookmarkStore>();
+                    let _ = store.stop_all_access();
+                }
             }
         })
         .invoke_handler(tauri::generate_handler![
@@ -188,8 +202,171 @@ pub fn run() {
             check_server_status,
             get_available_vaults,
             select_vault_directory,
-            add_vault_to_config
+            add_vault_to_config,
+            ensure_vault_access,
+            save_vault_bookmark,
+            save_vault_bookmark_from_path
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+// ---------------- macOS Security-Scoped Bookmarks ----------------
+
+#[derive(Default)]
+struct BookmarkStore(Arc<Mutex<HashMap<String, String>>>); // path -> base64(bookmark)
+
+impl BookmarkStore {
+    #[cfg(target_os = "macos")]
+    fn save(&self, path: &str, bookmark_b64: &str) {
+        if let Ok(mut m) = self.0.lock() {
+            m.insert(path.to_string(), bookmark_b64.to_string());
+        }
+        let _ = self.persist_to_disk();
+    }
+
+    #[cfg(target_os = "macos")]
+    fn get(&self, path: &str) -> Option<String> {
+        if let Ok(m) = self.0.lock() {
+            m.get(path).cloned()
+        } else { None }
+    }
+
+    #[cfg(target_os = "macos")]
+    fn stop_all_access(&self) -> Result<(), String> {
+        // We don't hold NSUrl here; stopAccessing is best handled per-open URL.
+        Ok(())
+    }
+
+    #[cfg(target_os = "macos")]
+    fn persist_to_disk(&self) -> Result<(), String> {
+        use std::fs;
+        let app_dir = dirs::data_local_dir().ok_or("No data dir")?;
+        let dir = app_dir.join("karta");
+        fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+        let file = dir.join("bookmarks.json");
+        let map = self.0.lock().map_err(|e| e.to_string())?;
+        let json = serde_json::to_string(&*map).map_err(|e| e.to_string())?;
+        fs::write(file, json).map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
+    #[cfg(target_os = "macos")]
+    fn load_from_disk(&self) -> Result<(), String> {
+        use std::fs;
+        let app_dir = dirs::data_local_dir().ok_or("No data dir")?;
+        let dir = app_dir.join("karta");
+        let file = dir.join("bookmarks.json");
+        if let Ok(bytes) = fs::read(&file) {
+            if let Ok(map) = serde_json::from_slice::<HashMap<String, String>>(&bytes) {
+                if let Ok(mut m) = self.0.lock() { *m = map; }
+            }
+        }
+        Ok(())
+    }
+}
+
+#[tauri::command]
+async fn ensure_vault_access(path: String, store: State<'_, BookmarkStore>) -> Result<bool, String> {
+    // Returns true if access is ensured (bookmark exists and startAccess succeeded), false if UI must reauth
+    #[cfg(target_os = "macos")]
+    {
+        store.load_from_disk().ok();
+        if let Some(bookmark_b64) = store.get(&path) {
+            start_access_from_bookmark(&bookmark_b64)?;
+            return Ok(true);
+        }
+        Ok(false)
+    }
+    #[cfg(not(target_os = "macos"))]
+    { Ok(true) }
+}
+
+#[tauri::command]
+async fn save_vault_bookmark(path: String, bookmark_b64: String, store: State<'_, BookmarkStore>) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    {
+        store.save(&path, &bookmark_b64);
+        Ok(())
+    }
+    #[cfg(not(target_os = "macos"))]
+    { Ok(()) }
+}
+
+#[cfg(target_os = "macos")]
+fn start_access_from_bookmark(bookmark_b64: &str) -> Result<(), String> {
+    use cocoa::base::{id, nil};
+    use cocoa::foundation::{NSData, NSAutoreleasePool, NSURL};
+    use objc::runtime::Object;
+    use objc::{class, msg_send, sel, sel_impl};
+    use base64::Engine as _;
+
+    unsafe {
+        let _pool = NSAutoreleasePool::new(nil);
+
+        let engine = base64::engine::general_purpose::STANDARD;
+        let bytes = engine.decode(bookmark_b64).map_err(|e| e.to_string())?;
+        let data: id = NSData::dataWithBytes_length_(nil, bytes.as_ptr() as _, bytes.len() as _);
+
+        let mut is_stale: bool = false;
+        let mut error: *mut Object = std::ptr::null_mut();
+        // Call +[NSURL URLByResolvingBookmarkData:options:relativeToURL:bookmarkDataIsStale:error:]
+        let url: id = msg_send![class!(NSURL),
+            URLByResolvingBookmarkData: data
+            options: 0u64
+            relativeToURL: nil
+            bookmarkDataIsStale: &mut is_stale
+            error: &mut error
+        ];
+        if url == nil {
+            return Err("Failed to resolve bookmark".into());
+        }
+
+        // Start accessing security-scoped resource on the resolved NSURL
+    let ok: bool = msg_send![url, startAccessingSecurityScopedResource];
+        if !ok { return Err("startAccessingSecurityScopedResource failed".into()); }
+    }
+    Ok(())
+}
+
+#[cfg(target_os = "macos")]
+fn create_bookmark_from_path(path: &str) -> Result<String, String> {
+    use cocoa::base::{id, nil};
+    use cocoa::foundation::{NSData, NSString, NSAutoreleasePool, NSURL};
+    use objc::runtime::Object;
+    use objc::{msg_send, sel, sel_impl};
+    use base64::Engine as _;
+
+    unsafe {
+        let _pool = NSAutoreleasePool::new(nil);
+        let ns_path = NSString::alloc(nil).init_str(path);
+        let url: id = NSURL::fileURLWithPath_(nil, ns_path);
+        if url.is_null() { return Err("Failed to create file URL".into()); }
+
+        // Constant for NSURLBookmarkCreationWithSecurityScope (0x2000)
+        let mut error: *mut Object = std::ptr::null_mut();
+        let data: id = msg_send![url, bookmarkDataWithOptions: 0x2000u64
+            includingResourceValuesForKeys: nil
+            relativeToURL: nil
+            error: &mut error];
+        if data.is_null() { return Err("Failed to create bookmark data".into()); }
+
+        let bytes_ptr: *const u8 = msg_send![data, bytes];
+        let len: usize = msg_send![data, length];
+        let slice = std::slice::from_raw_parts(bytes_ptr, len);
+        let b64 = base64::engine::general_purpose::STANDARD.encode(slice);
+        Ok(b64)
+    }
+}
+
+#[tauri::command]
+async fn save_vault_bookmark_from_path(path: String, store: State<'_, BookmarkStore>) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    {
+        let b64 = create_bookmark_from_path(&path)?;
+        store.save(&path, &b64);
+        Ok(())
+    }
+    #[cfg(not(target_os = "macos"))]
+    { Ok(()) }
 }
