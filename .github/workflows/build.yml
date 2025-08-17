@@ -57,7 +57,9 @@ jobs:
             libwebkit2gtk-4.0-dev \
             libayatana-appindicator3-dev \
             librsvg2-dev \
-            patchelf
+            patchelf \
+            libsoup-3.0-dev \
+            libjavascriptcoregtk-4.1-dev
 
       # Windows: avoid failing if WiX is already present/newer
       - name: Ensure WiX (Windows)
